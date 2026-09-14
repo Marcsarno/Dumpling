@@ -11,7 +11,7 @@ if not exist "node_modules\vite\bin\vite.js" (
   pause
   exit /b 1
 )
-echo Arianna - bedroom movement prototype
+echo Arianna - bedroom cleanup prototype
 echo Open the Local URL printed below in your browser.
 echo For iPhone testing, open the Network URL on the same Wi-Fi.
 echo Press Ctrl+C to stop the server.

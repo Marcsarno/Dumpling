@@ -17,7 +17,7 @@ export class CharacterAnimator {
       const name = track.name || asset.name;
       if (!['Idle', 'Walk', 'CarryIdle', 'CarryWalk', 'PickUp', 'PutDown', 'Celebrate'].includes(name)) continue;
       if (!model.anim) model.addComponent('anim', { activate: true });
-      model.anim!.assignAnimation(name, track);
+      model.anim!.assignAnimation(name, track, undefined, 1, ['Idle', 'Walk', 'CarryIdle', 'CarryWalk'].includes(name));
       this.states.add(name);
     }
     this.state = '';

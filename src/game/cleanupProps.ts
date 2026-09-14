@@ -97,7 +97,7 @@ export function createCleanupProps(app: Application, room: Bedroom) {
 
   const interactions: Interaction[] = items.map(item => ({
     id: `pickup-${item.id}`, name: item.name, icon: item.icon, kind: 'pickup', item: item.id,
-    anchor: new Vec3(...item.home), marker: new Vec3(item.home[0], item.home[1] + (item.id === 'vacuum' ? 1.02 : 0.62), item.home[2]), range: 0.85,
+    anchor: new Vec3(...item.home), marker: new Vec3(item.home[0], item.home[1] + (item.id === 'vacuum' ? 0.82 : 0.62), item.home[2]), range: 0.85,
   }));
   interactions.push(
     { id: 'toy-chest', name: 'Toy chest', icon: '🧸', kind: 'place', item: 'teddy', task: 'teddy', anchor: new Vec3(2.48, 0, -0.79), marker: new Vec3(2.48, 1.45, -1.55), range: 1.1, placement: [2.48, 0.85, -1.55] },

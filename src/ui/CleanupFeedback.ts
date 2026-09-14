@@ -36,6 +36,7 @@ export class CleanupFeedback {
     this.layer.append(element); this.popups.push({ element, point: point.clone(), until: now + 950 });
   }
   update(now: number, interactions: InteractionSystem, carry: CarrySystem, mission: MissionSystem) {
+    const nameTag = document.querySelector<HTMLElement>('#player-label')!.getBoundingClientRect();
     for (const { target, ring, label } of this.markers) {
       const available = interactions.available(target, carry.item?.id ?? null, mission);
       const destination = !!carry.item && (target.kind === 'place' || target.kind === 'vacuum') && available;
@@ -45,10 +46,23 @@ export class CleanupFeedback {
       ring.setLocalScale(scale, 1, scale);
       label.hidden = !available;
       label.classList.toggle('nearby', nearby); label.classList.toggle('destination', destination);
-      const text = destination ? `${target.icon} ${target.name}` : target.icon;
+      const tool = target.kind === 'pickup' && target.item === 'vacuum';
+      label.classList.toggle('tool', tool);
+      const text = destination || tool ? `${target.icon} ${target.name}` : target.icon;
       if (label.textContent !== text) label.textContent = text;
       this.camera.camera!.worldToScreen(target.marker, this.screen);
-      label.style.transform = `translate(${this.screen.x}px, ${this.screen.y}px) translate(-50%, -100%)`;
+      let x = this.screen.x, y = this.screen.y;
+      if (available) {
+        const half = label.offsetWidth / 2, height = label.offsetHeight;
+        // Keep new task badges readable beside Arianna's existing name tag on small phones.
+        if (x + half > nameTag.left - 3 && x - half < nameTag.right + 3 && y > nameTag.top - 3 && y - height < nameTag.bottom + 3) {
+          x = x < nameTag.left + nameTag.width / 2 ? nameTag.left - half - 4 : nameTag.right + half + 4;
+        }
+        const unclampedX = x;
+        x = Math.max(half + 4, Math.min(this.layer.clientWidth - half - 4, x));
+        if (x !== unclampedX && y > nameTag.top - 3 && y - height < nameTag.bottom + 3) y = nameTag.top - 5;
+      }
+      label.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
     }
     for (let i = this.popups.length - 1; i >= 0; i--) {
       const popup = this.popups[i];

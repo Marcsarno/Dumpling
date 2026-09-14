@@ -35,6 +35,7 @@ export class CleanupHUD {
     for (const task of TASKS) {
       const entry = this.tasks.querySelector<HTMLElement>(`[data-task="${task.id}"]`)!;
       const done = mission.completed.has(task.id);
+      this.text(entry.firstElementChild as HTMLElement, done ? '✓' : task.icon);
       entry.classList.toggle('done', done); entry.setAttribute('aria-label', `${task.name}: ${done ? 'complete' : 'to do'}`);
     }
     const enabled = !!focus && !busy && mission.state !== 'finished';

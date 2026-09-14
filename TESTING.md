@@ -1,10 +1,47 @@
-# Milestone 1 verification
+# Bedroom prototype verification
 
 Test environment: installed Microsoft Edge (Chromium), Playwright's real touch
 events with mobile emulation, and desktop mouse/keyboard input. Physical iPhone
 Safari has **not** been tested. Emulation is not a phone performance benchmark.
 
-## Automated checks
+## Stage 2: cleanup mission
+
+`scripts/cleanup-browser-test.mjs` drives the real joystick and Action button with
+touch events. It reads diagnostics, but never teleports Arianna or edits gameplay
+state. Its expiry test waits a genuine 60 seconds; the timer is not accelerated.
+
+It covers:
+
+- Ready state, disabled Action out of range, and first-input timer start.
+- Full teddy → chest, shirt → hamper, book → bookshelf, crayons and vacuum route.
+- Visible carry socket attachment, one-item limit and blocked wrong destinations.
+- Single task rewards, $2 all-clean bonus, $7 total, early completion and results.
+- Short crayon animation, tidy cup replacement and no repeat reward.
+- Partial vacuum release, two-thumb movement, independent finger release,
+  cancellation, out-of-range cancellation and no stuck tool input.
+- Full real-time expiry with partial allowance and a hold that would finish late.
+- Movement blocked after results, fresh replay state and vacuum-first task order.
+- Both controls on 320×568, 375×667, 430×932, 844×390 and 1280×800 viewports.
+- No browser warnings/errors, uncaught exceptions or failed asset requests.
+
+The scripted complete route, including wrong-destination and cancellation checks,
+took approximately **17 seconds** on the test machine. This is a practiced,
+automated route, not a child usability result. The remainder of the minute leaves
+room for discovering controls and destinations; actual seven-year-old playtesting
+is still needed to judge whether the loop is fun and suitably paced.
+
+```powershell
+$env:PLAYWRIGHT_MODULE = 'file:///C:/Users/marc7/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
+node scripts/cleanup-browser-test.mjs
+node --test scripts/mission-test.mjs
+```
+
+The Node tests check the exact deadline boundary, duplicate rewards, a single
+completion bonus, reset and delayed-frame expiry. They require Node with built-in
+TypeScript stripping (the bundled Node 24 works); no test framework is installed.
+Stage 2 screenshots and results are in `artifacts/stage2/`.
+
+## Original movement and GLB regression checks
 
 The browser suite checks:
 
@@ -53,9 +90,14 @@ node node_modules/vite/bin/vite.js build
 node node_modules/vite/bin/vite.js preview --host 0.0.0.0
 ```
 
+With the preview running and `PLAYWRIGHT_MODULE` set as above, run
+`node scripts/production-smoke.mjs`. This tests the actual production bundle:
+disabled/active Action, pickup, destination guidance, placement, allowance,
+portrait resizing and absence of the development debug API or browser errors.
+
 Open http://localhost:4173. Verify the bedroom loads, the joystick moves Arianna,
 the name tag follows her, and release stops her. Check the browser console.
-Vite reports a large engine chunk (approximately 514 KB gzipped); this is the
+Vite reports a large engine chunk (approximately 520 KB gzipped); this is the
 PlayCanvas engine, not a build failure. No art packs or external asset requests
 are required for this milestone.
 
@@ -68,3 +110,8 @@ are required for this milestone.
 5. Rotate the phone and return to portrait. The whole room and controls should fit.
 6. Walk along the bed, shelf and desk and into every room edge.
 7. Check frame pacing, device temperature and legibility on the actual target phone.
+8. Play all five cleanup tasks using both thumbs; verify the highlighted
+   destination and visibly carried object are easy to understand.
+9. Stop vacuuming halfway and move away. Dirt should remain and no money be earned.
+10. Let the minute expire while carrying. Confirm the result is encouraging and
+    replay restores the messy room and empty hands.

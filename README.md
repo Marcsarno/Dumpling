@@ -1,8 +1,9 @@
 # Arianna · A little room
 
-A mobile-first, fully 3D bedroom movement prototype built with **PlayCanvas 2.22.1,
-TypeScript, and Vite**. This is milestone 1 from the supplied brief. It opens
-directly into the room. All art is deliberately simple engine primitives.
+A mobile-first, fully 3D bedroom cleanup prototype built with **PlayCanvas 2.22.1,
+TypeScript, and Vite**. Stage 2 adds a one-minute cleanup loop to the approved
+movement prototype. The room, fixed camera, joystick, portrait framing, and
+existing furniture remain unchanged. All art is deliberately simple engine primitives.
 
 ## Play it
 
@@ -17,8 +18,29 @@ to start a second copy.
 **Controls:** drag the bottom-left joystick in the direction you want Arianna to
 move on screen. Release to stop. A short drag walks slowly; a full drag walks
 faster. Desktop supports mouse dragging, WASD, and arrow keys. Furniture and room
-edges block movement. There is no action button yet because interaction belongs
-to the next milestone.
+edges block movement. The bottom-right **Action** button lights up near an item:
+tap it to pick up, put away, or tidy. Desktop also supports **Space / E**. Carry
+one item at a time and follow the glowing destination. For the vacuum, hold Action
+for **1.15 seconds** beside the dirt. Both thumbs can be used at once.
+
+The **60-second timer starts with your first move or interaction**. Each task
+earns **$1**. Finishing all five adds **$2**, for a maximum **$7**, and ends early.
+When time runs out, keep what you earned; there is no failure penalty. The results
+card lists completed tasks and allowance, with one **Play again** button.
+
+| Task | What to do |
+| --- | --- |
+| Teddy | Pick up the teddy and put it on the toy chest |
+| Shirt | Put the shirt in the new laundry hamper |
+| Book | Return the book to the existing bookshelf |
+| Crayons | Walk to the desk and tap Action; tidying takes 0.45 seconds |
+| Dirt | Pick up the vacuum, approach the dirt, and hold Action |
+
+The vacuum returns to its starting spot after cleaning and frees Arianna's hands.
+Releasing a vacuum hold or leaving range cancels the unfinished work. Replay
+restores every prop, the player position, empty hands, and a fresh timer. The
+timer uses elapsed real time, including time in another tab; inputs reset on
+focus loss. Allowance belongs only to this round and is not saved.
 
 **On an iPhone:** connect to the same Wi-Fi as this computer. Open the Network URL
 printed by Vite in Safari, hold the phone upright, and drag the joystick. The
@@ -61,14 +83,23 @@ node node_modules/vite/bin/vite.js build
 | `src/game/IsometricCamera.ts` | Fixed orthographic camera and responsive framing |
 | `src/components/PlayerController.ts` | Camera-relative movement, keyboard input, room/furniture blocking |
 | `src/components/CharacterVisual.ts` | Capsule visual and optional GLB loading, scale and alignment |
-| `src/components/CharacterAnimator.ts` | Visual facing, placeholder bounce, engine Idle/Walk crossfades |
+| `src/components/CharacterAnimator.ts` | Visual facing, placeholder action poses and optional GLB animation crossfades |
+| `src/components/CarrySystem.ts` | One carried item on a visual socket independent of the character rig |
+| `src/game/cleanupProps.ts` | Five tasks, vacuum, hamper, destination anchors, placeholder props and reset |
+| `src/game/CleanupGame.ts` | Pickup/place/use rules, cleanup durations, cancellation, rewards and replay |
+| `src/systems/InteractionSystem.ts` | Valid-target filtering, nearest focus and forgiving proximity ranges |
+| `src/systems/MissionSystem.ts` | Real-time deadline, task completion, allowance, bonus and results state |
+| `src/ui/ActionButton.ts` | Captured touch/keyboard taps and holds, including two-thumb cancellation |
+| `src/ui/CleanupHUD.ts` / `CleanupFeedback.ts` | Task checks, context labels, results, destination rings and coin bursts |
+| `src/ui/cleanup.css` | Stage 2 overlays, separate from the approved layout styles |
 | `src/ui/VirtualJoystick.ts` | Analog joystick, pointer capture, cancellation and focus handling |
 | `src/ui/styles.css` / `index.html` | Full-screen canvas, safe-area-aware touch controls and minimal room labels |
 | `public/assets/characters/arianna/character.json` | Enables the incoming Arianna model |
 | `scripts/browser-test.mjs` | Automated real-browser movement, touch, resize and GLB tests |
+| `scripts/cleanup-browser-test.mjs` | Full touch-driven cleanup rounds, real 60-second expiry and replay |
+| `scripts/mission-test.mjs` | Deadline, duplicate reward, bonus and reset checks using Node's test runner |
 
-`public/assets/rooms`, `props`, and `dumplings` reserve asset locations. `src/systems`
-is empty until gameplay systems are needed.
+`public/assets/rooms`, `props`, and `dumplings` reserve asset locations.
 
 ## Dropping in arianna.glb
 
@@ -81,7 +112,9 @@ Use exact `Idle` and `Walk` clip names, in-place animation, and embedded texture
 See `public/assets/characters/arianna/README.md` for the asset contract. Missing or
 invalid models keep the capsule playable. Missing animation clips keep the loaded
 model usable, with whichever supported animation is present. The controller never
-depends on the rig. PickUp/Carry/PutDown/Celebrate states are reserved for later.
+depends on the rig. Optional `CarryIdle`, `CarryWalk`, `PickUp`, `PutDown`, and
+`Celebrate` clips are now supported, with Idle/Walk fallbacks. The held prop's
+socket is a sibling of the mesh, so loading a different rig leaves carrying intact.
 
 ## Deliberate implementation choices
 
@@ -97,7 +130,7 @@ depends on the rig. PickUp/Carry/PutDown/Celebrate states are reserved for later
   stairs, jumping, dynamic props or arbitrary collision geometry.
 - One directional shadow-casting light, a 1024px shadow map, shared simple
   materials, static batches, no post-processing, and a 1.75 pixel-ratio cap keep
-  the starting scene modest. The engine bundle is approximately 514 KB gzipped;
+  the starting scene modest. The complete bundle is approximately 520 KB gzipped;
   actual phone GPU performance still needs device testing.
 - Portrait is the primary layout. The canvas fills the browser viewport; resizing
   and landscape remain playable. No forced orientation API, letterboxed phone
@@ -115,12 +148,13 @@ Audio is deferred; PlayCanvas Sound is the planned engine system if needed.
 
 ## Scope and checkpoints
 
-Included: bedroom, placeholder Arianna, portrait canvas, fixed isometric camera,
-camera-relative joystick/keyboard movement, basic blocking, optional model handoff.
+Included: the approved movement prototype plus all five cleanup tasks, single
+Action button, one-item carrying, nearby highlights, destination guidance, brief
+cleanup animations, coin bursts, allowance, timer, results and replay.
 
-**Stopped before cleanup gameplay**, as requested. Pickup/drop, context action,
-five cleanup objects, allowance, the 60-second mission, shops and collecting are
-not implemented. Furniture is scenery in this milestone.
+**Stopped after Stage 2.** No store, driving, dumpling collecting, trading,
+permanent progression, polished character model, or new dependencies were added.
+Temporary feedback is visual; sound is still deferred.
 
 Local Git checkpoints preserve the initial implementation and the verified
 milestone. No GitHub remote has been added and nothing has been published.
