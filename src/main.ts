@@ -31,13 +31,15 @@ function start() {
   const screenPoint = new Vec3();
   const headPoint = new Vec3();
   let walked = 0;
+  const viewport = document.querySelector<HTMLElement>('#game')!;
   const resize = () => {
-    const { width, height } = canvas.getBoundingClientRect();
+    // resizeCanvas writes inline dimensions; measure the containing viewport, not the canvas.
+    const { width, height } = viewport.getBoundingClientRect();
     app.resizeCanvas(width, height);
     camera.resize(width, height);
   };
   const observer = new ResizeObserver(resize);
-  observer.observe(canvas);
+  observer.observe(viewport);
   resize();
   app.on('update', (elapsed: number) => {
     const dt = document.hidden ? 0 : Math.min(elapsed, 0.04);
@@ -49,7 +51,7 @@ function start() {
     headPoint.y += 1.52;
     camera.entity.camera!.worldToScreen(headPoint, screenPoint);
     // worldToScreen is already expressed in CSS/client pixels in PlayCanvas.
-    label.style.transform = `translate(${screenPoint.x - label.offsetWidth / 2}px, ${screenPoint.y - 10}px)`;
+    label.style.transform = `translate(${screenPoint.x - label.offsetWidth / 2}px, ${screenPoint.y - label.offsetHeight - 5}px)`;
   });
   app.start();
   document.querySelector('#loading')!.remove();
@@ -67,6 +69,8 @@ function start() {
         drawCalls: app.stats.drawCalls.total, fps: app.stats.frame.fps,
         resolution: [app.graphicsDevice.width, app.graphicsDevice.height],
         characterLoaded: !character.placeholder.enabled,
+        animationState: character.animator.currentState,
+        obstacles: room.obstacles.map(box => ({ center: box.center.toArray(), halfExtents: box.halfExtents.toArray() })),
       }),
     } });
   }

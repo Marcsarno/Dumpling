@@ -19,7 +19,8 @@ export class IsometricCamera {
     const aspect = width / height;
     // Fit the 9.9-unit projected room width on phones, with a stable angle on every screen.
     // Camera stays fixed during movement; only viewport changes affect framing.
-    this.entity.camera!.orthoHeight = Math.max(5.85, 5.15 / aspect);
+    this.entity.camera!.orthoHeight = Math.max(9, 5.15 / aspect);
+    if (aspect < 1 && height < 740) this.entity.camera!.orthoHeight = Math.max(10.7, 5.15 / aspect);
     if (aspect > 1.35 && height < 600) this.entity.camera!.orthoHeight = 5.5;
   }
 }

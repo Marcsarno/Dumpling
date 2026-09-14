@@ -1,0 +1,183 @@
+// Uses an existing Playwright installation; it is not a game/runtime dependency.
+// PLAYWRIGHT_MODULE can point to the absolute file: URL of a bundled index.mjs.
+import assert from 'node:assert/strict';
+import { mkdir, writeFile } from 'node:fs/promises';
+const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const browser = await chromium.launch({ headless: true, channel: process.env.BROWSER_CHANNEL || 'msedge' });
+const results = [];
+const baseURL = process.env.TEST_URL || 'http://localhost:5173';
+await mkdir('artifacts', { recursive: true });
+const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+const page = await context.newPage();
+const errors = [];
+page.on('pageerror', error => errors.push(error.message));
+page.on('console', message => { if (['warning', 'error'].includes(message.type())) errors.push(message.text()); });
+const snapshot = () => page.evaluate(() => window.__roomTest.snapshot());
+const distance = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+async function ready() {
+  await page.goto(baseURL);
+  await page.locator('[data-ready="true"]').waitFor();
+  await page.waitForTimeout(300);
+}
+async function report(name, fn) { await fn(); results.push(name); console.log(`PASS ${name}`); }
+
+try {
+  await report('Portrait boots with the placeholder and no scroll overflow', async () => {
+    await ready();
+    assert.equal((await snapshot()).characterLoaded, false);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390);
+    await page.screenshot({ path: 'artifacts/portrait-390x844.png' });
+  });
+  await report('All four keyboard directions follow the screen and the camera stays fixed', async () => {
+    for (const [key, axis, sign] of [['ArrowRight', 0, 1], ['ArrowLeft', 0, -1], ['ArrowUp', 1, -1], ['ArrowDown', 1, 1]]) {
+      await ready();
+      const before = await snapshot();
+      await page.keyboard.down(key);
+      await page.waitForTimeout(400);
+      await page.keyboard.up(key);
+      const after = await snapshot();
+      assert.ok((after.playerScreen[axis] - before.playerScreen[axis]) * sign > 8, `${key} moves correctly`);
+      assert.ok(Math.abs(after.playerScreen[1 - axis] - before.playerScreen[1 - axis]) < 3, `${key} is aligned to screen`);
+      assert.deepEqual(after.cameraPosition, before.cameraPosition);
+    }
+  });
+  await report('Diagonal input is normalized and releasing keys stops movement', async () => {
+    await ready();
+    await page.keyboard.down('ArrowRight'); await page.keyboard.down('ArrowDown');
+    await page.waitForTimeout(150);
+    const active = await snapshot();
+    assert.ok(Math.abs(Math.hypot(...active.velocity) - 2.25) < 0.025);
+    await page.keyboard.up('ArrowRight'); await page.keyboard.up('ArrowDown');
+    await page.waitForTimeout(80);
+    const stopped = await snapshot();
+    await page.waitForTimeout(200);
+    assert.ok(distance(stopped.position, (await snapshot()).position) < 0.001);
+  });
+  const cdp = await context.newCDPSession(page);
+  const touch = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points });
+  let center;
+  async function touchStart() {
+    const box = await page.locator('#joystick').boundingBox();
+    center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    await touch('touchStart', [{ ...center, id: 1 }]);
+  }
+  await report('Actual touch drag moves, clamps outside the joystick, and releases cleanly', async () => {
+    await ready();
+    const before = await snapshot();
+    await touchStart();
+    await touch('touchMove', [{ x: center.x + 115, y: center.y, id: 1 }]);
+    await page.waitForTimeout(350);
+    const during = await snapshot();
+    assert.ok(during.playerScreen[0] > before.playerScreen[0] + 8);
+    assert.ok(Math.hypot(...during.joystick) <= 1.001);
+    await touch('touchEnd', []);
+    await page.waitForTimeout(80);
+    const after = await snapshot();
+    assert.deepEqual(after.joystick, [0, 0]);
+    await page.waitForTimeout(150);
+    assert.ok(distance(after.position, (await snapshot()).position) < 0.001);
+  });
+  await report('Touch cancellation and a second finger cannot leave movement stuck', async () => {
+    await ready(); await touchStart();
+    const primary = { x: center.x + 30, y: center.y, id: 1 };
+    await touch('touchMove', [primary]);
+    await touch('touchStart', [primary, { x: 300, y: 700, id: 2 }]);
+    await page.waitForTimeout(80);
+    assert.ok((await snapshot()).joystick[0] > 0.6);
+    await touch('touchCancel', []);
+    await page.waitForTimeout(80);
+    assert.deepEqual((await snapshot()).joystick, [0, 0]);
+    await touchStart();
+    await touch('touchMove', [{ x: center.x, y: center.y - 30, id: 1 }]);
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await page.waitForTimeout(80);
+    assert.deepEqual((await snapshot()).joystick, [0, 0]);
+    await touch('touchEnd', []);
+  });
+  await report('Furniture and room edges block sustained movement', async () => {
+    await ready();
+    for (const key of ['ArrowUp', 'ArrowLeft', 'ArrowDown', 'ArrowRight']) {
+      await page.keyboard.down(key);
+      for (let i = 0; i < 12; i++) {
+        await page.waitForTimeout(180);
+        const state = await snapshot();
+        const [x, , z] = state.position;
+        assert.ok(Math.abs(x) <= 3.061 && Math.abs(z) <= 3.361, 'player stays inside room');
+        for (const box of state.obstacles) {
+          assert.ok(!(Math.abs(x - box.center[0]) < box.halfExtents[0] + 0.239 && Math.abs(z - box.center[2]) < box.halfExtents[2] + 0.239), 'player does not penetrate furniture');
+        }
+      }
+      await page.keyboard.up(key);
+    }
+  });
+  await report('Resize during a drag resets input; small phones and landscape render', async () => {
+    await ready(); await touchStart();
+    await touch('touchMove', [{ x: center.x + 30, y: center.y, id: 1 }]);
+    for (const [width, height] of [[375, 667], [320, 568], [430, 932], [844, 390], [1280, 800]]) {
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(220);
+      assert.deepEqual((await snapshot()).joystick, [0, 0]);
+      const box = await page.locator('#joystick').boundingBox();
+      assert.ok(box.x >= 0 && box.y >= 0 && box.x + box.width <= width && box.y + box.height <= height);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), width);
+      const canvas = await page.locator('#game-canvas').boundingBox();
+      assert.equal(canvas.width, width, 'canvas follows viewport width after rotation');
+      assert.equal(canvas.height, height, 'canvas follows viewport height after rotation');
+      await page.screenshot({ path: `artifacts/viewport-${width}x${height}.png` });
+    }
+    await touch('touchEnd', []);
+  });
+  await report('Mouse drag can leave the joystick and still release', async () => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await ready();
+    const box = await page.locator('#joystick').boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + 250, box.y + box.height / 2);
+    await page.waitForTimeout(100);
+    assert.ok((await snapshot()).joystick[0] > 0.9);
+    await page.mouse.up();
+    await page.waitForTimeout(80);
+    assert.deepEqual((await snapshot()).joystick, [0, 0]);
+  });
+  assert.deepEqual(errors, [], 'No browser console warnings/errors or page errors');
+  results.push('No browser console warnings/errors or page errors');
+
+  // Tiny GLB fixture exercises the real engine container + Anim pipeline, without art dependencies.
+  const positions = new Float32Array([-0.2,0,0, 0.2,0,0, 0,1,0]);
+  const times = new Float32Array([0,1]);
+  const values = new Float32Array([0,0,0, 0,0.05,0]);
+  const bin = Buffer.concat([Buffer.from(positions.buffer), Buffer.from(times.buffer), Buffer.from(values.buffer)]);
+  const gltf = { asset:{version:'2.0'}, scene:0, scenes:[{nodes:[0]}], nodes:[{name:'Fixture',mesh:0}], meshes:[{primitives:[{attributes:{POSITION:0}}]}], buffers:[{byteLength:bin.length}], bufferViews:[{buffer:0,byteOffset:0,byteLength:36},{buffer:0,byteOffset:36,byteLength:8},{buffer:0,byteOffset:44,byteLength:24}], accessors:[{bufferView:0,componentType:5126,count:3,type:'VEC3',min:[-0.2,0,0],max:[0.2,1,0]},{bufferView:1,componentType:5126,count:2,type:'SCALAR',min:[0],max:[1]},{bufferView:2,componentType:5126,count:2,type:'VEC3'}], animations:['Idle','Walk'].map(name=>({name,samplers:[{input:1,output:2,interpolation:'LINEAR'}],channels:[{sampler:0,target:{node:0,path:'translation'}}]})) };
+  const json = Buffer.from(JSON.stringify(gltf).padEnd(Math.ceil(JSON.stringify(gltf).length / 4) * 4, ' '));
+  const header = Buffer.alloc(20); header.writeUInt32LE(0x46546c67,0); header.writeUInt32LE(2,4); header.writeUInt32LE(28+json.length+bin.length,8); header.writeUInt32LE(json.length,12); header.writeUInt32LE(0x4e4f534a,16);
+  const binHeader = Buffer.alloc(8); binHeader.writeUInt32LE(bin.length,0); binHeader.writeUInt32LE(0x004e4942,4);
+  const fixture = Buffer.concat([header,json,binHeader,bin]);
+  await report('GLB replaces the capsule and engine Idle/Walk clips follow movement', async () => {
+    await page.route('**/character.json', route => route.fulfill({json:{url:'fixture.glb',height:1.2,yaw:0}}));
+    await page.route('**/fixture.glb', route => route.fulfill({body:fixture,contentType:'model/gltf-binary'}));
+    await ready();
+    await page.waitForFunction(() => window.__roomTest.snapshot().characterLoaded);
+    await page.waitForTimeout(100);
+    assert.equal((await snapshot()).animationState, 'Idle');
+    await page.keyboard.down('ArrowRight');
+    await page.waitForTimeout(150);
+    assert.equal((await snapshot()).animationState, 'Walk');
+    await page.keyboard.up('ArrowRight');
+    await page.waitForTimeout(100);
+    assert.equal((await snapshot()).animationState, 'Idle');
+    assert.deepEqual(errors, []);
+  });
+  await report('A broken GLB preserves a playable capsule', async () => {
+    await page.unroute('**/fixture.glb');
+    await page.route('**/fixture.glb', route => route.fulfill({body:'invalid glb',contentType:'model/gltf-binary'}));
+    await ready();
+    assert.equal((await snapshot()).characterLoaded, false);
+    const before = await snapshot();
+    await page.keyboard.down('ArrowDown'); await page.waitForTimeout(150); await page.keyboard.up('ArrowDown');
+    assert.ok(distance(before.position, (await snapshot()).position) > 0.1);
+    assert.ok(errors.some(error => error.includes('Keeping the Arianna placeholder')));
+  });
+  await writeFile('artifacts/test-results.json', JSON.stringify({ browser:'Microsoft Edge / Chromium, emulated touch', date:new Date().toISOString(), passed:results }, null, 2));
+  console.log(`\n${results.length} checks passed. Screenshots and report are in artifacts/.`);
+} finally { await browser.close(); }

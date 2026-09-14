@@ -6,6 +6,7 @@ export class CharacterAnimator {
   private readonly states = new Set<string>();
   private state = '';
   private time = 0;
+  get currentState() { return this.state; }
   constructor(private readonly visual: Entity, private readonly placeholder: Entity) {}
   attach(model: Entity, animations: Asset[]) {
     this.model = model;
