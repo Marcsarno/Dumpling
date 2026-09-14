@@ -4,7 +4,56 @@ Test environment: installed Microsoft Edge (Chromium), Playwright's real touch
 events with mobile emulation, and desktop mouse/keyboard input. Physical iPhone
 Safari has **not** been tested. Emulation is not a phone performance benchmark.
 
-## Stage 4: connected house
+## Approved Arianna V3.2.0 integration
+
+The supplied GLB SHA-256 is unchanged:
+`61de9d966f16d39842756861b946527c2f7056f351912b3e173eadfe6660bcb0`.
+Its manifest and handoff were read before integration and retained unchanged.
+
+Current browser checks:
+
+- `scripts/arianna-browser-test.mjs`: actual PlayCanvas import; all eight clip
+  names/loop flags; original vertex-color material, 3,294 vertices and 25 joints;
+  1.203 m authored scale; CPU-skinned soles meeting the rug/floor; facing and
+  velocity-matched Walk/CarryWalk; animated hand socket; full pickup/put-down
+  durations; exactly-once events at the first frame after 1.10 / 1.30 seconds;
+  movement locked during gestures and restored afterward. Screenshots inspected
+  at phone size for appearance and the held book. Results in `artifacts/arianna/`.
+- `scripts/cleanup-browser-test.mjs`: all 16 checks pass with Arianna, including
+  all five tasks, canceled and two-thumb vacuum holds, replay, five viewport sizes,
+  and a genuine 60-second partial-results timeout. Full mission: **36.7 seconds**.
+- `scripts/house-browser-test.mjs`: all ten additional carry/place interactions,
+  complete six-room tour, both laundry doorways, full six-task timed mission,
+  $8 saved reward, replay and bedroom selection pass. Full mission:
+  **57.2 seconds including the final animation and results**.
+- `scripts/browser-test.mjs`: all 11 movement, touch cancellation, collision,
+  viewport, Idle/Walk transition and malformed-GLB fallback checks pass.
+- `scripts/collection-browser-test.mjs`: two complete earned-money cleanup →
+  purchase → opening → collection loops pass, including reload persistence.
+
+TypeScript checking and the production build pass. Both production smoke suites
+pass: pickup/placement/reward and phone resize, plus reveal/collection persistence
+and cleanup return. The production window exposes no debug API. Vite retains its
+existing large-engine-chunk warning; no new dependencies were added.
+
+Pickup and put-down now each play 2.4 seconds at 1x. Celebration plays 1.6 seconds.
+Those gestures account for the longer mission routes compared with the historical
+placeholder timings below. The practiced house route leaves little spare time;
+these measurements do not establish a new player's completion time.
+
+At the user's chosen unchanged 2.25 units/s pace, Walk uses **7.5x** and CarryWalk
+**12.5x** playback at full input. Skinning/contact checks pass in the running game;
+that fast cadence still needs frame-pacing review on physical phones. No rig,
+material, clip samples, camera angle, joystick layout or movement speed was changed.
+SitCar remains available but unused; no Lilah or driving was added.
+
+Run the new check with the same Playwright environment variable used below:
+
+```powershell
+node scripts/arianna-browser-test.mjs
+```
+
+## Stage 4: connected house (historical placeholder timings)
 
 `scripts/house-browser-test.mjs` runs at **390×844** using real two-dimensional
 joystick gestures and Action taps. It never teleports the player or changes mission
@@ -32,10 +81,10 @@ route; it does not establish a child's discovery time or whether travel is fun.
 - No browser exceptions, console warnings/errors or failed asset requests.
 
 The existing 16-check cleanup suite, two complete Stage 3 purchase/reveal loops,
-movement/GLB fixture suite, and production smoke tests remain regression checks.
+movement/approved-GLB suite, and production smoke tests remain regression checks.
 The cleanup/collection tests explicitly choose **Bedroom · 5**. Camera assertions
 now require fixed **angle and scale**, rather than fixed position, because smooth
-following is the intentional Stage 4 change. The real final Arianna GLB remains off.
+following is the intentional Stage 4 change. Arianna is now enabled; see the integration checks above.
 
 ```powershell
 $env:PLAYWRIGHT_MODULE = 'file:///C:/Users/marc7/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
@@ -204,7 +253,7 @@ Stage 2 screenshots and results are in `artifacts/stage2/`.
 
 The browser suite checks:
 
-- Direct portrait boot with the placeholder, with no document overflow.
+- Direct portrait boot with approved Arianna, with no document overflow.
 - Screen-relative up/down/left/right movement and a fixed camera position.
 - Normalized diagonal speed and immediate stop after releasing keys.
 - Touch drag, analog input clamping and release outside the joystick.
@@ -214,7 +263,7 @@ The browser suite checks:
   including an orientation change during active input.
 - Desktop mouse capture and release outside the control.
 - No browser warnings, console errors or uncaught exceptions during normal play.
-- A synthetic GLB fixture passing through the real PlayCanvas container loader
+- The approved GLB passing through the real PlayCanvas container loader
   and engine Idle/Walk animation transitions without controller changes.
 - Malformed GLB fallback: logs the expected diagnostic and keeps movement usable.
 
@@ -234,8 +283,8 @@ node scripts/browser-test.mjs
 
 `BROWSER_CHANNEL` defaults to `msedge`. `TEST_URL` defaults to
 `http://localhost:5173`. The automated suite uses read-only development diagnostics
-that are stripped from the production build. The test GLB is generated in memory
-and intercepted only by the test browser; it never replaces the real asset config.
+that are stripped from the production build. The approved GLB is loaded from the supplied asset. Only the malformed-asset
+fallback test intercepts its response; it never replaces the real file or config.
 
 The suite saves screenshots and `artifacts/test-results.json`. Visual review is
 also necessary: it caught the retained canvas-size bug and smaller-screen overlap,

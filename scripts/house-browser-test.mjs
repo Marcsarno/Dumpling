@@ -14,6 +14,7 @@ async function createPlayer(name) {
   page.on('console', m => { if (['error', 'warning'].includes(m.type())) errors.push(`${name}: ${m.text()}`); });
   page.on('response', r => { if (r.status() >= 400) errors.push(`${name}: ${r.status()} ${r.url()}`); });
   await page.goto(baseURL); await page.locator('[data-ready=true]').waitFor();
+  await page.waitForFunction(() => window.__roomTest.snapshot().characterLoaded);
   const cdp = await context.newCDPSession(page);
   await page.evaluate(() => {
     window.__pointerTrace = [];
@@ -57,6 +58,7 @@ async function createPlayer(name) {
     });
     const c = await center('#action-button');
     await touch('touchStart', 2, c); await sleep(duration); await touch('touchEnd', 2); await sleep(100);
+    await page.waitForFunction(() => !window.__roomTest.snapshot().character.busy, undefined, { timeout: 6000 });
   }
   async function screenshot(file) { await page.screenshot({ path: `artifacts/stage4/${file}.png` }); }
   return { context, page, snap, touch, moveTo, press, center, screenshot };
@@ -128,5 +130,3 @@ try {
   await writeFile('artifacts/stage4/report.json', JSON.stringify({ checks, errors, missionSeconds, performanceSamples }, null, 2));
 } catch (error) { console.error(error); process.exitCode = 1; }
 finally { await browser.close(); }
-
-

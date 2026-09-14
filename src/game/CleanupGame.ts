@@ -25,9 +25,12 @@ export class CleanupGame {
   private activity: { target: Interaction; start: number; duration: number } | null = null;
   private progress = 0;
   private finishedHandled = false;
+  private celebrationStarted = false;
+  get movementLocked() { return this.character.animator.busy; }
   constructor(app: Application, private readonly character: ReturnType<typeof createCharacter>, private readonly props: CleanupProps,
     camera: Entity, private readonly resetMovement: () => void) {
     this.carry = new CarrySystem(app, character.visual);
+    character.animator.bindCarrySocket(this.carry.socket);
     this.interactions = new InteractionSystem(props.interactions);
     const button = document.querySelector<HTMLButtonElement>('#action-button')!;
     this.hud = new CleanupHUD(button, this.replay);
@@ -46,35 +49,37 @@ export class CleanupGame {
     const now = performance.now();
     this.mission.tick(now); this.refreshFocus();
     const target = this.interactions.focus;
-    if (!target || this.activity || this.mission.state === 'finished') return;
+    if (!target || this.activity || this.movementLocked || this.mission.state === 'finished') return;
     this.mission.start(now);
     if (target.kind === 'pickup') {
       const item = this.props.items.find(item => item.id === target.item)!;
-      if (this.carry.pickUp(item)) {
-        this.character.animator.setCarrying(true);
-        this.character.animator.playAction('PickUp', 0.25);
-        this.hud.announce(`Picked up ${item.name}. Follow the glowing destination.`);
-      }
+      this.character.animator.playAction('PickUp', .25, () => {
+        this.mission.tick(performance.now());
+        if (this.mission.state !== 'finished' && this.carry.pickUp(item)) {
+          this.character.animator.setCarrying(true);
+          this.hud.announce(`Picked up ${item.name}. Follow the glowing destination.`);
+        }
+      }, target.anchor);
     } else if (target.kind === 'place') {
       if (!this.carry.item || this.carry.item.id !== target.item) return;
-      if (this.mission.complete(target.task!, now)) {
-        const placed = this.carry.release(this.props.root, target.placement!);
-        if (placed && target.placedStyle === 'hide') placed.entity.enabled = false;
-        if (placed && target.placedStyle === 'hang') placed.entity.setLocalEulerAngles(90, 0, 0);
-        this.character.animator.setCarrying(false);
-        this.character.animator.playAction('PutDown', 0.3);
-        this.reward(target, now);
-      }
+      this.character.animator.playAction('PutDown', .3, () => {
+        const eventNow = performance.now();
+        if (this.mission.complete(target.task!, eventNow)) {
+          const placed = this.carry.release(this.props.root, target.placement!);
+          if (placed && target.placedStyle === 'hide') placed.entity.enabled = false;
+          if (placed && target.placedStyle === 'hang') placed.entity.setLocalEulerAngles(90, 0, 0);
+          this.character.animator.setCarrying(false);
+          this.reward(target, eventNow);
+        }
+      }, target.anchor);
     } else {
       this.activity = { target, start: now, duration: target.kind === 'vacuum' ? 1150 : 450 };
-      this.character.animator.playAction('PickUp', target.kind === 'vacuum' ? 1.15 : 0.45);
     }
     this.refreshFocus();
   };
   private cancelActivity() {
     this.activity = null; this.progress = 0;
     this.props.dirt.setLocalScale(1, 1, 1); this.props.crayonMess.setLocalScale(1, 1, 1);
-    this.character.animator.cancelAction();
   }
   private cancelHold = () => { if (this.activity?.target.kind === 'vacuum') this.cancelActivity(); };
   private reward(target: Interaction, now: number) {
@@ -88,9 +93,12 @@ export class CleanupGame {
       if (!this.finishedHandled) {
         this.finishedHandled = true; this.cancelActivity(); this.action.reset(); this.resetMovement();
         this.onFinished(this.roundId, this.mission.allowance);
-        if (this.mission.reason === 'complete') this.character.animator.playAction('Celebrate', 0.65);
+        if (this.mission.reason !== 'complete') this.character.animator.cancelAction();
       }
-      if (now - this.mission.finishedAt >= (this.mission.reason === 'complete' ? 600 : 0)) this.hud.showResults(this.mission);
+      if (this.mission.reason === 'complete' && !this.character.animator.busy && !this.celebrationStarted) {
+        this.celebrationStarted = true;
+        this.character.animator.playAction('Celebrate', .65);
+      } else if (!this.character.animator.busy) this.hud.showResults(this.mission);
     } else if (this.activity) {
       const { target, start, duration } = this.activity;
       const inRange = this.interactions.distance(target, this.character.player.getPosition()) <= target.range + 0.1;
@@ -105,17 +113,18 @@ export class CleanupGame {
           if (target.kind === 'crayons') this.props.tidyCrayons.enabled = true;
           else {
             const vacuum = this.props.items.find(item => item.id === 'vacuum')!;
-            this.carry.release(this.props.root, vacuum.home);
-            this.character.animator.setCarrying(false);
+            this.character.animator.playAction('PutDown', .3, () => {
+              this.carry.release(this.props.root, vacuum.home);
+              this.character.animator.setCarrying(false);
+            }, target.anchor);
           }
           this.activity = null; this.progress = 0;
-          this.character.animator.playAction('PutDown', 0.25);
           this.reward(target, now); this.refreshFocus();
         }
       }
     }
     this.feedback.update(now, this.interactions, this.carry, this.mission);
-    this.hud.update(this.mission, this.carry, this.interactions.focus, this.activity?.target.kind === 'crayons', this.progress);
+    this.hud.update(this.mission, this.carry, this.interactions.focus, this.activity?.target.kind === 'crayons', this.progress, this.character.animator.actionName);
   }
   replay = () => {
     if (!this.beforeReplay()) return;
@@ -124,7 +133,7 @@ export class CleanupGame {
     this.props.reset(); this.mission.reset(); this.feedback.reset(); this.hud.reset();
     this.character.animator.reset(); this.character.player.setPosition(0, 0.09, 0.9);
     this.character.visual.setLocalEulerAngles(0, 30, 0);
-    this.finishedHandled = false; this.interactions.focus = null; this.resetMovement();
+    this.finishedHandled = false; this.celebrationStarted = false; this.interactions.focus = null; this.resetMovement();
     this.onReplay();
     document.querySelector<HTMLCanvasElement>('#game-canvas')!.focus({ preventScroll: true });
   };

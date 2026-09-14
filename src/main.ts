@@ -59,7 +59,8 @@ function start() {
     if (loop.mode === 'cleanup') camera.follow(character.player.getPosition(), dt);
     loop.update(now);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === 'cleanup', cleanup.mode);
-    character.animator.update(dt, controller.velocity);
+    character.grounding?.update();
+    character.animator.update(dt, controller.velocity, elapsed);
     headPoint.copy(character.player.getPosition());
     headPoint.y += 1.52;
     camera.entity.camera!.worldToScreen(headPoint, screenPoint);
@@ -74,6 +75,7 @@ function start() {
   // Read-only diagnostics for local playtests, excluded from production by Vite.
   if (import.meta.env.DEV) {
     Object.defineProperty(window, '__roomTest', { configurable: true, value: {
+      characterGeometry: () => character.animator.geometrySnapshot(),
       snapshot: () => ({
         position: character.player.getPosition().toArray(),
         velocity: controller.velocity.toArray(), input: controller.input.toArray(),
@@ -85,6 +87,7 @@ function start() {
         resolution: [app.graphicsDevice.width, app.graphicsDevice.height],
         characterLoaded: !character.placeholder.enabled,
         animationState: character.animator.currentState,
+        character: character.animator.snapshot(),
         cleanup: cleanup.snapshot(),
         loop: loop.snapshot(),
         obstacles: room.obstacles.map(box => ({ center: box.center.toArray(), halfExtents: box.halfExtents.toArray() })),

@@ -15,12 +15,12 @@ try {
   await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(400); await page.keyboard.up('ArrowLeft');
   await page.waitForTimeout(60);
   assert.equal(await page.locator('#action-button').getAttribute('data-target'), 'pickup-teddy');
-  await page.locator('#action-button').tap(); await page.waitForTimeout(100);
+  await page.locator('#action-button').tap(); await page.waitForTimeout(2550);
   assert.equal(await page.locator('.cleanup-marker.destination').textContent(), '🧸 Toy chest');
   await page.keyboard.down('ArrowRight'); await page.waitForTimeout(1320); await page.keyboard.up('ArrowRight');
   await page.waitForTimeout(80);
   assert.equal(await page.locator('#action-button').getAttribute('data-target'), 'toy-chest');
-  await page.locator('#action-button').tap(); await page.waitForTimeout(100);
+  await page.locator('#action-button').tap(); await page.waitForTimeout(2550);
   assert.equal(await page.locator('#allowance').textContent(), '$1');
   await page.screenshot({ path: 'artifacts/stage2/production-reward.png' });
   for (const [width, height, name] of [[320, 568, 'small-phone'], [390, 844, 'portrait']]) {

@@ -32,7 +32,7 @@ export class CleanupHUD {
   }
   private text(element: HTMLElement, value: string) { if (element.textContent !== value) element.textContent = value; }
   announce(text: string) { this.announcement.textContent = text; }
-  update(mission: MissionSystem, carry: CarrySystem, focus: Interaction | null, busy: boolean, progress: number) {
+  update(mission: MissionSystem, carry: CarrySystem, focus: Interaction | null, busy: boolean, progress: number, animation: string | null = null) {
     this.setTasks(mission.tasks);
     const seconds = Math.ceil(mission.remaining / 1000);
     this.text(this.clock, mission.timed ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : '∞');
@@ -45,7 +45,7 @@ export class CleanupHUD {
       this.text(entry.firstElementChild as HTMLElement, done ? '✓' : task.icon);
       entry.classList.toggle('done', done); entry.setAttribute('aria-label', `${task.room ? `${task.room}: ` : ''}${task.name}: ${done ? 'complete' : 'to do'}`);
     }
-    const enabled = !!focus && !busy && mission.state !== 'finished';
+    const enabled = !!focus && !busy && !animation && mission.state !== 'finished';
     this.button.disabled = !enabled;
     this.button.dataset.target = enabled ? focus!.id : '';
     this.button.style.setProperty('--hold-progress', `${progress * 360}deg`);
@@ -56,6 +56,7 @@ export class CleanupHUD {
       detail = focus.name; icon = focus.icon;
     }
     if (busy) { title = 'Tidying…'; detail = 'Crayons'; }
+    if (animation) { title = animation === 'PickUp' ? 'Picking up…' : animation === 'PutDown' ? 'Putting away…' : 'Lovely!'; detail = 'One moment'; }
     if (mission.state === 'finished') { title = 'Well done'; detail = 'Round complete'; icon = '♡'; }
     this.text(this.actionTitle, title); this.text(this.actionDetail, detail); this.text(this.actionIcon, icon);
     this.button.setAttribute('aria-label', `${title}: ${detail}${focus?.kind === 'vacuum' ? '. Hold for just over one second.' : ''}`);

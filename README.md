@@ -176,8 +176,8 @@ node node_modules/vite/bin/vite.js build
 | `src/game/house.ts` / `houseProps.ts` | Continuous house geometry, shared materials and new carryable/drop-zone pairs |
 | `src/ui/HouseNavigation.ts` | Current-room headings and projected doorway labels |
 | `src/components/PlayerController.ts` | Camera-relative movement, keyboard input, room/furniture blocking |
-| `src/components/CharacterVisual.ts` | Capsule visual and optional GLB loading, scale and alignment |
-| `src/components/CharacterAnimator.ts` | Visual facing, placeholder action poses and optional GLB animation crossfades |
+| `src/components/CharacterVisual.ts` | Approved Arianna GLB loading, manifest validation and scale/alignment |
+| `src/components/CharacterAnimator.ts` | Manifest-driven Anim graph, event clocks, facing and hand grip |
 | `src/components/CarrySystem.ts` | One carried item on a visual socket independent of the character rig |
 | `src/game/cleanupProps.ts` | Five tasks, vacuum, hamper, destination anchors, placeholder props and reset |
 | `src/game/CleanupGame.ts` | Pickup/place/use rules, cleanup durations, cancellation, rewards and replay |
@@ -194,7 +194,7 @@ node node_modules/vite/bin/vite.js build
 | `src/ui/cleanup.css` | Stage 2 overlays, separate from the approved layout styles |
 | `src/ui/VirtualJoystick.ts` | Analog joystick, pointer capture, cancellation and focus handling |
 | `src/ui/styles.css` / `index.html` | Full-screen canvas, safe-area-aware touch controls and minimal room labels |
-| `public/assets/characters/arianna/character.json` | Enables the incoming Arianna model |
+| `public/assets/characters/arianna/character.json` | Enables the approved Arianna model |
 | `scripts/browser-test.mjs` | Automated real-browser movement, touch, resize and GLB tests |
 | `scripts/cleanup-browser-test.mjs` | Full touch-driven cleanup rounds, real 60-second expiry and replay |
 | `scripts/mission-test.mjs` | Deadline, duplicate reward, bonus and reset checks using Node's test runner |
@@ -215,20 +215,21 @@ Keep saved IDs stable when substituting final artwork. `SaveRepository` can be
 replaced for a future account backend; a remote asynchronous implementation would
 also need pending-state UI and server-authoritative transactions.
 
-## Dropping in arianna.glb
+## Approved Arianna character
 
-1. Put the file in `public/assets/characters/arianna/arianna.glb`.
-2. Set `url` to `"arianna.glb"` in the neighboring `character.json`.
-3. Reload. The engine loads the GLB, scales it to 1.2 world units tall, centers it,
-   and puts its feet at the player root. Set `yaw` to 180 if it faces backward.
+Arianna V3.2.0 is enabled at her authored 1.203 m height, with her original vertex
+colors, material, rig and all eight clips. The existing 2.25 units/s game pace is
+preserved: Walk reaches 7.5x playback and CarryWalk 12.5x at full input. Slower
+joystick movement and collision slowdown reduce playback proportionally.
 
-Use exact `Idle` and `Walk` clip names, in-place animation, and embedded textures.
-See `public/assets/characters/arianna/README.md` for the asset contract. Missing or
-invalid models keep the capsule playable. Missing animation clips keep the loaded
-model usable, with whichever supported animation is present. The controller never
-depends on the rig. Optional `CarryIdle`, `CarryWalk`, `PickUp`, `PutDown`, and
-`Celebrate` clips are now supported, with Idle/Walk fallbacks. The held prop's
-socket is a sibling of the mesh, so loading a different rig leaves carrying intact.
+Pickup attaches at 1.10 clip seconds and put-down releases at 1.30. Both gestures
+play their full 2.4 seconds with translation paused, followed by normal movement.
+Held props follow the midpoint of her animated hands. Floors and rugs adjust only
+the visual height. A completed mission finishes its put-down and full 1.6-second
+celebration before displaying results. Timed-out actions cannot award late money.
+
+See [the runtime asset notes](public/assets/characters/arianna/README.md) for the
+integration contract and [TESTING.md](TESTING.md) for browser verification.
 
 ## Deliberate implementation choices
 
@@ -267,9 +268,9 @@ Included: the approved five-task bedroom mission, a connected six-space house,
 ten new carry/place interactions, a six-task house mission and untimed exploration,
 plus the existing store, reveals, collection and local saves.
 
-**Stopped after Stage 4.** No final Arianna model, named family characters, second
-floor, additional bedrooms, driving, town, stores or NPC AI were added. There are
-no new dependencies.
+**Arianna integration complete.** The approved Stage 4 gameplay remains intact.
+Arianna is the only new character; no Lilah, extra rooms, driving or new gameplay
+was added. There are no new dependencies.
 
 The approved Stage 3 build was checkpointed **before edits** at `ee9c620` (the
 approved implementation is `795245c`). The earlier Stage 2 checkpoint is `06fbe10`.

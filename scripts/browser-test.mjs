@@ -22,9 +22,10 @@ async function ready() {
 async function report(name, fn) { await fn(); results.push(name); console.log(`PASS ${name}`); }
 
 try {
-  await report('Portrait boots with the placeholder and no scroll overflow', async () => {
+  await report('Portrait boots with approved Arianna and no scroll overflow', async () => {
     await ready();
-    assert.equal((await snapshot()).characterLoaded, false);
+    await page.waitForFunction(() => window.__roomTest.snapshot().characterLoaded);
+    assert.equal((await snapshot()).characterLoaded, true);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390);
     await page.screenshot({ path: 'artifacts/portrait-390x844.png' });
   });
@@ -144,19 +145,7 @@ try {
   assert.deepEqual(errors, [], 'No browser console warnings/errors or page errors');
   results.push('No browser console warnings/errors or page errors');
 
-  // Tiny GLB fixture exercises the real engine container + Anim pipeline, without art dependencies.
-  const positions = new Float32Array([-0.2,0,0, 0.2,0,0, 0,1,0]);
-  const times = new Float32Array([0,1]);
-  const values = new Float32Array([0,0,0, 0,0.05,0]);
-  const bin = Buffer.concat([Buffer.from(positions.buffer), Buffer.from(times.buffer), Buffer.from(values.buffer)]);
-  const gltf = { asset:{version:'2.0'}, scene:0, scenes:[{nodes:[0]}], nodes:[{name:'Fixture',mesh:0}], meshes:[{primitives:[{attributes:{POSITION:0}}]}], buffers:[{byteLength:bin.length}], bufferViews:[{buffer:0,byteOffset:0,byteLength:36},{buffer:0,byteOffset:36,byteLength:8},{buffer:0,byteOffset:44,byteLength:24}], accessors:[{bufferView:0,componentType:5126,count:3,type:'VEC3',min:[-0.2,0,0],max:[0.2,1,0]},{bufferView:1,componentType:5126,count:2,type:'SCALAR',min:[0],max:[1]},{bufferView:2,componentType:5126,count:2,type:'VEC3'}], animations:['Idle','Walk'].map(name=>({name,samplers:[{input:1,output:2,interpolation:'LINEAR'}],channels:[{sampler:0,target:{node:0,path:'translation'}}]})) };
-  const json = Buffer.from(JSON.stringify(gltf).padEnd(Math.ceil(JSON.stringify(gltf).length / 4) * 4, ' '));
-  const header = Buffer.alloc(20); header.writeUInt32LE(0x46546c67,0); header.writeUInt32LE(2,4); header.writeUInt32LE(28+json.length+bin.length,8); header.writeUInt32LE(json.length,12); header.writeUInt32LE(0x4e4f534a,16);
-  const binHeader = Buffer.alloc(8); binHeader.writeUInt32LE(bin.length,0); binHeader.writeUInt32LE(0x004e4942,4);
-  const fixture = Buffer.concat([header,json,binHeader,bin]);
-  await report('GLB replaces the capsule and engine Idle/Walk clips follow movement', async () => {
-    await page.route('**/character.json', route => route.fulfill({json:{url:'fixture.glb',height:1.2,yaw:0}}));
-    await page.route('**/fixture.glb', route => route.fulfill({body:fixture,contentType:'model/gltf-binary'}));
+  await report('Approved GLB uses engine Idle/Walk transitions without controller changes', async () => {
     await ready();
     await page.waitForFunction(() => window.__roomTest.snapshot().characterLoaded);
     await page.waitForTimeout(100);
@@ -170,8 +159,7 @@ try {
     assert.deepEqual(errors, []);
   });
   await report('A broken GLB preserves a playable capsule', async () => {
-    await page.unroute('**/fixture.glb');
-    await page.route('**/fixture.glb', route => route.fulfill({body:'invalid glb',contentType:'model/gltf-binary'}));
+    await page.route('**/arianna.glb', route => route.fulfill({body:'invalid glb',contentType:'model/gltf-binary'}));
     await ready();
     assert.equal((await snapshot()).characterLoaded, false);
     const before = await snapshot();

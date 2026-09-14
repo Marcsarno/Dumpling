@@ -1,11 +1,12 @@
 # Asset manifest
 
-Stage 4 uses original procedural geometry and existing project assets. No external
-3D models, texture packs, fonts or sound files were downloaded or incorporated.
-The final Arianna model remains disabled in `character.json`.
+The environment retains the approved Stage 4 procedural geometry and existing assets.
+Arianna V3.2.0 is now enabled from the user-provided approved GLB. No additional
+models, textures, fonts or sound files were downloaded.
 
 | Asset | Source / original file | License / usage basis | Modified? |
 | --- | --- | --- | --- |
+| Arianna V3.2.0 | User-provided approved `public/assets/characters/arianna/arianna.glb`, companion manifest and handoff | User explicitly authorized integration into this game; no broader redistribution license supplied | GLB, rig, material and all eight clips unchanged; runtime playback/attachment only |
 | Approved bedroom furniture, floor, walls, decor | Original project geometry, `src/game/bedroom.ts` | Original work created for this game; no third-party asset restrictions | Visual geometry retained; materials exposed for reuse and house root attached |
 | Hall, living room, kitchen, laundry room, bathroom, door thresholds and low cutaway walls | Original procedural work, `src/game/house.ts` | Original work created for this game | New |
 | Ten new carryable objects: shoes, mail, toy, cushion, dish, trash, dirty laundry, clean laundry, towel, toiletries | Original procedural work, `src/game/houseProps.ts` | Original work created for this game | New; same primitive meshes/material palette reused |

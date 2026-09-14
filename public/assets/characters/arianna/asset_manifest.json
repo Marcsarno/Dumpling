@@ -1,0 +1,178 @@
+{
+  "name": "Arianna",
+  "version": "3.2.0",
+  "status": "Selective surface refinement verified; rig and all eight clips unchanged",
+  "triangle_count": 4941,
+  "vertex_count": 3294,
+  "source_vertex_count": 2668,
+  "material_count": 1,
+  "materials": [
+    "Arianna | opaque vertex palette"
+  ],
+  "texture_sizes": [],
+  "color_source": "glTF COLOR_0 vertex colors; opaque PBR material; no external textures",
+  "bone_count": 25,
+  "armature_count": 1,
+  "skinned_mesh_count": 1,
+  "max_bone_influences": 3,
+  "animation_names": [
+    "CarryIdle",
+    "CarryWalk",
+    "Celebrate",
+    "Idle",
+    "PickUp",
+    "PutDown",
+    "SitCar",
+    "Walk"
+  ],
+  "animations": [
+    {
+      "name": "CarryIdle",
+      "duration_seconds": 2,
+      "loop": true
+    },
+    {
+      "name": "CarryWalk",
+      "duration_seconds": 1,
+      "loop": true
+    },
+    {
+      "name": "Celebrate",
+      "duration_seconds": 1.6,
+      "loop": false
+    },
+    {
+      "name": "Idle",
+      "duration_seconds": 2,
+      "loop": true
+    },
+    {
+      "name": "PickUp",
+      "duration_seconds": 2.4,
+      "loop": false
+    },
+    {
+      "name": "PutDown",
+      "duration_seconds": 2.4,
+      "loop": false
+    },
+    {
+      "name": "SitCar",
+      "duration_seconds": 2,
+      "loop": true
+    },
+    {
+      "name": "Walk",
+      "duration_seconds": 1.133333,
+      "loop": true
+    }
+  ],
+  "exported_glb_file_size": 724192,
+  "exported_glb_file_size_bytes": 724192,
+  "glb_sha256": "61de9d966f16d39842756861b946527c2f7056f351912b3e173eadfe6660bcb0",
+  "scale": {
+    "units": "meters",
+    "source_up": "+Z",
+    "source_forward": "-Y",
+    "glb_up": "+Y",
+    "glb_forward": "+Z",
+    "root": "origin at ground between feet; root node does not translate",
+    "rest_height_m": 1.203
+  },
+  "locomotion": {
+    "Walk": {
+      "in_place": true,
+      "travel_speed_mps": 0.3
+    },
+    "CarryWalk": {
+      "in_place": true,
+      "travel_speed_mps": 0.18
+    }
+  },
+  "interaction_events": {
+    "PickUp": [
+      {
+        "time_seconds": 1.1,
+        "event": "attach_prop"
+      }
+    ],
+    "PutDown": [
+      {
+        "time_seconds": 1.3,
+        "event": "release_prop"
+      }
+    ]
+  },
+  "interaction_notes": [
+    "Events are manifest metadata; dispatch them in your game code.",
+    "Test prop is part of the viewer, not the GLB.",
+    "SitCar is a seated loop; align the character pelvis to the seat in the game."
+  ],
+  "source_file": "arianna_source.blend",
+  "game_file": "arianna.glb",
+  "tools": {
+    "blender": "5.2.1 LTS",
+    "threejs": "0.180.0"
+  },
+  "known_limitations": [
+    "Approved V3 low-poly appearance; original skeleton refitted, mesh rebound, original motion timing retargeted.",
+    "No facial animation, finger rig, LOD chain, or physics simulation.",
+    "Single opaque vertex-color palette; no UV-painted atlas.",
+    "Boundary edges on face overlays and open garment details are intentional.",
+    "Overlapping garment components require review if adding more extreme poses.",
+    "Phone-scale browser view tested separately; device performance requires profiling on target phones."
+  ],
+  "rig_preservation": {
+    "original_bone_hierarchy_preserved": true,
+    "bone_count": 25,
+    "mesh": "new approved mesh rebound to refitted original armature",
+    "animations": "Eight original clip names and durations retained; motions retargeted and rebaked for the new joint positions and shorter limbs. Original Actions remain in backups/pre_restyle_v1 and the V3 review source."
+  },
+  "walk_revision": {
+    "changed_clip": "Walk",
+    "duration_seconds": 1.1333333333333333,
+    "step_length_m": 0.17,
+    "stride_length_m": 0.34,
+    "travel_speed_mps": 0.3,
+    "notes": [
+      "Raised hands with relaxed elbow bend",
+      "Stronger arm swing opposing the legs",
+      "Longer stride with slower cadence",
+      "Subtle hip sway, rise and rotation with shoulder counter-turn",
+      "Gentle foot pitch during swing; planted feet held steady"
+    ],
+    "preservation_report": "previews/preservation_check.json"
+  },
+  "surface_refinement": {
+    "triangle_count_before": 2941,
+    "triangle_count_after": 4941,
+    "added_geometry": [
+      "head silhouette",
+      "main hair volume",
+      "swept hair contact surfaces",
+      "seven existing braid ellipsoids"
+    ],
+    "shading_only": [
+      "sleeves",
+      "braid cores, band and tapered end"
+    ],
+    "normals": "Smooth vertex normals on cap, swept masses, braid and sleeves; no custom split-normal layer",
+    "weights": "Original weights copied exactly on unchanged geometry. Added head/hair vertices retain head weight 1. Added braid vertices retain their original single braid bone. No armature or Actions changed.",
+    "no_retargeting_or_rig_changes": true,
+    "report": "refinement_report.json"
+  },
+  "validation": {
+    "khronos_errors": 0,
+    "khronos_warnings": 0,
+    "actual_glb_browser_pass": true,
+    "all_animation_samples_byte_identical_to_previous_export": true,
+    "rig_and_inverse_binds_identical": true,
+    "material_setup_identical": true,
+    "maximum_compensated_stance_drift_m": 9.123061792003229e-05,
+    "reports": [
+      "previews/threejs_validation.json",
+      "previews/gltf_validator_report.json",
+      "previews/preservation_check.json"
+    ]
+  }
+}

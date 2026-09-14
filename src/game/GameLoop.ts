@@ -160,7 +160,7 @@ export class GameLoop {
   }
   beforeMovement(now: number) {
     if (this.mode === 'cleanup') this.cleanup.mission.tick(now);
-    this.controller.enabled = (this.mode === 'store' || (this.mode === 'cleanup' && this.cleanup.mission.state !== 'finished')) && !el<HTMLDialogElement>('#collection-dialog').open;
+    this.controller.enabled = (this.mode === 'store' || (this.mode === 'cleanup' && this.cleanup.mission.state !== 'finished' && !this.cleanup.movementLocked)) && !el<HTMLDialogElement>('#collection-dialog').open;
   }
   update(now: number) {
     const running = this.mode === 'cleanup' && this.cleanup.mission.state === 'running' && this.cleanup.mission.timed;

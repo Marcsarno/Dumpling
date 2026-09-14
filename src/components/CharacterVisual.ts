@@ -1,6 +1,7 @@
 import { Asset, BoundingBox, Entity, type Application, type ContainerResource, type RenderComponent } from 'playcanvas';
 import { material, primitives } from '../game/primitives';
-import { CharacterAnimator } from './CharacterAnimator';
+import { CharacterAnimator, type CharacterManifest } from './CharacterAnimator';
+import { CharacterGrounding } from './CharacterGrounding';
 
 export function createCharacter(app: Application) {
   const player = new Entity('Arianna', app);
@@ -25,15 +26,18 @@ export function createCharacter(app: Application) {
   const marker = primitives(app, player)('Player floor marker', 'cylinder', [0, -0.027, 0], [0.72, 0.012, 0.72], material('Player marker', '#efe0f6'), false);
   marker.render!.receiveShadows = false;
   const animator = new CharacterAnimator(visual, placeholder);
-  return { player, visual, placeholder, animator };
+  return { player, visual, placeholder, animator, grounding: null as CharacterGrounding | null };
 }
 
 /** Optional, engine-native container loading; absent assets never block play. */
 export async function loadArianna(app: Application, character: ReturnType<typeof createCharacter>): Promise<void> {
   const configResponse = await fetch(`${import.meta.env.BASE_URL}assets/characters/arianna/character.json`);
   if (!configResponse.ok) return;
-  const config: { url: string | null; height?: number; yaw?: number } = await configResponse.json();
+  const config: { url: string | null; height?: number; yaw?: number; manifest: string } = await configResponse.json();
   if (!config.url) return;
+  const response = await fetch(`${import.meta.env.BASE_URL}assets/characters/arianna/${config.manifest}`);
+  if (!response.ok) throw new Error('Arianna manifest could not load.');
+  const manifest: CharacterManifest = await response.json();
   const asset = new Asset('Arianna GLB', 'container', { url: `${import.meta.env.BASE_URL}assets/characters/arianna/${config.url}` });
   await new Promise<void>((resolve, reject) => {
     asset.once('load', () => resolve());
@@ -52,13 +56,17 @@ export async function loadArianna(app: Application, character: ReturnType<typeof
     }
   }
   if (first || bounds.halfExtents.y < 0.001) { model.destroy(); throw new Error('Arianna GLB has no usable visible geometry.'); }
-  const scale = (config.height ?? 1.2) / (bounds.halfExtents.y * 2);
+  const scale = (config.height ?? manifest.scale.rest_height_m) / manifest.scale.rest_height_m;
   const alignment = new Entity('GLB alignment', app);
   alignment.addChild(model);
   model.setLocalScale(scale, scale, scale);
-  model.setLocalPosition(-bounds.center.x * scale, -(bounds.center.y - bounds.halfExtents.y) * scale, -bounds.center.z * scale);
+  // Approved root is already at ground between the feet. Never recenter the rig from an AABB.
   alignment.setLocalEulerAngles(0, config.yaw ?? 0, 0);
   character.visual.addChild(alignment);
-  character.animator.attach(model, (resource as ContainerResource & { animations: Asset[] }).animations ?? []);
+  try {
+    character.animator.attach(model, (resource as ContainerResource & { animations: Asset[] }).animations ?? [], manifest, scale);
+  } catch (error) { alignment.destroy(); throw error; }
+  character.grounding = new CharacterGrounding(app.root, character.player, alignment);
+  character.grounding.update();
   character.placeholder.enabled = false;
 }

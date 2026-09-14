@@ -1,4 +1,4 @@
-import { Entity, type Application } from 'playcanvas';
+import { BoundingBox, Entity, Mat4, Vec3, type Application, type RenderComponent } from 'playcanvas';
 import type { CleanupItem } from '../game/cleanupProps';
 
 /** Socket is a sibling of the character mesh: replacing the rig cannot break carrying. */
@@ -13,8 +13,14 @@ export class CarrySystem {
   pickUp(item: CleanupItem): boolean {
     if (this.item) return false;
     this.item = item;
+    const bounds = new BoundingBox();
+    let first = true;
+    for (const render of item.entity.findComponents('render')) for (const mesh of (render as RenderComponent).meshInstances) {
+      if (first) { bounds.copy(mesh.aabb); first = false; } else bounds.add(mesh.aabb);
+    }
+    const center = first ? new Vec3() : new Mat4().copy(item.entity.getWorldTransform()).invert().transformPoint(bounds.center);
     item.entity.reparent(this.socket);
-    item.entity.setLocalPosition(0, 0, 0);
+    item.entity.setLocalPosition(center.mulScalar(-1));
     item.entity.setLocalEulerAngles(0, 0, 0);
     return true;
   }
