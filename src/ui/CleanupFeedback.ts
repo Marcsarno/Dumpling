@@ -72,6 +72,7 @@ export class CleanupFeedback {
     }
   }
   reset() { for (const popup of this.popups) popup.element.remove(); this.popups.length = 0; }
+  hide() { this.reset(); for (const marker of this.markers) { marker.ring.enabled = false; marker.label.hidden = true; } }
   destroy() {
     this.reset(); for (const marker of this.markers) { marker.ring.destroy(); marker.label.remove(); }
     this.mesh.destroy(); this.glow.destroy();

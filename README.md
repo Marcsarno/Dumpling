@@ -1,9 +1,10 @@
 # Arianna · A little room
 
-A mobile-first, fully 3D bedroom cleanup prototype built with **PlayCanvas 2.22.1,
-TypeScript, and Vite**. Stage 2 adds a one-minute cleanup loop to the approved
-movement prototype. The room, fixed camera, joystick, portrait framing, and
-existing furniture remain unchanged. All art is deliberately simple engine primitives.
+A mobile-first, fully 3D cleanup and collecting prototype built with **PlayCanvas,
+TypeScript, and Vite**. Stage 3 connects the approved one-minute cleanup to a small
+store, sealed dumpling boxes, a home reveal and a persistent collection. The bedroom,
+fixed gameplay camera, joystick, portrait framing and cleanup rules remain intact.
+All 3D art is deliberately simple engine primitives.
 
 ## Play it
 
@@ -26,7 +27,8 @@ for **1.15 seconds** beside the dirt. Both thumbs can be used at once.
 The **60-second timer starts with your first move or interaction**. Each task
 earns **$1**. Finishing all five adds **$2**, for a maximum **$7**, and ends early.
 When time runs out, keep what you earned; there is no failure penalty. The results
-card lists completed tasks and allowance, with one **Play again** button.
+card lists completed tasks and allowance, credits your saved wallet, and offers
+**Go Shopping** or **Play again**.
 
 | Task | What to do |
 | --- | --- |
@@ -40,7 +42,32 @@ The vacuum returns to its starting spot after cleaning and frees Arianna's hands
 Releasing a vacuum hold or leaving range cancels the unfinished work. Replay
 restores every prop, the player position, empty hands, and a fresh timer. The
 timer uses elapsed real time, including time in another tab; inputs reset on
-focus loss. Allowance belongs only to this round and is not saved.
+focus loss. The round's earnings are added to your persistent wallet when it ends.
+
+## Store → surprise → collection
+
+Go Shopping enters **Little Surprises**. Walk close to the central box display
+and tap the same Action button to buy a **$4 sealed box**. You may buy **three per
+trip**, subject to your wallet balance. The welcome mat is the **Go Home** interaction.
+You can leave even when you cannot afford a box.
+
+At home, tap **Open box**. The box shakes, its lid lifts, and after a brief pause
+your dumpling appears with a temporary chime and rarity effect. The sequence takes
+**2.6 seconds**. Only this presentation temporarily zooms the camera; returning to
+cleanup restores the original framing. Tap **Collection** to see eight prototype
+friends, locked silhouettes, names, rarities and duplicate counts. **Open next box**
+handles additional purchases. **Back to cleanup** starts another fresh mission.
+The footer's Collection button is also available between missions; unopened boxes
+remain reachable there if you choose to clean again first.
+
+The prototype saves to `localStorage` under **`arianna.progress.v1`**. It stores
+wallet balance, collection counts, sealed boxes, shopping-trip count and the most
+recent reveal receipt. Box contents are selected and saved when bought. A reveal
+commits the collection entry before its animation, so a refresh cannot lose that
+box or award it again. Completed mission IDs prevent duplicate wallet credits.
+Save failures preserve the previous state and show a retry message. Saves belong
+to this browser and origin (including port); clearing site data removes them.
+There is no account or cloud sync. Concurrent tabs are not an atomic shared wallet.
 
 **On an iPhone:** connect to the same Wi-Fi as this computer. Open the Network URL
 printed by Vite in Safari, hold the phone upright, and drag the joystick. The
@@ -89,6 +116,12 @@ node node_modules/vite/bin/vite.js build
 | `src/game/CleanupGame.ts` | Pickup/place/use rules, cleanup durations, cancellation, rewards and replay |
 | `src/systems/InteractionSystem.ts` | Valid-target filtering, nearest focus and forgiving proximity ranges |
 | `src/systems/MissionSystem.ts` | Real-time deadline, task completion, allowance, bonus and results state |
+| `src/data/collection.ts` | All eight dumpling definitions, rarity weights/colors/effects, box price and trip limit |
+| `src/systems/ProgressStore.ts` | Versioned save repository, wallet transactions, sealed receipts and duplicate counts |
+| `src/game/GameLoop.ts` | Cleanup rewards, scene transitions, store proximity/Action and collection UI |
+| `src/game/store.ts` | Small primitive store and collision footprints |
+| `src/game/OpeningSequence.ts` | Presentation-only shake, lid, reveal, rarity effects and temporary sound hook |
+| `src/game/dumplingVisual.ts` | Replaceable box/dumpling geometry factories and local SVG collection portraits |
 | `src/ui/ActionButton.ts` | Captured touch/keyboard taps and holds, including two-thumb cancellation |
 | `src/ui/CleanupHUD.ts` / `CleanupFeedback.ts` | Task checks, context labels, results, destination rings and coin bursts |
 | `src/ui/cleanup.css` | Stage 2 overlays, separate from the approved layout styles |
@@ -98,8 +131,19 @@ node node_modules/vite/bin/vite.js build
 | `scripts/browser-test.mjs` | Automated real-browser movement, touch, resize and GLB tests |
 | `scripts/cleanup-browser-test.mjs` | Full touch-driven cleanup rounds, real 60-second expiry and replay |
 | `scripts/mission-test.mjs` | Deadline, duplicate reward, bonus and reset checks using Node's test runner |
+| `scripts/collection-browser-test.mjs` | Two complete real-touch loops, purchases, opening, persistence and portrait layout |
+| `scripts/collection-edge-test.mjs` | Saved-state fixtures for all four rarity effects, trip cap and retained boxes |
+| `scripts/progress-test.mjs` | Exact rarity intervals, economy boundaries, duplicates, refresh and save failures |
 
 `public/assets/rooms`, `props`, and `dumplings` reserve asset locations.
+
+Change **`src/data/collection.ts`** to tune the prototype: `STORE_INVENTORY` holds
+the $4 price and three-box trip limit; `RARITIES` holds the 60/25/12/3 weights and
+presentation cues; `DUMPLINGS` holds IDs, names, tiers, colors, faces and accessories.
+Selection first rolls a rarity, then uniformly selects a dumpling within that tier.
+Keep saved IDs stable when substituting final artwork. `SaveRepository` can be
+replaced for a future account backend; a remote asynchronous implementation would
+also need pending-state UI and server-authoritative transactions.
 
 ## Dropping in arianna.glb
 
@@ -144,17 +188,20 @@ Engine APIs were checked against the official [standalone guide](https://develop
 [Collision](https://api.playcanvas.com/engine/classes/CollisionComponent.html),
 [ContainerResource](https://api.playcanvas.com/engine/classes/ContainerResource.html),
 and [Anim](https://api.playcanvas.com/engine/classes/AnimComponent.html) references.
-Audio is deferred; PlayCanvas Sound is the planned engine system if needed.
+The reveal's temporary Web Audio sine chime is isolated behind `OpeningSequence.cue`;
+it can be replaced with a PlayCanvas Sound asset bank without changing game rules.
 
 ## Scope and checkpoints
 
-Included: the approved movement prototype plus all five cleanup tasks, single
-Action button, one-item carrying, nearby highlights, destination guidance, brief
-cleanup animations, coin bursts, allowance, timer, results and replay.
+Included: the approved five-task cleanup, plus one store, one box product, eight
+prototype dumplings, four rarity tiers, brief reveals, collection counts, local
+saves and a repeatable cleanup → shopping → opening loop.
 
-**Stopped after Stage 2.** No store, driving, dumpling collecting, trading,
-permanent progression, polished character model, or new dependencies were added.
-Temporary feedback is visual; sound is still deferred.
+**Stopped after Stage 3.** Driving, town expansion, more stores, trading, NPCs,
+monetization, new chores and final character/artwork remain outside this milestone.
+No new dependencies were added.
+
+The approved Stage 2 build was checkpointed **before edits** at `06fbe10`.
 
 Local Git checkpoints preserve the initial implementation and the verified
 milestone. No GitHub remote has been added and nothing has been published.

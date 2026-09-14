@@ -1,5 +1,6 @@
 /** Single control shared by tap actions and hold actions. Pointer capture supports two thumbs. */
 export class ActionButton {
+  enabled = true;
   held = false;
   private pointer: number | null = null;
   private key: string | null = null;
@@ -7,7 +8,7 @@ export class ActionButton {
   constructor(readonly element: HTMLButtonElement, private readonly press: () => void, private readonly cancel: () => void) {
     const options = { signal: this.abort.signal };
     element.addEventListener('pointerdown', event => {
-      if (event.button !== 0 || this.held || element.disabled) return;
+      if (!this.enabled || event.button !== 0 || this.held || element.disabled) return;
       event.preventDefault(); this.pointer = event.pointerId;
       element.setPointerCapture(event.pointerId); this.held = true; this.press();
     }, options);
@@ -17,10 +18,10 @@ export class ActionButton {
     element.addEventListener('contextmenu', event => event.preventDefault(), options);
     element.addEventListener('click', event => {
       // Pointer activations happen on press. detail=0 supports assistive programmatic clicks.
-      if (event.detail === 0 && !this.held && !element.disabled) { this.press(); this.cancel(); }
+      if (this.enabled && event.detail === 0 && !this.held && !element.disabled) { this.press(); this.cancel(); }
     }, options);
     window.addEventListener('keydown', event => {
-      if (!['Space', 'KeyE'].includes(event.code) || (event.target as HTMLElement)?.id === 'replay') return;
+      if (!this.enabled || !['Space', 'KeyE'].includes(event.code) || (event.target as HTMLElement)?.closest('dialog')) return;
       event.preventDefault();
       if (event.repeat || this.held || element.disabled) return;
       this.key = event.code; this.held = true; this.press();

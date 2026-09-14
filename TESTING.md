@@ -1,8 +1,73 @@
-# Bedroom prototype verification
+# Cleanup and collection prototype verification
 
 Test environment: installed Microsoft Edge (Chromium), Playwright's real touch
 events with mobile emulation, and desktop mouse/keyboard input. Physical iPhone
 Safari has **not** been tested. Emulation is not a phone performance benchmark.
+
+## Stage 3: full collection loop
+
+`scripts/collection-browser-test.mjs` starts with an empty local save and drives
+the real joystick and Action button at **390×844**. It completes all five chores,
+earns $7, walks to the store display, buys a $4 box, returns home, opens it, checks
+the collection, refreshes, and completes a second full cleanup/shopping/opening
+loop. The second trip buys and opens two boxes. Final balance is $2, with three
+dumplings collected. Navigation uses read-only player positions; no teleportation,
+timer overrides, forced rarity or wallet injection are used in this full-loop test.
+
+It also verifies:
+
+- Insufficient-funds Action gating and immediate allowance deduction.
+- Refresh at the store retains the box, wallet and trip count.
+- Refresh after reveal preserves its receipt without awarding a duplicate.
+- Eight collection cards with silhouettes and visible owned counts.
+- Refresh from the collection reopens it with saved wallet and discoveries.
+- Back to cleanup restores all tasks, a ready 60-second timer and camera position.
+- Collection and replay fit **360×640** portrait without horizontal overflow.
+- No browser exceptions, console warnings/errors or failed asset requests.
+
+`scripts/collection-edge-test.mjs` uses explicitly labeled saved-state fixtures
+to exercise all four rarity reveals without repeatedly grinding random rolls.
+Each tier is checked at **360×640** for its configured color and particle count
+(5 / 10 / 16 / 24), visible reveal, collection entry and accessible replay button.
+It also buys three boxes from a $20 fixture wallet, verifies that a fourth purchase
+is blocked even after refresh, and checks that unopened boxes remain accessible
+after choosing to return to cleanup.
+
+`scripts/progress-test.mjs` covers exact 60/25/12/3 rarity intervals across 10,000
+stratified draws, reachability of all eight definitions, duplicate mission credits,
+three-box trip limits, insufficient funds, sealed-box persistence, duplicate
+dumpling counts, interrupted reveals, failed writes and unreadable-save protection.
+This tests selection boundaries; it is not a statistical test of browser crypto.
+
+```powershell
+$env:PLAYWRIGHT_MODULE = 'file:///C:/Users/marc7/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
+node scripts/collection-browser-test.mjs
+node scripts/collection-edge-test.mjs
+node --experimental-transform-types --test scripts/progress-test.mjs
+node scripts/collection-production-smoke.mjs
+```
+
+Node 24's transform-types flag is used only to run the source TypeScript unit tests;
+the shipped game is compiled by Vite. Stage 3 screenshots and the full-loop report
+are stored in `artifacts/stage3/` (ignored by Git).
+
+Issues caught during verification: a hidden store marker initially shared the
+cleanup-only destination selector; it now has its own styling target. The home
+box originally overlapped its caption at a short portrait size; it was raised,
+and a light vignette improves text readability. Scene transitions return a held
+cleanup prop to its room root, so a timed-out carried item cannot follow the player
+into the store. The engine bundle still triggers Vite's size advisory (about
+527 KB gzipped). Physical phone GPU performance and child playtesting remain open.
+
+Save IDs use `crypto.getRandomValues` instead of the HTTPS-only `randomUUID` API,
+so the plain-HTTP Wi-Fi preview remains playable. The full earned-money test is
+also run against the computer's LAN URL. The production smoke test uses a saved
+box fixture to verify the compiled reveal, rarity, collection, refresh and return
+to cleanup, with developer diagnostics absent.
+
+Recommended next milestone: observe several short phone play sessions, then tune
+interaction clarity, reveal timing and the $4 box economy using those observations.
+Keep world expansion separate until this repeat loop earns a voluntary replay.
 
 ## Stage 2: cleanup mission
 

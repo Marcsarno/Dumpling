@@ -10,10 +10,10 @@ export class PlayerController {
   private readonly right: Vec3;
   private readonly forward: Vec3;
   private readonly candidate = new Vec3();
-  private readonly bounds: Bedroom['obstacles'];
+  private bounds: Bedroom['obstacles'] = [];
   private readonly keyboard: Keyboard;
   private readonly abort = new AbortController();
-  constructor(readonly entity: Entity, camera: Entity, private readonly room: Bedroom, private readonly joystick: Vec2) {
+  constructor(readonly entity: Entity, camera: Entity, private room: Bedroom, private readonly joystick: Vec2) {
     this.right = camera.right.clone();
     this.right.y = 0;
     this.right.normalize();
@@ -21,18 +21,22 @@ export class PlayerController {
     this.forward.y = 0;
     this.forward.normalize();
     // Inflate furniture once by player radius, using PlayCanvas's existing AABB math.
-    this.bounds = room.obstacles.map(box => {
-      const expanded = box.clone();
-      expanded.halfExtents.x += this.radius;
-      expanded.halfExtents.z += this.radius;
-      return expanded;
-    });
+    this.setRoom(room);
     this.keyboard = new Keyboard(window, { preventDefault: false });
     window.addEventListener('keydown', event => {
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault();
     }, { signal: this.abort.signal });
     window.addEventListener('blur', this.reset, { signal: this.abort.signal });
     document.addEventListener('visibilitychange', this.reset, { signal: this.abort.signal });
+  }
+  setRoom(room: Bedroom) {
+    this.room = room;
+    this.bounds = room.obstacles.map(box => {
+      const expanded = box.clone();
+      expanded.halfExtents.x += this.radius;
+      expanded.halfExtents.z += this.radius;
+      return expanded;
+    });
   }
   private axis(positive: number[], negative: number[]) {
     return Number(positive.some(key => this.keyboard.isPressed(key))) - Number(negative.some(key => this.keyboard.isPressed(key)));

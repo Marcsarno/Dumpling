@@ -7,8 +7,12 @@ import { ActionButton } from '../ui/ActionButton';
 import { CleanupFeedback } from '../ui/CleanupFeedback';
 import { CleanupHUD } from '../ui/CleanupHUD';
 import type { CleanupProps, Interaction } from './cleanupProps';
+import { saveId } from '../systems/saveId';
 
 export class CleanupGame {
+  roundId = saveId();
+  onFinished: (id: string, amount: number) => void = () => {};
+  beforeReplay: () => boolean = () => true;
   readonly mission = new MissionSystem();
   readonly carry: CarrySystem;
   readonly interactions: InteractionSystem;
@@ -71,6 +75,7 @@ export class CleanupGame {
     if (this.mission.state === 'finished') {
       if (!this.finishedHandled) {
         this.finishedHandled = true; this.cancelActivity(); this.action.reset(); this.resetMovement();
+        this.onFinished(this.roundId, this.mission.allowance);
         if (this.mission.reason === 'complete') this.character.animator.playAction('Celebrate', 0.65);
       }
       if (now - this.mission.finishedAt >= (this.mission.reason === 'complete' ? 600 : 0)) this.hud.showResults(this.mission);
@@ -101,6 +106,8 @@ export class CleanupGame {
     this.hud.update(this.mission, this.carry, this.interactions.focus, this.activity?.target.kind === 'crayons', this.progress);
   }
   replay = () => {
+    if (!this.beforeReplay()) return;
+    this.roundId = saveId();
     this.action.reset(); this.cancelActivity(); this.carry.item = null;
     this.props.reset(); this.mission.reset(); this.feedback.reset(); this.hud.reset();
     this.character.animator.reset(); this.character.player.setPosition(0, 0.09, 0.9);
@@ -108,6 +115,10 @@ export class CleanupGame {
     this.finishedHandled = false; this.interactions.focus = null; this.resetMovement();
     document.querySelector<HTMLCanvasElement>('#game-canvas')!.focus({ preventScroll: true });
   };
+  setActive(active: boolean) {
+    this.action.enabled = active; this.action.reset();
+    if (!active) { this.feedback.hide(); this.hud.dialog.close(); }
+  }
   snapshot() {
     return {
       state: this.mission.state, reason: this.mission.reason, remaining: this.mission.remaining,

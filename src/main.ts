@@ -6,8 +6,10 @@ import { PlayerController } from './components/PlayerController';
 import { VirtualJoystick } from './ui/VirtualJoystick';
 import { createCleanupProps } from './game/cleanupProps';
 import { CleanupGame } from './game/CleanupGame';
+import { GameLoop } from './game/GameLoop';
 import './ui/styles.css';
 import './ui/cleanup.css';
+import './ui/collection.css';
 
 function start() {
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
@@ -31,6 +33,7 @@ function start() {
   const joystick = new VirtualJoystick(document.querySelector('#joystick')!, document.querySelector('#joystick-knob')!);
   const controller = new PlayerController(character.player, camera.entity, room, joystick.value);
   const cleanup = new CleanupGame(app, character, props, camera.entity, () => { joystick.reset(); controller.reset(); });
+  const loop = new GameLoop(app, camera, character, room, props, cleanup, controller, joystick);
   const label = document.querySelector<HTMLElement>('#player-label')!;
   const screenPoint = new Vec3();
   const headPoint = new Vec3();
@@ -40,17 +43,17 @@ function start() {
     const { width, height } = viewport.getBoundingClientRect();
     app.resizeCanvas(width, height);
     camera.resize(width, height);
+    loop.resized();
   };
   const observer = new ResizeObserver(resize);
   observer.observe(viewport);
   resize();
   app.on('update', (elapsed: number) => {
     const now = performance.now();
-    cleanup.mission.tick(now);
-    controller.enabled = cleanup.mission.state !== 'finished';
+    loop.beforeMovement(now);
     const dt = document.hidden ? 0 : Math.min(elapsed, 0.04);
     controller.update(dt);
-    cleanup.update(now, controller.input.lengthSq() > 0);
+    loop.update(now);
     character.animator.update(dt, controller.velocity);
     headPoint.copy(character.player.getPosition());
     headPoint.y += 1.52;
@@ -76,12 +79,13 @@ function start() {
         characterLoaded: !character.placeholder.enabled,
         animationState: character.animator.currentState,
         cleanup: cleanup.snapshot(),
+        loop: loop.snapshot(),
         obstacles: room.obstacles.map(box => ({ center: box.center.toArray(), halfExtents: box.halfExtents.toArray() })),
       }),
     } });
   }
   if (import.meta.hot) import.meta.hot.dispose(() => {
-    observer.disconnect(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
+    observer.disconnect(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
     delete (window as unknown as Record<string, unknown>).__roomTest;
   });
 }
