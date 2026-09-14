@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#ede6f4" />
+    <meta name="description" content="A little room, a little adventure. Explore Arianna's cozy 3D bedroom." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Arianna · A little room</title>
+  </head>
+  <body>
+    <main id="game" aria-label="Arianna's bedroom game">
+      <canvas id="game-canvas" aria-label="3D bedroom. Move Arianna with the joystick or arrow keys." tabindex="0"></canvas>
+      <header class="topbar">
+        <div class="wordmark"><span class="flower" aria-hidden="true">✿</span><span>Arianna<small>LITTLE EVERYDAY ADVENTURES</small></span></div>
+        <span class="chapter">01 <span>/</span> HOME</span>
+      </header>
+      <section class="room-title" aria-label="Current room">
+        <span class="eyebrow"><i></i> A LITTLE ROOM, A BIG ADVENTURE</span>
+        <h1>Home, sweet home.</h1>
+        <p>Make yourself at home, Arianna.</p>
+      </section>
+      <div id="player-label" class="player-label" aria-hidden="true">Arianna <span>♡</span></div>
+      <div class="room-caption"><span aria-hidden="true">✧</span> A cozy corner of your world <span aria-hidden="true">✧</span></div>
+      <div class="move-tip" id="move-tip" role="status"><span class="tip-icon" aria-hidden="true">↗</span><div><strong>A little wander</strong><span>Drag the joystick to explore your room.</span></div></div>
+      <div class="controls">
+        <div class="joystick-group">
+          <div id="joystick" role="group" aria-label="Movement joystick. Drag to move. Arrow keys or WASD also work.">
+            <span class="direction up" aria-hidden="true">⌃</span><span class="direction right" aria-hidden="true">›</span><span class="direction down" aria-hidden="true">⌄</span><span class="direction left" aria-hidden="true">‹</span>
+            <div id="joystick-knob"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5v22M5 16h22M12 9l4-4 4 4M12 23l4 4 4-4M9 12l-4 4 4 4M23 12l4 4-4 4"/></svg></div>
+          </div>
+          <span class="control-label">LET’S EXPLORE</span>
+        </div>
+        <div class="explore-note"><span class="tiny-house" aria-hidden="true">⌂</span><span>Your room<small>Room to roam. No rush.</small></span></div>
+      </div>
+      <footer><span class="build-badge">MOVEMENT PLAYTEST</span><span class="keyboard-hint">WASD / arrow keys also work</span></footer>
+      <div id="loading" role="status"><span class="loading-flower">✿</span><p>Making room for you…</p></div>
+      <div id="error" role="alert" hidden><h2>We couldn’t open your room.</h2><p>Please use a browser with WebGL 2 enabled, then refresh.</p></div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
