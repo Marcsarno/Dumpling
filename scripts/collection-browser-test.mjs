@@ -14,6 +14,7 @@ async function createPlayer(name) {
   page.on('console', m => { if (['error', 'warning'].includes(m.type())) errors.push(`${name}: ${m.text()}`); });
   page.on('response', r => { if (r.status() >= 400) errors.push(`${name}: ${r.status()} ${r.url()}`); });
   await page.goto(baseURL); await page.locator('[data-ready=true]').waitFor();
+  await page.locator('#mission-bedroom').tap();
   const cdp = await context.newCDPSession(page);
   await page.evaluate(() => {
     window.__pointerTrace = [];
@@ -74,7 +75,7 @@ async function cleanupRound(play) {
 }
 try {
   const play = await createPlayer('collection loop'); const { page, snap, moveTo, press, screenshot } = play;
-  await sleep(400); const camera = (await snap()).cameraPosition;
+  await sleep(400); const camera = (await snap()).cameraAngles;
   await cleanupRound(play);
   assert.equal((await snap()).loop.balance, 7); assert.equal((await snap()).cleanup.allowance, 7);
   await screenshot('01-earned-wallet'); pass('Complete five-task touch cleanup credits $7 to persistent wallet');
@@ -106,7 +107,8 @@ try {
   pass('Collection shows eight entries, locked silhouettes and owned counts; refresh restores collection and wallet');
   await page.locator('#back-cleanup').tap(); await sleep(150);
   assert.equal((await snap()).cleanup.state, 'ready'); assert.equal((await snap()).cleanup.remaining, 60000);
-  assert.deepEqual((await snap()).cameraPosition, camera);
+  assert.deepEqual((await snap()).cameraAngles, camera);
+  await page.locator('#mission-bedroom').tap();
   await cleanupRound(play); assert.equal((await snap()).loop.balance, 10);
   await page.locator('#go-shopping').tap(); await moveTo(-.7, .7); await press('buy-box'); await press('buy-box');
   assert.equal((await snap()).loop.balance, 2); assert.equal((await snap()).loop.boxes, 2);

@@ -1,4 +1,4 @@
-import { BoundingBox, Entity, Vec3, type Application } from 'playcanvas';
+import { BoundingBox, Entity, Vec3, type Application, type StandardMaterial } from 'playcanvas';
 import { material, primitives } from './primitives';
 
 export interface Bedroom {
@@ -6,6 +6,8 @@ export interface Bedroom {
   obstacles: BoundingBox[];
   halfWidth: number;
   halfDepth: number;
+  walkable?: { minX: number; maxX: number; minZ: number; maxZ: number }[];
+  materials?: Record<string, StandardMaterial>;
 }
 
 export function createBedroom(app: Application): Bedroom {
@@ -140,5 +142,5 @@ export function createBedroom(app: Application): Bedroom {
   shape('Picture center', 'sphere', [-1, 2.08, -3.425], [0.17, 0.17, 0.015], m.yellow, false);
   shape('Picture caption', 'box', [-1, 1.72, -3.435], [0.3, 0.025, 0.01], m.purple, false);
   app.batcher.generate([group.id]);
-  return { root, obstacles, halfWidth: 3.3, halfDepth: 3.6 };
+  return { root, obstacles, halfWidth: 3.3, halfDepth: 3.6, materials: m };
 }

@@ -3,7 +3,7 @@ import type { Bedroom } from './bedroom';
 import { material, primitives, type Triple } from './primitives';
 import type { TaskId } from '../systems/MissionSystem';
 
-export type ItemId = 'teddy' | 'shirt' | 'book' | 'vacuum';
+export type ItemId = string;
 export interface CleanupItem { id: ItemId; name: string; icon: string; entity: Entity; home: Triple }
 export interface Interaction {
   id: string;
@@ -16,9 +16,10 @@ export interface Interaction {
   item?: ItemId;
   task?: TaskId;
   placement?: Triple;
+  placedStyle?: 'hide' | 'hang';
 }
 
-export function createCleanupProps(app: Application, room: Bedroom) {
+export function createCleanupProps(app: Application, room: Bedroom): CleanupProps {
   const root = new Entity('Cleanup props', app);
   app.root.addChild(root);
   const m = {
@@ -116,4 +117,9 @@ export function createCleanupProps(app: Application, room: Bedroom) {
   };
   return { root, items, interactions, crayonMess, tidyCrayons, dirt, reset };
 }
-export type CleanupProps = ReturnType<typeof createCleanupProps>;
+export interface CleanupProps {
+  root: Entity; items: CleanupItem[]; interactions: Interaction[];
+  crayonMess: Entity; tidyCrayons: Entity; dirt: Entity;
+  reset: () => void;
+  configure?: (tasks: readonly string[]) => void;
+}

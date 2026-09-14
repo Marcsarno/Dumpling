@@ -40,9 +40,13 @@ export class GameLoop {
     on('#collection-button', () => this.attempt(() => this.collection()));
     on('#back-cleanup', () => this.attempt(() => this.startCleanup()));
     on('#open-next', () => this.attempt(() => { this.save.goHome(); this.enterHome(); }));
+    for (const mode of ['house', 'bedroom', 'practice'] as const) on(`#mission-${mode}`, () => {
+      if (this.mode === 'cleanup' && this.creditPending()) this.cleanup.configure(mode);
+    });
     el<HTMLDialogElement>('#collection-dialog').addEventListener('cancel', e => e.preventDefault(), { signal: this.abort.signal });
     cleanup.onFinished = (id, amount) => { this.pendingCredit = { id, amount }; this.creditPending(); };
     cleanup.beforeReplay = () => this.creditPending();
+    cleanup.onReplay = () => this.camera.reset();
     this.wallet();
     const location = this.save.data.location;
     if (location === 'store') this.enterStore();
@@ -78,11 +82,13 @@ export class GameLoop {
       this.props.reset(); this.cleanup.carry.item = null; this.character.animator.reset();
     }
     this.mode = mode; this.cleanup.setActive(mode === 'cleanup'); this.action.enabled = mode !== 'cleanup'; this.action.reset();
+    this.camera.reset();
     this.joystick.reset(); this.controller.reset(); this.opening.hide();
     this.room.root.enabled = mode !== 'store'; this.props.root.enabled = mode === 'cleanup'; this.store.root.enabled = mode === 'store';
     this.character.player.enabled = mode !== 'home'; el('#player-label').hidden = mode === 'home';
     el('#store-markers').hidden = mode !== 'store'; el('#game').dataset.scene = mode;
     el('#task-list').hidden = mode !== 'cleanup'; el('#task-count').hidden = mode !== 'cleanup';
+    el('#mission-picker').hidden = mode !== 'cleanup';
     el('#mission-clock').hidden = mode !== 'cleanup'; el('.allowance-label').hidden = mode !== 'cleanup';
     el('#trip-wallet').hidden = mode === 'cleanup'; el('#home-vignette').hidden = mode !== 'home';
     el('#scene-subtitle').hidden = mode === 'cleanup'; el<HTMLDialogElement>('#collection-dialog').close();
@@ -107,7 +113,7 @@ export class GameLoop {
     this.wallet();
   }
   private collection() {
-    if (this.mode === 'cleanup' && this.cleanup.mission.state === 'running') return;
+    if (this.mode === 'cleanup' && this.cleanup.mission.state === 'running' && this.cleanup.mission.timed) return;
     if (!this.creditPending()) return;
     this.save.showCollection(); this.enterHome(); this.renderCollection();
   }
@@ -157,10 +163,18 @@ export class GameLoop {
     this.controller.enabled = (this.mode === 'store' || (this.mode === 'cleanup' && this.cleanup.mission.state !== 'finished')) && !el<HTMLDialogElement>('#collection-dialog').open;
   }
   update(now: number) {
-    const running = this.mode === 'cleanup' && this.cleanup.mission.state === 'running';
+    const running = this.mode === 'cleanup' && this.cleanup.mission.state === 'running' && this.cleanup.mission.timed;
+    for (const mode of ['house', 'bedroom', 'practice']) {
+      const button = el<HTMLButtonElement>(`#mission-${mode}`); button.disabled = running;
+      button.setAttribute('aria-pressed', String(this.cleanup.mode === mode));
+    }
+    el('#game').dataset.mission = this.cleanup.mode;
     el<HTMLButtonElement>('#collection-button').disabled = running || this.mode === 'store' || this.opening.phase === 'opening';
     if (now > this.messageUntil) el('#save-message').hidden = true;
-    if (this.mode === 'cleanup') { this.cleanup.update(now, this.controller.input.lengthSq() > 0); return; }
+    if (this.mode === 'cleanup') {
+      el('#task-list').hidden = this.cleanup.mode === 'practice';
+      this.cleanup.update(now, this.controller.input.lengthSq() > 0); return;
+    }
     let title = 'Action', detail = 'Come closer', icon = '✋', enabled = false;
     if (this.mode === 'store') {
       this.storeFocus(); const data = this.save.data;

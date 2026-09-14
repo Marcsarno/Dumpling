@@ -1,4 +1,4 @@
-import { TASKS, type MissionSystem } from '../systems/MissionSystem';
+import type { MissionSystem, TaskDefinition } from '../systems/MissionSystem';
 import type { Interaction } from '../game/cleanupProps';
 import type { CarrySystem } from '../components/CarrySystem';
 
@@ -14,29 +14,36 @@ export class CleanupHUD {
   private readonly announcement = document.querySelector<HTMLElement>('#cleanup-announcement')!;
   readonly dialog = document.querySelector<HTMLDialogElement>('#results')!;
   private readonly abort = new AbortController();
+  private taskDefinitions: readonly TaskDefinition[] | null = null;
   constructor(readonly button: HTMLButtonElement, replay: () => void) {
-    for (const task of TASKS) {
+    document.querySelector('#replay')!.addEventListener('click', replay, { signal: this.abort.signal });
+    this.dialog.addEventListener('cancel', event => event.preventDefault(), { signal: this.abort.signal });
+  }
+  private setTasks(tasks: readonly TaskDefinition[]) {
+    if (this.taskDefinitions === tasks) return;
+    this.taskDefinitions = tasks; this.tasks.replaceChildren();
+    for (const task of tasks) {
       const entry = document.createElement('li'); entry.dataset.task = task.id;
+      entry.title = task.room ? `${task.room}: ${task.name}` : task.name;
       const icon = document.createElement('span'); icon.textContent = task.icon; icon.setAttribute('aria-hidden', 'true');
       const name = document.createElement('span'); name.textContent = task.name;
       entry.append(icon, name); this.tasks.append(entry);
     }
-    document.querySelector('#replay')!.addEventListener('click', replay, { signal: this.abort.signal });
-    this.dialog.addEventListener('cancel', event => event.preventDefault(), { signal: this.abort.signal });
   }
   private text(element: HTMLElement, value: string) { if (element.textContent !== value) element.textContent = value; }
   announce(text: string) { this.announcement.textContent = text; }
   update(mission: MissionSystem, carry: CarrySystem, focus: Interaction | null, busy: boolean, progress: number) {
+    this.setTasks(mission.tasks);
     const seconds = Math.ceil(mission.remaining / 1000);
-    this.text(this.clock, `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`);
+    this.text(this.clock, mission.timed ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : '∞');
     this.clock.classList.toggle('soon', seconds <= 10 && mission.state === 'running');
     this.text(this.allowance, `$${mission.allowance}`);
-    this.text(this.count, `${mission.completed.size} / 5`);
-    for (const task of TASKS) {
+    this.text(this.count, `${mission.completed.size} / ${mission.tasks.length}`);
+    for (const task of mission.tasks) {
       const entry = this.tasks.querySelector<HTMLElement>(`[data-task="${task.id}"]`)!;
       const done = mission.completed.has(task.id);
       this.text(entry.firstElementChild as HTMLElement, done ? '✓' : task.icon);
-      entry.classList.toggle('done', done); entry.setAttribute('aria-label', `${task.name}: ${done ? 'complete' : 'to do'}`);
+      entry.classList.toggle('done', done); entry.setAttribute('aria-label', `${task.room ? `${task.room}: ` : ''}${task.name}: ${done ? 'complete' : 'to do'}`);
     }
     const enabled = !!focus && !busy && mission.state !== 'finished';
     this.button.disabled = !enabled;
@@ -55,23 +62,25 @@ export class CleanupHUD {
     let hint = 'Find an item. Walk close, then tap Action.';
     if (mission.state === 'ready') hint = 'Move to start · 60 seconds · $1 per task';
     else if (carry.item) {
-      hint = { teddy: '🧸 Take Teddy to the glowing toy chest.', shirt: '👕 Take the shirt to the glowing hamper.', book: '📘 Take the book to the glowing bookshelf.', vacuum: '✦ Go to the dirt, then hold Action to vacuum.' }[carry.item.id];
+      const destination = document.querySelector<HTMLElement>('.cleanup-marker.destination')?.textContent;
+      hint = carry.item.id === 'vacuum' ? '✦ Go to the dirt, then hold Action to vacuum.' : `${carry.item.icon} Take ${carry.item.name.toLowerCase()} to ${destination || 'the glowing destination'}.`;
     } else if (focus?.kind === 'crayons') hint = '🖍 Tap Action to put the crayons in their cup.';
     if (mission.state === 'finished') hint = 'Every little bit helps. Nice work, Arianna!';
+    if (!mission.timed && !carry.item && mission.state !== 'finished') hint = 'Explore freely · Practice tasks · No timer or allowance';
     this.text(this.hint, hint);
   }
   showResults(mission: MissionSystem) {
     if (this.dialog.open) return;
-    document.querySelector('#results-title')!.textContent = mission.reason === 'complete' ? 'Room ready!' : 'Nice helping!';
+    document.querySelector('#results-title')!.textContent = mission.reason === 'complete' ? (mission.tasks.length === 6 ? 'House ready!' : mission.tasks.length === 5 ? 'Room ready!' : 'All tidied up!') : 'Nice helping!';
     document.querySelector('#results-summary')!.textContent = mission.reason === 'complete'
-      ? 'All five tasks done. Your cozy room is ready!'
+      ? `All ${mission.tasks.length} tasks done. A little helping makes a happy home!`
       : mission.completed.size ? 'Look at what you did in one little minute.' : 'A little practice goes a long way. Let’s try again!';
-    document.querySelector('#results-tasks')!.textContent = `${mission.completed.size} / 5`;
+    document.querySelector('#results-tasks')!.textContent = `${mission.completed.size} / ${mission.tasks.length}`;
     document.querySelector('#results-money')!.textContent = `$${mission.allowance}`;
     const bonus = document.querySelector<HTMLElement>('#results-bonus')!;
     bonus.hidden = !mission.bonus; bonus.textContent = `Includes a $${mission.bonus} all-clean bonus ✦`;
     const list = document.querySelector('#results-list')!; list.replaceChildren();
-    for (const task of TASKS) {
+    for (const task of mission.tasks) {
       const row = document.createElement('li');
       row.textContent = `${mission.completed.has(task.id) ? '✓' : '○'} ${task.name}`;
       row.classList.toggle('done', mission.completed.has(task.id)); list.append(row);

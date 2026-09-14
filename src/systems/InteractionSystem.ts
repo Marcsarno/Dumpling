@@ -7,6 +7,8 @@ export class InteractionSystem {
   constructor(readonly interactions: Interaction[]) {}
   available(target: Interaction, carried: ItemId | null, mission: MissionSystem) {
     if (mission.state === 'finished') return false;
+    const task = target.task ?? (target.item === 'vacuum' ? 'dirt' : target.item);
+    if (task && !mission.tasks.some(entry => entry.id === task)) return false;
     if (target.task && mission.completed.has(target.task)) return false;
     if (target.kind === 'place' || target.kind === 'vacuum') return carried === target.item;
     if (carried) return false;

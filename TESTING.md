@@ -4,6 +4,100 @@ Test environment: installed Microsoft Edge (Chromium), Playwright's real touch
 events with mobile emulation, and desktop mouse/keyboard input. Physical iPhone
 Safari has **not** been tested. Emulation is not a phone performance benchmark.
 
+## Stage 4: connected house
+
+`scripts/house-browser-test.mjs` runs at **390×844** using real two-dimensional
+joystick gestures and Action taps. It never teleports the player or changes mission
+time. It walks bedroom → hall → living → kitchen → laundry → bathroom → hall →
+bedroom, tests all ten new carry/place interactions, then checks the extra
+living/laundry doorway in both directions. Room checks verify that the camera
+settles close to the player while preserving its original rotation and scale.
+
+The same run starts a fresh six-task house mission, completes all chores across
+five rooms, verifies **$6 + $2 bonus = $8** in the persistent wallet, replays, and
+switches back to the approved bedroom mission. The final complete route took
+**26.9 seconds**, including deliberate waypoint stops. This is a practiced automated
+route; it does not establish a child's discovery time or whether travel is fun.
+
+`scripts/house-edge-test.mjs` checks:
+
+- Solid collision on low bedroom walls away from doorways.
+- Full player-radius coffee-table blocking.
+- Readable player framing, visible controls and no horizontal overflow at
+  **320×568, 360×640, 390×844, 430×932**, plus 844×390 landscape.
+- A genuine **60-second house timeout while carrying** in the living room.
+- Partial allowance kept ($1), no hard failure, no end-of-round camera snap.
+- Carried props cleared when shopping, the store's original camera restored,
+  and return to a fresh house mission in the bedroom.
+- No browser exceptions, console warnings/errors or failed asset requests.
+
+The existing 16-check cleanup suite, two complete Stage 3 purchase/reveal loops,
+movement/GLB fixture suite, and production smoke tests remain regression checks.
+The cleanup/collection tests explicitly choose **Bedroom · 5**. Camera assertions
+now require fixed **angle and scale**, rather than fixed position, because smooth
+following is the intentional Stage 4 change. The real final Arianna GLB remains off.
+
+```powershell
+$env:PLAYWRIGHT_MODULE = 'file:///C:/Users/marc7/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs'
+node scripts/house-browser-test.mjs
+node scripts/house-edge-test.mjs
+node scripts/house-ui-test.mjs
+node --test scripts/mission-test.mjs
+node scripts/cleanup-browser-test.mjs
+node scripts/collection-browser-test.mjs
+node scripts/browser-test.mjs
+```
+
+The UI test also verifies opening the collection during free exploration and
+keyboard activation of focused menu buttons, in both development and production.
+The seven mission unit tests include exact deadline boundaries, the configurable
+six-task list, rejection of tasks outside that list, and untimed practice with
+zero allowance. The five existing save/economy unit tests also pass.
+
+### Rendering cost
+
+A temporary local server runs an unmodified archive of approved commit `795245c`
+on port 5175. `scripts/house-performance.mjs` compares it with the current game on
+5173 at **390×844**, DPR capped to 1.75, rendering at **682×1477**. It samples each
+starting view after warmup with a fresh save.
+
+| Measurement | Stage 3 | Stage 4 |
+| --- | --- | --- |
+| Starting-view total draw calls, six samples | 145 | 184 |
+| Production JavaScript gzip | 527.16 KB | 532.67 KB |
+| Directional shadow lights | 1 | 1 |
+| Shadow-map resolution | 1024 | 1024 |
+| Additional room texture assets | — | 0 |
+| Additional room material palette | — | 0; original bedroom instances reused |
+
+The house adds **39 draw calls (~27%)** in this view and about **5.5 KB** compressed
+JavaScript. A batching adjustment reduced an earlier house reading of 232 to 184
+without changing geometry. The final batch grouping combines static geometry by
+shared material across this compact house; it gives up some fine-grained culling
+to reduce draw submission overhead. Room geometry stays resident throughout.
+
+Warm desktop readings were near the display's 143–144 Hz refresh rate. They are
+**not** a mobile GPU benchmark. Explore enables more props than the six-task mission
+and therefore costs more; moving-room readings are recorded in
+`artifacts/stage4/report.json`. Vite's large-chunk advisory remains expected for the
+bundled engine. A physical iPhone/Safari play session is the next performance check.
+
+### Navigation and visual review
+
+Screenshots in `artifacts/stage4/` cover every room, the return path, short-phone
+framing and both completion/timeout cards. The TV console was placed clear of the
+living/laundry doorway. A playtest waypoint initially aimed inside the solid laundry
+basket; approaching its open side verified pickup and the route to the folding
+counter. Low internal walls and doorway jambs expose the player without needing
+transparency sorting. The original bedroom bed, desk, chest, rug and shelves retain
+their geometry and positions; only cutaway boundaries and a door connection were
+added to its open edges.
+
+Recommended Stage 5: observe phone playtests comparing the bedroom and house
+missions, then tune task placement, route guidance and camera lag based on where
+players hesitate. Do not expand the house or add characters until that comparison
+shows which parts of the traveling cleanup loop players want to repeat.
+
 ## Stage 3: full collection loop
 
 `scripts/collection-browser-test.mjs` starts with an empty local save and drives

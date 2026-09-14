@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { MissionSystem, TASKS } from '../src/systems/MissionSystem.ts';
+import { HOUSE_TASKS } from '../src/data/house.ts';
 
 test('ready time is free; duplicate starts never extend an active round', () => {
   const mission = new MissionSystem();
@@ -35,4 +36,16 @@ test('replay clears a finished round and starts a fresh deadline', () => {
   mission.reset(); assert.equal(mission.state, 'ready'); assert.equal(mission.remaining, 60_000);
   assert.equal(mission.allowance, 0); assert.equal(mission.completed.size, 0); assert.equal(mission.reason, null);
   mission.start(70_000); mission.tick(71_000); assert.equal(mission.remaining, 59_000);
+});
+test('House mission rewards only its six tasks, once each, for $8 total', () => {
+  const mission = new MissionSystem(); mission.configure(HOUSE_TASKS); mission.start(0);
+  assert.equal(mission.complete('teddy', 100), false); assert.equal(mission.allowance, 0);
+  for (const task of HOUSE_TASKS) assert.equal(mission.complete(task.id, 500), true);
+  assert.equal(mission.allowance, 8); assert.equal(mission.completed.size, 6); assert.equal(mission.reason, 'complete');
+});
+test('Untimed practice supports interactions without expiry or wallet rewards', () => {
+  const mission = new MissionSystem(); mission.configure(HOUSE_TASKS, false); mission.start(0); mission.tick(120_000);
+  assert.equal(mission.state, 'running'); assert.equal(mission.remaining, 60_000);
+  for (const task of HOUSE_TASKS) assert.equal(mission.complete(task.id, 130_000), true);
+  assert.equal(mission.allowance, 0); assert.equal(mission.bonus, 0); assert.equal(mission.reason, 'complete');
 });

@@ -14,6 +14,7 @@ async function createPlayer(name) {
   page.on('console', m => { if (['error', 'warning'].includes(m.type())) errors.push(`${name}: ${m.text()}`); });
   page.on('response', r => { if (r.status() >= 400) errors.push(`${name}: ${r.status()} ${r.url()}`); });
   await page.goto(baseURL); await page.locator('[data-ready=true]').waitFor();
+  await page.locator('#mission-bedroom').tap();
   const cdp = await context.newCDPSession(page);
   await page.evaluate(() => {
     window.__pointerTrace = [];
@@ -71,7 +72,7 @@ try {
   assert.equal((await snap()).cleanup.remaining, 60000);
   assert.equal(await page.locator('#action-button').isDisabled(), true);
   await screenshot('01-ready'); pass('Ready state does not spend the minute before the first input; distant Action is inactive');
-  const fixedCamera = (await snap()).cameraPosition;
+  const fixedCamera = (await snap()).cameraAngles;
   const roundStart = Date.now();
   await moveTo(-.55, 1.25);
   await screenshot('02-near-teddy');
@@ -121,11 +122,11 @@ try {
   state = await snap();
   assert.equal(state.cleanup.completed.length, 5); assert.equal(state.cleanup.allowance, 7); assert.equal(state.cleanup.bonus, 2);
   assert.equal(state.cleanup.reason, 'complete'); assert.equal(state.cleanup.dirtVisible, false); assert.equal(state.cleanup.carrying, null);
-  assert.deepEqual(state.cameraPosition, fixedCamera);
+  assert.deepEqual(state.cameraAngles, fixedCamera);
   assert.ok(Date.now() - roundStart < 60000);
   await screenshot('06-all-clean-results');
   const fullRoundSeconds = Math.round((Date.now() - roundStart) / 100) / 10;
-  pass(`Full touch-controlled five-task round completes in ${fullRoundSeconds}s with $7 and a fixed camera`);
+  pass(`Full touch-controlled five-task round completes in ${fullRoundSeconds}s with $7 and a fixed camera angle`);
   await page.keyboard.down('ArrowRight'); await sleep(200); await page.keyboard.up('ArrowRight');
   assert.deepEqual((await snap()).position, state.position); pass('Results stop player movement and interactions');
   await page.locator('#replay').tap(); await sleep(150);

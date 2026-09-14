@@ -1,0 +1,11 @@
+#mission-picker { display:flex; gap:5px; justify-content:center; margin:9px auto 0; pointer-events:auto; }
+#mission-picker button { border:1px solid #fff9; border-radius:12px; background:#f6f0f9db; padding:5px 10px; color:#8c739d; font:700 10px "Trebuchet MS",system-ui,sans-serif; cursor:pointer; touch-action:manipulation; }
+#mission-picker button[aria-pressed=true] { color:#614d7c; background:#d6c4e8; }
+#mission-picker button:disabled { opacity:.65; cursor:default; }
+#room-connections { margin:7px 12px 0; font-size:10px; color:#816b90; }
+#house-doors { position:absolute; inset:0; pointer-events:none; }
+.door-label { position:absolute; left:0; top:0; white-space:nowrap; padding:3px 6px; font-size:9px; font-weight:700; color:#756085; background:#fff6e7dc; border:1px solid #fff8; border-radius:7px; }
+.room-title { text-shadow:0 1px 6px #ede6f4; }
+#game[data-mission=practice] #task-count { font-size:9px; }
+@media(max-height:740px) and (orientation:portrait) { #mission-picker { margin-top:5px; } #mission-picker button { padding:4px 8px; font-size:9px; } #room-connections { margin-top:4px; font-size:9px; } }
+@media(orientation:landscape) and (max-height:600px) { #mission-picker { justify-content:flex-start; flex-wrap:wrap; width:180px; margin-left:0; } #room-connections { max-width:165px; margin-left:0; } }

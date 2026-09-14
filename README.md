@@ -1,9 +1,10 @@
 # Arianna · A little room
 
 A mobile-first, fully 3D cleanup and collecting prototype built with **PlayCanvas,
-TypeScript, and Vite**. Stage 3 connects the approved one-minute cleanup to a small
-store, sealed dumpling boxes, a home reveal and a persistent collection. The bedroom,
-fixed gameplay camera, joystick, portrait framing and cleanup rules remain intact.
+TypeScript, and Vite**. Stage 4 expands the approved bedroom into one connected
+house, keeping the Stage 3 shopping, blind-box reveal and collection loop. The
+bedroom furniture, visual palette, joystick, movement speed and cleanup rules are
+retained. The camera now follows smoothly at the original angle and player scale.
 All 3D art is deliberately simple engine primitives.
 
 ## Play it
@@ -24,11 +25,20 @@ tap it to pick up, put away, or tidy. Desktop also supports **Space / E**. Carry
 one item at a time and follow the glowing destination. For the vacuum, hold Action
 for **1.15 seconds** beside the dirt. Both thumbs can be used at once.
 
+Choose **House · 6**, **Bedroom · 5**, or **Explore** before moving. The game starts
+in Arianna's bedroom with the six-task house mission selected. Explore makes all
+15 implemented interactions available without a timer or allowance; it can be
+switched back to a timed mission at any time. Selecting a mode resets the props
+and returns Arianna to her bedroom. Timed missions cannot be switched mid-round.
+
 The **60-second timer starts with your first move or interaction**. Each task
-earns **$1**. Finishing all five adds **$2**, for a maximum **$7**, and ends early.
+earns **$1**. Finishing the task list adds **$2** and ends early: the bedroom mission
+pays up to **$7**, and the house mission pays up to **$8**.
 When time runs out, keep what you earned; there is no failure penalty. The results
 card lists completed tasks and allowance, credits your saved wallet, and offers
 **Go Shopping** or **Play again**.
+
+The original bedroom mission still contains:
 
 | Task | What to do |
 | --- | --- |
@@ -43,6 +53,60 @@ Releasing a vacuum hold or leaving range cancels the unfinished work. Replay
 restores every prop, the player position, empty hands, and a fresh timer. The
 timer uses elapsed real time, including time in another tab; inputs reset on
 focus loss. The round's earnings are added to your persistent wallet when it ends.
+
+## Connected house
+
+The main walking loop is **Bedroom → Hall → Living room → Kitchen → Laundry room
+→ Bathroom → Hall → Bedroom**. A second doorway directly connects the living room
+and laundry room. All rooms remain in one resident PlayCanvas world; walking
+through a door never loads a scene, fades the screen, or teleports the player.
+
+```text
+               Bathroom ───── Laundry
+                   │           │   │
+Bedroom ──────── Hall ─────── Living ── Kitchen
+```
+
+| Space | Approximate floor size in game units | Working interactions |
+| --- | --- | --- |
+| Bedroom | 6.6 × 7.2, existing furniture retained | Original five chores |
+| Hall | 2 × 7.9, with storage at both ends | Shoes → shoe bench; mail → mail tray |
+| Living room | 6 × 5.6 | Toy → toy basket; cushion → sofa |
+| Kitchen | 5 × 5.6 | Dish → sink; trash → bin |
+| Laundry room | 4.5 × 3.4 | Dirty clothes → washer; clean clothes → folding counter |
+| Bathroom | 4 × 3.4 | Towel → towel rack; toiletries → vanity |
+
+The hall's bedroom, living and bathroom door centers are only 3.5 units apart from
+end to end; its remaining space holds the two working storage interactions.
+Door gaps are 1.6–1.8 units wide, compared with the player's 0.48-unit collision
+diameter. Low jambs and thresholds mark the openings. Low cutaway walls still block
+movement. Only the existing bedroom backdrop and the house's northern exterior
+retain full-height walls; there are no foreground walls hiding whole rooms.
+
+The **House · 6** mission selects the bedroom book, living-room toy, kitchen dish,
+kitchen trash, dirty laundry and bathroom towel. Other interactions are available
+in Explore. All pickup/place tasks reuse the existing single Action button, carry
+socket, target filtering, destination highlights and rewards. Trash and laundry
+disappear into their containers; the placed towel hangs vertically from its rail.
+
+`src/data/house.ts` defines room rectangles, seven doorways and mission task lists.
+`src/game/house.ts` creates the connected floors, walls, furniture and collision
+footprints using the bedroom's material instances. `src/game/houseProps.ts` defines
+the new carryable/drop-zone pairs. No new interaction minigame or physics engine
+was added. Future chores can be added as task data and additional interaction pairs.
+
+The camera follows the player's horizontal displacement using exponential smoothing
+(`1 - exp(-6 × dt)`). Its rotation and responsive orthographic scale stay unchanged
+while walking; room boundaries do not trigger camera cuts or zoom changes. Only
+replay, store transitions and the existing home reveal reset its position. Movement
+still uses the same flattened camera-right/forward axes. Collision tests use the
+union of connected floor rectangles, so crossing a floor seam never creates an
+invisible barrier or permits walking off the house's irregular footprint.
+
+See **[ASSET_MANIFEST.md](ASSET_MANIFEST.md)** for provenance. Stage 4 adds only
+original procedural assets, uses the bedroom's shared palette, and introduces no
+new texture/model downloads. The PlayCanvas MIT notice is included in
+`public/PLAYCANVAS-LICENSE.txt` and in the production output.
 
 ## Store → surprise → collection
 
@@ -107,7 +171,10 @@ node node_modules/vite/bin/vite.js build
 | `src/main.ts` | PlayCanvas application, sunlight, viewport resize, update loop, lifecycle cleanup |
 | `src/game/bedroom.ts` | Modular primitive bedroom, static batching, furniture footprints |
 | `src/game/primitives.ts` | Shared material and engine-entity construction helpers |
-| `src/game/IsometricCamera.ts` | Fixed orthographic camera and responsive framing |
+| `src/game/IsometricCamera.ts` | Smoothed position following, fixed angle and responsive framing |
+| `src/data/house.ts` | House floor rectangles, doorways and mission task definitions |
+| `src/game/house.ts` / `houseProps.ts` | Continuous house geometry, shared materials and new carryable/drop-zone pairs |
+| `src/ui/HouseNavigation.ts` | Current-room headings and projected doorway labels |
 | `src/components/PlayerController.ts` | Camera-relative movement, keyboard input, room/furniture blocking |
 | `src/components/CharacterVisual.ts` | Capsule visual and optional GLB loading, scale and alignment |
 | `src/components/CharacterAnimator.ts` | Visual facing, placeholder action poses and optional GLB animation crossfades |
@@ -115,7 +182,7 @@ node node_modules/vite/bin/vite.js build
 | `src/game/cleanupProps.ts` | Five tasks, vacuum, hamper, destination anchors, placeholder props and reset |
 | `src/game/CleanupGame.ts` | Pickup/place/use rules, cleanup durations, cancellation, rewards and replay |
 | `src/systems/InteractionSystem.ts` | Valid-target filtering, nearest focus and forgiving proximity ranges |
-| `src/systems/MissionSystem.ts` | Real-time deadline, task completion, allowance, bonus and results state |
+| `src/systems/MissionSystem.ts` | Configurable task lists, real-time deadline, practice mode, rewards and results |
 | `src/data/collection.ts` | All eight dumpling definitions, rarity weights/colors/effects, box price and trip limit |
 | `src/systems/ProgressStore.ts` | Versioned save repository, wallet transactions, sealed receipts and duplicate counts |
 | `src/game/GameLoop.ts` | Cleanup rewards, scene transitions, store proximity/Action and collection UI |
@@ -134,6 +201,9 @@ node node_modules/vite/bin/vite.js build
 | `scripts/collection-browser-test.mjs` | Two complete real-touch loops, purchases, opening, persistence and portrait layout |
 | `scripts/collection-edge-test.mjs` | Saved-state fixtures for all four rarity effects, trip cap and retained boxes |
 | `scripts/progress-test.mjs` | Exact rarity intervals, economy boundaries, duplicates, refresh and save failures |
+| `scripts/house-browser-test.mjs` | Touch-driven tour, every new interaction, every doorway and full six-task mission |
+| `scripts/house-edge-test.mjs` | Walls, furniture, small screens and real whole-house timeout while carrying |
+| `scripts/house-performance.mjs` | Same-viewport draw-call comparison against an archived Stage 3 server |
 
 `public/assets/rooms`, `props`, and `dumplings` reserve asset locations.
 
@@ -174,7 +244,7 @@ socket is a sibling of the mesh, so loading a different rig leaves carrying inta
   stairs, jumping, dynamic props or arbitrary collision geometry.
 - One directional shadow-casting light, a 1024px shadow map, shared simple
   materials, static batches, no post-processing, and a 1.75 pixel-ratio cap keep
-  the starting scene modest. The complete bundle is approximately 520 KB gzipped;
+  the starting scene modest. The complete JavaScript bundle is approximately 533 KB gzipped;
   actual phone GPU performance still needs device testing.
 - Portrait is the primary layout. The canvas fills the browser viewport; resizing
   and landscape remain playable. No forced orientation API, letterboxed phone
@@ -193,15 +263,16 @@ it can be replaced with a PlayCanvas Sound asset bank without changing game rule
 
 ## Scope and checkpoints
 
-Included: the approved five-task cleanup, plus one store, one box product, eight
-prototype dumplings, four rarity tiers, brief reveals, collection counts, local
-saves and a repeatable cleanup → shopping → opening loop.
+Included: the approved five-task bedroom mission, a connected six-space house,
+ten new carry/place interactions, a six-task house mission and untimed exploration,
+plus the existing store, reveals, collection and local saves.
 
-**Stopped after Stage 3.** Driving, town expansion, more stores, trading, NPCs,
-monetization, new chores and final character/artwork remain outside this milestone.
-No new dependencies were added.
+**Stopped after Stage 4.** No final Arianna model, named family characters, second
+floor, additional bedrooms, driving, town, stores or NPC AI were added. There are
+no new dependencies.
 
-The approved Stage 2 build was checkpointed **before edits** at `06fbe10`.
+The approved Stage 3 build was checkpointed **before edits** at `ee9c620` (the
+approved implementation is `795245c`). The earlier Stage 2 checkpoint is `06fbe10`.
 
 Local Git checkpoints preserve the initial implementation and the verified
 milestone. No GitHub remote has been added and nothing has been published.

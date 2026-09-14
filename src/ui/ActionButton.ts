@@ -21,7 +21,8 @@ export class ActionButton {
       if (this.enabled && event.detail === 0 && !this.held && !element.disabled) { this.press(); this.cancel(); }
     }, options);
     window.addEventListener('keydown', event => {
-      if (!this.enabled || !['Space', 'KeyE'].includes(event.code) || (event.target as HTMLElement)?.closest('dialog')) return;
+      const target = event.target as HTMLElement;
+      if (!this.enabled || !['Space', 'KeyE'].includes(event.code) || target?.closest('dialog') || (target?.closest('button') && target !== element)) return;
       event.preventDefault();
       if (event.repeat || this.held || element.disabled) return;
       this.key = event.code; this.held = true; this.press();

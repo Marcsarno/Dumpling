@@ -9,6 +9,7 @@ try {
   page.on('response', response => { if (response.status() >= 400) errors.push(response.url()); });
   await page.goto(process.env.TEST_URL || 'http://localhost:4173');
   await page.locator('[data-ready=true]').waitFor(); await page.waitForTimeout(250);
+  await page.locator('#mission-bedroom').tap();
   assert.equal(await page.evaluate(() => typeof window.__roomTest), 'undefined');
   assert.equal(await page.locator('#action-button').isDisabled(), true);
   await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(400); await page.keyboard.up('ArrowLeft');

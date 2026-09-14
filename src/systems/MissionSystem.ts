@@ -5,7 +5,8 @@ export const TASKS = [
   { id: 'crayons', name: 'Crayons', icon: '🖍' },
   { id: 'dirt', name: 'Dirt', icon: '✦' },
 ] as const;
-export type TaskId = typeof TASKS[number]['id'];
+export type TaskId = string;
+export interface TaskDefinition { id: TaskId; name: string; icon: string; room?: string }
 
 /** A round owns its money. No save data or permanent progression. Times are monotonic ms. */
 export class MissionSystem {
@@ -20,23 +21,26 @@ export class MissionSystem {
   remaining = this.duration;
   finishedAt = 0;
   private deadline = 0;
+  tasks: readonly TaskDefinition[] = TASKS;
+  timed = true;
+  configure(tasks: readonly TaskDefinition[], timed = true) { this.tasks = tasks; this.timed = timed; this.reset(); }
   start(now: number) {
     if (this.state !== 'ready') return;
     this.state = 'running';
     this.deadline = now + this.duration;
   }
   tick(now: number) {
-    if (this.state !== 'running') return;
+    if (this.state !== 'running' || !this.timed) return;
     this.remaining = Math.max(0, this.deadline - now);
     if (this.remaining === 0) this.finish('time', now);
   }
   complete(task: TaskId, now: number): boolean {
     this.tick(now); // A late input/hold can never score after the deadline.
-    if (this.state !== 'running' || this.completed.has(task)) return false;
+    if (this.state !== 'running' || this.completed.has(task) || !this.tasks.some(entry => entry.id === task)) return false;
     this.completed.add(task);
-    this.allowance += this.reward;
-    if (this.completed.size === TASKS.length) {
-      this.bonus = this.allCleanBonus;
+    this.allowance += this.timed ? this.reward : 0;
+    if (this.completed.size === this.tasks.length) {
+      this.bonus = this.timed ? this.allCleanBonus : 0;
       this.allowance += this.bonus;
       this.finish('complete', now);
     }

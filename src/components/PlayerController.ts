@@ -24,6 +24,7 @@ export class PlayerController {
     this.setRoom(room);
     this.keyboard = new Keyboard(window, { preventDefault: false });
     window.addEventListener('keydown', event => {
+      if (event.key === ' ' && (event.target as HTMLElement)?.closest('button,dialog')) return;
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault();
     }, { signal: this.abort.signal });
     window.addEventListener('blur', this.reset, { signal: this.abort.signal });
@@ -67,7 +68,17 @@ export class PlayerController {
     this.velocity.set((this.candidate.x - oldX) / Math.max(dt, 0.001), 0, (this.candidate.z - oldZ) / Math.max(dt, 0.001));
     this.keyboard.update();
   }
-  private blocked() { return this.bounds.some(box => box.containsPoint(this.candidate)); }
+  private blocked() {
+    if (this.room.walkable) {
+      // Test the player's corners against the union, so adjoining floors have no invisible seam.
+      for (const x of [this.candidate.x - this.radius, this.candidate.x + this.radius]) {
+        for (const z of [this.candidate.z - this.radius, this.candidate.z + this.radius]) {
+          if (!this.room.walkable.some(floor => x >= floor.minX && x <= floor.maxX && z >= floor.minZ && z <= floor.maxZ)) return true;
+        }
+      }
+    }
+    return this.bounds.some(box => box.containsPoint(this.candidate));
+  }
   reset = () => {
     this.keyboard.detach();
     this.keyboard.attach(window);

@@ -1,7 +1,8 @@
 import type { Application, Entity } from 'playcanvas';
 import { CarrySystem } from '../components/CarrySystem';
 import type { createCharacter } from '../components/CharacterVisual';
-import { MissionSystem } from '../systems/MissionSystem';
+import { MissionSystem, TASKS } from '../systems/MissionSystem';
+import { HOUSE_TASKS, EXTRA_HOUSE_TASKS } from '../data/house';
 import { InteractionSystem } from '../systems/InteractionSystem';
 import { ActionButton } from '../ui/ActionButton';
 import { CleanupFeedback } from '../ui/CleanupFeedback';
@@ -13,6 +14,8 @@ export class CleanupGame {
   roundId = saveId();
   onFinished: (id: string, amount: number) => void = () => {};
   beforeReplay: () => boolean = () => true;
+  onReplay: () => void = () => {};
+  mode: 'bedroom' | 'house' | 'practice' = 'house';
   readonly mission = new MissionSystem();
   readonly carry: CarrySystem;
   readonly interactions: InteractionSystem;
@@ -30,6 +33,13 @@ export class CleanupGame {
     this.hud = new CleanupHUD(button, this.replay);
     this.feedback = new CleanupFeedback(app, camera, document.querySelector('#cleanup-effects')!, props.interactions);
     this.action = new ActionButton(button, this.press, this.cancelHold);
+    this.configure('house');
+  }
+  configure(mode: typeof this.mode) {
+    if (this.mission.state === 'running' && this.mission.timed) return;
+    this.mode = mode;
+    const tasks = mode === 'bedroom' ? TASKS : mode === 'house' ? HOUSE_TASKS : [...TASKS, ...HOUSE_TASKS.filter(task => task.id !== 'book'), ...EXTRA_HOUSE_TASKS];
+    this.mission.configure(tasks, mode !== 'practice'); this.props.configure?.(tasks.map(task => task.id)); this.replay();
   }
   private refreshFocus() { this.interactions.update(this.character.player.getPosition(), this.carry.item?.id ?? null, this.mission); }
   private press = () => {
@@ -48,7 +58,9 @@ export class CleanupGame {
     } else if (target.kind === 'place') {
       if (!this.carry.item || this.carry.item.id !== target.item) return;
       if (this.mission.complete(target.task!, now)) {
-        this.carry.release(this.props.root, target.placement!);
+        const placed = this.carry.release(this.props.root, target.placement!);
+        if (placed && target.placedStyle === 'hide') placed.entity.enabled = false;
+        if (placed && target.placedStyle === 'hang') placed.entity.setLocalEulerAngles(90, 0, 0);
         this.character.animator.setCarrying(false);
         this.character.animator.playAction('PutDown', 0.3);
         this.reward(target, now);
@@ -66,8 +78,8 @@ export class CleanupGame {
   }
   private cancelHold = () => { if (this.activity?.target.kind === 'vacuum') this.cancelActivity(); };
   private reward(target: Interaction, now: number) {
-    this.feedback.reward(target.marker, '+$1', now);
-    this.hud.announce(`${target.name} cleaned up. Earned $1. ${this.mission.completed.size} of 5 tasks complete.`);
+    this.feedback.reward(target.marker, this.mission.timed ? '+$1' : '✓', now);
+    this.hud.announce(`${target.name} cleaned up. ${this.mission.timed ? 'Earned $1. ' : ''}${this.mission.completed.size} of ${this.mission.tasks.length} tasks complete.`);
   }
   update(now: number, movementIntent: boolean) {
     if (movementIntent) this.mission.start(now);
@@ -113,6 +125,7 @@ export class CleanupGame {
     this.character.animator.reset(); this.character.player.setPosition(0, 0.09, 0.9);
     this.character.visual.setLocalEulerAngles(0, 30, 0);
     this.finishedHandled = false; this.interactions.focus = null; this.resetMovement();
+    this.onReplay();
     document.querySelector<HTMLCanvasElement>('#game-canvas')!.focus({ preventScroll: true });
   };
   setActive(active: boolean) {
@@ -122,6 +135,7 @@ export class CleanupGame {
   snapshot() {
     return {
       state: this.mission.state, reason: this.mission.reason, remaining: this.mission.remaining,
+      mode: this.mode, tasks: this.mission.tasks.map(task => task.id), timed: this.mission.timed,
       completed: [...this.mission.completed], allowance: this.mission.allowance, bonus: this.mission.bonus,
       carrying: this.carry.item?.id ?? null, carriedParent: this.carry.item?.entity.parent?.name ?? null,
       carriedPosition: this.carry.item?.entity.getPosition().toArray() ?? null,

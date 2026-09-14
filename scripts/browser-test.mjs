@@ -28,7 +28,7 @@ try {
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390);
     await page.screenshot({ path: 'artifacts/portrait-390x844.png' });
   });
-  await report('All four keyboard directions follow the screen and the camera stays fixed', async () => {
+  await report('All four keyboard directions follow the screen; following keeps angle and scale fixed', async () => {
     for (const [key, axis, sign] of [['ArrowRight', 0, 1], ['ArrowLeft', 0, -1], ['ArrowUp', 1, -1], ['ArrowDown', 1, 1]]) {
       await ready();
       const before = await snapshot();
@@ -36,9 +36,10 @@ try {
       await page.waitForTimeout(400);
       await page.keyboard.up(key);
       const after = await snapshot();
-      assert.ok((after.playerScreen[axis] - before.playerScreen[axis]) * sign > 8, `${key} moves correctly`);
+      assert.ok((after.playerScreen[axis] - before.playerScreen[axis]) * sign > 3, `${key} moves correctly before camera catches up`);
       assert.ok(Math.abs(after.playerScreen[1 - axis] - before.playerScreen[1 - axis]) < 3, `${key} is aligned to screen`);
-      assert.deepEqual(after.cameraPosition, before.cameraPosition);
+      assert.deepEqual(after.cameraAngles, before.cameraAngles); assert.equal(after.cameraHeight, before.cameraHeight);
+      assert.ok(distance(after.cameraPosition, before.cameraPosition) > .1);
     }
   });
   await report('Diagonal input is normalized and releasing keys stops movement', async () => {
@@ -68,7 +69,7 @@ try {
     await touch('touchMove', [{ x: center.x + 115, y: center.y, id: 1 }]);
     await page.waitForTimeout(350);
     const during = await snapshot();
-    assert.ok(during.playerScreen[0] > before.playerScreen[0] + 8);
+    assert.ok(during.playerScreen[0] > before.playerScreen[0] + 3);
     assert.ok(Math.hypot(...during.joystick) <= 1.001);
     await touch('touchEnd', []);
     await page.waitForTimeout(80);

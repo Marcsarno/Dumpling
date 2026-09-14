@@ -1,15 +1,17 @@
 import { Application, Color, Entity, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 } from 'playcanvas';
-import { createBedroom } from './game/bedroom';
+import { createHouse } from './game/house';
 import { IsometricCamera } from './game/IsometricCamera';
 import { createCharacter, loadArianna } from './components/CharacterVisual';
 import { PlayerController } from './components/PlayerController';
 import { VirtualJoystick } from './ui/VirtualJoystick';
-import { createCleanupProps } from './game/cleanupProps';
+import { createHouseProps } from './game/houseProps';
 import { CleanupGame } from './game/CleanupGame';
 import { GameLoop } from './game/GameLoop';
+import { HouseNavigation } from './ui/HouseNavigation';
 import './ui/styles.css';
 import './ui/cleanup.css';
 import './ui/collection.css';
+import './ui/house.css';
 
 function start() {
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
@@ -26,14 +28,15 @@ function start() {
   });
   sun.setEulerAngles(48, -30, 0);
   app.root.addChild(sun);
-  const room = createBedroom(app);
-  const props = createCleanupProps(app, room);
+  const room = createHouse(app);
+  const props = createHouseProps(app, room);
   const camera = new IsometricCamera(app);
   const character = createCharacter(app);
   const joystick = new VirtualJoystick(document.querySelector('#joystick')!, document.querySelector('#joystick-knob')!);
   const controller = new PlayerController(character.player, camera.entity, room, joystick.value);
   const cleanup = new CleanupGame(app, character, props, camera.entity, () => { joystick.reset(); controller.reset(); });
   const loop = new GameLoop(app, camera, character, room, props, cleanup, controller, joystick);
+  const navigation = new HouseNavigation();
   const label = document.querySelector<HTMLElement>('#player-label')!;
   const screenPoint = new Vec3();
   const headPoint = new Vec3();
@@ -53,7 +56,9 @@ function start() {
     loop.beforeMovement(now);
     const dt = document.hidden ? 0 : Math.min(elapsed, 0.04);
     controller.update(dt);
+    if (loop.mode === 'cleanup') camera.follow(character.player.getPosition(), dt);
     loop.update(now);
+    navigation.update(character.player.getPosition(), camera.entity, loop.mode === 'cleanup', cleanup.mode);
     character.animator.update(dt, controller.velocity);
     headPoint.copy(character.player.getPosition());
     headPoint.y += 1.52;
@@ -73,6 +78,8 @@ function start() {
         position: character.player.getPosition().toArray(),
         velocity: controller.velocity.toArray(), input: controller.input.toArray(),
         joystick: joystick.value.toArray(), cameraPosition: camera.entity.getPosition().toArray(),
+        cameraAngles: camera.entity.getEulerAngles().toArray(), cameraHeight: camera.entity.camera!.orthoHeight,
+        room: navigation.current,
         playerScreen: camera.entity.camera!.worldToScreen(character.player.getPosition()).toArray(),
         drawCalls: app.stats.drawCalls.total, fps: app.stats.frame.fps,
         resolution: [app.graphicsDevice.width, app.graphicsDevice.height],
@@ -85,7 +92,7 @@ function start() {
     } });
   }
   if (import.meta.hot) import.meta.hot.dispose(() => {
-    observer.disconnect(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
+    observer.disconnect(); navigation.destroy(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
     delete (window as unknown as Record<string, unknown>).__roomTest;
   });
 }

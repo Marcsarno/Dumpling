@@ -51,6 +51,8 @@ export class CleanupFeedback {
       const text = destination || tool ? `${target.icon} ${target.name}` : target.icon;
       if (label.textContent !== text) label.textContent = text;
       this.camera.camera!.worldToScreen(target.marker, this.screen);
+      // Distant house rooms must not pile their badges against the edge of the phone.
+      if (this.screen.x < -15 || this.screen.x > this.layer.clientWidth + 15 || this.screen.y < this.layer.clientHeight * .25 || this.screen.y > this.layer.clientHeight * .76) label.hidden = true;
       let x = this.screen.x, y = this.screen.y;
       if (available) {
         const half = label.offsetWidth / 2, height = label.offsetHeight;
