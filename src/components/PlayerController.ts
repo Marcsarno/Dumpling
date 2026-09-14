@@ -2,6 +2,7 @@ import { Entity, Keyboard, Vec2, Vec3, KEY_A, KEY_D, KEY_S, KEY_W, KEY_UP, KEY_D
 import type { Bedroom } from '../game/bedroom';
 
 export class PlayerController {
+  enabled = true;
   readonly input = new Vec2();
   readonly velocity = new Vec3();
   readonly radius = 0.24;
@@ -37,6 +38,7 @@ export class PlayerController {
     return Number(positive.some(key => this.keyboard.isPressed(key))) - Number(negative.some(key => this.keyboard.isPressed(key)));
   }
   update(dt: number) {
+    if (!this.enabled) { this.input.set(0, 0); this.velocity.set(0, 0, 0); this.keyboard.update(); return; }
     this.input.copy(this.joystick);
     this.input.x += this.axis([KEY_D, KEY_RIGHT], [KEY_A, KEY_LEFT]);
     this.input.y += this.axis([KEY_W, KEY_UP], [KEY_S, KEY_DOWN]);

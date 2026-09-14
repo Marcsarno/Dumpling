@@ -4,7 +4,10 @@ import { IsometricCamera } from './game/IsometricCamera';
 import { createCharacter, loadArianna } from './components/CharacterVisual';
 import { PlayerController } from './components/PlayerController';
 import { VirtualJoystick } from './ui/VirtualJoystick';
+import { createCleanupProps } from './game/cleanupProps';
+import { CleanupGame } from './game/CleanupGame';
 import './ui/styles.css';
+import './ui/cleanup.css';
 
 function start() {
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
@@ -22,15 +25,15 @@ function start() {
   sun.setEulerAngles(48, -30, 0);
   app.root.addChild(sun);
   const room = createBedroom(app);
+  const props = createCleanupProps(app, room);
   const camera = new IsometricCamera(app);
   const character = createCharacter(app);
   const joystick = new VirtualJoystick(document.querySelector('#joystick')!, document.querySelector('#joystick-knob')!);
   const controller = new PlayerController(character.player, camera.entity, room, joystick.value);
+  const cleanup = new CleanupGame(app, character, props, camera.entity, () => { joystick.reset(); controller.reset(); });
   const label = document.querySelector<HTMLElement>('#player-label')!;
-  const tip = document.querySelector<HTMLElement>('#move-tip')!;
   const screenPoint = new Vec3();
   const headPoint = new Vec3();
-  let walked = 0;
   const viewport = document.querySelector<HTMLElement>('#game')!;
   const resize = () => {
     // resizeCanvas writes inline dimensions; measure the containing viewport, not the canvas.
@@ -42,11 +45,13 @@ function start() {
   observer.observe(viewport);
   resize();
   app.on('update', (elapsed: number) => {
+    const now = performance.now();
+    cleanup.mission.tick(now);
+    controller.enabled = cleanup.mission.state !== 'finished';
     const dt = document.hidden ? 0 : Math.min(elapsed, 0.04);
     controller.update(dt);
+    cleanup.update(now, controller.input.lengthSq() > 0);
     character.animator.update(dt, controller.velocity);
-    walked += controller.velocity.length() * dt;
-    if (walked > 1.5) tip.classList.add('explored');
     headPoint.copy(character.player.getPosition());
     headPoint.y += 1.52;
     camera.entity.camera!.worldToScreen(headPoint, screenPoint);
@@ -70,12 +75,13 @@ function start() {
         resolution: [app.graphicsDevice.width, app.graphicsDevice.height],
         characterLoaded: !character.placeholder.enabled,
         animationState: character.animator.currentState,
+        cleanup: cleanup.snapshot(),
         obstacles: room.obstacles.map(box => ({ center: box.center.toArray(), halfExtents: box.halfExtents.toArray() })),
       }),
     } });
   }
   if (import.meta.hot) import.meta.hot.dispose(() => {
-    observer.disconnect(); joystick.destroy(); controller.destroy(); app.destroy();
+    observer.disconnect(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
     delete (window as unknown as Record<string, unknown>).__roomTest;
   });
 }
