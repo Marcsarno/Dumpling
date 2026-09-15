@@ -24,9 +24,9 @@ tap it to pick up, put away, or tidy. Desktop also supports **Space / E**. Carry
 one item at a time and follow the glowing destination. For the vacuum, hold Action
 for **1.15 seconds** beside the dirt. Both thumbs can be used at once.
 
-Choose **House · 6**, **Bedroom · 5**, or **Explore** before moving. The game starts
+Choose **House · 6**, **Bedroom · 5**, **Puppy · 1**, or **Explore** before moving. The game starts
 in Arianna's bedroom with the six-task house mission selected. Explore makes all
-15 implemented interactions available without a timer or allowance; it can be
+16 implemented chores available without a timer or allowance; it can be
 switched back to a timed mission at any time. Selecting a mode resets the props
 and returns Arianna to her bedroom. Timed missions cannot be switched mid-round.
 
@@ -54,6 +54,25 @@ timer uses elapsed real time, including time in another tab; inputs reset on
 focus loss. The round's earnings are added to your persistent wallet when it ends.
 
 ## Connected cottage
+
+The **Puppy** challenge is a single ordered chore: pick up the small shovel on the
+landing, scoop the living-room poop, carry it to the bathroom toilet, flush, then
+wash hands at the bathroom sink. The same Action button handles each step. A loaded
+scooper visibly carries the poop; flushing swirls it away. The brief handwash uses
+the hands-forward pose, bubbles and a progress ring. Only the final wash earns $1;
+the complete timed challenge also earns the existing $2 bonus. Explore includes
+the same sequence without money and requires clean hands before another chore.
+
+A small imported Quaternius pug plays its supplied Idle clip in the living room.
+The bathroom has imported soap and toilet paper, and the toilet's cistern faces
+the east wall with its seat projecting into the room. Pet and bathroom props are
+in `public/assets/pets/`; source URLs, licenses and runtime changes are recorded
+there. The game's **Art credits** link includes the required J-Toastie attribution.
+
+The squishy store now uses Kenney bookcases, a cash register, shopping cart,
+shopping basket and packaged-stock display, with visible squishy samples, plants,
+an awning and bunting. Its existing price, bag limit, purchase/reveal loop and saves
+are retained. This is an initial furnished store, not a new economy system.
 
 The footprint is **9.8 units wide by 19.9 deep**. A bedroom and bathroom sit at the
 back, connected by a compact landing. The central living room leads to the kitchen

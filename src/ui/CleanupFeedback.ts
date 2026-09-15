@@ -39,7 +39,7 @@ export class CleanupFeedback {
     const nameTag = document.querySelector<HTMLElement>('#player-label')!.getBoundingClientRect();
     for (const { target, ring, label } of this.markers) {
       const available = interactions.available(target, carry.item?.id ?? null, mission);
-      const destination = !!carry.item && (target.kind === 'place' || target.kind === 'vacuum') && available;
+      const destination = available && ((!!carry.item && (target.kind === 'place' || target.kind === 'vacuum' || target.kind === 'pet')) || target.id === 'wash-hands');
       const nearby = interactions.focus === target && available;
       ring.enabled = nearby || destination;
       const scale = (destination ? 1.2 : 0.85) + Math.sin(now / 220) * 0.05;

@@ -9,13 +9,14 @@ import { CleanupFeedback } from '../ui/CleanupFeedback';
 import { CleanupHUD } from '../ui/CleanupHUD';
 import type { CleanupProps, Interaction } from './cleanupProps';
 import { saveId } from '../systems/saveId';
+import { PET_TASKS } from './PetCleanup';
 
 export class CleanupGame {
   roundId = saveId();
   onFinished: (id: string, amount: number) => void = () => {};
   beforeReplay: () => boolean = () => true;
   onReplay: () => void = () => {};
-  mode: 'bedroom' | 'house' | 'practice' = 'house';
+  mode: 'bedroom' | 'house' | 'practice' | 'pet' = 'house';
   readonly mission = new MissionSystem();
   readonly carry: CarrySystem;
   readonly interactions: InteractionSystem;
@@ -26,12 +27,12 @@ export class CleanupGame {
   private progress = 0;
   private finishedHandled = false;
   private celebrationStarted = false;
-  get movementLocked() { return this.character.animator.busy; }
+  get movementLocked() { return this.character.animator.busy || this.activity?.target.kind === 'pet'; }
   constructor(app: Application, private readonly character: ReturnType<typeof createCharacter>, private readonly props: CleanupProps,
     camera: Entity, private readonly resetMovement: () => void) {
     this.carry = new CarrySystem(app, character.visual);
     character.animator.bindCarrySocket(this.carry.socket);
-    this.interactions = new InteractionSystem(props.interactions);
+    this.interactions = new InteractionSystem(props.interactions, target => props.pet?.allows(target) ?? true);
     const button = document.querySelector<HTMLButtonElement>('#action-button')!;
     this.hud = new CleanupHUD(button, this.replay);
     this.feedback = new CleanupFeedback(app, camera, document.querySelector('#cleanup-effects')!, props.interactions);
@@ -41,7 +42,7 @@ export class CleanupGame {
   configure(mode: typeof this.mode) {
     if (this.mission.state === 'running' && this.mission.timed) return;
     this.mode = mode;
-    const tasks = mode === 'bedroom' ? TASKS : mode === 'house' ? HOUSE_TASKS : [...TASKS, ...HOUSE_TASKS.filter(task => task.id !== 'book'), ...EXTRA_HOUSE_TASKS];
+    const tasks = mode === 'pet' ? PET_TASKS : mode === 'bedroom' ? TASKS : mode === 'house' ? HOUSE_TASKS : [...TASKS, ...HOUSE_TASKS.filter(task => task.id !== 'book'), ...EXTRA_HOUSE_TASKS, ...PET_TASKS];
     this.mission.configure(tasks, mode !== 'practice'); this.props.configure?.(tasks.map(task => task.id)); this.replay();
   }
   private refreshFocus() { this.interactions.update(this.character.player.getPosition(), this.carry.item?.id ?? null, this.mission); }
@@ -57,8 +58,20 @@ export class CleanupGame {
         this.mission.tick(performance.now());
         if (this.mission.state !== 'finished' && this.carry.pickUp(item)) {
           this.character.animator.setCarrying(true);
+          if (item.id === 'scooper') this.props.pet?.pickedUp();
           this.hud.announce(`Picked up ${item.name}. Follow the glowing destination.`);
         }
+      }, target.anchor);
+    } else if (target.kind === 'pet' && target.id !== 'wash-hands') {
+      this.character.animator.playAction(target.id === 'scoop-poop' ? 'PickUp' : 'PutDown', .4, () => {
+        this.mission.tick(performance.now());
+        if (this.mission.state === 'finished') return;
+        if (target.id === 'scoop-poop') this.props.pet!.scoop();
+        else {
+          this.carry.release(this.props.root, this.props.pet!.tool.home);
+          this.character.animator.setCarrying(false); this.props.pet!.flush(performance.now());
+        }
+        this.hud.announce(this.props.pet!.hint!);
       }, target.anchor);
     } else if (target.kind === 'place') {
       if (!this.carry.item || this.carry.item.id !== target.item) return;
@@ -73,11 +86,13 @@ export class CleanupGame {
         }
       }, target.anchor);
     } else {
-      this.activity = { target, start: now, duration: target.kind === 'vacuum' ? 1150 : 450 };
+      this.activity = { target, start: now, duration: target.kind === 'pet' ? 1600 : target.kind === 'vacuum' ? 1150 : 450 };
+      if (target.kind === 'pet') { this.character.animator.setCarrying(true); this.character.animator.faceTowards(target.marker); }
     }
     this.refreshFocus();
   };
   private cancelActivity() {
+    if (this.activity?.target.kind === 'pet') { this.character.animator.setCarrying(false); this.character.animator.faceTowards(null); }
     this.activity = null; this.progress = 0;
     this.props.dirt.setLocalScale(1, 1, 1); this.props.crayonMess.setLocalScale(1, 1, 1);
   }
@@ -105,12 +120,13 @@ export class CleanupGame {
       if (!inRange || document.hidden || (target.kind === 'vacuum' && !this.action.held)) this.cancelActivity();
       else {
         this.progress = Math.min(1, (now - start) / duration);
-        const messy = target.kind === 'vacuum' ? this.props.dirt : this.props.crayonMess;
+        const messy = target.kind === 'pet' ? null : target.kind === 'vacuum' ? this.props.dirt : this.props.crayonMess;
         const size = 1 - this.progress * 0.92;
-        messy.setLocalScale(size, size, size);
+        messy?.setLocalScale(size, size, size);
         if (this.progress >= 1 && this.mission.complete(target.task!, now)) {
-          messy.enabled = false;
-          if (target.kind === 'crayons') this.props.tidyCrayons.enabled = true;
+          if (messy) messy.enabled = false;
+          if (target.kind === 'pet') { this.props.pet!.finish(); this.character.animator.setCarrying(false); this.character.animator.faceTowards(null); }
+          else if (target.kind === 'crayons') this.props.tidyCrayons.enabled = true;
           else {
             const vacuum = this.props.items.find(item => item.id === 'vacuum')!;
             this.character.animator.playAction('PutDown', .3, () => {
@@ -124,7 +140,8 @@ export class CleanupGame {
       }
     }
     this.feedback.update(now, this.interactions, this.carry, this.mission);
-    this.hud.update(this.mission, this.carry, this.interactions.focus, this.activity?.target.kind === 'crayons', this.progress, this.character.animator.actionName);
+    this.props.pet?.update(now, this.activity?.target.kind === 'pet' ? this.progress : 0, this.carry.socket.getPosition());
+    this.hud.update(this.mission, this.carry, this.interactions.focus, this.activity?.target.kind === 'crayons' || this.activity?.target.kind === 'pet', this.progress, this.character.animator.actionName, this.props.pet?.hint);
   }
   replay = () => {
     if (!this.beforeReplay()) return;
@@ -145,6 +162,7 @@ export class CleanupGame {
     return {
       state: this.mission.state, reason: this.mission.reason, remaining: this.mission.remaining,
       mode: this.mode, tasks: this.mission.tasks.map(task => task.id), timed: this.mission.timed,
+      pet: this.props.pet?.snapshot(),
       completed: [...this.mission.completed], allowance: this.mission.allowance, bonus: this.mission.bonus,
       carrying: this.carry.item?.id ?? null, carriedParent: this.carry.item?.entity.parent?.name ?? null,
       carriedPosition: this.carry.item?.entity.getPosition().toArray() ?? null,

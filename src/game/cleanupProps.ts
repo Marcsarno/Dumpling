@@ -2,6 +2,7 @@ import { BoundingBox, Entity, Vec3, type Application } from 'playcanvas';
 import type { Bedroom } from './bedroom';
 import { material, primitives, type Triple } from './primitives';
 import type { TaskId } from '../systems/MissionSystem';
+import type { PetCleanup } from './PetCleanup';
 
 export type ItemId = string;
 export interface CleanupItem { id: ItemId; name: string; icon: string; entity: Entity; home: Triple }
@@ -9,7 +10,9 @@ export interface Interaction {
   id: string;
   name: string;
   icon: string;
-  kind: 'pickup' | 'place' | 'crayons' | 'vacuum';
+  kind: 'pickup' | 'place' | 'crayons' | 'vacuum' | 'pet';
+  actionLabel?: string;
+  available?: (carried: ItemId | null) => boolean;
   anchor: Vec3;
   marker: Vec3;
   range: number;
@@ -118,6 +121,7 @@ export function createCleanupProps(app: Application, room: Bedroom): CleanupProp
   return { root, items, interactions, crayonMess, tidyCrayons, dirt, reset };
 }
 export interface CleanupProps {
+  pet?: PetCleanup;
   root: Entity; items: CleanupItem[]; interactions: Interaction[];
   crayonMess: Entity; tidyCrayons: Entity; dirt: Entity;
   reset: () => void;

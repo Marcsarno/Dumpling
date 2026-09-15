@@ -19,7 +19,7 @@ export class HouseArt {
   constructor(private readonly app: Application, private readonly root: Entity) {
     this.group = app.batcher.addGroup('Cottage imported art', false, 12);
   }
-  add(pack: 'furniture' | 'nature', name: string, position: Triple, size: number, yaw = 0, dimension: 'height' | 'width' = 'height', colors: Record<string, string> = {}) {
+  add(pack: 'furniture' | 'nature' | 'market', name: string, position: Triple, size: number, yaw = 0, dimension: 'height' | 'width' = 'height', colors: Record<string, string> = {}) {
     const key = `${pack}/${name}`;
     if (!this.assets.has(key)) this.assets.set(key, new Promise<ContainerResource>((resolve, reject) => {
       const asset = new Asset(key, 'container', { url: `${import.meta.env.BASE_URL}assets/environment/kenney/${key}.glb` });

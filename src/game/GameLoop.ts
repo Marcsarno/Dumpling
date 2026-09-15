@@ -41,7 +41,7 @@ export class GameLoop {
     on('#collection-button', () => this.attempt(() => this.collection()));
     on('#back-cleanup', () => this.attempt(() => this.startCleanup()));
     on('#open-next', () => this.attempt(() => { this.save.goHome(); this.enterHome(); }));
-    for (const mode of ['house', 'bedroom', 'practice'] as const) on(`#mission-${mode}`, () => {
+    for (const mode of ['house', 'bedroom', 'pet', 'practice'] as const) on(`#mission-${mode}`, () => {
       if (this.mode === 'cleanup' && this.creditPending()) this.cleanup.configure(mode);
     });
     el<HTMLDialogElement>('#collection-dialog').addEventListener('cancel', e => e.preventDefault(), { signal: this.abort.signal });
@@ -165,7 +165,7 @@ export class GameLoop {
   }
   update(now: number) {
     const running = this.mode === 'cleanup' && this.cleanup.mission.state === 'running' && this.cleanup.mission.timed;
-    for (const mode of ['house', 'bedroom', 'practice']) {
+    for (const mode of ['house', 'bedroom', 'pet', 'practice']) {
       const button = el<HTMLButtonElement>(`#mission-${mode}`); button.disabled = running;
       button.setAttribute('aria-pressed', String(this.cleanup.mode === mode));
     }

@@ -137,7 +137,8 @@ export function createHouse(app: Application): Bedroom {
   furniture('bathroomSink',4.12,-3.08,.9,0,'height',[1.0,.7]);
   furniture('bathroomMirror',4.12,-3.49,.9,0,'height',undefined,1.35,{metal:'#a5c6cc'});
   furniture('bathtub',5.75,-2.12,2.15,90,'width',[.94,2.15]);
-  furniture('toilet',5.8,-.28,.8,180,'height',[.58,.7]);
+  // Cistern against the east wall; the seat projects west into the room.
+  furniture('toilet',5.98,-.32,.8,-90,'height',[.8,.58]);
   box('Bath mat',4.6,.054,-1.55,1.1,.025,1.4,m.rug);
   for(const z of [-.85,-.2])box('Towel rail leg',3.62,.44,z,.055,.88,.055,m.wood);
   box('Towel rail bar',3.62,.88,-.525,.06,.055,.7,m.wood);block(3.62,-.525,.16,.8);

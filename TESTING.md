@@ -6,6 +6,40 @@ Safari has **not** been tested. Emulation is not a phone performance benchmark.
 
 ## Portrait cottage revision
 
+### Puppy cleanup and squishy-store iteration
+
+`scripts/pet-browser-test.mjs` passes the complete touch-driven scoop → carry →
+flush → handwash sequence. Poop becomes a child of the carried shovel, flush
+empties the tool, and only the completed wash awards $1 plus the $2 timed bonus.
+Replay restores the shovel, mess, stages and empty hands. Screenshots of the pug,
+loaded tool, corrected toilet, washing pose and results are in `artifacts/pets-store/`.
+
+`scripts/pet-edge-test.mjs` also passes: bare-hand and empty-tool gating; real
+60-second expiry after flushing with zero task credit; mandatory handwashing
+before other Explore chores; normal carrying restored afterward; no money in
+Explore; and Puppy selector/control framing at 320×568, 360×640, 430×932 and
+844×390. Its read-only route planner never teleports or overrides mission time.
+
+`scripts/collection-browser-test.mjs` passes both complete earned-money purchase,
+reveal, collection and reload loops with the imported store fixtures.
+`scripts/store-art-browser-test.mjs` separately checks the final counter placement,
+touch purchase and control framing at 320×568, 430×932 and 844×390. It uses an
+isolated saved-wallet fixture for shop checks. No asset requests or browser errors
+occurred. The store screenshots were visually inspected.
+
+The puppy has its original supplied Idle animation. Arianna uses her existing
+pickup/put-down clips and a hands-forward pose with bubbles for the brief wash;
+there is no new bespoke handwashing animation. All supplied character GLBs remain
+unchanged. Required asset attribution ships in `public/asset-credits.html` and is
+linked from the game's footer. Physical-phone testing remains outstanding.
+
+TypeScript and the final production build pass. Both production smoke suites
+pass with the new assets, covering pickup/placement/reward, reveal/collection
+persistence and return to cleanup, with no exposed debug API or browser errors.
+Vite retains its existing large-engine-chunk warning (main JS: 539 KB gzipped).
+
+### Previous cottage checks
+
 `scripts/cottage-browser-test.mjs` (also invoked by `house-browser-test.mjs`)
 checks the current house using real touch joystick input and Action taps. Its
 read-only path planner routes around furniture and through doors; it never

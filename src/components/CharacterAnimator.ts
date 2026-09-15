@@ -50,6 +50,7 @@ export class CharacterAnimator {
   }
   bindCarrySocket(socket: Entity) { this.socket = socket; }
   setCarrying(value: boolean) { this.carrying = value; }
+  faceTowards(target: Vec3 | null) { this.faceTarget = target?.clone() ?? null; }
   /** Events use the imported clip clock, not guessed wall-clock delays. */
   playAction(name: string, fallbackDuration: number, commit?: () => void, target?: Vec3) {
     const duration = this.clips.get(name)?.duration ?? fallbackDuration;

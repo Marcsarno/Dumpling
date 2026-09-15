@@ -3,7 +3,8 @@
   "license": "CC0-1.0",
   "sources": {
     "furniture": "https://kenney.nl/assets/furniture-kit",
-    "nature": "https://kenney.nl/assets/nature-kit"
+    "nature": "https://kenney.nl/assets/nature-kit",
+    "market": "https://kenney.nl/assets/mini-market"
   },
   "modifications": "Original GLB geometry retained. Runtime materials use a coordinated warm house palette. Runtime scale, rotation and placement only.",
   "assets": {
@@ -42,7 +43,8 @@
       "toaster",
       "toilet",
       "trashcan",
-      "washer"
+      "washer",
+      "bookcaseOpen"
     ],
     "nature": [
       "fence_planksDouble",
@@ -52,6 +54,12 @@
       "plant_bushDetailed",
       "tree_detailed",
       "tree_oak"
+    ],
+    "market": [
+      "cash-register",
+      "shopping-basket",
+      "shopping-cart",
+      "shelf-boxes"
     ]
   }
 }

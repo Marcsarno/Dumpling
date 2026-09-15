@@ -4,12 +4,14 @@ import type { MissionSystem } from './MissionSystem';
 
 export class InteractionSystem {
   focus: Interaction | null = null;
-  constructor(readonly interactions: Interaction[]) {}
+  constructor(readonly interactions: Interaction[], private readonly guard: (target: Interaction) => boolean = () => true) {}
   available(target: Interaction, carried: ItemId | null, mission: MissionSystem) {
     if (mission.state === 'finished') return false;
+    if (!this.guard(target)) return false;
     const task = target.task ?? (target.item === 'vacuum' ? 'dirt' : target.item);
     if (task && !mission.tasks.some(entry => entry.id === task)) return false;
     if (target.task && mission.completed.has(target.task)) return false;
+    if (target.available) return target.available(carried);
     if (target.kind === 'place' || target.kind === 'vacuum') return carried === target.item;
     if (carried) return false;
     if (target.kind === 'pickup') return !mission.completed.has(target.item === 'vacuum' ? 'dirt' : target.item!);

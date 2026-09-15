@@ -32,7 +32,7 @@ export class CleanupHUD {
   }
   private text(element: HTMLElement, value: string) { if (element.textContent !== value) element.textContent = value; }
   announce(text: string) { this.announcement.textContent = text; }
-  update(mission: MissionSystem, carry: CarrySystem, focus: Interaction | null, busy: boolean, progress: number, animation: string | null = null) {
+  update(mission: MissionSystem, carry: CarrySystem, focus: Interaction | null, busy: boolean, progress: number, animation: string | null = null, petHint?: string | null) {
     this.setTasks(mission.tasks);
     const seconds = Math.ceil(mission.remaining / 1000);
     this.text(this.clock, mission.timed ? `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}` : '∞');
@@ -52,10 +52,10 @@ export class CleanupHUD {
     this.button.classList.toggle('holding', progress > 0);
     let title = 'Action', detail = 'Come closer', icon = '✋';
     if (focus) {
-      title = { pickup: 'Pick up', place: 'Put away', crayons: 'Tidy up', vacuum: 'Hold to clean' }[focus.kind];
+      title = focus.actionLabel ?? { pickup: 'Pick up', place: 'Put away', crayons: 'Tidy up', vacuum: 'Hold to clean', pet: 'Action' }[focus.kind];
       detail = focus.name; icon = focus.icon;
     }
-    if (busy) { title = 'Tidying…'; detail = 'Crayons'; }
+    if (busy) { title = focus?.kind === 'pet' ? 'Washing…' : 'Tidying…'; detail = focus?.name ?? 'One moment'; }
     if (animation) { title = animation === 'PickUp' ? 'Picking up…' : animation === 'PutDown' ? 'Putting away…' : 'Lovely!'; detail = 'One moment'; }
     if (mission.state === 'finished') { title = 'Well done'; detail = 'Round complete'; icon = '♡'; }
     this.text(this.actionTitle, title); this.text(this.actionDetail, detail); this.text(this.actionIcon, icon);
@@ -68,6 +68,7 @@ export class CleanupHUD {
     } else if (focus?.kind === 'crayons') hint = '🖍 Tap Action to put the crayons in their cup.';
     if (mission.state === 'finished') hint = 'Every little bit helps. Nice work, Arianna!';
     if (!mission.timed && !carry.item && mission.state !== 'finished') hint = 'Explore freely · Practice tasks · No timer or allowance';
+    if (petHint && mission.state !== 'finished' && (mission.tasks.length === 1 || carry.item?.id === 'scooper' || petHint.startsWith('🫧'))) hint = petHint;
     this.text(this.hint, hint);
   }
   showResults(mission: MissionSystem) {

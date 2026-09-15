@@ -39,3 +39,16 @@
  #game[data-scene=cleanup] #cleanup-hint { width:40%; left:30%; bottom:12px; }
  #game[data-scene=cleanup] footer { display:none; }
 }
+.asset-credits { color:inherit; font-size:9px; text-decoration:none; padding:5px; }
+#game[data-scene=store] .topbar { top:max(12px,env(safe-area-inset-top)); left:16px; right:16px; padding:10px 13px; border-radius:20px; background:#fff9efed; }
+#game[data-scene=store] .wordmark { font-size:22px; }
+#game[data-scene=store] .wordmark small { font-size:6px; }
+#game[data-scene=store] .flower { font-size:34px; }
+#game[data-scene=store] .room-title { top:96px; padding:0 14px; text-align:left; width:100%; }
+#game[data-scene=store] .eyebrow { justify-content:flex-start; font-size:8px; letter-spacing:1px; }
+#game[data-scene=store] h1 { font-size:21px; margin:5px 0; }
+#game[data-scene=store] #scene-subtitle { font-size:11px; }
+@media(orientation:landscape) and (max-height:600px) {
+ #game[data-scene=store] .topbar { width:235px; }
+ #game[data-scene=store] .room-title { width:210px; }
+}
