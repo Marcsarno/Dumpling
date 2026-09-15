@@ -3,14 +3,18 @@ import type { Bedroom } from './bedroom';
 import { material, primitives, type Triple } from './primitives';
 import type { TaskId } from '../systems/MissionSystem';
 import type { PetCleanup } from './PetCleanup';
+import type { DailyLife } from './DailyLife';
 
 export type ItemId = string;
-export interface CleanupItem { id: ItemId; name: string; icon: string; entity: Entity; home: Triple }
+export interface CleanupItem { id: ItemId; name: string; icon: string; entity: Entity; home: Triple; carryPace?: 'walk' | 'run'; carryGrip?: Triple; carriedScale?: number }
 export interface Interaction {
   id: string;
   name: string;
   icon: string;
-  kind: 'pickup' | 'place' | 'crayons' | 'vacuum' | 'pet';
+  kind: 'pickup' | 'place' | 'crayons' | 'vacuum' | 'pet' | 'daily';
+  duration?: number;
+  hold?: boolean;
+  mess?: Entity;
   actionLabel?: string;
   available?: (carried: ItemId | null) => boolean;
   anchor: Vec3;
@@ -64,6 +68,8 @@ export function createCleanupProps(app: Application, room: Bedroom): CleanupProp
   for (const y of [0.005, 0.11]) book('Book cover', 'box', [0, y, 0], [0.4, 0.02, 0.5], m.blue);
   book('Book spine', 'box', [-0.19, 0.055, 0], [0.025, 0.12, 0.5], m.blue);
   book('Cover star', 'sphere', [0, 0.125, 0], [0.12, 0.012, 0.12], m.yellow, false);
+  items[3].carryPace = 'walk';
+  items[3].carryGrip = [0,.92,0];items[3].carriedScale = .75;
   const vacuum = primitives(app, items[3].entity);
   vacuum('Vacuum head', 'box', [0, 0.06, 0.12], [0.45, 0.13, 0.3], m.purple);
   vacuum('Vacuum tank', 'capsule', [0, 0.36, 0], [0.24, 0.49, 0.21], m.purple);
@@ -121,6 +127,7 @@ export function createCleanupProps(app: Application, room: Bedroom): CleanupProp
   return { root, items, interactions, crayonMess, tidyCrayons, dirt, reset };
 }
 export interface CleanupProps {
+  daily?: DailyLife;
   pet?: PetCleanup;
   root: Entity; items: CleanupItem[]; interactions: Interaction[];
   crayonMess: Entity; tidyCrayons: Entity; dirt: Entity;

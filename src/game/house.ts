@@ -3,20 +3,30 @@ import { HOUSE_DOORS, HOUSE_ROOMS } from '../data/house';
 import { createBedroom, type Bedroom } from './bedroom';
 import { material, primitives, type Triple } from './primitives';
 import { HouseArt } from './HouseArt';
+import { HouseLighting } from './HouseLighting';
+import { SurfaceTextures } from './SurfaceTextures';
 
 /** A continuous, deep cottage with short private circulation and connected family spaces. */
 export function createHouse(app: Application): Bedroom {
   const bedroom = createBedroom(app), m = bedroom.materials!;
+  const surfaces = new SurfaceTextures(app);
+  surfaces.apply(m.wood,'wood');surfaces.apply(m.rug,'rug');
   const root = new Entity('Maple cottage', app); app.root.addChild(root); bedroom.root.reparent(root);
   const obstacles = bedroom.obstacles;
   const group = app.batcher.addGroup('Cottage architecture', false, 14);
-  const shape = primitives(app, root, group.id);
-  const art = new HouseArt(app, root);
+  const makeShape = primitives(app, root, group.id);
+  let exterior = false;
+  const shape: typeof makeShape = (...args) => {
+    const entity = makeShape(...args);
+    for(const mesh of entity.render!.meshInstances) mesh.mask = exterior ? 8 : 1;
+    return entity;
+  };
+  const art = new HouseArt(app, root, surfaces);
   const block = (x: number, z: number, w: number, d: number) => obstacles.push(new BoundingBox(new Vec3(x,.7,z),new Vec3(w/2,1.4,d/2)));
   const box = (name: string,x: number,y: number,z: number,w: number,h: number,d: number,mat=m.trim) => shape(name,'box',[x,y,z],[w,h,d],mat);
   const oval = (name: string,x: number,y: number,z: number,w: number,h: number,d: number,mat=m.rug) => shape(name,'cylinder',[x,y,z],[w,h,d],mat,false);
   function furniture(name: string, x: number,z: number,size: number,yaw=0,dimension: 'height'|'width'='height',foot?: [number,number],y=.027,colors: Record<string,string>={}) {
-    art.add('furniture',name,[x,y,z],size,yaw,dimension,colors); if(foot)block(x,z,...foot);
+    art.add('furniture',name,[x,y,z],size,yaw,dimension,colors,exterior); if(foot)block(x,z,...foot);
   }
   const oak = material('Cottage oak boards','#dec69e'), tile=material('Warm checker stone','#d9dcd1'), grout=material('Stone grout','#eeeadd');
   const sage=material('Kitchen sage paint','#aebea9'), blue=material('Bathroom powder paint','#cadce0');
@@ -85,6 +95,7 @@ export function createHouse(app: Application): Bedroom {
   furniture('coatRackStanding',3.8,1.0,1.55,0,'height',[.4,.4]);
   furniture('sideTableDrawers',5.8,1.1,.72,0,'height',[.75,.45]);
   furniture('plantSmall1',5.8,1.1,.28,0,'height',undefined,.76);
+  furniture('lampRoundFloor',6.1,3.28,1.8,0,'height',[.35,.35]);
   oval('Landing rug',4.7,.054,2.15,1.75,.025,1.55,m.rug);
   box('Mail tray',5.55,.8,1.1,.42,.08,.3,m.wood);
 
@@ -93,7 +104,8 @@ export function createHouse(app: Application): Bedroom {
   furniture('tableCoffee',-.48,6.3,1.3,0,'width',[1.3,.75]);
   furniture('books',-.58,6.3,.34,0,'width',undefined,.54);
   furniture('plantSmall2',-.15,6.3,.23,0,'height',undefined,.54);
-  oval('Living rug',-.9,.052,6.2,4.0,.025,4.2,material('Living oatmeal rug','#dbbf9e'));
+  const livingRug = material('Living oatmeal rug','#dbbf9e');surfaces.apply(livingRug,'rug');
+  oval('Living rug',-.9,.052,6.2,4.0,.025,4.2,livingRug);
   for(const z of [4.7,7.7])box('Rug woven border',-.9,.067,z,3.2,.004,.035,m.trim);
   furniture('cabinetTelevision',2.0,4.2,1.8,0,'width',[1.8,.6]);
   furniture('televisionModern',2.0,4.2,1.28,0,'width',undefined,.68,{metal:'#718d91'});
@@ -132,6 +144,7 @@ export function createHouse(app: Application): Bedroom {
   box('Clean laundry basket',5.85,.23,10.5,.65,.43,.6,m.pinkLight);block(5.85,10.5,.65,.6);
   for(let i=0;i<3;i++)box('Folded towels',5.6,.98+i*.07,12.65,.55,.055,.32,[m.blue,m.pinkLight,m.mint][i]);
   furniture('plantSmall2',6.1,12.65,.3,0,'height',undefined,.95);
+  furniture('lampRoundFloor',6.1,11.45,1.8,0,'height',[.35,.35]);
 
   // Compact private bathroom, with no passage through the bathing area.
   furniture('bathroomSink',4.12,-3.08,.9,0,'height',[1.0,.7]);
@@ -150,6 +163,7 @@ export function createHouse(app: Application): Bedroom {
   furniture('books',2.45,1.05,.3,20,'width',undefined,1.18);
 
   // The visible world continues beyond the cutaway: lawn, planting, porch, drive and fence.
+  exterior = true;
   box('Garden terrain',0,-.3,7,70,.3,80,grass);
   box('Lawn edging',-5.15,-.12,8.8,.22,.12,19,grassDark);
   box('Gravel driveway',-7.2,-.135,12.0,3.8,.045,17.5,asphalt);
@@ -180,5 +194,6 @@ export function createHouse(app: Application): Bedroom {
   box('Mailbox door',-5.15,1.03,18.315,.36,.29,.035,m.trim);
   app.batcher.generate([group.id]);
   const ready=art.finish();
-  return {root,obstacles,materials:m,halfWidth:6.6,halfDepth:16.4,walkable:[...HOUSE_ROOMS],ready,artStats:()=>art.snapshot()};
+  const lighting = new HouseLighting(app, root, m.lamp, art.lampMaterials);
+  return {root,obstacles,materials:m,halfWidth:6.6,halfDepth:16.4,walkable:[...HOUSE_ROOMS],ready,artStats:()=>art.snapshot(),lighting};
 }

@@ -5,7 +5,7 @@ const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'file:///C:/Users/m
 const browser=await chromium.launch({headless:true,channel:'msedge'});
 const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
 const page=await context.newPage(),errors=[],checks=[];
-await mkdir('artifacts/pets-store',{recursive:true});
+await mkdir('artifacts/lilah',{recursive:true});
 page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(['error','warning'].includes(m.type()))errors.push(m.text())});
 page.on('response',r=>{if(r.status()>=400)errors.push(r.status()+' '+r.url())});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -14,7 +14,7 @@ const cdp=await context.newCDPSession(page),touches=new Map();
 async function touch(type,id,p){if(type==='touchEnd')touches.delete(id);else touches.set(id,{...p,id});await cdp.send('Input.dispatchTouchEvent',{type:type==='touchEnd'&&touches.size?'touchMove':type,touchPoints:[...touches.values()]})}
 async function center(sel){const b=await page.locator(sel).boundingBox();return{x:b.x+b.width/2,y:b.y+b.height/2,r:b.width*.29}}
 const pass=name=>{checks.push(name);console.log('PASS '+name)};
-async function photo(name){await page.screenshot({path:'artifacts/pets-store/'+name+'.png'})}
+async function photo(name){await page.screenshot({path:'artifacts/lilah/'+name+'.png'})}
 let world,obstacles;
 function free(x,z){
  const radius=.265;
@@ -72,21 +72,26 @@ async function approach(id){
 async function press(id,hold=60){
  await page.waitForFunction(id=>document.querySelector('#action-button').dataset.target===id,id,{timeout:2500});
  const c=await center('#action-button');await touch('touchStart',2,c);await sleep(hold);await touch('touchEnd',2);await sleep(40);
- await page.waitForFunction(()=>!window.__roomTest.snapshot().character.busy,undefined,{timeout:6500});
+ await page.waitForFunction(()=>!window.__roomTest.snapshot().character.busy && !window.__roomTest.snapshot().cleanup.aligning && window.__roomTest.snapshot().cleanup.progress===0,undefined,{timeout:6500});
 }
 async function chore(pick,place){await approach(pick);await press(pick);assert.ok((await snap()).cleanup.carrying);await approach(place);await press(place);assert.equal((await snap()).cleanup.carrying,null)}
 try{
- await page.goto('http://127.0.0.1:5173');await page.locator('[data-ready=true]').waitFor();
- // Isolated save fixture for visual/shop checks; earned-money regression is a separate full-loop test.
- await page.evaluate(()=>localStorage.setItem('arianna.progress.v1',JSON.stringify({version:1,balance:8,collection:{},boxes:[],creditedRounds:[],trip:{active:true,purchases:0},location:'store',reveal:null})));
- await page.evaluate(()=>localStorage.setItem('arianna.daily.v1',JSON.stringify({version:1,day:1,minutes:900,phase:'afternoon',done:[],eggDrop:false,breakfast:'done',dust:[0,2,4],schoolSeconds:0})));
- await page.reload();await page.waitForFunction(()=>window.__roomTest?.snapshot().characterLoaded);await sleep(1200);
- let s=await snap();world=[{minX:-3.3,maxX:3.3,minZ:-3.6,maxZ:3.6}];
- // Store uses the active movement collider list, exposed separately below for QA.
- await photo('08-squishy-store');const c=await center('#joystick');await touch('touchStart',1,c);
- for(let i=0;i<80;i++){s=await snap();if(s.loop.focus==='buy-box')break;const dx=-.75-s.position[0],dz=.1-s.position[2],len=Math.hypot(dx,dz),r=s.cameraRight,f=s.cameraForward;await touch('touchMove',1,{x:c.x+c.r*(dx*r[0]+dz*r[2])/Math.hypot(r[0],r[2])/len,y:c.y-c.r*(dx*f[0]+dz*f[2])/Math.hypot(f[0],f[2])/len});await sleep(50)}await touch('touchEnd',1);
- await page.locator('#action-button[data-target=buy-box]').tap();await sleep(100);assert.equal((await snap()).loop.balance,4);assert.equal((await snap()).loop.boxes,1);await photo('09-store-purchased');
- for(const [width,height]of[[320,568],[430,932],[844,390]]){await page.setViewportSize({width,height});await sleep(180);for(const sel of ['#joystick','#action-button']){const box=await page.locator(sel).boundingBox();assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=width&&box.y+box.height<=height)}await photo('store-'+width+'x'+height)}
- assert.deepEqual(errors,[]);pass('Imported shop assets load; touch purchase works and controls fit phones and landscape');
- await writeFile('artifacts/pets-store/store-report.json',JSON.stringify({checks,errors},null,2));
-}catch(error){await photo('store-failure');console.error(error);process.exitCode=1}finally{await browser.close()}
+ await page.goto('http://127.0.0.1:5173');await page.waitForFunction(()=>window.__roomTest?.snapshot().lilah.loaded&&window.__roomTest.snapshot().characterLoaded);
+ let s=await snap();world=s.walkable;obstacles=s.obstacles;
+ assert.equal(s.lilah.height,.86465625);assert.equal(s.lilah.animation.clips.length,8);
+ const bounds=await page.evaluate(()=>({ari:window.__roomTest.characterGeometry()[0],lilah:window.__roomTest.lilahGeometry()[0]}));
+ const ratio=(bounds.lilah.maxY-bounds.lilah.minY)/(bounds.ari.maxY-bounds.ari.minY);assert.ok(Math.abs(ratio-.625)<.025,JSON.stringify(bounds));
+ await photo('01-sisters');pass('Actual Lilah GLB loads with eight clips, 25% larger than her original half-height scale');
+ await page.waitForFunction(()=>window.__roomTest.snapshot().cleanup.daily.lilah.messes.length===1,undefined,{timeout:55000});
+ s=await snap();assert.equal(s.cleanup.daily.lilah.messes[0].kind,'toys');assert.ok(s.cleanup.tasks.includes('lilah-mess-0'));await photo('02-toy-trail');
+ await approach('lilah-mess-0');await press('lilah-mess-0');assert.equal((await snap()).cleanup.daily.lilah.messes[0].done,true);assert.equal((await snap()).loop.balance,1);pass('Lilah independently carries and drops toys; Arianna tidies them for one allowance');
+ await page.reload();await page.waitForFunction(()=>window.__roomTest?.snapshot().lilah.loaded);assert.equal((await snap()).cleanup.daily.lilah.messes[0].done,true);assert.equal((await snap()).loop.balance,1);pass('Cleaned toddler mess and allowance survive reload without respawning');
+ await page.waitForFunction(()=>window.__roomTest.snapshot().cleanup.daily.lilah.messes.length===2,undefined,{timeout:65000});
+ await photo('03-spill');await approach('take-towel');await press('take-towel');await approach('lilah-mess-1');await press('lilah-mess-1',450);assert.equal((await snap()).cleanup.daily.lilah.messes[1].done,false);await press('lilah-mess-1',1400);assert.equal((await snap()).cleanup.daily.lilah.messes[1].done,true);pass('Juice spill uses paper towel and requires a full hold');
+ await page.waitForFunction(()=>window.__roomTest.snapshot().cleanup.daily.lilah.messes.length===3,undefined,{timeout:70000});
+ await approach('daily-vacuum');await press('daily-vacuum');await approach('lilah-mess-2');await press('lilah-mess-2',1400);assert.equal((await snap()).cleanup.daily.lilah.messes[2].done,true);await approach('put-tool-away');await press('put-tool-away');pass('Cracker crumbs use the vacuum; all three toddler mess types are cleanable');
+ s=await snap();assert.equal(s.loop.balance,3);assert.equal(s.cleanup.daily.lilah.messes.length,3);await photo('04-tidied');
+ await page.reload();await page.waitForFunction(()=>window.__roomTest?.snapshot().lilah.loaded);await approach('play-lilah');await press('play-lilah');assert.ok((await snap()).lilah.nextMess-(await snap()).lilah.time>65);pass('Playing together triggers celebration and delays mischief');
+ await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('arianna.daily.v1'));s.phase='night';s.minutes=1140;s.done=[];localStorage.setItem('arianna.daily.v1',JSON.stringify(s));});await page.reload();await page.waitForFunction(()=>window.__roomTest?.snapshot().lilah.state==='sleepy');await photo('05-sleepy');pass('Lilah winds down at night and stops making messes');
+ assert.deepEqual(errors,[]);await writeFile('artifacts/lilah/report.json',JSON.stringify({checks,errors,snapshot:await snap()},null,2));
+}catch(error){await photo('failure');console.error(error);process.exitCode=1}finally{await browser.close()}

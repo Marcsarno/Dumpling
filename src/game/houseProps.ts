@@ -3,6 +3,7 @@ import type { Bedroom } from './bedroom';
 import { createCleanupProps, type CleanupItem, type CleanupProps } from './cleanupProps';
 import { primitives, type Triple } from './primitives';
 import { PetCleanup } from './PetCleanup';
+import { DailyLife } from './DailyLife';
 
 /** Data-driven Carryable/DropZone pairs use the bedroom's existing interaction and carry systems. */
 export function createHouseProps(app: Application, house: Bedroom): CleanupProps {
@@ -52,6 +53,7 @@ export function createHouseProps(app: Application, house: Bedroom): CleanupProps
   pair('bath-bottle', 'Toiletries', '♧', [4.7, .09, -2.15], 'Vanity', [4.12, 0, -2.35], [4.1, .96, -3.08], 'bottle');
   const resetBedroom = props.reset;
   props.pet = new PetCleanup(app, props);
+  props.daily = new DailyLife(app, props, house);
   function visibility() {
     for (const item of props.items) item.entity.enabled = active.includes(item.id === 'vacuum' ? 'dirt' : item.id);
     props.dirt.enabled = active.includes('dirt'); props.crayonMess.enabled = active.includes('crayons'); props.tidyCrayons.enabled = !active.includes('crayons');
@@ -61,6 +63,7 @@ export function createHouseProps(app: Application, house: Bedroom): CleanupProps
     for (const item of extras) { item.entity.reparent(props.root); item.entity.setLocalPosition(...item.home); item.entity.setLocalEulerAngles(0, 0, 0); }
     visibility();
     props.pet!.reset(active.includes('pet-care'));
+    if(props.daily!.active) props.daily!.refresh();
   };
   props.configure = tasks => { active = tasks; props.reset(); };
   return props;

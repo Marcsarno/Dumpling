@@ -1,5 +1,6 @@
 import { Asset, BoundingBox, Color, Entity, StandardMaterial, type Application, type ContainerResource, type RenderComponent } from 'playcanvas';
 import type { Triple } from './primitives';
+import type { SurfaceTextures } from './SurfaceTextures';
 
 const PALETTE: Record<string, string> = {
   wood: '#c9a078', woodDark: '#987453', woodBark: '#987653', carpet: '#afc3af', carpetDarker: '#879f8e',
@@ -16,10 +17,11 @@ export class HouseArt {
   private readonly group;
   loaded = 0;
   readonly errors: string[] = [];
-  constructor(private readonly app: Application, private readonly root: Entity) {
+  readonly lampMaterials: StandardMaterial[] = [];
+  constructor(private readonly app: Application, private readonly root: Entity, private readonly surfaces?: SurfaceTextures) {
     this.group = app.batcher.addGroup('Cottage imported art', false, 12);
   }
-  add(pack: 'furniture' | 'nature' | 'market', name: string, position: Triple, size: number, yaw = 0, dimension: 'height' | 'width' = 'height', colors: Record<string, string> = {}) {
+  add(pack: 'furniture' | 'nature' | 'market', name: string, position: Triple, size: number, yaw = 0, dimension: 'height' | 'width' = 'height', colors: Record<string, string> = {}, exterior = pack === 'nature') {
     const key = `${pack}/${name}`;
     if (!this.assets.has(key)) this.assets.set(key, new Promise<ContainerResource>((resolve, reject) => {
       const asset = new Asset(key, 'container', { url: `${import.meta.env.BASE_URL}assets/environment/kenney/${key}.glb` });
@@ -38,9 +40,14 @@ export class HouseArt {
           const material = original.clone(); material.name = `Cottage ${paletteKey}`;
           if (color) material.diffuse = new Color().fromString(color);
           material.metalness = 0; material.gloss = .15; material.update();
+          // Kenney UVs span many repeats already; a small multiplier keeps the grain visible.
+          if(pack==='furniture' && /^carpet/.test(original.name)) this.surfaces?.apply(material,'fabric',.12);
+          else if(pack==='furniture' && /^(wood|woodDark)$/.test(original.name)) this.surfaces?.apply(material,'wood',.12);
           this.materials.set(paletteKey, material);
+          if(original.name === 'lamp') this.lampMaterials.push(material);
         }
         mesh.material = this.materials.get(paletteKey)!;
+        mesh.mask = exterior ? 8 : 1;
       }
       const scale = size / (2 * (dimension === 'height' ? bounds.halfExtents.y : bounds.halfExtents.x));
       const anchor = new Entity(`Art ${name}`, this.app), normalization = new Entity('Art normalization', this.app);
@@ -54,5 +61,6 @@ export class HouseArt {
     this.pending.push(task);
   }
   async finish() { await Promise.all(this.pending); this.app.batcher.generate([this.group.id]); }
-  snapshot() { return { loaded: this.loaded, models: this.assets.size, errors: this.errors }; }
+  snapshot() { return { loaded: this.loaded, models: this.assets.size, errors: this.errors,
+    texturedMaterials:[...this.materials.values()].filter(m=>m.diffuseMap?.name.startsWith('Subtle')).map(m=>({name:m.name,texture:m.diffuseMap!.name})) }; }
 }

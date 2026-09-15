@@ -5,18 +5,23 @@ export interface CharacterManifest {
   locomotion: Record<string, { travel_speed_mps: number }>;
   interaction_events: Record<string, { time_seconds: number; event: string }[]>;
   scale: { rest_height_m: number };
+  hand_joints?: string[];
+  action_playback?: number;
+  walk_playback?: number;
 }
-type Action = { name: string; elapsed: number; duration: number; eventTime: number; fired: boolean; commit?: () => void };
+type Action = { name: string; elapsed: number; duration: number; eventTime: number; rate: number; fired: boolean; commit?: () => void };
 
 /** Rig, clip clocks and grip presentation stay separate from movement and mission rules. */
 export class CharacterAnimator {
   private model: Entity | null = null;
   private manifest: CharacterManifest | null = null;
   private scale = 1;
+  private frameScale = 1;
   private readonly clips = new Map<string, AnimTrack>();
   private state = '';
   private time = 0;
   private carrying = false;
+  private carryPace: 'walk' | 'run' = 'run';
   private action: Action | null = null;
   private socket: Entity | null = null;
   private hands: GraphNode[] = [];
@@ -29,13 +34,13 @@ export class CharacterAnimator {
   get busy() { return this.action !== null; }
   get actionName() { return this.action?.name ?? null; }
   constructor(private readonly visual: Entity, private readonly placeholder: Entity) {}
-  attach(model: Entity, animations: Asset[], manifest: CharacterManifest, scale: number) {
-    const tracks = new Map(animations.map(asset => { const track = asset.resource as AnimTrack; return [track.name || asset.name, track]; }));
+  attach(model: Entity, animations: AnimTrack[], manifest: CharacterManifest, scale: number) {
+    const tracks = new Map(animations.map(track => [track.name, track]));
     for (const clip of manifest.animations) {
       const track = tracks.get(clip.name);
       if (!track || Math.abs(track.duration - clip.duration_seconds) > .01) throw new Error('Missing or mismatched Arianna clip: ' + clip.name);
     }
-    const hands = ['hand.L', 'hand.R'].map(name => model.findByName(name)!).filter(Boolean);
+    const hands = (manifest.hand_joints ?? ['hand.L', 'hand.R']).map(name => model.findByName(name)!).filter(Boolean);
     if (hands.length !== 2) throw new Error('Arianna hand joints are missing.');
     model.addComponent('anim', { activate: true });
     model.anim!.loadStateGraph(new AnimStateGraph({
@@ -50,14 +55,16 @@ export class CharacterAnimator {
   }
   bindCarrySocket(socket: Entity) { this.socket = socket; }
   setCarrying(value: boolean) { this.carrying = value; }
+  setCarryPace(value: 'walk' | 'run') { this.carryPace = value; }
   faceTowards(target: Vec3 | null) { this.faceTarget = target?.clone() ?? null; }
   /** Events use the imported clip clock, not guessed wall-clock delays. */
   playAction(name: string, fallbackDuration: number, commit?: () => void, target?: Vec3) {
     const duration = this.clips.get(name)?.duration ?? fallbackDuration;
     const eventTime = this.manifest?.interaction_events[name]?.[0]?.time_seconds ?? fallbackDuration / 2;
-    this.action = { name, elapsed: 0, duration, eventTime, fired: false, commit };
+    const rate = name === 'PickUp' || name === 'PutDown' ? (this.manifest?.action_playback ?? 3) : 1;
+    this.action = { name, elapsed: 0, duration, eventTime, rate, fired: false, commit };
     this.faceTarget = target?.clone() ?? null;
-    if (this.model) { this.model.anim!.speed = 1; this.transition(name, .12); }
+    if (this.model) { this.model.anim!.speed = rate; this.transition(name, .08); }
   }
   cancelAction() { this.action = null; this.faceTarget = null; }
   reset() {
@@ -68,13 +75,14 @@ export class CharacterAnimator {
   private transition(name: string, seconds: number) {
     if (!this.model || !this.clips.has(name)) return;
     const layer = this.model.anim!.baseLayer!;
-    const gaitBlend = ['Walk', 'CarryWalk'].includes(this.state) && ['Walk', 'CarryWalk'].includes(name);
+    const gaitBlend = ['Walk', 'Run', 'CarryWalk', 'CarryRun'].includes(this.state) && ['Walk', 'Run', 'CarryWalk', 'CarryRun'].includes(name);
     const phase = gaitBlend ? (layer.activeStateCurrentTime / layer.activeStateDuration) % 1 : undefined;
     // Component speed also scales blend clocks; preserve a short real-time blend.
     layer.transition(name, seconds * this.model.anim!.speed, phase);
     this.state = name;
   }
   update(dt: number, velocity: Vec3, frameDuration = dt) {
+    this.frameScale = dt / Math.max(frameDuration, .001);
     const speed = velocity.length(), moving = speed > .03;
     this.facing.copy(velocity);
     if (this.faceTarget) this.facing.sub2(this.faceTarget, this.visual.getPosition());
@@ -86,7 +94,7 @@ export class CharacterAnimator {
     }
     const action = this.action;
     if (action) {
-      action.elapsed = this.model ? this.model.anim!.baseLayer!.activeStateCurrentTime : action.elapsed + dt;
+      action.elapsed = this.model ? this.model.anim!.baseLayer!.activeStateCurrentTime : action.elapsed + dt * action.rate;
       if (!action.fired && action.elapsed >= action.eventTime) {
         action.fired = true;
         this.lastEvent = { name: this.manifest?.interaction_events[action.name]?.[0]?.event ?? action.name, clip: action.name, time: action.elapsed };
@@ -95,11 +103,14 @@ export class CharacterAnimator {
       if (action.elapsed >= action.duration) this.cancelAction();
     }
     if (this.model) {
-      const desired = this.action?.name ?? (this.carrying ? (moving ? 'CarryWalk' : 'CarryIdle') : moving ? 'Walk' : 'Idle');
+      const run = this.clips.has('Run') && speed > (this.state.includes('Run') ? 1.05 : 1.3);
+      const gait = this.carrying ? (run && this.carryPace==='run' ? 'CarryRun' : 'CarryWalk') : run ? 'Run' : 'Walk';
+      const desired = this.action?.name ?? (moving ? gait : this.carrying ? 'CarryIdle' : 'Idle');
       const travel = this.manifest?.locomotion[desired]?.travel_speed_mps;
       // Presentation cadence is intentionally decoupled from the asset's tiny authored stride.
       // 7.5x/12.5x looked frantic in play. Keep a relaxed gait with analog-speed response.
-      this.model.anim!.speed = travel ? Math.min(1.5, speed / 2.25 * 1.5) * dt / Math.max(frameDuration, .001) : 1;
+      const cadence=this.manifest?.walk_playback ?? 1.5;
+      this.model.anim!.speed = this.action?.rate ?? (travel ? Math.min(cadence, speed / (this.manifest?.walk_playback ? travel : 2.25) * cadence) * this.frameScale : 1);
       if (desired !== this.state) this.transition(desired, .14);
       if (this.socket && this.hands.length === 2) {
         this.grip.add2(this.hands[0].getPosition(), this.hands[1].getPosition()).mulScalar(.5);
@@ -117,11 +128,11 @@ export class CharacterAnimator {
   snapshot() {
     return {
       state: this.state, busy: this.busy, action: this.actionName, clipTime: this.model?.anim?.baseLayer?.activeStateCurrentTime ?? 0,
-      playbackRate: this.model?.anim?.speed ?? 1, scale: this.scale, groundY: this.model?.getPosition().y, lastEvent: this.lastEvent,
+      playbackRate: this.model?.anim?.speed ?? 1, frameScale: this.frameScale, scale: this.scale, groundY: this.model?.getPosition().y, lastEvent: this.lastEvent,
       clips: this.manifest?.animations, yaw: Math.atan2(-this.visual.forward.x, -this.visual.forward.z) * math.RAD_TO_DEG,
       hands: this.hands.map(hand => hand.getPosition().toArray()), socket: this.socket?.getPosition().toArray(),
       materials: this.model?.findComponents('render').flatMap(render => (render as RenderComponent).meshInstances.map(mesh => mesh.material.name)),
-      feet: ['foot.L', 'foot.R', 'toe.L', 'toe.R'].map(name => this.model?.findByName(name)?.getPosition().toArray()),
+      feet: (this.manifest?.hand_joints ? ['LeftFoot','RightFoot','LeftToeBase','RightToeBase'] : ['foot.L', 'foot.R', 'toe.L', 'toe.R']).map(name => this.model?.findByName(name)?.getPosition().toArray()),
     };
   }
   /** Read-only CPU skinning for development QA; never called by the game loop. */
@@ -143,11 +154,11 @@ export class CharacterAnimator {
           const index = v * 4 + influence, weight = weights[index];
           if (!weight) continue;
           const joint = joints[index]; matrices[joint].transformPoint(source, transformed); world.add(transformed.mulScalar(weight));
-          if (weight > .5 && /^(foot|toe)\./.test(skin.bones[joint].name)) foot = skin.bones[joint].name;
+          if (weight > .5 && /^(?:(foot|toe)\.|(?:Left|Right)(?:Foot|Toe))/.test(skin.bones[joint].name)) foot = skin.bones[joint].name;
         }
         minY = Math.min(minY, world.y); maxY = Math.max(maxY, world.y);
-        if (foot.endsWith('.L')) leftSole = Math.min(leftSole, world.y);
-        if (foot.endsWith('.R')) rightSole = Math.min(rightSole, world.y);
+        if (foot.endsWith('.L')||foot.startsWith('Left')) leftSole = Math.min(leftSole, world.y);
+        if (foot.endsWith('.R')||foot.startsWith('Right')) rightSole = Math.min(rightSole, world.y);
       }
       result.push({ vertices, joints: skin.bones.length, minY, maxY, leftSole, rightSole,
         vertexColors: Boolean((instance.material as unknown as { diffuseVertexColor: boolean }).diffuseVertexColor) });

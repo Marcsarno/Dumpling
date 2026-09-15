@@ -1,40 +1,27 @@
-# Arianna runtime integration
+# Arianna carry revision
 
-The user-approved V3.2.0 asset is enabled in `character.json`. The GLB, supplied
-`asset_manifest.json`, and `PLAYCANVAS_HANDOFF.md` are retained without edits.
+The enabled GLB is the user's Meshy revisions/carry_v1/arianna/arianna.glb.
+SHA-256: 35cfde9dba8d20d53019d654728972c04f7455ccc533040d00818f86d3f82989.
+It is copied byte-for-byte: 14,694 triangles, 28 joints, one baked PBR material,
+and two embedded 2048px textures. No mesh, texture, material or rig edits.
 
-- PlayCanvas's container loader preserves the single vertex-color PBR material,
-  mesh, 25-bone rig and eight separately named clips.
-- Height is 1.203 m (uniform scale 1), +Y up, +Z forward, yaw 0. The authored root
-  stays at ground between the feet; no bounding-box recentering is applied.
-- `CharacterGrounding` moves only the visual alignment to the existing floors and
-  thin rugs. The player root, collider, joystick and travel speed stay unchanged.
-- `CharacterAnimator` builds the Anim state graph from the manifest loop flags.
-  Idle, Walk, CarryIdle, CarryWalk and SitCar loop. SitCar is loaded but unused.
-  PickUp, PutDown and Celebrate play once at original speed and full duration.
-- Movement remains 2.25 units/s. Following playtest feedback, Walk and CarryWalk
-  now use a relaxed maximum 1.5x cadence, with proportional analog-speed response.
-  This intentionally supersedes the initial 7.5x/12.5x strict stride-speed matching.
-  A direct Walk/CarryWalk blend synchronizes normalized phase. Locomotion facing
-  uses actual velocity immediately; interaction turns use the signed heading
-  derived from the forward vector, avoiding Euler-angle reversal artifacts.
-- PickUp dispatches attach_prop at 1.10 clip seconds; PutDown dispatches
-  release_prop at 1.30. Each callback commits once, on the first engine frame
-  reaching the event. Translation and repeat actions pause during the full 2.4s
-  gesture; normal movement resumes afterward. Mission deadlines still apply.
-- Held placeholder props are centered between the animated hand.L / hand.R joints.
-  Their materials and geometry are unchanged. Gameplay holds a generic socket and
-  knows no joint names. Broad props and high shelves still use generic gestures;
-  there is no prop-specific finger animation or inverse kinematics.
-- Existing crayon and vacuum work feedback stays brief; it does not crop PickUp.
-  Vacuum returns on a full PutDown. Successful missions finish that gesture,
-  then play the full 1.6s Celebrate before showing results.
-- Invalid assets retain the playable capsule and log a load diagnostic.
+All six supplied clips remain in the file: Casual_Walk, Walking, Running,
+Idle, CarryWalk and CarryRun. The older game_ready file has only three clips.
+The supplied preservation and validator reports are included beside the model.
 
-The read-only DEV diagnostics expose clip state, playback rate, event timing,
-hand/prop positions and optional CPU-skinned geometry measurements. They are
-not controls and are absent from the production window object.
+MeshyGameplayAdapter uses the actual Idle and carry clips. Runtime gait copies
+remove the 1/15-second export lead-in, joining the authored matching endpoints.
+Walk/Run aliases use Walking/Running. The controller runs at 3.15 units/s by
+default; vacuum and scooper carry at 1.65 units/s. Analog input can walk slowly.
+Playback follows actual speed, up to 1x; gait blends preserve normalized phase.
+Facing follows actual velocity, including collisions.
 
-Run `scripts/arianna-browser-test.mjs` for animation and contact checks; see
-`TESTING.md` for full mission and collection regressions. Physical phone testing
-is still needed for frame pacing at the chosen playback rates.
+CarryIdle uses the supplied carry-arm pose with stationary legs. Pickup, put-down
+and celebration still use temporary runtime poses because these clips were not
+supplied. Pickup/put-down take 0.8 seconds and commit at 0.4 seconds, once each.
+The generic carry socket follows LeftHand/RightHand. The vacuum uses a handle
+attachment and 0.75 carried scale; its original scale returns when placed.
+
+Display height is 1.38345m (15% larger than the previous 1.203m), +Y up / +Z forward. Floors/rugs move only the visual
+alignment. The collider, camera and portrait layout are unchanged.
+Run scripts/new-arianna-browser-test.mjs for current model checks.

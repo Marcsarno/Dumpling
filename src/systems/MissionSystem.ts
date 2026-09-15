@@ -23,6 +23,7 @@ export class MissionSystem {
   private deadline = 0;
   tasks: readonly TaskDefinition[] = TASKS;
   timed = true;
+  continuous = false;
   configure(tasks: readonly TaskDefinition[], timed = true) { this.tasks = tasks; this.timed = timed; this.reset(); }
   start(now: number) {
     if (this.state !== 'ready') return;
@@ -39,7 +40,7 @@ export class MissionSystem {
     if (this.state !== 'running' || this.completed.has(task) || !this.tasks.some(entry => entry.id === task)) return false;
     this.completed.add(task);
     this.allowance += this.timed ? this.reward : 0;
-    if (this.completed.size === this.tasks.length) {
+    if (!this.continuous && this.completed.size === this.tasks.length) {
       this.bonus = this.timed ? this.allCleanBonus : 0;
       this.allowance += this.bonus;
       this.finish('complete', now);

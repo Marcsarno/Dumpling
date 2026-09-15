@@ -18,7 +18,7 @@ export class PetCleanup {
   private flushStart = 0;
   constructor(app: Application, private readonly props: CleanupProps) {
     const tool = new Entity('Pooper scooper', app); props.root.addChild(tool);
-    this.tool = { id: 'scooper', name: 'Scooper', icon: '🥄', entity: tool, home: [3.8, .04, 3.0] };
+    this.tool = { id: 'scooper', name: 'Scooper', icon: '🥄', entity: tool, home: [3.8, .04, 3.0], carryPace: 'walk' };
     tool.setLocalPosition(...this.tool.home); props.items.push(this.tool);
     this.poop = new Entity('Dog poop', app); props.root.addChild(this.poop);
     this.poop.setLocalPosition(3.7, .04, 5.3);

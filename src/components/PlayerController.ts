@@ -1,18 +1,38 @@
 import { Entity, Keyboard, Vec2, Vec3, KEY_A, KEY_D, KEY_S, KEY_W, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT } from 'playcanvas';
 import type { Bedroom } from '../game/bedroom';
+import { RUN_SPEED } from './MovementPace';
 
 export class PlayerController {
   enabled = true;
   readonly input = new Vec2();
   readonly velocity = new Vec3();
   readonly radius = 0.24;
-  readonly speed = 2.25;
+  speed = RUN_SPEED;
   private readonly right: Vec3;
   private readonly forward: Vec3;
   private readonly candidate = new Vec3();
   private bounds: Bedroom['obstacles'] = [];
   private readonly keyboard: Keyboard;
   private readonly abort = new AbortController();
+  private approach: { point: Vec3; arrived: () => void; cancelled: () => void } | null = null;
+  get approaching() { return this.approach !== null; }
+  /** Find a reachable standing point beside the actual prop, respecting inflated furniture. */
+  approachProp(point: Vec3, arrived: () => void, cancelled: () => void) {
+    const start = this.entity.getPosition().clone(), candidates: Vec3[] = [];
+    const free = (p: Vec3) => { this.candidate.copy(p); return !this.blocked(); };
+    const clear = (p: Vec3) => {
+      const count = Math.ceil(start.distance(p) / .06);
+      for (let i = 1; i <= count; i++) if (!free(new Vec3().lerp(start, p, i / count))) return false;
+      return true;
+    };
+    for (let radius = .32; radius <= 1.8; radius += .06) for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 24) {
+      const p = new Vec3(point.x + Math.sin(angle) * radius, start.y, point.z + Math.cos(angle) * radius);
+      if (p.distance(start) < 2.2 && free(p) && clear(p)) candidates.push(p);
+    }
+    candidates.sort((a,b) => Math.hypot(a.x-point.x,a.z-point.z)*3+a.distance(start) - Math.hypot(b.x-point.x,b.z-point.z)*3-b.distance(start));
+    if (!candidates.length) { cancelled(); return; }
+    this.approach = { point: candidates[0], arrived, cancelled };
+  }
   constructor(readonly entity: Entity, camera: Entity, private room: Bedroom, private readonly joystick: Vec2) {
     this.right = camera.right.clone();
     this.right.y = 0;
@@ -49,6 +69,16 @@ export class PlayerController {
     this.input.y += this.axis([KEY_W, KEY_UP], [KEY_S, KEY_DOWN]);
     if (this.input.lengthSq() > 1) this.input.normalize();
     if (document.hidden) this.input.set(0, 0);
+    if (this.approach) {
+      const pending = this.approach;
+      if (this.input.lengthSq() > .04 || document.hidden) { this.approach = null; pending.cancelled(); }
+      else {
+        const delta = pending.point.clone().sub(this.entity.getPosition()); delta.y = 0;
+        if (delta.length() < .045) { this.approach = null; pending.arrived(); this.velocity.set(0,0,0); this.keyboard.update(); return; }
+        const magnitude = Math.min(1, delta.length() / Math.max(this.speed * dt, .001)); delta.normalize();
+        this.input.set(delta.dot(this.right)*magnitude, delta.dot(this.forward)*magnitude);
+      }
+    }
     const dx = (this.right.x * this.input.x + this.forward.x * this.input.y) * this.speed * dt;
     const dz = (this.right.z * this.input.x + this.forward.z * this.input.y) * this.speed * dt;
     const start = this.entity.getPosition();
@@ -80,6 +110,7 @@ export class PlayerController {
     return this.bounds.some(box => box.containsPoint(this.candidate));
   }
   reset = () => {
+    const pending = this.approach; this.approach = null; pending?.cancelled();
     this.keyboard.detach();
     this.keyboard.attach(window);
     this.input.set(0, 0);

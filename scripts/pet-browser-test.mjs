@@ -72,7 +72,7 @@ async function approach(id){
 async function press(id,hold=60){
  await page.waitForFunction(id=>document.querySelector('#action-button').dataset.target===id,id,{timeout:2500});
  const c=await center('#action-button');await touch('touchStart',2,c);await sleep(hold);await touch('touchEnd',2);await sleep(40);
- await page.waitForFunction(()=>!window.__roomTest.snapshot().character.busy,undefined,{timeout:6500});
+ await page.waitForFunction(()=>!window.__roomTest.snapshot().character.busy&&!window.__roomTest.snapshot().cleanup.aligning,undefined,{timeout:6500});
 }
 async function chore(pick,place){await approach(pick);await press(pick);assert.ok((await snap()).cleanup.carrying);await approach(place);await press(place);assert.equal((await snap()).cleanup.carrying,null)}
 try{

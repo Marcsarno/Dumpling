@@ -52,10 +52,10 @@ export class CleanupHUD {
     this.button.classList.toggle('holding', progress > 0);
     let title = 'Action', detail = 'Come closer', icon = '✋';
     if (focus) {
-      title = focus.actionLabel ?? { pickup: 'Pick up', place: 'Put away', crayons: 'Tidy up', vacuum: 'Hold to clean', pet: 'Action' }[focus.kind];
+      title = focus.actionLabel ?? { pickup: 'Pick up', place: 'Put away', crayons: 'Tidy up', vacuum: 'Hold to clean', pet: 'Action',daily:'Action' }[focus.kind];
       detail = focus.name; icon = focus.icon;
     }
-    if (busy) { title = focus?.kind === 'pet' ? 'Washing…' : 'Tidying…'; detail = focus?.name ?? 'One moment'; }
+    if (busy) { title = focus?.kind === 'pet' ? 'Washing…' : focus?.kind==='daily' ? `${focus.name}…` : 'Tidying…'; detail = 'One moment'; }
     if (animation) { title = animation === 'PickUp' ? 'Picking up…' : animation === 'PutDown' ? 'Putting away…' : 'Lovely!'; detail = 'One moment'; }
     if (mission.state === 'finished') { title = 'Well done'; detail = 'Round complete'; icon = '♡'; }
     this.text(this.actionTitle, title); this.text(this.actionDetail, detail); this.text(this.actionIcon, icon);

@@ -40,6 +40,17 @@
  #game[data-scene=cleanup] footer { display:none; }
 }
 .asset-credits { color:inherit; font-size:9px; text-decoration:none; padding:5px; }
+#day-label { margin:5px 0; font-size:11px; font-weight:700; color:#667b5b; text-transform:capitalize; }
+#mission-picker { flex-wrap:wrap; }
+#game[data-mission=day] .task-list { flex-wrap:wrap; font-size:9px; }
+#game[data-mission=day] #mission-clock { font-size:19px; white-space:nowrap; }
+#school-transition { position:absolute; z-index:30; inset:0; background:#f6eafaed; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#65517b; }
+#school-transition[hidden] { display:none; }
+#school-transition span { font-size:64px; }
+.lilah-label { position:absolute; top:0; left:0; max-width:165px; padding:7px 10px; border-radius:15px 15px 15px 3px; background:#fff2ceeF; color:#735978; font-size:12px; font-weight:700; pointer-events:none; box-shadow:0 3px 12px #7c627525; z-index:5; text-align:center; }
+.lilah-label[hidden] { display:none; }
+#player-label, #house-doors, #room-connections { display:none !important; }
+#game[data-scene=cleanup] .room-title h1 { display:none; }
 #game[data-scene=store] .topbar { top:max(12px,env(safe-area-inset-top)); left:16px; right:16px; padding:10px 13px; border-radius:20px; background:#fff9efed; }
 #game[data-scene=store] .wordmark { font-size:22px; }
 #game[data-scene=store] .wordmark small { font-size:6px; }

@@ -1,4 +1,5 @@
-import { Asset, BoundingBox, Entity, type Application, type ContainerResource, type RenderComponent } from 'playcanvas';
+import { Asset, BoundingBox, Entity, type AnimTrack, type Application, type ContainerResource, type RenderComponent } from 'playcanvas';
+import { meshyGameplay } from './MeshyGameplayAdapter';
 import { material, primitives } from '../game/primitives';
 import { CharacterAnimator, type CharacterManifest } from './CharacterAnimator';
 import { CharacterGrounding } from './CharacterGrounding';
@@ -33,11 +34,11 @@ export function createCharacter(app: Application) {
 export async function loadArianna(app: Application, character: ReturnType<typeof createCharacter>): Promise<void> {
   const configResponse = await fetch(`${import.meta.env.BASE_URL}assets/characters/arianna/character.json`);
   if (!configResponse.ok) return;
-  const config: { url: string | null; height?: number; yaw?: number; manifest: string } = await configResponse.json();
+  const config: { url: string | null; height?: number; yaw?: number; manifest: string; adapter?: string } = await configResponse.json();
   if (!config.url) return;
   const response = await fetch(`${import.meta.env.BASE_URL}assets/characters/arianna/${config.manifest}`);
   if (!response.ok) throw new Error('Arianna manifest could not load.');
-  const manifest: CharacterManifest = await response.json();
+  let manifest: CharacterManifest = await response.json();
   const asset = new Asset('Arianna GLB', 'container', { url: `${import.meta.env.BASE_URL}assets/characters/arianna/${config.url}` });
   await new Promise<void>((resolve, reject) => {
     asset.once('load', () => resolve());
@@ -47,6 +48,8 @@ export async function loadArianna(app: Application, character: ReturnType<typeof
   });
   const resource = asset.resource as ContainerResource;
   const model = resource.instantiateRenderEntity({ castShadows: true });
+  let tracks=((resource as ContainerResource & { animations: Asset[] }).animations ?? []).map(asset=>asset.resource as AnimTrack);
+  if(config.adapter==='meshy')({tracks,manifest}=meshyGameplay(model,tracks));
   // Normalize the visual only. Root position, movement and collision radius stay untouched.
   const bounds = new BoundingBox();
   let first = true;
@@ -64,7 +67,7 @@ export async function loadArianna(app: Application, character: ReturnType<typeof
   alignment.setLocalEulerAngles(0, config.yaw ?? 0, 0);
   character.visual.addChild(alignment);
   try {
-    character.animator.attach(model, (resource as ContainerResource & { animations: Asset[] }).animations ?? [], manifest, scale);
+    character.animator.attach(model, tracks, manifest, scale);
   } catch (error) { alignment.destroy(); throw error; }
   character.grounding = new CharacterGrounding(app.root, character.player, alignment);
   character.grounding.update();

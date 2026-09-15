@@ -3,11 +3,13 @@ import { createHouse } from './game/house';
 import { IsometricCamera } from './game/IsometricCamera';
 import { createCharacter, loadArianna } from './components/CharacterVisual';
 import { PlayerController } from './components/PlayerController';
+import { RUN_SPEED, WALK_SPEED } from './components/MovementPace';
 import { VirtualJoystick } from './ui/VirtualJoystick';
 import { createHouseProps } from './game/houseProps';
 import { CleanupGame } from './game/CleanupGame';
 import { GameLoop } from './game/GameLoop';
 import { HouseNavigation } from './ui/HouseNavigation';
+import { Lilah } from './game/Lilah';
 import './ui/styles.css';
 import './ui/cleanup.css';
 import './ui/collection.css';
@@ -28,15 +30,17 @@ function start() {
   });
   sun.setEulerAngles(48, -30, 0);
   app.root.addChild(sun);
+  sun.light!.mask = 9;
   const room = createHouse(app);
   const props = createHouseProps(app, room);
   const camera = new IsometricCamera(app);
   const character = createCharacter(app);
   const joystick = new VirtualJoystick(document.querySelector('#joystick')!, document.querySelector('#joystick-knob')!);
   const controller = new PlayerController(character.player, camera.entity, room, joystick.value);
-  const cleanup = new CleanupGame(app, character, props, camera.entity, () => { joystick.reset(); controller.reset(); });
+  const cleanup = new CleanupGame(app, character, props, camera.entity, () => { joystick.reset(); controller.reset(); }, controller);
   const loop = new GameLoop(app, camera, character, room, props, cleanup, controller, joystick);
   const navigation = new HouseNavigation();
+  const lilah = new Lilah(app,room,props.daily!);
   const label = document.querySelector<HTMLElement>('#player-label')!;
   const screenPoint = new Vec3();
   const headPoint = new Vec3();
@@ -54,13 +58,23 @@ function start() {
   app.on('update', (elapsed: number) => {
     const now = performance.now();
     loop.beforeMovement(now);
+    const bulky = cleanup.carry.item?.carryPace === 'walk';
+    controller.speed = bulky ? WALK_SPEED : RUN_SPEED;
+    character.animator.setCarryPace(bulky ? 'walk' : 'run');
+    const night=cleanup.mode==='day'&&props.daily!.clock.state.phase==='night'&&loop.mode!=='store';
     const dt = document.hidden ? 0 : Math.min(elapsed, 0.04);
+    room.lighting!.update(night,dt);
+    const dusk = room.lighting!.nightAmount;
+    sun.light!.intensity = 1.2 - .98*dusk;
+    sun.light!.color.set(1-.28*dusk,.92-.12*dusk,.83+.17*dusk);
+    app.scene.ambientLight.set(.72-.42*dusk,.68-.36*dusk,.77-.31*dusk);
     controller.update(dt);
     if (loop.mode === 'cleanup') camera.follow(character.player.getPosition(), dt);
     loop.update(now);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === 'cleanup', cleanup.mode);
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
+    lilah.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day'&&!cleanup.movementLocked,character.player.getPosition(),camera.entity);
     headPoint.copy(character.player.getPosition());
     headPoint.y += 1.52;
     camera.entity.camera!.worldToScreen(headPoint, screenPoint);
@@ -76,6 +90,7 @@ function start() {
   if (import.meta.env.DEV) {
     Object.defineProperty(window, '__roomTest', { configurable: true, value: {
       characterGeometry: () => character.animator.geometrySnapshot(),
+      lilahGeometry: () => lilah.geometry(),
       snapshot: () => ({
         position: character.player.getPosition().toArray(),
         velocity: controller.velocity.toArray(), input: controller.input.toArray(),
@@ -91,6 +106,8 @@ function start() {
         cameraRight: camera.entity.right.toArray(), cameraForward: camera.entity.forward.toArray(),
         animationState: character.animator.currentState,
         character: character.animator.snapshot(),
+        lilah: lilah.snapshot(),
+        lighting: room.lighting!.snapshot(),
         cleanup: cleanup.snapshot(),
         loop: loop.snapshot(),
         obstacles: room.obstacles.map(box => ({ center: box.center.toArray(), halfExtents: box.halfExtents.toArray() })),
@@ -98,7 +115,7 @@ function start() {
     } });
   }
   if (import.meta.hot) import.meta.hot.dispose(() => {
-    observer.disconnect(); navigation.destroy(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
+    observer.disconnect(); lilah.destroy(); navigation.destroy(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
     delete (window as unknown as Record<string, unknown>).__roomTest;
   });
 }

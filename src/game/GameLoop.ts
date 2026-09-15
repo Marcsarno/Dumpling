@@ -33,15 +33,28 @@ export class GameLoop {
     private readonly props: CleanupProps, private readonly cleanup: CleanupGame,
     private readonly controller: PlayerController, private readonly joystick: VirtualJoystick) {
     this.store = createStore(app); this.opening = new OpeningSequence(app);
+    const daily=this.props.daily!;
+    daily.onReward=id=>{this.pendingCredit={id,amount:1};this.creditPending();};
+    daily.onStore=()=>this.attempt(()=>{if(daily.clock.canShop&&this.creditPending()){this.save.startTrip();this.enterStore();}});
+    daily.onPhaseChange=()=>{
+      if(this.cleanup.mode!=='day')return;
+      const away=this.mode!=='cleanup';
+      if(away&&daily.clock.state.phase!=='night')return;
+      const position=this.character.player.getPosition().clone();
+      if(this.mode!=='cleanup'&&daily.clock.state.phase==='night')this.startCleanup();
+      this.cleanup.configure('day');
+      if(daily.clock.state.phase==='afternoon'||away)this.character.player.setPosition(-2.1,.09,8.2);
+      else if(daily.clock.state.phase!=='morning')this.character.player.setPosition(position);
+    };
     el('#game').dataset.scene = 'cleanup';
     el('#shop-display-marker').textContent = `🎁 Blind boxes · $${STORE_INVENTORY.price}`;
     this.action = new ActionButton(el('#action-button'), this.press, () => {}); this.action.enabled = false;
     const on = (id: string, fn: () => void) => el(id).addEventListener('click', fn, { signal: this.abort.signal });
-    on('#go-shopping', () => this.attempt(() => { if (!this.creditPending()) return; this.save.startTrip(); this.enterStore(); }));
+    on('#go-shopping', () => this.attempt(() => { if(this.cleanup.mode==='day'&&!daily.clock.canShop)return; if (!this.creditPending()) return; this.save.startTrip(); this.enterStore(); }));
     on('#collection-button', () => this.attempt(() => this.collection()));
     on('#back-cleanup', () => this.attempt(() => this.startCleanup()));
     on('#open-next', () => this.attempt(() => { this.save.goHome(); this.enterHome(); }));
-    for (const mode of ['house', 'bedroom', 'pet', 'practice'] as const) on(`#mission-${mode}`, () => {
+    for (const mode of ['day','house', 'bedroom', 'pet', 'practice'] as const) on(`#mission-${mode}`, () => {
       if (this.mode === 'cleanup' && this.creditPending()) this.cleanup.configure(mode);
     });
     el<HTMLDialogElement>('#collection-dialog').addEventListener('cancel', e => e.preventDefault(), { signal: this.abort.signal });
@@ -50,7 +63,7 @@ export class GameLoop {
     cleanup.onReplay = () => this.camera.reset();
     this.wallet();
     const location = this.save.data.location;
-    if (location === 'store') this.enterStore();
+    if (location === 'store'&&daily.clock.canShop) this.enterStore();
     else if (location === 'home') this.enterHome();
     else if (location === 'collection') { this.enterHome(); this.renderCollection(); }
     if (this.save.problem) this.message(this.save.problem, true);
@@ -160,12 +173,22 @@ export class GameLoop {
       : Math.hypot(p.x, p.z - this.store.exitAnchor.z) <= .85 ? 'go-home' : '';
   }
   beforeMovement(now: number) {
+    this.props.daily!.update(now,this.cleanup.carry.item?.id??null,this.cleanup.movementLocked||this.controller.approaching||this.opening.phase==='opening');
+    const school=this.cleanup.mode==='day'&&this.props.daily!.clock.state.phase==='school';
+    el('#school-transition').hidden=!school;
     if (this.mode === 'cleanup') this.cleanup.mission.tick(now);
-    this.controller.enabled = (this.mode === 'store' || (this.mode === 'cleanup' && this.cleanup.mission.state !== 'finished' && !this.cleanup.movementLocked)) && !el<HTMLDialogElement>('#collection-dialog').open;
+    this.controller.enabled = !school&&(this.mode === 'store' || (this.mode === 'cleanup' && this.cleanup.mission.state !== 'finished' && !this.cleanup.movementLocked)) && !el<HTMLDialogElement>('#collection-dialog').open;
   }
   update(now: number) {
+    const daily=this.cleanup.mode==='day',clock=this.props.daily!.clock;
+    el('#day-label').hidden=!daily;
+    if(daily){
+      el('#day-label').textContent=`Day ${clock.state.day} · ${clock.state.phase==='afternoon'?'After school':clock.state.phase}`;
+      el('#mission-clock').hidden=false;
+      el('#mission-clock').textContent=clock.label;
+    }
     const running = this.mode === 'cleanup' && this.cleanup.mission.state === 'running' && this.cleanup.mission.timed;
-    for (const mode of ['house', 'bedroom', 'pet', 'practice']) {
+    for (const mode of ['day','house', 'bedroom', 'pet', 'practice']) {
       const button = el<HTMLButtonElement>(`#mission-${mode}`); button.disabled = running;
       button.setAttribute('aria-pressed', String(this.cleanup.mode === mode));
     }
@@ -174,7 +197,9 @@ export class GameLoop {
     if (now > this.messageUntil) el('#save-message').hidden = true;
     if (this.mode === 'cleanup') {
       el('#task-list').hidden = this.cleanup.mode === 'practice';
-      this.cleanup.update(now, this.controller.input.lengthSq() > 0); return;
+      this.cleanup.update(now, this.controller.input.lengthSq() > 0);
+      if(this.cleanup.mode==='day'){el('#allowance').textContent=`$${this.save.data.balance}`;el('#day-label').textContent=`Day ${this.props.daily!.clock.state.day} · ${this.props.daily!.clock.state.phase==='afternoon'?'After school':this.props.daily!.clock.state.phase}`;}
+      el('#day-label').hidden=this.cleanup.mode!=='day';return;
     }
     let title = 'Action', detail = 'Come closer', icon = '✋', enabled = false;
     if (this.mode === 'store') {

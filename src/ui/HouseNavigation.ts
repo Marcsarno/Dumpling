@@ -10,15 +10,15 @@ export class HouseNavigation {
   private readonly labels = HOUSE_DOORS.map(door => {
     const label = document.createElement('span'); label.className = 'door-label'; this.root.append(label); return { door, label };
   });
-  update(position: Vec3, camera: Entity, enabled: boolean, mission: 'bedroom' | 'house' | 'practice' | 'pet') {
-    this.root.hidden = !enabled;
-    document.querySelector<HTMLElement>('#room-connections')!.hidden = !enabled;
+  update(position: Vec3, camera: Entity, enabled: boolean, mission: 'bedroom' | 'house' | 'practice' | 'pet' | 'day') {
+    this.root.hidden = true;
+    document.querySelector<HTMLElement>('#room-connections')!.hidden = true;
     if (!enabled) return;
     const room = HOUSE_ROOMS.find(room => position.x >= room.minX && position.x <= room.maxX && position.z >= room.minZ && position.z <= room.maxZ);
     if (room) this.current = room.id;
     const current = HOUSE_ROOMS.find(room => room.id === this.current)!;
     document.querySelector('h1')!.textContent = current.title;
-    document.querySelector('#scene-kicker')!.textContent = `${mission === 'practice' ? 'FREE EXPLORING' : mission === 'pet' ? 'PUPPY CLEANUP' : mission === 'house' ? 'HOUSE CLEANUP' : 'BEDROOM CLEANUP'} · ${current.name.toUpperCase()}`;
+    document.querySelector('#scene-kicker')!.textContent = `${mission === 'day' ? 'EVERYDAY LIFE' : mission === 'practice' ? 'FREE EXPLORING' : mission === 'pet' ? 'PUPPY CLEANUP' : mission === 'house' ? 'HOUSE CLEANUP' : 'BEDROOM CLEANUP'}`;
     const neighbors: string[] = [];
     for (const { door, label } of this.labels) {
       const connected = door.a === this.current || door.b === this.current;

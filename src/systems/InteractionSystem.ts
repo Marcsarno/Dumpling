@@ -8,6 +8,7 @@ export class InteractionSystem {
   available(target: Interaction, carried: ItemId | null, mission: MissionSystem) {
     if (mission.state === 'finished') return false;
     if (!this.guard(target)) return false;
+    if(target.kind==='daily')return target.available?.(carried)??false;
     const task = target.task ?? (target.item === 'vacuum' ? 'dirt' : target.item);
     if (task && !mission.tasks.some(entry => entry.id === task)) return false;
     if (target.task && mission.completed.has(target.task)) return false;
@@ -28,7 +29,9 @@ export class InteractionSystem {
       const distance = this.distance(target, position);
       // Small exit hysteresis prevents the button flickering at the range boundary.
       const range = target.range + (target === this.focus ? 0.1 : 0);
-      if (distance <= range && distance < nearestDistance) { nearest = target; nearestDistance = distance; }
+      // A usable mess wins over nearby tool storage when their interaction ranges overlap.
+      const score=distance+(target.id==='put-tool-away'?100:0);
+      if (distance <= range && score < nearestDistance) { nearest = target; nearestDistance = score; }
     }
     this.focus = nearest;
   }

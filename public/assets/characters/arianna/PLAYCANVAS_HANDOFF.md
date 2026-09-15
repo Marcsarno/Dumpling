@@ -1,21 +1,18 @@
-# PlayCanvas animation handoff
+# Current PlayCanvas handoff
 
-Target engine: PlayCanvas, importing GLB/glTF. Preserve clean, separately named clips and the shared deform skeleton. Keep engine state logic outside Blender.
+This folder now contains the Meshy carry_v1 revision, replacing the older V3.2.0
+25-bone character. See README.md and asset_manifest.json for the current model.
 
-The current GLB contains eight separate named animation entries: Idle, Walk, CarryIdle, CarryWalk, PickUp, PutDown, Celebrate, SitCar. These are separate clips within one GLB, not a concatenated timeline. All use the same 25-bone skeleton and ordinary baked local transform tracks; playback does not require Blender IK, drivers or Python scripts.
+Use the supplied Idle, CarryWalk and CarryRun, plus Walking and Running for
+ordinary locomotion. Casual_Walk is preserved but not selected by gameplay.
+CarryWalk/CarryRun preserve the original walking/running body channels.
+The rig uses LeftHand and RightHand; old hand.L/hand.R names do not apply.
 
-Walk and CarryWalk have matching first/last skinned poses in the actual GLB. Loop-seam tests passed. Configure their PlayCanvas animation states to loop; the companion manifest loop flags are integration metadata, not automatic PlayCanvas state configuration. Also loop Idle, CarryIdle and SitCar. PickUp, PutDown and Celebrate are one-shot clips.
+character.json enables the meshy adapter. The adapter keeps interaction poses
+outside the GLB. Replace these temporary poses when real PickUp, PutDown,
+CarryIdle and Celebrate clips arrive. Gameplay uses the existing controller
+and carry socket rather than joint names.
 
-Use the PlayCanvas Anim component and animation state graph for state transitions and blending. Do not bake engine-specific state machines or transition logic into the character. The existing clips share a consistent rest skeleton for blending; tune transition durations in the game. Walk and CarryWalk have different cycle durations, so synchronize normalized gait phase if blending directly between them.
-
-Walk: 1.133333 seconds per cycle, in place; forward movement 0.30 m/s at normal playback speed.
-CarryWalk: 1.0 second per cycle, in place; forward movement 0.18 m/s at normal playback speed.
-Scale entity movement with animation playback rate to maintain foot contact.
-
-Dispatch pickup attachment at 1.10 seconds and put-down release at 1.30 seconds in game code. The viewer box is a test prop, not part of the GLB. Runtime character movement, object attachment and state logic belong in PlayCanvas.
-
-Validation performed: Khronos GLB validation and actual Three.js skinning/loop/contact checks. This is not yet a PlayCanvas runtime import or blend test; perform that when the PlayCanvas scene is available. The local Three.js viewer is only a review tool and is not a runtime dependency of the asset.
-
-Official guidance:
-- https://developer.playcanvas.com/user-manual/editor/scenes/components/anim/
-- https://developer.playcanvas.com/user-manual/animation/anim-state-graph-assets/
+MovementPace.ts defines normal/small-item pace at 3.15 units/s and bulky pace
+at 1.65. Item carryPace metadata chooses bulky walking. Original binary clips,
+geometry, rig and materials remain unchanged.

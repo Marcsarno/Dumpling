@@ -1,5 +1,6 @@
 import { BoundingBox, Entity, Vec3, type Application, type StandardMaterial } from 'playcanvas';
 import { material, primitives } from './primitives';
+import type { HouseLighting } from './HouseLighting';
 
 export interface Bedroom {
   root: Entity;
@@ -10,6 +11,7 @@ export interface Bedroom {
   materials?: Record<string, StandardMaterial>;
   ready?: Promise<void>;
   artStats?: () => { loaded: number; models: number; errors: string[] };
+  lighting?: HouseLighting;
 }
 
 export function createBedroom(app: Application): Bedroom {
@@ -35,6 +37,7 @@ export function createBedroom(app: Application): Bedroom {
     blue: material('Powder blue', '#9cbed5'),
     dark: material('Dark details', '#76647e'),
     sky: material('Window sky', '#c4e4ea'),
+    lamp: material('Bedside lamp shade', '#f3d68f'),
   };
   const obstacles: BoundingBox[] = [];
   const block = (x: number, z: number, w: number, d: number) => obstacles.push(new BoundingBox(new Vec3(x, 0.7, z), new Vec3(w / 2, 1.4, d / 2)));
@@ -99,14 +102,14 @@ export function createBedroom(app: Application): Bedroom {
   shape('Basket label', 'box', [1.14, 0.44, -2.75], [0.29, 0.13, 0.018], m.pinkLight);
   for (let i = 0; i < 3; i++) shape('Stacked book', 'box', [0.81, 0.83 + i * 0.09, -2.99], [0.65 - i * 0.05, 0.075, 0.4], [m.blue, m.yellow, m.purple][i]);
 
-  // Nightstand and a single decorative lamp (no extra realtime light).
+  // HouseLighting supplies the bedside lamp's light and shade emission at night.
   block(-0.53, -2.8, 0.83, 0.75);
   shape('Nightstand', 'box', [-0.53, 0.44, -2.83], [0.75, 0.78, 0.68], m.trim);
   shape('Drawer', 'box', [-0.53, 0.61, -2.475], [0.64, 0.23, 0.027], m.pinkLight);
   shape('Drawer pull', 'sphere', [-0.53, 0.61, -2.435], [0.07, 0.07, 0.07], m.wood);
   shape('Lamp base', 'cylinder', [-0.53, 0.88, -2.83], [0.32, 0.06, 0.32], m.yellow);
   shape('Lamp stem', 'cylinder', [-0.53, 1.09, -2.83], [0.05, 0.41, 0.05], m.wood);
-  shape('Lamp shade', 'cone', [-0.53, 1.39, -2.83], [0.53, 0.49, 0.53], m.yellow);
+  shape('Lamp shade', 'cone', [-0.53, 1.39, -2.83], [0.53, 0.49, 0.53], m.lamp);
 
   // Storage chest, desk and stool, decorative in this milestone.
   block(2.48, -1.55, 1.15, 1.36);

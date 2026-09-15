@@ -3,8 +3,21 @@
 A mobile-first 3D cleanup and collecting game built with **PlayCanvas, TypeScript
 and Vite**. The house now has a deep cottage plan, closer phone framing, imported
 furniture and a landscaped setting. Arianna's approved model and cleanup/shop/save
-systems remain in place. Her walk and carry gait are capped at 1.5x, with immediate
-facing of actual movement, including reversals and collision slides.
+systems remain in place. The new textured Arianna is displayed 15% larger. Normal
+movement and small items use running; vacuum and scooper use slower carry walking.
+She faces actual movement, including reversals and collision slides.
+
+House furniture now has restrained woven upholstery, wood grain and rug textures
+from three shared 256px repeating maps. Original GLB files and their colors stay
+intact. Floating character names, room titles and doorway labels are hidden;
+Lilah's short occasional remarks fade after 2.6 seconds without a name prefix.
+
+Interaction glows and icon-only markers guide the next step. One destination
+gets the stronger aura and an edge arrow when offscreen. Carried tools prioritize
+unfinished messes, then storage after the last available cleaning step. If a mess
+and storage overlap, Action selects cleaning first. Early tool return is still
+possible away from a usable mess. The phone touch test is
+`scripts/house-detail-browser-test.mjs`.
 
 ## Play it
 
@@ -24,8 +37,43 @@ tap it to pick up, put away, or tidy. Desktop also supports **Space / E**. Carry
 one item at a time and follow the glowing destination. For the vacuum, hold Action
 for **1.15 seconds** beside the dirt. Both thumbs can be used at once.
 
-Choose **House · 6**, **Bedroom · 5**, **Puppy · 1**, or **Explore** before moving. The game starts
-in Arianna's bedroom with the six-task house mission selected. Explore makes all
+The game starts in **Daily life**. Its saved clock begins at 7 AM, advancing one
+game minute per two real seconds while the game is visible. Morning tasks are
+brushing teeth, choosing clothes from the bedroom drawer and getting dressed by
+the bed, then making eggs in the kitchen. Cracking an egg has a 50% chance to drop
+it: fetch the paper towel and hold Action to wipe before cooking can continue.
+After finishing the routine (or at 8:30), use the living-room front door to go to
+school. A short transition brings Arianna home at 3 PM.
+
+After school, three randomly located dirt piles, a kitchen spill and laundry earn
+$1 each. Carry the vacuum between piles; hold Action to clean and return the tool
+to free your hands. Paper-towel wiping also uses a brief hold. Shopping is available
+through the front door until 7 PM, when the day changes to nighttime. Brush teeth,
+put clothes back inside the drawer, read by the bed, then sleep to begin a new day.
+Sleep is also available at 9 PM. Daily progress and the egg outcome survive reloads;
+daily time pauses while hidden. School gameplay remains future work.
+
+Lilah is now a roaming two-year-old with her own preserved Meshy model and eight
+animation clips. Her display height is 62.5% of Arianna's (25% larger than the
+initial half-height version). She follows Arianna, explores, proudly makes toy
+trails, spills juice, and drops cracker crumbs. These are real $1 chores using
+the existing Action button, paper towel and vacuum. Up to three incidents occur
+per day, with at most two untidied at once. Playing with Lilah delays her next
+incident for 75 seconds; at night she settles down. Messes and rewards survive
+reloads. Her behavior, navigation, animation and mess persistence are separate.
+
+At 7 PM the garden becomes cool and dark while nine real bedside, floor-lamp and
+wall-sconce lights fade on inside, with a soft warm interior fill for readable
+faces. Lamp shades glow. Interior light masks exclude the garden and driveway,
+including imported and batched geometry. Lights fade off for daytime and the
+store; local lamps have no shadow maps to keep their phone rendering cost modest.
+
+Pickup and put-down retain the full original clips at 3x playback (about 0.8 seconds).
+Action first walks Arianna to a collision-safe point beside the actual prop.
+Steering cancels that approach; a committed brief gesture locks movement.
+Cooking geometry remains temporary pending approval of the Kenney Food Kit download.
+
+You can also choose **House · 6**, **Bedroom · 5**, **Puppy · 1**, or **Explore** before moving. Explore makes all
 16 implemented chores available without a timer or allowance; it can be
 switched back to a timed mission at any time. Selecting a mode resets the props
 and returns Arianna to her bedroom. Timed missions cannot be switched mid-round.
@@ -100,7 +148,8 @@ playable boundary remains the house. Foreground walls stay low for visibility.
 
 The closer camera follows at a fixed angle with smoothing (10/s), maintaining
 about 5.73 orthographic half-height at 390×844, compared with the former 11.15.
-The screen-relative joystick and 2.25 units/s maximum travel speed are unchanged.
+The screen-relative joystick is unchanged. Full-stick running is 3.15 units/s;
+bulky carried tools use 1.65 units/s. Small analog input allows slower walking.
 The smaller header keeps the world readable on phones. Room changes never cause
 camera cuts or abrupt zooms.
 
@@ -223,18 +272,17 @@ also need pending-state UI and server-authoritative transactions.
 
 ## Approved Arianna character
 
-Arianna V3.2.0 is enabled at her authored 1.203 m height, with her original vertex
-colors, material, rig and all eight clips. The existing 2.25 units/s game pace is
-preserved. Walk and CarryWalk now use a relaxed 1.5x maximum cadence. Slower
-joystick movement and collision slowdown reduce playback proportionally. This
-presentation tuning supersedes the initial strict stride-speed matching. Movement
-facing uses the actual velocity in the same frame, without yaw interpolation lag.
+The Meshy carry_v1 Arianna is enabled at 1.38345m display height, 15% larger than
+the previous display. Her original textures, material, 28-joint rig and six supplied
+clips are preserved byte-for-byte. Idle, CarryWalk and CarryRun use the new authored
+clips. Running is the default; item metadata selects slower bulky carrying.
+Playback follows actual movement, capped at 1x. Gait blends synchronize phase.
 
-Pickup attaches at 1.10 clip seconds and put-down releases at 1.30. Both gestures
-play their full 2.4 seconds with translation paused, followed by normal movement.
-Held props follow the midpoint of her animated hands. Floors and rugs adjust only
-the visual height. A completed mission finishes its put-down and full 1.6-second
-celebration before displaying results. Timed-out actions cannot award late money.
+Temporary runtime pickup/put-down poses take 0.8 seconds and commit at 0.4 seconds.
+These and the temporary celebration stay outside the unchanged source GLB until
+authored interaction clips arrive. Props follow the animated palms; the vacuum
+uses its handle as the attachment. Floors and rugs adjust only the visual height.
+Timed-out interactions cannot award late money.
 
 See [the runtime asset notes](public/assets/characters/arianna/README.md) for the
 integration contract and [TESTING.md](TESTING.md) for browser verification.
@@ -251,7 +299,8 @@ integration contract and [TESTING.md](TESTING.md) for browser verification.
   Ammo/WASM. It is intentionally limited to a flat floor and axis-aligned furniture;
   introduce the engine's collision/rigid-body system if future levels require
   stairs, jumping, dynamic props or arbitrary collision geometry.
-- One directional shadow-casting light, a 1024px shadow map, shared simple
+- One directional shadow-casting light, a 1024px shadow map, unshadowed nighttime
+  interior lights, shared simple
   materials, static batches, no post-processing, and a 1.75 pixel-ratio cap keep
   the starting scene modest. The complete JavaScript bundle is approximately 536 KB gzipped;
   actual phone GPU performance still needs device testing.
@@ -279,7 +328,7 @@ plus the existing store, reveals, collection and local saves.
 **Portrait cottage revision complete.** The existing gameplay runs in a deeper,
 more furnished house with a closer following camera and calmer Arianna gait.
 The six spaces connect through varied doorways instead of a central corridor.
-Arianna remains the only character. There are no new dependencies.
+Arianna and Lilah now share the house. There are no new dependencies.
 
 The approved Stage 3 build was checkpointed **before edits** at `ee9c620` (the
 approved implementation is `795245c`). The earlier Stage 2 checkpoint is `06fbe10`.

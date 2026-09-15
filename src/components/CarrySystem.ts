@@ -18,9 +18,11 @@ export class CarrySystem {
     for (const render of item.entity.findComponents('render')) for (const mesh of (render as RenderComponent).meshInstances) {
       if (first) { bounds.copy(mesh.aabb); first = false; } else bounds.add(mesh.aabb);
     }
-    const center = first ? new Vec3() : new Mat4().copy(item.entity.getWorldTransform()).invert().transformPoint(bounds.center);
+    const center = item.carryGrip ? new Vec3(...item.carryGrip) : first ? new Vec3() : new Mat4().copy(item.entity.getWorldTransform()).invert().transformPoint(bounds.center);
     item.entity.reparent(this.socket);
-    item.entity.setLocalPosition(center.mulScalar(-1));
+    const scale=item.carriedScale ?? 1;
+    item.entity.setLocalScale(scale,scale,scale);
+    item.entity.setLocalPosition(center.mulScalar(-scale));
     item.entity.setLocalEulerAngles(0, 0, 0);
     return true;
   }
@@ -28,6 +30,7 @@ export class CarrySystem {
     if (!this.item) return null;
     const item = this.item;
     item.entity.reparent(parent);
+    item.entity.setLocalScale(1,1,1);
     item.entity.setLocalPosition(...position);
     item.entity.setLocalEulerAngles(0, 0, 0);
     this.item = null;

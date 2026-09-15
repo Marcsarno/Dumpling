@@ -5,7 +5,7 @@ const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'file:///C:/Users/m
 const browser=await chromium.launch({headless:true,channel:'msedge'});
 const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,isMobile:true,hasTouch:true});
 const page=await context.newPage(),errors=[],checks=[];
-await mkdir('artifacts/pets-store',{recursive:true});
+await mkdir('artifacts/house-detail',{recursive:true});
 page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(['error','warning'].includes(m.type()))errors.push(m.text())});
 page.on('response',r=>{if(r.status()>=400)errors.push(r.status()+' '+r.url())});
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -14,7 +14,7 @@ const cdp=await context.newCDPSession(page),touches=new Map();
 async function touch(type,id,p){if(type==='touchEnd')touches.delete(id);else touches.set(id,{...p,id});await cdp.send('Input.dispatchTouchEvent',{type:type==='touchEnd'&&touches.size?'touchMove':type,touchPoints:[...touches.values()]})}
 async function center(sel){const b=await page.locator(sel).boundingBox();return{x:b.x+b.width/2,y:b.y+b.height/2,r:b.width*.29}}
 const pass=name=>{checks.push(name);console.log('PASS '+name)};
-async function photo(name){await page.screenshot({path:'artifacts/pets-store/'+name+'.png'})}
+async function photo(name){await page.screenshot({path:'artifacts/house-detail/'+name+'.png'})}
 let world,obstacles;
 function free(x,z){
  const radius=.265;
@@ -72,21 +72,27 @@ async function approach(id){
 async function press(id,hold=60){
  await page.waitForFunction(id=>document.querySelector('#action-button').dataset.target===id,id,{timeout:2500});
  const c=await center('#action-button');await touch('touchStart',2,c);await sleep(hold);await touch('touchEnd',2);await sleep(40);
- await page.waitForFunction(()=>!window.__roomTest.snapshot().character.busy,undefined,{timeout:6500});
+ await page.waitForFunction(()=>!window.__roomTest.snapshot().character.busy && !window.__roomTest.snapshot().cleanup.aligning && window.__roomTest.snapshot().cleanup.progress===0,undefined,{timeout:6500});
 }
 async function chore(pick,place){await approach(pick);await press(pick);assert.ok((await snap()).cleanup.carrying);await approach(place);await press(place);assert.equal((await snap()).cleanup.carrying,null)}
-try{
- await page.goto('http://127.0.0.1:5173');await page.locator('[data-ready=true]').waitFor();
- // Isolated save fixture for visual/shop checks; earned-money regression is a separate full-loop test.
- await page.evaluate(()=>localStorage.setItem('arianna.progress.v1',JSON.stringify({version:1,balance:8,collection:{},boxes:[],creditedRounds:[],trip:{active:true,purchases:0},location:'store',reveal:null})));
- await page.evaluate(()=>localStorage.setItem('arianna.daily.v1',JSON.stringify({version:1,day:1,minutes:900,phase:'afternoon',done:[],eggDrop:false,breakfast:'done',dust:[0,2,4],schoolSeconds:0})));
- await page.reload();await page.waitForFunction(()=>window.__roomTest?.snapshot().characterLoaded);await sleep(1200);
- let s=await snap();world=[{minX:-3.3,maxX:3.3,minZ:-3.6,maxZ:3.6}];
- // Store uses the active movement collider list, exposed separately below for QA.
- await photo('08-squishy-store');const c=await center('#joystick');await touch('touchStart',1,c);
- for(let i=0;i<80;i++){s=await snap();if(s.loop.focus==='buy-box')break;const dx=-.75-s.position[0],dz=.1-s.position[2],len=Math.hypot(dx,dz),r=s.cameraRight,f=s.cameraForward;await touch('touchMove',1,{x:c.x+c.r*(dx*r[0]+dz*r[2])/Math.hypot(r[0],r[2])/len,y:c.y-c.r*(dx*f[0]+dz*f[2])/Math.hypot(f[0],f[2])/len});await sleep(50)}await touch('touchEnd',1);
- await page.locator('#action-button[data-target=buy-box]').tap();await sleep(100);assert.equal((await snap()).loop.balance,4);assert.equal((await snap()).loop.boxes,1);await photo('09-store-purchased');
- for(const [width,height]of[[320,568],[430,932],[844,390]]){await page.setViewportSize({width,height});await sleep(180);for(const sel of ['#joystick','#action-button']){const box=await page.locator(sel).boundingBox();assert.ok(box.x>=0&&box.y>=0&&box.x+box.width<=width&&box.y+box.height<=height)}await photo('store-'+width+'x'+height)}
- assert.deepEqual(errors,[]);pass('Imported shop assets load; touch purchase works and controls fit phones and landscape');
- await writeFile('artifacts/pets-store/store-report.json',JSON.stringify({checks,errors},null,2));
-}catch(error){await photo('store-failure');console.error(error);process.exitCode=1}finally{await browser.close()}
+try {
+ await page.goto('http://127.0.0.1:5173');await page.waitForFunction(()=>window.__roomTest?.snapshot().characterLoaded);
+ await page.evaluate(()=>{
+  const s=JSON.parse(localStorage.getItem('arianna.daily.v1'));s.phase='afternoon';s.minutes=900;s.done=[];s.dust=[0,2,4];localStorage.setItem('arianna.daily.v1',JSON.stringify(s));
+  localStorage.setItem('arianna.lilah.v1',JSON.stringify({day:s.day,messes:[{x:.5,z:2,done:true},{x:.4,z:11,done:true},{x:1,z:7.4,done:true}]}));
+ });
+ await page.reload();await page.waitForFunction(()=>window.__roomTest?.snapshot().characterLoaded&&window.__roomTest.snapshot().houseArt.loaded>140);
+ const s=await snap();world=s.walkable;obstacles=s.obstacles;
+ assert.equal(await page.locator('#player-label').isVisible(),false);assert.equal(await page.locator('#house-doors').isVisible(),false);assert.equal(await page.locator('.room-title h1').isVisible(),false);
+ await photo('01-textures');pass('Floating names, room titles and doorway labels removed');
+ const guided=()=>page.locator('.cleanup-marker[data-guided="true"]').getAttribute('data-target');
+ await approach('daily-vacuum');await press('daily-vacuum');assert.match(await guided(),/^vacuum-/);
+ assert.equal(await page.locator('.cleanup-marker[data-target="put-tool-away"]').getAttribute('data-guided'),'false');
+ await photo('02-vacuum-guidance');
+ for(let i=0;i<3;i++) {await approach('vacuum-'+i);await press('vacuum-'+i,1400);assert.equal((await snap()).cleanup.daily.dirt[i].visible,false);if(i<2)assert.match(await guided(),/^vacuum-/);}
+ assert.equal(await guided(),'put-tool-away');await photo('03-return-guidance');
+ await approach('put-tool-away');await press('put-tool-away');assert.equal((await snap()).cleanup.carrying,null);pass('Vacuum guidance points to unfinished messes, then switches to storage after the last pile');
+ await approach('take-towel');await press('take-towel');assert.equal(await guided(),'wipe-spill');await approach('wipe-spill');await press('wipe-spill',1400);pass('Paper towel guidance also prioritizes its cleaning step');
+ assert.ok(!(await page.locator('#lilah-label').textContent()).startsWith('Lilah ·'));
+ assert.deepEqual(errors,[]);await writeFile('artifacts/house-detail/report.json',JSON.stringify({checks,errors,snapshot:await snap()},null,2));
+} catch(error) {await photo('failure');console.error(error);process.exitCode=1;} finally {await browser.close();}
