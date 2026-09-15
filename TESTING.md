@@ -4,7 +4,53 @@ Test environment: installed Microsoft Edge (Chromium), Playwright's real touch
 events with mobile emulation, and desktop mouse/keyboard input. Physical iPhone
 Safari has **not** been tested. Emulation is not a phone performance benchmark.
 
-## Approved Arianna V3.2.0 integration
+## Portrait cottage revision
+
+`scripts/cottage-browser-test.mjs` (also invoked by `house-browser-test.mjs`)
+checks the current house using real touch joystick input and Action taps. Its
+read-only path planner routes around furniture and through doors; it never
+teleports Arianna or changes mission time.
+
+- All 42 Kenney models / 169 placements load without failed requests.
+- The footprint is 9.8 units wide and 19.9 deep. At 390×844, camera half-height is
+  5.73, compared with 11.15 before this revision.
+- Sampled direction-reversal frames face actual velocity without yaw lag.
+  Walk and CarryWalk now top out at 1.5x, with analog-speed response. This is a
+  deliberate visual cadence adjustment, not strict authored-stride matching.
+- All six rooms and all ten additional pickup/place tasks are reachable.
+- The complete six-task house mission awards and saves $8 in **52.6 seconds**,
+  including the final gesture and results. This practiced route does not predict
+  a new player's discovery time.
+- Replay and player/control framing pass at 320×568, 360×640, 430×932 and 844×390.
+- No browser exceptions, console warnings/errors or failed asset requests.
+
+Screenshots in `artifacts/house-v2/` were inspected for furniture orientation,
+doorway clearance, player visibility, close phone framing and exterior scenery.
+The report includes the sampled movement vectors, facing and animation rates.
+
+Current regression checks also pass:
+
+- `arianna-browser-test.mjs`: original material, skin, scale and floor contact;
+  animated hand socket; full gesture timing and exactly-once attachment/release;
+  relaxed looping Walk/CarryWalk and movement-facing/idle transitions.
+- `cleanup-browser-test.mjs`: all 16 checks, including the complete five-task
+  bedroom round in 39 seconds, two-thumb vacuuming, cancellations, replay and
+  an actual 60-second expiry that blocks late rewards.
+- `node --test scripts/mission-test.mjs`: all seven mission-rule checks.
+- `collection-browser-test.mjs`: two full earned-money cleanup, purchase, reveal
+  and saved-collection loops; reload persistence and 360×640 layout.
+- Both production smoke suites: pickup/placement/reward and phone resize, plus
+  reveal/rarity/collection persistence and cleanup return. No production debug API
+  or browser errors. The chest approach waits for the visible Action target so it
+  follows the current camera-relative controls rather than an old fixed duration.
+- TypeScript checking and the production build pass. Vite reports the existing
+  large engine-chunk warning; the main bundle is 536 KB gzipped.
+
+The earlier horizontal-house route scripts (`house-edge-test.mjs` and related
+Stage 4 route checks below) are historical. Use the cottage suite for the current
+floor plan. Physical iPhone/Safari performance remains unverified.
+
+## Approved Arianna V3.2.0 integration (historical baseline)
 
 The supplied GLB SHA-256 is unchanged:
 `61de9d966f16d39842756861b946527c2f7056f351912b3e173eadfe6660bcb0`.

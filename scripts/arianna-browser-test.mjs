@@ -44,8 +44,9 @@ async function createPlayer(name) {
       if (length < tolerance) { await touch('touchEnd', 1); await sleep(70); return; }
       // Convert world direction to screen-relative joystick axes using the unchanged camera basis.
       const magnitude = Math.min(1, Math.max(.3, length * 2.1));
-      const screenX = (13 * dx - 10 * dz) / Math.sqrt(269) / length * magnitude;
-      const screenY = (-10 * dx - 13 * dz) / Math.sqrt(269) / length * magnitude;
+      const right = s.cameraRight, forward = s.cameraForward;
+      const screenX = (right[0] * dx + right[2] * dz) / Math.hypot(right[0], right[2]) / length * magnitude;
+      const screenY = (forward[0] * dx + forward[2] * dz) / Math.hypot(forward[0], forward[2]) / length * magnitude;
       await touch('touchMove', 1, { x: c.x + c.radius * screenX, y: c.y - c.radius * screenY });
       await sleep(90);
     }
@@ -133,7 +134,7 @@ try {
     assert.ok(moving.length>4);
     for(const s of moving){
       assert.equal(s.character.state,carrying?'CarryWalk':'Walk');
-      const expected=Math.hypot(...s.velocity)/(carrying?.18:.3);
+      const expected=Math.min(1.5,Math.hypot(...s.velocity)/2.25*1.5);
       assert.ok(Math.abs(s.character.playbackRate-expected)<.1);
       const yaw=Math.atan2(s.velocity[0],s.velocity[2])*180/Math.PI;
       const delta=((s.character.yaw-yaw+540)%360)-180;
@@ -142,7 +143,7 @@ try {
       assert.ok(Math.abs(sole-s.character.groundY)<.018, JSON.stringify({sole,ground:s.character.groundY}));
     }
     observations.push({gait:carrying?'CarryWalk':'Walk',rate:moving[0].character.playbackRate});
-    pass((carrying?'CarryWalk':'Walk')+' loops at velocity-matched playback and faces the movement direction');
+    pass((carrying?'CarryWalk':'Walk')+' loops at relaxed playback and faces the movement direction');
   }
   await walkSample(true);
   await moveTo(.35,-1.45); await moveTo(1,-1.8);

@@ -39,16 +39,16 @@ export function createHouseProps(app: Application, house: Bedroom): CleanupProps
       { id: `place-${id}`, name: destination, icon, kind: 'place', item: id, task: id, anchor: new Vec3(...anchor), marker: new Vec3(placement[0], placement[1] + .65, placement[2]), range, placement, placedStyle: id === 'bath-towel' ? 'hang' : ['kitchen-trash', 'laundry-clothes'].includes(id) ? 'hide' : undefined },
     );
   }
-  pair('hall-shoes', 'Shoes', '👟', [4.28, .09, 1.65], 'Shoe bench', [4.3, 0, 2.3], [4.3, .66, 2.8], 'shoes');
-  pair('hall-mail', 'Mail', '✉', [4.3, .09, -1.3], 'Mail tray', [4.3, 0, -3], [4.25, .91, -3.62], 'mail');
-  pair('living-toy', 'Living-room toy', '🧸', [6.3, .09, 1.5], 'Toy basket', [9.8, 0, 3.35], [9.8, .56, 3.9], 'toy');
-  pair('living-cushion', 'Cushion', '♡', [9.15, .09, 2.7], 'Sofa', [7.55, 0, .75], [7.7, .83, -.15], 'cloth', 1.05);
-  pair('kitchen-dish', 'Dish', '🍽', [12.15, .09, 1.45], 'Kitchen sink', [14.1, 0, .4], [14.1, 1.04, -.37], 'plate', 1.05);
-  pair('kitchen-trash', 'Trash', '♻', [14.7, .09, 3.85], 'Trash bin', [12.15, 0, 3.45], [12.15, .62, 4.04], 'trash');
-  pair('laundry-clothes', 'Dirty laundry', '👕', [11.45, .09, -1.85], 'Washer', [10.25, 0, -2.55], [10.25, .53, -2.9], 'cloth');
-  pair('laundry-clean', 'Clean laundry', '▤', [13.05, .56, -1.5], 'Folding counter', [13, 0, -2.83], [13, .99, -3.62], 'cloth');
-  pair('bath-towel', 'Bath towel', '▤', [7.6, .09, -2.6], 'Towel rack', [6.2, 0, -1.85], [6.2, .92, -1.16], 'cloth');
-  pair('bath-bottle', 'Toiletries', '♧', [7.75, .09, -1.35], 'Vanity', [6.3, 0, -3.08], [6.67, .98, -3.75], 'bottle');
+  pair('hall-shoes', 'Shoes', '👟', [4.45, .09, 2.25], 'Shoe bench', [5.15, 0, 2.5], [5.85, .58, 2.5], 'shoes');
+  pair('hall-mail', 'Mail', '✉', [4.05, .09, 1.55], 'Mail tray', [5.15, 0, 1.1], [5.55, .86, 1.1], 'mail');
+  pair('living-toy', 'Living-room toy', '🧸', [1.0, .09, 5.25], 'Toy basket', [1.95, 0, 7.85], [1.8, .49, 8.55], 'toy');
+  pair('living-cushion', 'Cushion', '♡', [1.0, .09, 6.8], 'Sofa', [-1.3, 0, 6.0], [-2.0, .72, 6.0], 'cloth', 1.05);
+  pair('kitchen-dish', 'Dish', '🍽', [-.55, .09, 11.6], 'Kitchen sink', [-1.7, 0, 11.45], [-2.65, 1.04, 11.45], 'plate', 1.05);
+  pair('kitchen-trash', 'Trash', '♻', [.4, .09, 10.5], 'Trash bin', [1.3, 0, 10.3], [1.95, .65, 10.3], 'trash');
+  pair('laundry-clothes', 'Dirty laundry', '👕', [4.3, .09, 10.9], 'Washer', [3.35, 0, 11.15], [3.35, .53, 10.7], 'cloth');
+  pair('laundry-clean', 'Clean laundry', '▤', [5.85, .48, 10.5], 'Folding counter', [5.8, 0, 11.75], [5.78, .97, 12.63], 'cloth');
+  pair('bath-towel', 'Bath towel', '▤', [4.65, .09, -1.45], 'Towel rack', [4.05, 0, -.525], [3.62, .84, -.525], 'cloth');
+  pair('bath-bottle', 'Toiletries', '♧', [4.7, .09, -2.15], 'Vanity', [4.12, 0, -2.35], [4.1, .96, -3.08], 'bottle');
   const resetBedroom = props.reset;
   function visibility() {
     for (const item of props.items) item.entity.enabled = active.includes(item.id === 'vacuum' ? 'dirt' : item.id);

@@ -17,7 +17,9 @@ try {
   assert.equal(await page.locator('#action-button').getAttribute('data-target'), 'pickup-teddy');
   await page.locator('#action-button').tap(); await page.waitForTimeout(2550);
   assert.equal(await page.locator('.cleanup-marker.destination').textContent(), '🧸 Toy chest');
-  await page.keyboard.down('ArrowRight'); await page.waitForTimeout(1320); await page.keyboard.up('ArrowRight');
+  await page.keyboard.down('ArrowRight');
+  try { await page.locator('#action-button[data-target=toy-chest]').waitFor({ timeout: 2200 }); }
+  finally { await page.keyboard.up('ArrowRight'); }
   await page.waitForTimeout(80);
   assert.equal(await page.locator('#action-button').getAttribute('data-target'), 'toy-chest');
   await page.locator('#action-button').tap(); await page.waitForTimeout(2550);

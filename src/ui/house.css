@@ -9,3 +9,33 @@
 #game[data-mission=practice] #task-count { font-size:9px; }
 @media(max-height:740px) and (orientation:portrait) { #mission-picker { margin-top:5px; } #mission-picker button { padding:4px 8px; font-size:9px; } #room-connections { margin-top:4px; font-size:9px; } }
 @media(orientation:landscape) and (max-height:600px) { #mission-picker { justify-content:flex-start; flex-wrap:wrap; width:180px; margin-left:0; } #room-connections { max-width:165px; margin-left:0; } }
+/* Give the closer world most of the phone; keep touch targets and the existing actions. */
+#game[data-scene=cleanup] .topbar { top:max(12px,env(safe-area-inset-top)); left:16px; right:16px; padding:10px 13px; border:1px solid #fff9; border-radius:20px; background:#fff9efed; box-shadow:0 4px 20px #66564412; }
+#game[data-scene=cleanup] .wordmark { font-size:22px; }
+#game[data-scene=cleanup] .wordmark small { font-size:6px; }
+#game[data-scene=cleanup] .flower { font-size:34px; }
+#game[data-scene=cleanup] .room-title { top:96px; padding:0 14px; text-align:left; width:100%; }
+#game[data-scene=cleanup] .eyebrow { justify-content:flex-start; font-size:8px; letter-spacing:1.1px; color:#5c6e52; }
+#game[data-scene=cleanup] h1 { font-size:21px; margin:5px 0; letter-spacing:-.6px; }
+#game[data-scene=cleanup] .task-list { justify-content:flex-start; background:#fff8efdc; border-radius:9px; padding:4px 7px; width:max-content; max-width:100%; height:auto; }
+#game[data-scene=cleanup] #mission-picker { justify-content:flex-start; margin:7px 0 0; }
+#game[data-scene=cleanup] #room-connections { display:none; }
+#game[data-scene=cleanup] .player-label { font-size:9px; padding:3px 7px; }
+#game[data-scene=cleanup] .controls { bottom:max(40px,calc(env(safe-area-inset-bottom) + 24px)); left:20px; right:20px; }
+#game[data-scene=cleanup] .control-label { color:#50624c; text-shadow:0 1px 3px #ffff; }
+#game[data-scene=cleanup] #cleanup-hint { background:#fff9efed; width:calc(100% - 32px); left:16px; padding:7px 10px; border-radius:12px; color:#596651; bottom:calc(max(40px,env(safe-area-inset-bottom)) + 150px); font-size:10px; }
+#game[data-scene=cleanup] footer { left:16px; right:16px; background:#fff9efed; padding:5px 9px; border-radius:12px; bottom:8px; color:#6c795e; }
+@media(max-height:740px) and (orientation:portrait) {
+ #game[data-scene=cleanup] .room-title { top:85px; }
+ #game[data-scene=cleanup] h1 { display:none; }
+ #game[data-scene=cleanup] #mission-picker { margin-top:5px; }
+ #game[data-scene=cleanup] #cleanup-hint { bottom:calc(max(36px,env(safe-area-inset-bottom)) + 144px); font-size:9px; }
+}
+@media(orientation:landscape) and (max-height:600px) {
+ #game[data-scene=cleanup] .topbar { width:235px; }
+ #game[data-scene=cleanup] .room-title { top:95px; width:210px; }
+ #game[data-scene=cleanup] h1 { display:none; }
+ #game[data-scene=cleanup] .task-list { flex-wrap:wrap; }
+ #game[data-scene=cleanup] #cleanup-hint { width:40%; left:30%; bottom:12px; }
+ #game[data-scene=cleanup] footer { display:none; }
+}

@@ -8,6 +8,8 @@ export interface Bedroom {
   halfDepth: number;
   walkable?: { minX: number; maxX: number; minZ: number; maxZ: number }[];
   materials?: Record<string, StandardMaterial>;
+  ready?: Promise<void>;
+  artStats?: () => { loaded: number; models: number; errors: string[] };
 }
 
 export function createBedroom(app: Application): Bedroom {

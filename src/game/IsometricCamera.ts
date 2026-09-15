@@ -13,22 +13,19 @@ export class IsometricCamera {
       farClip: 60,
       clearColor: new Color().fromString('#ede6f4'),
     });
-    this.entity.setPosition(10, 15, 13);
-    this.entity.lookAt(new Vec3(0, 0.8, 0));
+    this.entity.setPosition(6, 14, 18.9);
+    this.entity.lookAt(new Vec3(0, .8, .9));
     app.root.addChild(this.entity);
   }
   resize(width: number, height: number) {
     const aspect = width / height;
-    // Fit the 9.9-unit projected room width on phones, with a stable angle on every screen.
-    // Following changes translation only. Room changes never alter angle or readable player scale.
-    this.entity.camera!.orthoHeight = Math.max(9, 5.15 / aspect);
-    if (aspect < 1 && height < 740) this.entity.camera!.orthoHeight = Math.max(10.7, 5.15 / aspect);
-    if (aspect > 1.35 && height < 600) this.entity.camera!.orthoHeight = 5.5;
+    // Show a readable slice of the home, instead of fitting its entire width into a phone.
+    this.entity.camera!.orthoHeight = aspect < 1 ? Math.max(5.1, 2.65 / aspect) : 5.1;
   }
   follow(player: Vec3, dt: number) {
     this.desired.set(player.x, 0, player.z - .9);
-    this.offset.lerp(this.offset, this.desired, 1 - Math.exp(-6 * dt));
-    this.entity.setPosition(10 + this.offset.x, 15, 13 + this.offset.z);
+    this.offset.lerp(this.offset, this.desired, 1 - Math.exp(-10 * dt));
+    this.entity.setPosition(6 + this.offset.x, 14, 18.9 + this.offset.z);
   }
-  reset() { this.offset.set(0, 0, 0); this.entity.setPosition(10, 15, 13); }
+  reset() { this.offset.set(0, 0, 0); this.entity.setPosition(6, 14, 18.9); }
 }

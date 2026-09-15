@@ -79,8 +79,9 @@ export class CharacterAnimator {
     if (this.faceTarget) this.facing.sub2(this.faceTarget, this.visual.getPosition());
     if (moving || this.faceTarget) {
       const target = Math.atan2(this.facing.x, this.facing.z) * math.RAD_TO_DEG;
-      const current = this.visual.getLocalEulerAngles().y;
-      this.visual.setLocalEulerAngles(0, math.lerpAngle(current, target, 1 - Math.exp(-16 * dt)), 0);
+      const current = Math.atan2(-this.visual.forward.x, -this.visual.forward.z) * math.RAD_TO_DEG;
+      // Translation uses this frame's velocity; face it in the same frame, including reversals and wall slides.
+      this.visual.setLocalEulerAngles(0, moving ? target : math.lerpAngle(current, target, 1 - Math.exp(-18 * dt)), 0);
     }
     const action = this.action;
     if (action) {
@@ -95,7 +96,9 @@ export class CharacterAnimator {
     if (this.model) {
       const desired = this.action?.name ?? (this.carrying ? (moving ? 'CarryWalk' : 'CarryIdle') : moving ? 'Walk' : 'Idle');
       const travel = this.manifest?.locomotion[desired]?.travel_speed_mps;
-      this.model.anim!.speed = travel ? speed * dt / Math.max(frameDuration, .001) / (travel * this.scale) : 1;
+      // Presentation cadence is intentionally decoupled from the asset's tiny authored stride.
+      // 7.5x/12.5x looked frantic in play. Keep a relaxed gait with analog-speed response.
+      this.model.anim!.speed = travel ? Math.min(1.5, speed / 2.25 * 1.5) * dt / Math.max(frameDuration, .001) : 1;
       if (desired !== this.state) this.transition(desired, .14);
       if (this.socket && this.hands.length === 2) {
         this.grip.add2(this.hands[0].getPosition(), this.hands[1].getPosition()).mulScalar(.5);
@@ -114,7 +117,7 @@ export class CharacterAnimator {
     return {
       state: this.state, busy: this.busy, action: this.actionName, clipTime: this.model?.anim?.baseLayer?.activeStateCurrentTime ?? 0,
       playbackRate: this.model?.anim?.speed ?? 1, scale: this.scale, groundY: this.model?.getPosition().y, lastEvent: this.lastEvent,
-      clips: this.manifest?.animations, yaw: this.visual.getLocalEulerAngles().y,
+      clips: this.manifest?.animations, yaw: Math.atan2(-this.visual.forward.x, -this.visual.forward.z) * math.RAD_TO_DEG,
       hands: this.hands.map(hand => hand.getPosition().toArray()), socket: this.socket?.getPosition().toArray(),
       materials: this.model?.findComponents('render').flatMap(render => (render as RenderComponent).meshInstances.map(mesh => mesh.material.name)),
       feet: ['foot.L', 'foot.R', 'toe.L', 'toe.R'].map(name => this.model?.findByName(name)?.getPosition().toArray()),

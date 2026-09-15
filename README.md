@@ -1,11 +1,10 @@
-# Arianna · A little room
+# Arianna · Maple cottage
 
-A mobile-first, fully 3D cleanup and collecting prototype built with **PlayCanvas,
-TypeScript, and Vite**. Stage 4 expands the approved bedroom into one connected
-house, keeping the Stage 3 shopping, blind-box reveal and collection loop. The
-bedroom furniture, visual palette, joystick, movement speed and cleanup rules are
-retained. The camera now follows smoothly at the original angle and player scale.
-All 3D art is deliberately simple engine primitives.
+A mobile-first 3D cleanup and collecting game built with **PlayCanvas, TypeScript
+and Vite**. The house now has a deep cottage plan, closer phone framing, imported
+furniture and a landscaped setting. Arianna's approved model and cleanup/shop/save
+systems remain in place. Her walk and carry gait are capped at 1.5x, with immediate
+facing of actual movement, including reversals and collision slides.
 
 ## Play it
 
@@ -54,59 +53,47 @@ restores every prop, the player position, empty hands, and a fresh timer. The
 timer uses elapsed real time, including time in another tab; inputs reset on
 focus loss. The round's earnings are added to your persistent wallet when it ends.
 
-## Connected house
+## Connected cottage
 
-The main walking loop is **Bedroom → Hall → Living room → Kitchen → Laundry room
-→ Bathroom → Hall → Bedroom**. A second doorway directly connects the living room
-and laundry room. All rooms remain in one resident PlayCanvas world; walking
-through a door never loads a scene, fades the screen, or teleports the player.
+The footprint is **9.8 units wide by 19.9 deep**. A bedroom and bathroom sit at the
+back, connected by a compact landing. The central living room leads to the kitchen
+and dining area and the utility room. The kitchen and utility room also connect
+directly. There is no long central corridor and no scene loading between rooms.
 
-```text
-               Bathroom ───── Laundry
-                   │           │   │
-Bedroom ──────── Hall ─────── Living ── Kitchen
-```
-
-| Space | Approximate floor size in game units | Working interactions |
+| Space | Floor dimensions | Working interactions |
 | --- | --- | --- |
-| Bedroom | 6.6 × 7.2, existing furniture retained | Original five chores |
-| Hall | 2 × 7.9, with storage at both ends | Shoes → shoe bench; mail → mail tray |
-| Living room | 6 × 5.6 | Toy → toy basket; cushion → sofa |
-| Kitchen | 5 × 5.6 | Dish → sink; trash → bin |
-| Laundry room | 4.5 × 3.4 | Dirty clothes → washer; clean clothes → folding counter |
-| Bathroom | 4 × 3.4 | Towel → towel rack; toiletries → vanity |
+| Bedroom | 6.6 × 7.2 | Original five chores |
+| Landing | 3.2 × 3.2 | Shoes → bench; mail → tray |
+| Bathroom | 3.2 × 4 | Towel → rail; toiletries → vanity |
+| Living room | 9.8 × 5.9 | Toy → basket; cushion → sofa |
+| Kitchen & dining | 5.9 × 6.8 | Dish → sink; trash → bin |
+| Utility room | 3.9 × 3.7 | Dirty clothes → washer; clean clothes → counter |
 
-The hall's bedroom, living and bathroom door centers are only 3.5 units apart from
-end to end; its remaining space holds the two working storage interactions.
-Door gaps are 1.6–1.8 units wide, compared with the player's 0.48-unit collision
-diameter. Low jambs and thresholds mark the openings. Low cutaway walls still block
-movement. Only the existing bedroom backdrop and the house's northern exterior
-retain full-height walls; there are no foreground walls hiding whole rooms.
+42 CC0 models from Kenney's Furniture Kit and Nature Kit supply 169 placements:
+sofa, reading chair, TV console, books, plants, kitchen appliances, dining set,
+bathroom fittings, trees, flowers, bushes and fence sections. Original GLB meshes
+are retained with a coordinated runtime material palette. The original bedroom
+furniture is enriched with small details. There are no new runtime dependencies.
 
-The **House · 6** mission selects the bedroom book, living-room toy, kitchen dish,
-kitchen trash, dirty laundry and bathroom towel. Other interactions are available
-in Explore. All pickup/place tasks reuse the existing single Action button, carry
-socket, target filtering, destination highlights and rewards. Trash and laundry
-disappear into their containers; the placed towel hangs vertically from its rail.
+Outside the cutaway is a continuous lawn, planted borders, mature trees, gravel
+driveway, entry porch, terrace, mailbox and low fencing. This is scenery; the
+playable boundary remains the house. Foreground walls stay low for visibility.
 
-`src/data/house.ts` defines room rectangles, seven doorways and mission task lists.
-`src/game/house.ts` creates the connected floors, walls, furniture and collision
-footprints using the bedroom's material instances. `src/game/houseProps.ts` defines
-the new carryable/drop-zone pairs. No new interaction minigame or physics engine
-was added. Future chores can be added as task data and additional interaction pairs.
+The closer camera follows at a fixed angle with smoothing (10/s), maintaining
+about 5.73 orthographic half-height at 390×844, compared with the former 11.15.
+The screen-relative joystick and 2.25 units/s maximum travel speed are unchanged.
+The smaller header keeps the world readable on phones. Room changes never cause
+camera cuts or abrupt zooms.
 
-The camera follows the player's horizontal displacement using exponential smoothing
-(`1 - exp(-6 × dt)`). Its rotation and responsive orthographic scale stay unchanged
-while walking; room boundaries do not trigger camera cuts or zoom changes. Only
-replay, store transitions and the existing home reveal reset its position. Movement
-still uses the same flattened camera-right/forward axes. Collision tests use the
-union of connected floor rectangles, so crossing a floor seam never creates an
-invisible barrier or permits walking off the house's irregular footprint.
+The **House · 6** mission still selects the book, living-room toy, kitchen dish,
+trash, dirty laundry and bathroom towel, for up to $8 in 60 seconds. Explore makes
+all 15 chores available without a timer. Every task uses the existing Action
+button, carry socket, highlights and rewards.
 
-See **[ASSET_MANIFEST.md](ASSET_MANIFEST.md)** for provenance. Stage 4 adds only
-original procedural assets, uses the bedroom's shared palette, and introduces no
-new texture/model downloads. The PlayCanvas MIT notice is included in
-`public/PLAYCANVAS-LICENSE.txt` and in the production output.
+Room/door data lives in `src/data/house.ts`; architecture and placements in
+`src/game/house.ts`; asynchronous asset caching, normalization, palette and
+batching in `src/game/HouseArt.ts`; chores in `src/game/houseProps.ts`.
+See [ASSET_MANIFEST.md](ASSET_MANIFEST.md) for sources and included CC0 licenses.
 
 ## Store → surprise → collection
 
@@ -201,8 +188,8 @@ node node_modules/vite/bin/vite.js build
 | `scripts/collection-browser-test.mjs` | Two complete real-touch loops, purchases, opening, persistence and portrait layout |
 | `scripts/collection-edge-test.mjs` | Saved-state fixtures for all four rarity effects, trip cap and retained boxes |
 | `scripts/progress-test.mjs` | Exact rarity intervals, economy boundaries, duplicates, refresh and save failures |
-| `scripts/house-browser-test.mjs` | Touch-driven tour, every new interaction, every doorway and full six-task mission |
-| `scripts/house-edge-test.mjs` | Walls, furniture, small screens and real whole-house timeout while carrying |
+| `scripts/cottage-browser-test.mjs` | Current cottage tour, ten interactions, relaxed gait/facing, six-task mission and phone viewports |
+| `scripts/house-edge-test.mjs` | Historical Stage 4 layout test; superseded by the cottage suite |
 | `scripts/house-performance.mjs` | Same-viewport draw-call comparison against an archived Stage 3 server |
 
 `public/assets/rooms`, `props`, and `dumplings` reserve asset locations.
@@ -219,8 +206,10 @@ also need pending-state UI and server-authoritative transactions.
 
 Arianna V3.2.0 is enabled at her authored 1.203 m height, with her original vertex
 colors, material, rig and all eight clips. The existing 2.25 units/s game pace is
-preserved: Walk reaches 7.5x playback and CarryWalk 12.5x at full input. Slower
-joystick movement and collision slowdown reduce playback proportionally.
+preserved. Walk and CarryWalk now use a relaxed 1.5x maximum cadence. Slower
+joystick movement and collision slowdown reduce playback proportionally. This
+presentation tuning supersedes the initial strict stride-speed matching. Movement
+facing uses the actual velocity in the same frame, without yaw interpolation lag.
 
 Pickup attaches at 1.10 clip seconds and put-down releases at 1.30. Both gestures
 play their full 2.4 seconds with translation paused, followed by normal movement.
@@ -245,7 +234,7 @@ integration contract and [TESTING.md](TESTING.md) for browser verification.
   stairs, jumping, dynamic props or arbitrary collision geometry.
 - One directional shadow-casting light, a 1024px shadow map, shared simple
   materials, static batches, no post-processing, and a 1.75 pixel-ratio cap keep
-  the starting scene modest. The complete JavaScript bundle is approximately 533 KB gzipped;
+  the starting scene modest. The complete JavaScript bundle is approximately 536 KB gzipped;
   actual phone GPU performance still needs device testing.
 - Portrait is the primary layout. The canvas fills the browser viewport; resizing
   and landscape remain playable. No forced orientation API, letterboxed phone
@@ -268,9 +257,10 @@ Included: the approved five-task bedroom mission, a connected six-space house,
 ten new carry/place interactions, a six-task house mission and untimed exploration,
 plus the existing store, reveals, collection and local saves.
 
-**Arianna integration complete.** The approved Stage 4 gameplay remains intact.
-Arianna is the only new character; no Lilah, extra rooms, driving or new gameplay
-was added. There are no new dependencies.
+**Portrait cottage revision complete.** The existing gameplay runs in a deeper,
+more furnished house with a closer following camera and calmer Arianna gait.
+The six spaces connect through varied doorways instead of a central corridor.
+Arianna remains the only character. There are no new dependencies.
 
 The approved Stage 3 build was checkpointed **before edits** at `ee9c620` (the
 approved implementation is `795245c`). The earlier Stage 2 checkpoint is `06fbe10`.

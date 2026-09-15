@@ -1,20 +1,21 @@
+/** A deep cottage plan: private rooms, a small landing, shared living, then kitchen/utility. */
 export const HOUSE_ROOMS = [
-  { id: 'bedroom', name: 'Bedroom', title: 'Home, sweet home.', minX: -3.3, maxX: 3.3, minZ: -3.6, maxZ: 3.6 },
-  { id: 'hall', name: 'Hall', title: 'A little hello.', minX: 3.3, maxX: 5.3, minZ: -4.3, maxZ: 3.6 },
-  { id: 'living', name: 'Living room', title: 'Room to be together.', minX: 5.3, maxX: 11.3, minZ: -.9, maxZ: 4.7 },
-  { id: 'kitchen', name: 'Kitchen', title: 'Something good cooking.', minX: 11.3, maxX: 16.3, minZ: -.9, maxZ: 4.7 },
-  { id: 'laundry', name: 'Laundry room', title: 'Fresh little folds.', minX: 9.3, maxX: 13.8, minZ: -4.3, maxZ: -.9 },
-  { id: 'bathroom', name: 'Bathroom', title: 'A little freshen up.', minX: 5.3, maxX: 9.3, minZ: -4.3, maxZ: -.9 },
+  { id: 'bedroom', name: 'Bedroom', title: 'A little room of her own.', minX: -3.3, maxX: 3.3, minZ: -3.6, maxZ: 3.6 },
+  { id: 'hall', name: 'Landing', title: 'Little everyday arrivals.', minX: 3.3, maxX: 6.5, minZ: .4, maxZ: 3.6 },
+  { id: 'bathroom', name: 'Bathroom', title: 'Freshen up.', minX: 3.3, maxX: 6.5, minZ: -3.6, maxZ: .4 },
+  { id: 'living', name: 'Living room', title: 'Make yourself at home.', minX: -3.3, maxX: 6.5, minZ: 3.6, maxZ: 9.5 },
+  { id: 'kitchen', name: 'Kitchen & dining', title: 'Something good cooking.', minX: -3.3, maxX: 2.6, minZ: 9.5, maxZ: 16.3 },
+  { id: 'laundry', name: 'Utility room', title: 'Fresh little folds.', minX: 2.6, maxX: 6.5, minZ: 9.5, maxZ: 13.2 },
 ] as const;
 export type RoomId = typeof HOUSE_ROOMS[number]['id'];
 export const HOUSE_DOORS: { id: string; a: RoomId; b: RoomId; x: number; z: number; axis: 'x' | 'z'; width: number }[] = [
-  { id: 'bedroom-hall', a: 'bedroom', b: 'hall', x: 3.3, z: 0, axis: 'z', width: 1.7 },
-  { id: 'hall-living', a: 'hall', b: 'living', x: 5.3, z: 1.15, axis: 'z', width: 1.8 },
-  { id: 'hall-bathroom', a: 'hall', b: 'bathroom', x: 5.3, z: -2.35, axis: 'z', width: 1.6 },
-  { id: 'living-kitchen', a: 'living', b: 'kitchen', x: 11.3, z: 2.2, axis: 'z', width: 1.8 },
-  { id: 'living-laundry', a: 'living', b: 'laundry', x: 10.25, z: -.9, axis: 'x', width: 1.6 },
-  { id: 'kitchen-laundry', a: 'kitchen', b: 'laundry', x: 12.5, z: -.9, axis: 'x', width: 1.6 },
-  { id: 'laundry-bathroom', a: 'laundry', b: 'bathroom', x: 9.3, z: -2.35, axis: 'z', width: 1.6 },
+  { id: 'bedroom-hall', a: 'bedroom', b: 'hall', x: 3.3, z: 2.7, axis: 'z', width: 1.35 },
+  { id: 'bedroom-living', a: 'bedroom', b: 'living', x: .25, z: 3.6, axis: 'x', width: 1.8 },
+  { id: 'hall-living', a: 'hall', b: 'living', x: 4.8, z: 3.6, axis: 'x', width: 1.7 },
+  { id: 'hall-bathroom', a: 'hall', b: 'bathroom', x: 4.8, z: .4, axis: 'x', width: 1.45 },
+  { id: 'living-kitchen', a: 'living', b: 'kitchen', x: .25, z: 9.5, axis: 'x', width: 2.1 },
+  { id: 'living-laundry', a: 'living', b: 'laundry', x: 4.8, z: 9.5, axis: 'x', width: 1.7 },
+  { id: 'kitchen-laundry', a: 'kitchen', b: 'laundry', x: 2.6, z: 11.5, axis: 'z', width: 1.5 },
 ];
 export const HOUSE_TASKS = [
   { id: 'book', name: 'Book', icon: '📘', room: 'Bedroom' },

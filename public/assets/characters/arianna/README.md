@@ -8,15 +8,16 @@ The user-approved V3.2.0 asset is enabled in `character.json`. The GLB, supplied
 - Height is 1.203 m (uniform scale 1), +Y up, +Z forward, yaw 0. The authored root
   stays at ground between the feet; no bounding-box recentering is applied.
 - `CharacterGrounding` moves only the visual alignment to the existing floors and
-  thin rugs. The player root, collider, joystick, camera and travel speed stay unchanged.
+  thin rugs. The player root, collider, joystick and travel speed stay unchanged.
 - `CharacterAnimator` builds the Anim state graph from the manifest loop flags.
   Idle, Walk, CarryIdle, CarryWalk and SitCar loop. SitCar is loaded but unused.
   PickUp, PutDown and Celebrate play once at original speed and full duration.
-- Movement remains 2.25 units/s, as requested. Playback uses actual displacement
-  speed / authored speed: at full input Walk is 7.5x and CarryWalk is 12.5x.
-  Analog movement and collision slowdown adjust playback; low-frame-rate movement
-  clamping is accounted for. The faster cadence is an explicit gameplay preference.
-  A direct Walk/CarryWalk blend synchronizes normalized phase.
+- Movement remains 2.25 units/s. Following playtest feedback, Walk and CarryWalk
+  now use a relaxed maximum 1.5x cadence, with proportional analog-speed response.
+  This intentionally supersedes the initial 7.5x/12.5x strict stride-speed matching.
+  A direct Walk/CarryWalk blend synchronizes normalized phase. Locomotion facing
+  uses actual velocity immediately; interaction turns use the signed heading
+  derived from the forward vector, avoiding Euler-angle reversal artifacts.
 - PickUp dispatches attach_prop at 1.10 clip seconds; PutDown dispatches
   release_prop at 1.30. Each callback commits once, on the first engine frame
   reaching the event. Translation and repeat actions pause during the full 2.4s
@@ -36,4 +37,4 @@ not controls and are absent from the production window object.
 
 Run `scripts/arianna-browser-test.mjs` for animation and contact checks; see
 `TESTING.md` for full mission and collection regressions. Physical phone testing
-is still needed for frame pacing at the chosen fast playback rates.
+is still needed for frame pacing at the chosen playback rates.

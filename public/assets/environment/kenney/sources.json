@@ -1,0 +1,57 @@
+{
+  "author": "Kenney",
+  "license": "CC0-1.0",
+  "sources": {
+    "furniture": "https://kenney.nl/assets/furniture-kit",
+    "nature": "https://kenney.nl/assets/nature-kit"
+  },
+  "modifications": "Original GLB geometry retained. Runtime materials use a coordinated warm house palette. Runtime scale, rotation and placement only.",
+  "assets": {
+    "furniture": [
+      "bathroomMirror",
+      "bathroomSink",
+      "bathtub",
+      "bear",
+      "benchCushion",
+      "bookcaseOpenLow",
+      "books",
+      "cabinetTelevision",
+      "chairCushion",
+      "coatRackStanding",
+      "dryer",
+      "hoodModern",
+      "kitchenCabinetDrawer",
+      "kitchenCabinetUpperDouble",
+      "kitchenCoffeeMachine",
+      "kitchenFridge",
+      "kitchenSink",
+      "kitchenStove",
+      "lampRoundFloor",
+      "loungeChairRelax",
+      "loungeSofa",
+      "pillow",
+      "plantSmall1",
+      "plantSmall2",
+      "pottedPlant",
+      "radio",
+      "sideTable",
+      "sideTableDrawers",
+      "tableCoffee",
+      "tableRound",
+      "televisionModern",
+      "toaster",
+      "toilet",
+      "trashcan",
+      "washer"
+    ],
+    "nature": [
+      "fence_planksDouble",
+      "flower_purpleA",
+      "flower_yellowC",
+      "grass_large",
+      "plant_bushDetailed",
+      "tree_detailed",
+      "tree_oak"
+    ]
+  }
+}

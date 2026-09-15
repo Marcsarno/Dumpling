@@ -33,6 +33,7 @@ export class GameLoop {
     private readonly props: CleanupProps, private readonly cleanup: CleanupGame,
     private readonly controller: PlayerController, private readonly joystick: VirtualJoystick) {
     this.store = createStore(app); this.opening = new OpeningSequence(app);
+    el('#game').dataset.scene = 'cleanup';
     el('#shop-display-marker').textContent = `🎁 Blind boxes · $${STORE_INVENTORY.price}`;
     this.action = new ActionButton(el('#action-button'), this.press, () => {}); this.action.enabled = false;
     const on = (id: string, fn: () => void) => el(id).addEventListener('click', fn, { signal: this.abort.signal });
