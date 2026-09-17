@@ -3,7 +3,7 @@ import {primitives,material} from './primitives';
 import type {CleanupProps} from './cleanupProps';
 import type {TaskDefinition} from '../systems/MissionSystem';
 
-type Mess={x:number;z:number;done:boolean};
+type Mess={x:number;z:number;done:boolean;cleanedBy?:'arianna'|'marc'};
 /** Three distinct incidents per day; cleaned chores never respawn or pay twice. */
 export class LilahMesses {
   private day=0;
@@ -11,7 +11,7 @@ export class LilahMesses {
   readonly roots:Entity[]=[];
   tasks:TaskDefinition[]=[];
   readonly kinds=['toys','spill','crumbs'] as const;
-  onClean=()=>{};
+  onClean=(_actor:'arianna'|'marc')=>{};
   constructor(app:Application,parent:Entity,private props:CleanupProps,private active:()=>boolean){
     const colors=['#db9fc9','#accce1','#e6c779','#b3c59f'].map((c,i)=>material('Lilah toy '+i,c));
     const juice=material('Lilah juice','#e5b763'),crumb=material('Lilah cracker crumbs','#ba9363');
@@ -36,7 +36,7 @@ export class LilahMesses {
     }catch{}
     this.refresh();
   }
-  private save(){try{localStorage.setItem('arianna.lilah.v1',JSON.stringify({day:this.day,messes:this.records}));}catch{}}
+  private save(records:Mess[]){try{localStorage.setItem('arianna.lilah.v1',JSON.stringify({day:this.day,messes:records}));return true;}catch{return false;}}
   refresh(){
     this.tasks=this.records.map((_,i)=>({id:'lilah-mess-'+i,name:['Lilah’s toys','Lilah’s spill','Lilah’s crumbs'][i],icon:['🧸','🧻','✦'][i]}));
     this.roots.forEach((root,i)=>{const m=this.records[i];root.enabled=!!m&&!m.done;root.setLocalScale(1,1,1);if(m){root.setLocalPosition(m.x,.035,m.z);const target=this.props.interactions.find(t=>t.id==='lilah-mess-'+i)!;target.anchor.set(m.x,0,m.z);target.marker.set(m.x,.3,m.z);}});
@@ -45,7 +45,7 @@ export class LilahMesses {
   get activeCount(){return this.records.filter(m=>!m.done).length;}
   get completed(){return this.records.flatMap((m,i)=>m.done?['lilah-mess-'+i]:[]);}
   needs(kind:'spill'|'crumbs'){const i=this.kinds.indexOf(kind);return !!this.records[i]&&!this.records[i].done;}
-  add(position:Vec3){if(this.count>=3||this.activeCount>=2)return false;this.records.push({x:position.x,z:position.z,done:false});this.refresh();this.save();return true;}
-  complete(id:string){const i=this.tasks.findIndex(t=>t.id===id);if(i<0||this.records[i].done)return false;this.records[i].done=true;this.roots[i].enabled=false;this.save();this.onClean();return true;}
+  add(position:Vec3){if(this.count>=3||this.activeCount>=2)return false;const records=[...this.records,{x:position.x,z:position.z,done:false}];if(!this.save(records))return false;this.records=records;this.refresh();return true;}
+  complete(id:string,actor:'arianna'|'marc'='arianna'){const i=this.tasks.findIndex(t=>t.id===id);if(i<0||this.records[i].done)return false;const records=this.records.map((m,j)=>j===i?{...m,done:true,cleanedBy:actor}:m);if(!this.save(records))return false;this.records=records;this.roots[i].enabled=false;this.onClean(actor);return true;}
   snapshot(){return {day:this.day,messes:this.records.map((m,i)=>({...m,id:'lilah-mess-'+i,kind:this.kinds[i],visible:this.roots[i].enabled})),budget:3};}
 }

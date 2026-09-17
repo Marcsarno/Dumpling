@@ -4,7 +4,8 @@
   "sources": {
     "furniture": "https://kenney.nl/assets/furniture-kit",
     "nature": "https://kenney.nl/assets/nature-kit",
-    "market": "https://kenney.nl/assets/mini-market"
+    "market": "https://kenney.nl/assets/mini-market",
+    "building": "https://kenney.nl/assets/building-kit"
   },
   "modifications": "Original GLB geometry retained. Runtime materials use a coordinated warm house palette. Runtime scale, rotation and placement only.",
   "assets": {
@@ -13,24 +14,39 @@
       "bathroomSink",
       "bathtub",
       "bear",
+      "bedDouble",
       "benchCushion",
+      "bookcaseClosedDoors",
+      "bookcaseOpen",
       "bookcaseOpenLow",
       "books",
+      "cabinetBed",
+      "cabinetBedDrawer",
+      "cabinetBedDrawerTable",
       "cabinetTelevision",
       "chairCushion",
+      "chairDesk",
+      "chairModernFrameCushion",
       "coatRackStanding",
+      "desk",
       "dryer",
       "hoodModern",
       "kitchenCabinetDrawer",
       "kitchenCabinetUpperDouble",
       "kitchenCoffeeMachine",
       "kitchenFridge",
+      "kitchenMicrowave",
       "kitchenSink",
       "kitchenStove",
       "lampRoundFloor",
+      "lampRoundTable",
+      "lampSquareTable",
+      "laptop",
       "loungeChairRelax",
+      "loungeDesignChair",
       "loungeSofa",
       "pillow",
+      "pillowLong",
       "plantSmall1",
       "plantSmall2",
       "pottedPlant",
@@ -38,13 +54,13 @@
       "sideTable",
       "sideTableDrawers",
       "tableCoffee",
+      "tableCoffeeGlassSquare",
       "tableRound",
       "televisionModern",
       "toaster",
       "toilet",
       "trashcan",
-      "washer",
-      "bookcaseOpen"
+      "washer"
     ],
     "nature": [
       "fence_planksDouble",
@@ -59,7 +75,15 @@
       "cash-register",
       "shopping-basket",
       "shopping-cart",
-      "shelf-boxes"
+      "shelf-boxes",
+      "shelf-end",
+      "shelf-bags"
+    ],
+    "building": [
+      "wall-window-wide-round",
+      "wall-doorway-round",
+      "door-rotate-round-a",
+      "floor"
     ]
   }
 }

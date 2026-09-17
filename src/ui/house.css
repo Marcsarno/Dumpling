@@ -49,6 +49,7 @@
 #school-transition span { font-size:64px; }
 .lilah-label { position:absolute; top:0; left:0; max-width:165px; padding:7px 10px; border-radius:15px 15px 15px 3px; background:#fff2ceeF; color:#735978; font-size:12px; font-weight:700; pointer-events:none; box-shadow:0 3px 12px #7c627525; z-index:5; text-align:center; }
 .lilah-label[hidden] { display:none; }
+.marc-label { background:#e7f0e4ef; color:#4f655c; }
 #player-label, #house-doors, #room-connections { display:none !important; }
 #game[data-scene=cleanup] .room-title h1 { display:none; }
 #game[data-scene=store] .topbar { top:max(12px,env(safe-area-inset-top)); left:16px; right:16px; padding:10px 13px; border-radius:20px; background:#fff9efed; }

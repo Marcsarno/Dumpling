@@ -23,6 +23,9 @@ export class HouseLighting {
     };
     addLight('Bedside lamp light', [-.53,1.39,-2.83], 2.4, 3.8);
     addLight('Reading floor lamp light', [5.65,1.58,7.7], 2.3, 3.5);
+    addLight('Lilah nursery lamp', [7.1,1.48,-1.15], 2.3, 6);
+    addLight('Marc bedside lamp', [10.6,.94,4.5], 2.3, 6);
+    addLight('Marc reading lamp', [10.55,1.48,8.0], 2.3, 6);
     // Fixtures sit on real walls or imported floor lamps, never on the removed ceiling.
     for(const [name,x,y,z,leftWall,floorLamp] of [
       ['Bedroom',.55,2.2,-3.46,false,false], ['Landing',6.1,1.58,3.28,false,true],

@@ -40,7 +40,7 @@ export class Lilah {
     this.label.id='lilah-label';this.label.className='lilah-label';this.label.hidden=true;document.querySelector('#game')!.append(this.label);
     this.say('Hi, Ari!');
     this.daily.onPlayLilah=()=>this.playTogether();
-    this.daily.lilahMesses.onClean=()=>{if(!this.animator.busy){this.say('All better! I helped!');this.animator.playAction('Celebrate',1.6);}};
+    this.daily.lilahMesses.onClean=actor=>{if(!this.animator.busy){this.say(actor==='marc'?'Daddy fixed it! I supervised!':'All better! I helped!');this.animator.playAction('Celebrate',1.6);}};
     void this.load().catch(error=>{console.error('Lilah could not load:',error);this.label.textContent='Lilah is still loading';});
   }
   private async load(){
@@ -68,7 +68,7 @@ export class Lilah {
     const clock=this.daily.clock;
     if(clock.state.phase==='night'){
       this.state='sleepy';this.say('Sleepy…');this.carrying=false;this.toy.enabled=false;this.animator.setCarrying(false);
-      this.go(new Vec3(.5,0,1.4),'bedtime');this.nextDecision=this.time+30;return;
+      this.go(new Vec3(8.55,0,-1.3),'bedtime');this.nextDecision=this.time+30;return;
     }
     const messes=this.daily.lilahMesses;
     if(this.time>=this.nextMess&&messes.count<3&&messes.activeCount<2){
@@ -82,7 +82,7 @@ export class Lilah {
       for(const [x,z]of [[.9,.7],[-.9,.7],[.9,-.7],[-.9,-.7]])if(this.go(new Vec3(arianna.x+x,0,arianna.z+z),'follow'))break;
       this.state='following';this.say(['Ari! Wait for me!','I do it too!','Whatcha doing?'][Math.floor(Math.random()*3)]);
     }else{
-      const spots=[[1.1,1.3],[3.8,2],[1.4,5.6],[.5,10.8],[4.3,11.4]],p=spots[Math.floor(Math.random()*spots.length)];
+      const spots=[[1.1,1.3],[3.8,2],[1.4,5.6],[.5,10.8],[4.3,11.4],[8.4,.5]],p=spots[Math.floor(Math.random()*spots.length)];
       this.go(new Vec3(p[0],0,p[1]),'explore');this.state='exploring';this.say('Ooh! What’s that?');
     }
     this.nextDecision=this.time+12;
@@ -101,7 +101,7 @@ export class Lilah {
     if(canMischief&&!this.animator.busy){
       if(this.route.length){
         const p=this.root.getPosition(),next=this.route[0],dx=next.x-p.x,dz=next.z-p.z,distance=Math.hypot(dx,dz);
-        if(distance<.035){this.route.shift();if(!this.route.length)this.arrive();}
+        if(distance<.0001){this.route.shift();if(!this.route.length)this.arrive();}
         else {
           const step=Math.min(distance,.7*dt),x=p.x+dx/distance*step,z=p.z+dz/distance*step;
           // Stop for Arianna instead of clipping through her; reroute on the next decision.

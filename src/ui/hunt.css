@@ -1,0 +1,30 @@
+#hunt-routes { width:min(420px,calc(100% - 24px)); max-height:calc(100dvh - 28px); overflow:auto; border:2px solid white; border-radius:26px; padding:23px 16px 14px; color:#57496b; background:#faf5ef; }
+#hunt-routes::backdrop { background:#46395480; backdrop-filter:blur(4px); }
+#hunt-routes h2 { font-size:25px; letter-spacing:-.8px; margin:12px 0 7px; }
+.hunt-budget { font-size:13px; color:#59765e; font-weight:800; margin:0 0 15px; }
+.store-choice { display:flex; align-items:center; gap:12px; width:100%; padding:13px 10px; margin:9px 0; text-align:left; border:1px solid #fff; border-radius:18px; background:linear-gradient(110deg,var(--shop-color),#fff7ee); color:#514863; box-shadow:0 3px 8px #69546710; cursor:pointer; }
+.store-choice:disabled { opacity:.5; cursor:default; }
+.store-icon { display:grid; place-items:center; width:43px; min-width:43px; height:43px; border-radius:50%; background:#fff8; font-size:28px; }
+.store-choice strong { display:block; font-size:17px; margin-bottom:4px; }
+.store-choice small { display:block; font-size:10px; line-height:1.5; }
+.store-choice em { display:block; font-size:11px; line-height:1.35; margin:7px 0 4px; font-style:normal; font-weight:700; }
+.route-status { color:#5e795b; }
+.hunt-explainer { font-size:10px; line-height:1.5; color:#8d7b8b; margin:12px 4px; }
+#shopping-time { display:inline-block; padding:6px 10px; margin:3px 0; background:#fffaeeed; color:#66795b; border-radius:12px; font-size:10px; font-weight:700; pointer-events:none; }
+#hunt-find { position:absolute; left:16px; right:16px; bottom:220px; max-width:360px; margin:auto; padding:12px 14px; border:1px solid white; border-radius:18px; background:#fff8eff2; color:#655371; box-shadow:0 4px 18px #56466320; pointer-events:none; }
+#hunt-find strong { font-size:17px; }
+#hunt-find p { font-size:12px; margin:5px 0; color:#59816b; font-weight:700; }
+#hunt-find small { font-size:10px; }
+#game[data-scene=store] #save-message { bottom:auto; top:190px; left:16px; width:calc(100% - 32px); padding:9px 12px; }
+#game[data-scene=store] #cleanup-hint { background:#fff9efdf; border-radius:12px; padding:7px 9px; }
+#game[data-scene=store] #shop-display-marker { background:transparent; color:#ffe6a0; border:0; padding:0; box-shadow:none; font-size:23px; text-shadow:0 0 4px white,0 0 9px #e6b761; }
+#hunt-travel { position:absolute; inset:0; z-index:45; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#f5edf7f5; color:#705b83; }
+#hunt-travel span { font-size:65px; animation:hunt-bob .6s ease-in-out infinite alternate; }
+#hunt-travel h2 { font-size:27px; }
+@keyframes hunt-bob { to { transform:translateY(-10px) rotate(6deg); } }
+.series-heading { grid-column:1/-1; text-align:left; padding:10px 3px 4px; font-size:14px; }
+#game[data-scene=store] .room-title h1 { display:none; }
+#game[data-scene=store] #day-label, #game[data-scene=store] #scene-subtitle { display:none; }
+#game[data-scene=store] .room-title .eyebrow { font-size:12px; letter-spacing:.7px; margin-bottom:4px; }
+@media(max-height:740px) { #hunt-find { bottom:190px; padding:8px 12px; } #hunt-routes { padding-top:14px; } .store-choice { padding:9px; } }
+@media(prefers-reduced-motion:reduce) { #hunt-travel span { animation:none; } }

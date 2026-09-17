@@ -1,5 +1,54 @@
 # Arianna · Maple cottage
 
+**Continuing in a new chat?** Read [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md) first for the game vision, current milestone, preferences, tests and deployment status.
+
+## Marc and the family rooms
+
+Marc is in the house at **130% of Arianna's height**, using his supplied
+animation_v2 model. He walks around, rests in the living-room reading chair,
+gets up to tidy Lilah's toys/spills/crumbs, and occasionally calls Arianna
+“sweetie” or tells a dad joke. He gives nearby Arianna first chance to clean;
+Dad's help does not award her allowance or finish her own daily chores.
+
+The east side now has **Lilah's nursery** (through the landing), with its north
+wall aligned to the bathroom, and **Marc's larger bedroom**, extending south
+to the utility-room wall. A doorway connects the two. Arianna's room stays as
+it was. Dad's room mixes slate carpet, painted blue-gray/ivory cabinetry,
+terracotta upholstery, a glass-and-metal reading table and a separate desk.
+The crib, changing dresser, toys and furniture use credited free assets.
+Bedside and reading lamps light the rooms at night, when Lilah heads to her nursery.
+
+Sitting/standing use real embedded animations; cleaning uses a small runtime
+pose/tool effect. Lilah does not yet climb into or sleep inside the crib.
+This expansion, trading and the new stores are local, uncommitted work.
+
+## Trading V1 · recess table
+
+Go to school during Daily life to visit the tiny recess courtyard, or open
+**Collection → Visit recess trading table** for a quick visit using your real
+collection. Walk up to a classmate and press Action. The daily clock pauses at
+the table; **Finish school** resumes the afternoon. The Collection shortcut
+returns to Collection and does not skip any chores.
+
+- **Jules / Rarity Hunter** strongly values rarity. **Remy / Series Collector**
+  overvalues the named series, which rotates daily. **Poppy / Cute Collector**
+  loves pink, purple, and bows, so a common duplicate can beat a rarer item.
+- Each classmate offers 1–3 actual squishies. Pick up to three of yours;
+  tap a selected squishy to take it back. **✕** walks away, **+** asks for more,
+  and **✓** completes a trade when the classmate agrees. An ask can add, refuse,
+  or swap a squishy; changed offers are shown before you accept.
+- Extras appear first. The last copy stays safe unless you explicitly enable
+  **Include last copies**; accepting a trade with a last copy also asks for
+  confirmation. In Collection, **♥** and **🔒** protect every copy of that squishy.
+- One completed trade per classmate per day, up to four requests for more.
+  Offers, negotiations and completed trades persist through refresh. Tomorrow
+  brings new pockets. Trades exchange the shown items in one saved transaction.
+- The courtyard reuses existing Kenney CC0 furniture and trees. The three seated
+  schoolmates use simple placeholder geometry; Arianna and Lilah are unchanged.
+
+No wishlist, bedroom display, special events, new stores, or expanded driving
+are included in this milestone. Subjective trading balance still needs playtesting.
+
 A mobile-first 3D cleanup and collecting game built with **PlayCanvas, TypeScript
 and Vite**. The house now has a deep cottage plan, closer phone framing, imported
 furniture and a landscaped setting. Arianna's approved model and cleanup/shop/save
@@ -333,10 +382,34 @@ Arianna and Lilah now share the house. There are no new dependencies.
 The approved Stage 3 build was checkpointed **before edits** at `ee9c620` (the
 approved implementation is `795245c`). The earlier Stage 2 checkpoint is `06fbe10`.
 
-Local Git checkpoints preserve the initial implementation and the verified
-milestone. No GitHub remote has been added and nothing has been published.
-The project produces a static Vite build suitable for a later GitHub/Vercel setup;
-Vercel's output directory should be `dist` and the build command is `pnpm build`.
+The approved cottage checkpoint is published from [Marcsarno/Dumpling](https://github.com/Marcsarno/Dumpling)
+to [dumpling-sandy.vercel.app](https://dumpling-sandy.vercel.app/). Vercel builds `main`
+with `pnpm build`, output directory `dist`. New local milestones are not published until requested.
+
+## Squishy Hunt V1
+
+Finish the five afternoon chores in Daily life, put your tool away, then use Action
+at the front door. Compare three stores' rumors, prices and round-trip travel costs.
+Travel and searching consume the same afternoon clock; shops close at 7 PM.
+Travel is charged up front, including the ride home, so returning never strands Arianna.
+
+Clover Corner costs 55 game minutes, Peachy Playroom 90, and Moonbeam Finds 165.
+A trip must leave at least 18 game minutes to search. Efficient chores can leave time
+for the first two stores; a specialty-store visit normally takes the remaining outing.
+The chooser reveals clues rather than exact stock. Each store has six possible find
+locations, shuffled stock each day, and sometimes only one box left.
+
+Walk up to a ribboned box and use Action to inspect it. Its series, price and owned
+count appear; another tap buys it. Walking away keeps your allowance. Your bag holds
+three purchases per visit. Return via the welcome mat, open the boxes at home, and
+view the collection. Sleeping creates a new day's stock, series assortment and rumors.
+Purchases, discoveries, remaining stock and sealed outcomes persist across refreshes.
+
+`src/data/hunt.ts` configures travel, prices, stock rules, series, inspection timing,
+and per-store rarity odds. `ProgressStore` commits stock and wallet changes together.
+`store.ts` builds the three imported-asset interiors; `HuntUI` handles the route cards
+and discoveries. The existing `OpeningSequence` and collection receipts are reused.
+See [ASSET_SOURCES.md](ASSET_SOURCES.md) for the CC0 models and modifications.
 
 ## Verification
 

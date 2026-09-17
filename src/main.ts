@@ -10,6 +10,7 @@ import { CleanupGame } from './game/CleanupGame';
 import { GameLoop } from './game/GameLoop';
 import { HouseNavigation } from './ui/HouseNavigation';
 import { Lilah } from './game/Lilah';
+import { Marc } from './game/Marc';
 import './ui/styles.css';
 import './ui/cleanup.css';
 import './ui/collection.css';
@@ -41,6 +42,7 @@ function start() {
   const loop = new GameLoop(app, camera, character, room, props, cleanup, controller, joystick);
   const navigation = new HouseNavigation();
   const lilah = new Lilah(app,room,props.daily!);
+  const marc = new Marc(app,room,props.daily!);
   const label = document.querySelector<HTMLElement>('#player-label')!;
   const screenPoint = new Vec3();
   const headPoint = new Vec3();
@@ -61,7 +63,7 @@ function start() {
     const bulky = cleanup.carry.item?.carryPace === 'walk';
     controller.speed = bulky ? WALK_SPEED : RUN_SPEED;
     character.animator.setCarryPace(bulky ? 'walk' : 'run');
-    const night=cleanup.mode==='day'&&props.daily!.clock.state.phase==='night'&&loop.mode!=='store';
+    const night=cleanup.mode==='day'&&props.daily!.clock.state.phase==='night'&&loop.mode!=='store'&&loop.mode!=='recess';
     const dt = document.hidden ? 0 : Math.min(elapsed, 0.04);
     room.lighting!.update(night,dt);
     const dusk = room.lighting!.nightAmount;
@@ -69,12 +71,13 @@ function start() {
     sun.light!.color.set(1-.28*dusk,.92-.12*dusk,.83+.17*dusk);
     app.scene.ambientLight.set(.72-.42*dusk,.68-.36*dusk,.77-.31*dusk);
     controller.update(dt);
-    if (loop.mode === 'cleanup') camera.follow(character.player.getPosition(), dt);
+    if (loop.mode !== 'home') camera.follow(character.player.getPosition(), dt);
     loop.update(now);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === 'cleanup', cleanup.mode);
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
     lilah.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day'&&!cleanup.movementLocked,character.player.getPosition(),camera.entity);
+    marc.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day',character.player.getPosition(),lilah.root.getPosition(),cleanup.activeInteractionId,camera.entity);
     headPoint.copy(character.player.getPosition());
     headPoint.y += 1.52;
     camera.entity.camera!.worldToScreen(headPoint, screenPoint);
@@ -91,6 +94,7 @@ function start() {
     Object.defineProperty(window, '__roomTest', { configurable: true, value: {
       characterGeometry: () => character.animator.geometrySnapshot(),
       lilahGeometry: () => lilah.geometry(),
+      marcGeometry: () => marc.geometry(),
       snapshot: () => ({
         position: character.player.getPosition().toArray(),
         velocity: controller.velocity.toArray(), input: controller.input.toArray(),
@@ -107,6 +111,7 @@ function start() {
         animationState: character.animator.currentState,
         character: character.animator.snapshot(),
         lilah: lilah.snapshot(),
+        marc: marc.snapshot(),
         lighting: room.lighting!.snapshot(),
         cleanup: cleanup.snapshot(),
         loop: loop.snapshot(),
@@ -115,7 +120,7 @@ function start() {
     } });
   }
   if (import.meta.hot) import.meta.hot.dispose(() => {
-    observer.disconnect(); lilah.destroy(); navigation.destroy(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
+    observer.disconnect(); marc.destroy(); lilah.destroy(); navigation.destroy(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
     delete (window as unknown as Record<string, unknown>).__roomTest;
   });
 }

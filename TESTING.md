@@ -4,7 +4,146 @@ Test environment: installed Microsoft Edge (Chromium), Playwright's real touch
 events with mobile emulation, and desktop mouse/keyboard input. Physical iPhone
 Safari has **not** been tested. Emulation is not a phone performance benchmark.
 
+## Marc and family-house expansion — September 16
+
+The subsequent layout revision has a dedicated `family-layout-browser-test.mjs`:
+asserts nursery/bathroom north alignment and Dad/utility south alignment, walks
+through the connected rooms and approaches the crib, bed (both sides), storage,
+reading corner and desk. Captures wide 980×824 and portrait 320/390/430 layouts,
+then verifies Lilah reaches the moved crib area at night and all **13** interior
+lights work. Images/reports are in `artifacts/family-layout/`. Furniture and
+trees were visually reviewed for overlap. Family touch helpers now approach
+waypoints precisely rather than skipping corners with a 12 cm tolerance.
+
+Completed in isolated Edge profiles with real simulated joystick and Action
+touch input; the user's localhost save was not cleared or modified by tests.
+
+- `family-browser-test.mjs`: original ten Marc clips loaded, configured height
+  exactly 1.3 × Arianna, walks to reading chair, SitDown/SitIdle/StandUp and
+  cleanup states observed. All three actual Lilah incidents are autonomously
+  cleaned and saved with `cleanedBy: 'marc'`; allowance stays zero. Both new
+  rooms are reachable through real doors. Saves survive refresh. Portrait
+  320×568, 390×844 and 430×932 layouts have no document overflow.
+- `family-boundaries-browser-test.mjs`: an existing saved toy mess stays
+  available while Arianna is nearby, then real Action cleans it for $1 once.
+  Night fixture verifies interior lights, nursery arrival, bedroom
+  lighting, normal night chores and next-day reset. Final wallet contains
+  only Arianna's four earned rewards. Screenshots inspected for furniture,
+  chair alignment and day/night appearance.
+- The first sustained run exposed Marc cutting a furniture corner. Fixed
+  waypoint arrival and the path planner's initial grid connection; the full
+  autonomous run then completed all three messes with no browser errors.
+- Full `hunt-browser-test.mjs` and `trading-browser-test.mjs` regressions pass:
+  morning, school/recess, five chores, store choices/purchases, refresh, reveal,
+  collection, another store, night/sleep/new stock; all trader interactions,
+  protection, last-copy confirmation and persisted exchanges.
+- TypeScript check, production build and 29 mission/clock/progress/hunt/trading
+  rule tests pass. Build retains the existing large-bundle advisory. Original
+  Marc GLB source/copy SHA-256 match; his appearance/rig file is unchanged.
+
+```powershell
+node scripts/family-browser-test.mjs
+node scripts/family-boundaries-browser-test.mjs
+node --experimental-transform-types --test scripts/mission-test.mjs scripts/daily-clock-test.mjs scripts/progress-test.mjs scripts/hunt-test.mjs scripts/trading-test.mjs
+```
+
+Artifacts: `artifacts/family/`, `artifacts/family-boundaries/`,
+`artifacts/squishy-hunt/`, `artifacts/trading/`. Night fixtures seed saved time
+before boot instead of waiting through the whole evening. The autonomous test
+waits for Lilah's normal three incidents; it does not inject cleanup events.
+Physical iPhone/Safari remains untested. Sitting is aligned to the living-room
+reading chair only; cleanup uses a runtime pose/tool effect. Lilah reaches the
+nursery but does not yet climb into or lie down in the crib.
+
 ## Portrait cottage revision
+
+### Trading V1 — September 16, 2026
+
+`scripts/trading-test.mjs` covers stable daily offers, different preferences,
+common-duplicate-for-new-Rare trades, adding/refusing/swapping, bounded asks,
+stale/repeated acceptance, protection changes from another instance, repeated
+IDs, last copies, failed writes, old saves and malformed saves. It runs with
+the existing progress, hunt and daily-clock suites (22 passing tests total).
+
+`scripts/trading-browser-test.mjs` uses isolated saved inventory and one sealed
+duplicate box. Real touch controls open the box, mark a favorite and lock, visit
+all three classmates with joystick movement, negotiate and complete a trade.
+The scripted example exchanges a common Rosie duplicate for a new Rare Blueberry
+and a Comet with the Cute Collector. It verifies X leaves inventory untouched,
+last-copy confirmation can be canceled, protection stays active when singles
+are enabled, and refresh preserves collection/negotiations/completed trades.
+An isolated saved school fixture checks recess entry, paused time, afternoon
+return and next-day refreshed offers. No real save or runtime positions are edited.
+
+Portrait layouts: **320×568, 390×844, 430×932**. X / + / ✓ stay visible with touch
+targets above 44px; the bag scrolls independently. Screenshots are reviewed in
+`artifacts/trading/`. Completed trading browser runs have no runtime/asset errors.
+The touch test caught and fixed release-tap fallthrough when Action opened a
+dialog. Type checking and the Vite production build pass; the pre-existing
+engine bundle size advisory remains. Physical Safari and subjective fun still
+require user playtesting.
+
+The updated `hunt-browser-test.mjs` also passes the full touch-driven morning →
+recess exit → five chores → nearby hunt → reload/reveal → second store → night
+routine → sleep/new-day stock loop. Its evening save fixture now runs before
+page boot, preventing the previous scene's autosave from racing the test setup.
+
+```powershell
+node --experimental-transform-types --test scripts/trading-test.mjs scripts/progress-test.mjs scripts/hunt-test.mjs scripts/daily-clock-test.mjs
+node --experimental-transform-types scripts/trading-browser-test.mjs
+```
+
+### Squishy Hunt V1 — September 15, 2026
+
+Current shopping verification uses `hunt-test.mjs`, `hunt-browser-test.mjs`,
+`hunt-boundaries-browser-test.mjs`, and `hunt-layout-browser-test.mjs`.
+Older single-display shopping scripts below describe previous checkpoints.
+
+Passed:
+
+- Morning dressing, teeth, breakfast and school, then all five afternoon chores using
+  the existing touch joystick and Action button. Lilah and the house remain active.
+- Front-door chooser, three rumors/price ranges/travel costs, and the visible
+  afternoon budget. Nearby plus toy-store trips fit; the distant third trip does not.
+- All six stock locations in every store are reachable with collision-aware touch
+  navigation. Inspecting reveals series/price/owned count; buying charges the wallet
+  and removes stock in one persisted transaction.
+- Specialty-store travel consumes most of the afternoon. A paced six-location
+  specialty search measured **28.2 seconds** (includes brief visual/reading pauses).
+  An automated direct route through the smaller shop takes about 14 seconds; human
+  decision time and unfamiliarity will vary. This is pacing evidence, not a claim
+  that subjective fun has been established on a physical phone.
+- Refresh preserves stock depletion, discoveries, balance and sealed contents.
+  Home opening and the grouped four-series collection work with the existing reveal.
+- Night teeth, book, clothes and sleep produce a new day with new stock/rumors;
+  wallet, collection and unopened purchases remain saved.
+- A one-box day sells out correctly. At 7 PM Arianna returns home with her paid box,
+  and returning to the house exposes the normal night activities.
+- Screenshots inspected for imported models, stock placement, sparkle markers and
+  cards. Layout checks cover **320×568, 390×844 and 430×932**; the find card, feedback
+  and Action button remain separate, and the route chooser scrolls on short screens.
+- No browser runtime errors or asset-load errors in the completed runs. Type checking,
+  production build, and the progress/clock/hunt unit suites pass.
+
+Fixtures use an isolated browser profile and saved allowance from prior days. The full
+routine is played with touches, without teleporting or changing runtime positions.
+Only the saved clock is advanced to evening between the afternoon and night segments,
+to avoid waiting through idle time; night chores and sleep are then performed normally.
+Additional isolated fixtures cover sold-out stock and the closing-time boundary.
+The real user's save is not modified by tests.
+
+Reproduce with the local development server running on port 5173:
+
+```powershell
+node --experimental-transform-types --test scripts/progress-test.mjs scripts/hunt-test.mjs scripts/daily-clock-test.mjs
+node --experimental-transform-types scripts/hunt-browser-test.mjs
+node --experimental-transform-types scripts/hunt-boundaries-browser-test.mjs
+node --experimental-transform-types scripts/hunt-layout-browser-test.mjs
+```
+
+Browser scripts accept `PLAYWRIGHT_MODULE` and otherwise use this workstation's
+bundled Playwright with installed Edge. Screenshots and reports are stored in
+`artifacts/squishy-hunt/` (ignored by Git). Physical iPhone/Safari remains untested.
 
 ### Puppy cleanup and squishy-store iteration
 

@@ -93,7 +93,7 @@ export class DailyLife {
     target('put-tool-away','Put tool away','↩',[0,0,0],[0,.8,0],h=>h==='vacuum'||h==='paper-towel',0);
     target('bedtime-book','Read a bedtime book','📘',[-.85,0,-.8],[-1.4,.9,-.8],h=>!h&&phase()==='night'&&notDone('read'),1600,'read');
     target('school-door','Go to school','🎒',[-2.35,0,8.2],[-3.1,1.1,8.2],h=>!h&&this.clock.schoolDue,0);
-    target('shop-door','Visit squishy store','🛍',[-2.35,0,8.2],[-3.1,1.1,8.2],h=>!h&&this.clock.canShop,0);
+    target('shop-door','Choose a store','🛍',[-2.35,0,8.2],[-3.1,1.1,8.2],h=>!h&&this.clock.canShop&&this.clock.ready,0);
     target('sleep','Go to bed','🌙',[-.85,0,-1.6],[-1.4,.8,-1.6],h=>!h&&this.clock.canSleep,0);
     this.refresh();void pan;
   }
@@ -117,6 +117,7 @@ export class DailyLife {
     this.bubbles.enabled=false;
     this.wipingPaper.enabled=false;this.eggFall=0;
   }
+  pause(now:number){this.last=now;}
   update(now:number,held:string|null,busy:boolean){
     if(!this.active){this.last=now;return;}this.held=held;
     this.lilahMesses.syncDay(this.clock.state.day);
@@ -138,6 +139,10 @@ export class DailyLife {
   perform(target:Interaction,carry:CarrySystem){
     const take=(item:CleanupItem)=>{item.entity.enabled=true;carry.pickUp(item);};
     const release=()=>{const item=carry.item;if(item){carry.release(this.root,item.home);item.entity.enabled=false;}};
+    if(target.id.startsWith('lilah-mess-')){
+      if(this.complete(target.id)&&target.hold&&carry.item?.id==='paper-towel')release();
+      this.save();return;
+    }
     switch(target.id){
       case 'play-lilah':this.onPlayLilah();break;
       case 'choose-clothes':case 'night-clothes':take(this.outfit);break;
@@ -155,7 +160,6 @@ export class DailyLife {
       case 'shop-door':this.onStore();break;
       case 'sleep':this.clock.sleep();break;
     }
-    if(target.id.startsWith('lilah-mess-')&&target.hold&&carry.item?.id==='paper-towel')release();
     if(target.task)this.complete(target.task);
     if(target.mess)target.mess.enabled=false;
     this.save();

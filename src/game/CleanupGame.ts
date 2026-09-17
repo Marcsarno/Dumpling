@@ -31,6 +31,7 @@ export class CleanupGame {
   private celebrationStarted = false;
   private aligning: Interaction | null = null;
   get movementLocked() { return this.character.animator.busy || this.activity?.target.kind === 'pet' || (this.activity?.target.kind === 'daily' && !this.activity.target.hold); }
+  get activeInteractionId(){return this.activity?.target.id??this.aligning?.id??null;}
   constructor(app: Application, private readonly character: ReturnType<typeof createCharacter>, private readonly props: CleanupProps,
     camera: Entity, private readonly resetMovement: () => void, private readonly controller: PlayerController) {
     this.carry = new CarrySystem(app, character.visual);

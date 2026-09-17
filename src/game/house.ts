@@ -25,22 +25,23 @@ export function createHouse(app: Application): Bedroom {
   const block = (x: number, z: number, w: number, d: number) => obstacles.push(new BoundingBox(new Vec3(x,.7,z),new Vec3(w/2,1.4,d/2)));
   const box = (name: string,x: number,y: number,z: number,w: number,h: number,d: number,mat=m.trim) => shape(name,'box',[x,y,z],[w,h,d],mat);
   const oval = (name: string,x: number,y: number,z: number,w: number,h: number,d: number,mat=m.rug) => shape(name,'cylinder',[x,y,z],[w,h,d],mat,false);
-  function furniture(name: string, x: number,z: number,size: number,yaw=0,dimension: 'height'|'width'='height',foot?: [number,number],y=.027,colors: Record<string,string>={}) {
-    art.add('furniture',name,[x,y,z],size,yaw,dimension,colors,exterior); if(foot)block(x,z,...foot);
+  function furniture(name: string, x: number,z: number,size: number,yaw=0,dimension: 'height'|'width'='height',foot?: [number,number],y=.027,colors: Record<string,string>={},finish:'natural'|'paint'='natural') {
+    art.add('furniture',name,[x,y,z],size,yaw,dimension,colors,exterior,0,finish); if(foot)block(x,z,...foot);
   }
   const oak = material('Cottage oak boards','#dec69e'), tile=material('Warm checker stone','#d9dcd1'), grout=material('Stone grout','#eeeadd');
   const sage=material('Kitchen sage paint','#aebea9'), blue=material('Bathroom powder paint','#cadce0');
   const grass=material('Garden lawn','#9db77d'), grassDark=material('Lawn edge','#8ea66d'), path=material('Garden limestone','#d4c8ac');
   const asphalt=material('Warm driveway gravel','#afa698'), soil=material('Flower bed earth','#9a8265');
+  const dadCarpet=material('Marc slate woven carpet','#aab7bd');surfaces.apply(dadCarpet,'fabric',12);
 
   for(const room of HOUSE_ROOMS.filter(room=>room.id!=='bedroom')){
     const w=room.maxX-room.minX,d=room.maxZ-room.minZ,x=(room.maxX+room.minX)/2,z=(room.maxZ+room.minZ)/2;
     box(room.name+' foundation',x,-.17,z,w,.32,d,m.wood);
-    box(room.name+' floor',x,-.025,z,w,.1,d,room.id==='bathroom'||room.id==='laundry'?tile:oak);
+    box(room.name+' floor',x,-.025,z,w,.1,d,room.id==='marc-bedroom'?dadCarpet:room.id==='bathroom'||room.id==='laundry'?tile:oak);
     if(room.id==='bathroom'||room.id==='laundry'){
       for(let a=room.minX+.05;a<room.maxX;a+=.6)box('Tile grout',a,.029,z,.013,.006,d,grout);
       for(let b=room.minZ+.05;b<room.maxZ;b+=.6)box('Tile grout',x,.029,b,w,.006,.013,grout);
-    } else {
+    } else if(room.id!=='marc-bedroom') {
       for(let b=room.minZ+.05;b<room.maxZ;b+=.38){
         box('Oak board seam',x,.029,b,w,.005,.009,m.seam);
         for(let a=room.minX+.5+((Math.round(b*10)%3)*.4);a<room.maxX;a+=1.9)box('Oak board end',a,.031,b+.19,.009,.003,.36,m.seam);
@@ -67,6 +68,8 @@ export function createHouse(app: Application): Bedroom {
   wall('z',2.6,9.5,13.2); wall('x',13.2,2.6,6.5);
   wall('x',16.3,-3.3,2.6); wall('z',2.6,13.2,16.3);
   wall('z',6.5,-3.6,13.2);
+  wall('x',-3.6,6.5,11,2.65,m.wall);wall('x',3.6,6.5,11);
+  wall('z',11,-3.6,13.2);wall('x',13.2,6.5,11);
   wall('x',-3.6,3.3,6.5,2.65,blue);
   wall('z',-3.3,3.6,9.5,2.65,m.wall); wall('z',-3.3,9.5,16.3,2.65,sage);
   block(-3.35,0,.15,7.3);block(0,-3.65,6.8,.15);
@@ -91,7 +94,7 @@ export function createHouse(app: Application): Bedroom {
   box('Entry lintel',-3.1,2.32,8.25,.19,.09,1.19,m.trim);
 
   // Landing is a small furnished room, not a corridor through the house.
-  furniture('benchCushion',5.85,2.5,1.15,-90,'width',[.55,1.15],.027,{carpet:'#b9a7cd'});
+  furniture('benchCushion',6.02,3.05,.8,-90,'width',[.5,.8],.027,{carpet:'#b9a7cd'});
   furniture('coatRackStanding',3.8,1.0,1.55,0,'height',[.4,.4]);
   furniture('sideTableDrawers',5.8,1.1,.72,0,'height',[.75,.45]);
   furniture('plantSmall1',5.8,1.1,.28,0,'height',undefined,.76);
@@ -162,6 +165,52 @@ export function createHouse(app: Application): Bedroom {
   furniture('bear',-2.53,-2.5,.32,0,'height',undefined,.92);
   furniture('books',2.45,1.05,.3,20,'width',undefined,1.18);
 
+  // Family extension: two real bedrooms, with doors through the landing/living room.
+  // Arianna's furniture and chore anchors remain in their original positions.
+  const nurseryRug=material('Nursery butter rug','#e7d5aa');surfaces.apply(nurseryRug,'rug');
+  oval('Nursery play rug',8.55,.052,.35,2.6,.025,2.4,nurseryRug);
+  art.add('nursery','crib',[9.8,.035,-1.7],1.25,0,'height',{'_crayfishdiffuse':'#e9dbc5','03___Default':'#c5d4cf','02___Default':'#ecd59d'});
+  block(9.8,-1.7,1.6,2.0);
+  furniture('cabinetBedDrawer',7.3,-2.85,.88,0,'height',[.9,.7],.027,{wood:'#e8e5df'},'paint');
+  art.add('furniture','pillowLong',[7.3,.96,-3.03],.68,0,'width',{carpet:'#e7c7bd'},false,90);
+  furniture('bookcaseOpenLow',10.55,1.55,1.1,-90,'height',[.6,1.5],.027,{wood:'#e8e5df'},'paint');
+  furniture('bear',10.5,1.35,.29,0,'height',undefined,.55);
+  furniture('books',10.5,1.85,.34,90,'width',undefined,.55);
+  furniture('loungeChairRelax',7.15,-.1,.83,45,'height',[.85,.85],.027,{carpet:'#b9c5ac'});
+  furniture('lampRoundFloor',7.1,-1.15,1.65,0,'height',[.3,.3]);
+  furniture('bear',8.65,.4,.3,20,'height',undefined,.075);
+  box('Nursery toy basket',9.45,.22,2.8,.6,.38,.55,m.mint);block(9.45,2.8,.6,.55);
+  furniture('bear',9.45,2.8,.24,0,'height',undefined,.39);
+  box('Nursery window frame',8.2,1.8,-3.51,1.55,1.15,.1,m.trim);
+  box('Nursery window glass',8.2,1.8,-3.44,1.35,.95,.035,m.sky);
+  box('Nursery window cross',8.2,1.8,-3.4,.055,1.0,.04,m.trim);
+
+  // Bed at the quiet north end; clear west-side route from living room to nursery.
+  // Painted cabinetry, woven fabric and glass/metal give Dad a different palette.
+  const dadRug=material('Marc ivory bedside rug','#e5e1d5');surfaces.apply(dadRug,'rug');
+  oval('Marc bedside rug',9.35,.052,5.65,3.05,.025,3.55,dadRug);
+  furniture('bedDouble',9.3,5.15,1.9,0,'width',[1.95,2.4],.035,{wood:'#566d7d',carpet:'#667f91',carpetWhite:'#eee9de',metal:'#b6a176'},'paint');
+  for(const x of [8.0,10.6])furniture('cabinetBedDrawerTable',x,4.5,.55,0,'height',[.55,.5],.027,{wood:'#ede9df',metal:'#657780'},'paint');
+  furniture('lampRoundTable',10.6,4.5,.42,0,'height',undefined,.60,{metal:'#b79c70'});
+  furniture('books',8.0,4.5,.27,0,'width',undefined,.6);
+  box('Dad folded throw',9.3,.675,5.8,1.68,.035,.4,material('Terracotta throw','#c58b70'));
+  furniture('bookcaseClosedDoors',7.02,8.45,1.7,90,'height',[.75,1.55],.027,{wood:'#657c89',metal:'#c9b68c'},'paint');
+  // The south-end workspace leaves room to pull the chair out.
+  furniture('desk',8.45,12.65,1.8,180,'width',[1.8,.75],.027,{wood:'#ece8de',metal:'#5d707d'},'paint');
+  furniture('laptop',8.45,12.6,.52,180,'width',undefined,.92);
+  furniture('chairModernFrameCushion',8.45,11.55,.88,180,'height',[.65,.65],.027,{metal:'#526777',carpetBlue:'#c38e72'});
+  furniture('plantSmall2',9.08,12.62,.22,0,'height',undefined,.92);
+  // An upholstered reading corner and a low glass table, with no doorway behind it.
+  furniture('loungeDesignChair',10.05,9.15,.95,-45,'height',[1.1,1.1],.027,{carpetBlue:'#b97f65',metal:'#576d77'});
+  furniture('tableCoffeeGlassSquare',9.9,10.6,.62,0,'width',[.62,.62],.027,{metal:'#566a76',glass:'#b9d2d3'});
+  furniture('books',9.9,10.6,.25,0,'width',undefined,.36);
+  furniture('lampRoundFloor',10.55,8.0,1.65,0,'height',[.3,.3],.027,{metal:'#b59b76'});
+  furniture('pottedPlant',10.5,12.4,.95,0,'height',[.5,.5]);
+  // Useful touches in the existing shared rooms, kept clear of routes and interactions.
+  furniture('cabinetBedDrawer',-2.72,15.65,1,90,'height',[.95,.9]);
+  furniture('kitchenMicrowave',-2.72,15.65,.29,90,'height',undefined,1.035);
+  furniture('pillowLong',-2.3,6.8,.66,90,'width',undefined,.62,{carpet:'#b5c9bc'});
+
   // The visible world continues beyond the cutaway: lawn, planting, porch, drive and fence.
   exterior = true;
   box('Garden terrain',0,-.3,7,70,.3,80,grass);
@@ -174,20 +223,20 @@ export function createHouse(app: Application): Bedroom {
   box('Patio terrace',4.55,-.105,14.4,4,.08,2.4,path);
   for(let x=3;x<6.5;x+=.55)box('Terrace joint',x,-.06,14.4,.012,.006,2.4,m.trim);
   furniture('benchCushion',4.65,14.5,1.6,0,'width',undefined,-.06);
-  for(const [x,z,w,d] of [[-4.05,2.0,1.05,6],[-4.1,12.15,1,4.2],[7.25,3.0,1.05,13],[.3,-4.35,8,1.0]])box('Raised flower border',x,-.07,z,w,.11,d,soil);
-  const treePositions: Triple[]=[[-6.2,0,-3.5],[-8.5,0,2],[-5.5,0,16.6],[8.2,0,-4],[9.6,0,3],[8.3,0,8.3],[7.4,0,16.9],[-.8,0,18.6],[4.2,0,-6],[-10.7,0,11]];
+  for(const [x,z,w,d] of [[-4.05,2.0,1.05,6],[-4.1,12.15,1,4.2],[11.75,5.5,1.05,11],[.3,-4.35,8,1.0]])box('Raised flower border',x,-.07,z,w,.11,d,soil);
+  const treePositions: Triple[]=[[-6.2,0,-3.5],[-8.5,0,2],[-5.5,0,16.6],[8.2,0,-7.2],[13.6,0,3],[13.3,0,8.3],[9.4,0,16.9],[-9.5,0,20],[4.2,0,-6],[-10.7,0,11]];
   treePositions.forEach(([x,,z],i)=>art.add('nature',i%2?'tree_oak':'tree_detailed',[x,-.14,z],3.0+(i%3)*.45,i*57));
   for(let i=0;i<28;i++){
-    const left=i<14,x=left?-4.12:7.22,z=-2.7+(i%14)*1.14;
+    const left=i<14,x=left?-4.12:11.75,z=-2.7+(i%14)*1.14;
     if(left&&z>6.8&&z<9.8)continue;
     art.add('nature','plant_bushDetailed',[x,-.1,z],.48+(i%3)*.08,i*41);
     art.add('nature',i%2?'flower_purpleA':'flower_yellowC',[x+.35,-.07,z+.25],.26+(i%3)*.03,i*23);
   }
   for(let i=0;i<30;i++)art.add('nature','grass_large',[-11+(i%10)*2.4,-.14,i<10?-6.3:i<20?18.4:21.5],.15+(i%3)*.03,i*17);
   // A deliberately low fence keeps foreground landscaping from obscuring the player.
-  for(let z=-6;z<20;z+=2)art.add('nature','fence_planksDouble',[10.5,-.14,z],.82,90);
-  for(let x=-10;x<10.5;x+=2)art.add('nature','fence_planksDouble',[x,-.14,-6],.82,0);
-  for(let x=-4.7;x<10.5;x+=2)art.add('nature','fence_planksDouble',[x,-.14,20],.82,0);
+  for(let z=-6;z<20;z+=2)art.add('nature','fence_planksDouble',[15,-.14,z],.82,90);
+  for(let x=-10;x<15;x+=2)art.add('nature','fence_planksDouble',[x,-.14,-6],.82,0);
+  for(let x=-4.7;x<15;x+=2)art.add('nature','fence_planksDouble',[x,-.14,20],.82,0);
   // Mailbox by the driveway entrance.
   box('Mailbox post',-5.15,.45,18,.12,1.15,.12,m.wood);
   box('Mailbox body',-5.15,1.03,18,.43,.36,.6,m.pink);
@@ -195,5 +244,5 @@ export function createHouse(app: Application): Bedroom {
   app.batcher.generate([group.id]);
   const ready=art.finish();
   const lighting = new HouseLighting(app, root, m.lamp, art.lampMaterials);
-  return {root,obstacles,materials:m,halfWidth:6.6,halfDepth:16.4,walkable:[...HOUSE_ROOMS],ready,artStats:()=>art.snapshot(),lighting};
+  return {root,obstacles,materials:m,halfWidth:11.1,halfDepth:16.4,walkable:[...HOUSE_ROOMS],ready,artStats:()=>art.snapshot(),lighting};
 }

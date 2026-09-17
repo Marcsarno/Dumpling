@@ -21,7 +21,7 @@ try {
   await page.screenshot({path:'artifacts/house-lighting/day.png'});
   await phase('night',1140);
   await page.waitForFunction(()=>window.__roomTest.snapshot().lighting.amount===1);
-  const night=await snap();assert.equal(night.lighting.lights.length,10);assert.ok(night.lighting.lights.every(l=>l.enabled&&l.intensity>0&&l.mask===1));assert.ok(night.lighting.glowingShades>=3);assert.equal(night.lighting.exteriorMask,8);
+  const night=await snap();assert.equal(night.lighting.lights.length,13);assert.ok(night.lighting.lights.every(l=>l.enabled&&l.intensity>0&&l.mask===1));assert.ok(night.lighting.glowingShades>=3);assert.equal(night.lighting.exteriorMask,8);
   await page.screenshot({path:'artifacts/house-lighting/night.png'});
   await phase('afternoon',1139.7);
   await page.waitForFunction(()=>window.__roomTest.snapshot().cleanup.daily.phase==='night'&&window.__roomTest.snapshot().lighting.amount===1);
