@@ -17,3 +17,6 @@
 @media(max-height:700px){.showing-results .pop-cover{gap:8px;padding:12px}.showing-results .pop-cover h3{font-size:21px}.showing-results .pop-result-star{font-size:24px}.pop-chain-cue{font-size:10px}.pop-feedback{font-size:18px}}
 @media(prefers-reduced-motion:reduce){.pop-ticket-flight img{animation:none;opacity:1}.pop-chain-cue.pulse>b{animation:none}}
 @media(max-width:360px){.pop-title{gap:5px}.pop-title>div{min-width:0}.pop-title small{font-size:7px;letter-spacing:.6px}.pop-title h2{font-size:20px}.showing-results .pop-tray{height:calc(100dvh - 145px)}}
+#squishy-pop-shortcut{pointer-events:auto;border:2px solid #fff;border-radius:22px;padding:9px 14px;background:linear-gradient(135deg,#ffe6f0,#efb5dd);color:#604c80;font:800 13px 'Trebuchet MS',sans-serif;box-shadow:0 3px 10px #72538b26;cursor:pointer}#squishy-pop-shortcut:hover{background:#f6c7e5}#squishy-pop-shortcut:focus-visible{outline:3px solid #7855ae;outline-offset:3px}
+@media(max-width:600px){footer .asset-credits{display:none}#squishy-pop-shortcut{font-size:11px;padding:8px 10px}}
+#squishy-pop-shortcut{min-height:44px}

@@ -86,6 +86,15 @@ export class GameLoop {
     const on = (id: string, fn: () => void) => el(id).addEventListener('click', fn, { signal: this.abort.signal });
     on('#go-shopping', () => this.attempt(() => this.chooseStore()));
     on('#collection-button', () => this.attempt(() => this.collection()));
+    const popShortcut=document.createElement('button');popShortcut.id='squishy-pop-shortcut';popShortcut.type='button';popShortcut.textContent='✿ Squishy Pop';
+    popShortcut.title='Jump straight into Squishy Pop';el('footer').insertBefore(popShortcut,el('#collection-button'));
+    popShortcut.addEventListener('click',()=>this.attempt(()=>{
+      if(this.tornado?.active||this.character.animator.busy||this.cleanup.movementLocked||this.opening.phase==='opening'||this.travelUntil||this.inspecting||
+        (this.mode==='cleanup'&&this.cleanup.mission.timed&&this.cleanup.mission.state==='running')){
+        this.message('Finish this action or round, then jump into Squishy Pop!');return;
+      }
+      if(this.creditPending())this.popUI.open();
+    }),{signal:this.abort.signal});
     on('#back-cleanup', () => this.attempt(() => this.startCleanup()));
     on('#open-next', () => this.attempt(() => { this.save.goHome(); this.enterHome(); }));
     const tradeButton=document.createElement('button');tradeButton.id='visit-recess';tradeButton.className='loop-button pink-button';tradeButton.textContent='Visit recess trading table';
@@ -417,5 +426,5 @@ export class GameLoop {
   snapshot() { return { mode: this.mode, balance: this.save.data.balance, boxes: this.save.data.boxes.length, purchases: this.save.data.trip.purchases, collection: { ...this.save.data.collection }, phase: this.opening.phase, reveal: this.save.data.reveal ? { ...this.save.data.reveal } : null, focus: this.focus,
     pop:this.popUI.snapshot(),popSave:this.save.data.pop,trading:this.save.data.trading, recess:this.mode==='recess'?{seats:this.recess.seats.map(s=>({id:s.id,position:s.anchor.toArray()})),art:this.recess.artStats?.()}:null,
     hunt:this.save.data.hunt,store:this.mode==='store'?{id:this.activeStoreId,sites:this.store.sites.map(s=>({id:s.id,position:s.anchor.toArray()})),exit:this.store.exitAnchor.toArray(),walkable:this.store.walkable,obstacles:this.store.obstacles.map(b=>({center:b.center.toArray(),halfExtents:b.halfExtents.toArray()})),art:this.store.artStats?.()}:null }; }
-  destroy() { this.popUI.destroy();this.abort.abort(); this.action.destroy(); this.opening.destroy(); this.huntUI.destroy(); this.tradingUI.destroy(); }
+  destroy() { this.popUI.destroy();this.abort.abort();document.querySelector('#squishy-pop-shortcut')?.remove(); this.action.destroy(); this.opening.destroy(); this.huntUI.destroy(); this.tradingUI.destroy(); }
 }

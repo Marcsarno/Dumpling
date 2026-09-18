@@ -63,6 +63,7 @@ function start() {
     const now = performance.now();
     if(import.meta.env.DEV&&loop.developerPaused){loop.developerTick(now,elapsed);return;}
     loop.beforeMovement(now);
+    if(loop.popUI.isOpen)return;
     const bulky = cleanup.carry.item?.carryPace === 'walk';
     controller.speed = bulky ? WALK_SPEED : RUN_SPEED;
     character.animator.setCarryPace(bulky ? 'walk' : 'run');

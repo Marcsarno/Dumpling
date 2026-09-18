@@ -1,6 +1,7 @@
 import { AnimCurve, AnimData, AnimTrack, Entity, Quat, Vec3, INTERPOLATION_LINEAR, type GraphNode } from 'playcanvas';
 import type { CharacterManifest } from './CharacterAnimator';
 import { RUN_SPEED, WALK_SPEED } from './MovementPace';
+import { balancedRun } from './RunningPose';
 
 /** Uses supplied locomotion/idle, with temporary interaction poses outside the untouched GLB. */
 export type ChoreCapture = Record<'wipe'|'vacuum', {fps:number;samples:number[][]}>;
@@ -80,7 +81,7 @@ export function meshyGameplay(model: Entity, source: AnimTrack[], chore?:ChoreCa
     return new AnimTrack(name,track.duration-start,track.inputs.map(input=>new AnimData(input.components,Array.from(input.data,t=>t-start))),track.outputs,track.curves);
   };
   const tracks=[...source.filter(track=>!['Idle','CarryWalk','CarryRun'].includes(track.name)),
-    loop(walking,'Walk'),loop(running,'Run'),loop(authoredCarryWalk,'CarryWalk'),loop(authoredCarryRun,'CarryRun'),loop(idle,'Idle'),
+    loop(walking,'Walk'),balancedRun(model,running),loop(authoredCarryWalk,'CarryWalk'),loop(authoredCarryRun,'CarryRun'),loop(idle,'Idle'),
     pose('CarryIdle',[carry,carry],[0,2]),
     pose('PickUp',[rest,reach,carry],[0,.4,.8]),pose('PutDown',[carry,reach,rest],[0,.4,.8]),
     pose('Celebrate',[rest,happy,happy,rest],[0,.3,.7,1]),pose('SitCar',[rest,rest],[0,2])];
