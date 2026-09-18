@@ -1,4 +1,9 @@
-import { AnimCurve, AnimData, AnimTrack, Entity, Quat, INTERPOLATION_LINEAR } from 'playcanvas';
+import { AnimCurve, AnimData, AnimTrack, Entity, Quat, Vec3, INTERPOLATION_LINEAR } from 'playcanvas';
+
+// Palm directions measured from this GLB's vertices with >80% hand weight.
+// Mirroring bone axes alone does not mirror the visible palms: their bind frames differ.
+export const RUN_PALM_AXES={Left:new Vec3(-.084140846,.99499861,-.05383385).normalize(),Right:new Vec3(-.16291618,.98452002,.06464243).normalize()};
+export const RUN_WRIST_LIMIT=12;
 
 /** Rebalance the imported run in bind space; never change the mesh or bone lengths. */
 export function balancedRun(model: Entity, track: AnimTrack): AnimTrack {
@@ -23,13 +28,24 @@ export function balancedRun(model: Entity, track: AnimTrack): AnimTrack {
   };
   const delta=(name:string)=>new Quat().mul2(bones[name].getRotation(),bind[name].clone().invert());
   const mirror=(q:Quat)=>new Quat(q.x,-q.y,-q.z,q.w);
+  const palmAlignment=new Quat().setFromDirections(RUN_PALM_AXES.Left,new Vec3(-RUN_PALM_AXES.Right.x,RUN_PALM_AXES.Right.y,RUN_PALM_AXES.Right.z));
+  const settleRightWrist=()=>{
+    const hand=bones.RightHand,fore=bones.RightForeArm;
+    const direction=hand.getPosition().clone().sub(fore.getPosition()).normalize();
+    const rotation=hand.getRotation().clone(),palm=rotation.transformVector(RUN_PALM_AXES.Right).normalize();
+    const angle=Math.acos(Math.max(-1,Math.min(1,palm.dot(direction))))*180/Math.PI;
+    const straight=new Quat().mul2(new Quat().setFromDirections(palm,direction),rotation);
+    hand.setRotation(new Quat().slerp(straight,rotation,Math.min(1,RUN_WRIST_LIMIT/Math.max(angle,.001))));
+  };
   const frames:number[][][]=[];const count=40;
   for(let f=0;f<=count;f++){
     const phase=f===count?0:f/count;
     sample((phase+.5)%1);
+    settleRightWrist();
     const opposite=Object.fromEntries(names.map(name=>[name,delta(name)]));
     const oppositeX=bones.Hips.getLocalPosition().x;
     sample(phase);
+    settleRightWrist();
     // Remove persistent lateral lean while retaining the alternating running rhythm.
     const central=names.slice(0,4).map(name=>new Quat().slerp(delta(name),mirror(opposite[name]),.5));
     const p=bones.Hips.getLocalPosition().clone();p.x=(p.x-oppositeX)*.5+rest[nodes.indexOf(bones.Hips)].p.x;bones.Hips.setLocalPosition(p);
@@ -40,6 +56,7 @@ export function balancedRun(model: Entity, track: AnimTrack): AnimTrack {
       const left='Left'+part,right='Right'+part;
       bones[left].setRotation(mirror(new Quat().mul2(opposite[right],bind[right])));
     }
+    bones.LeftHand.setRotation(new Quat().mul2(bones.LeftHand.getRotation(),palmAlignment));
     frames.push(bindings.map(({path},i)=>path.propertyPath[0]==='localRotation'?nodes[i].getLocalRotation().toArray():
       (path.propertyPath[0]==='localPosition'?nodes[i].getLocalPosition():nodes[i].getLocalScale()).toArray()));
   }

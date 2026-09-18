@@ -3,6 +3,7 @@
 ## Running correction + live Squishy Pop shortcut (September 17, 2026)
 
 - User authorized fixing Arianna's left arm while running and adding a live-game shortcut. `RunningPose.ts` bakes a runtime copy of Run: balanced hip/spine motion and the clean right-arm swing reflected half a stride later onto the left chain. Original GLB, joint lengths, walking/carrying and chore clips stay unchanged.
+- Follow-up: visible palms have different alignment within their bind frames. Run now compensates using hand-weighted mesh directions and limits wrist flex to 12 degrees on both sides; tests verify visible left/right wrist flex matches half a stride apart, including the downward swing. Raw bone-axis mirroring alone was insufficient.
 - Footer **✿ Squishy Pop** opens the arcade directly from the current scene. **Back to game** returns there. World updates and the daily clock pause during Pop. Active timed rounds, Tornado and unfinished actions must finish before using the shortcut; chores are never automatically completed. Existing store entry and reward receipts remain in use.
 - Local DEV button moved up to avoid covering the shortcut on phones. `scripts/running-pose-test.mjs` checks asset/pose preservation, loop continuity, unit quaternions and bone lengths. Rig viewer inspections cover front/side/back phases; shortcut opening/return checked with an isolated save and phone layout. Check latest Git/Vercel status for deployment.
 

@@ -32,3 +32,15 @@ for(const curve of run.curves){
  }
 }
 console.log('PASS: original clip and rig preserved; run duration, closed loop, normalized continuous rotations and bone lengths verified.');
+
+// Check visible palm direction, not just bone quaternions. These axes were
+// independently measured from the source mesh's strongly hand-weighted vertices.
+const {Vec3}=await import('playcanvas');
+const palmAxes={Left:new Vec3(-.084140846,.99499861,-.05383385).normalize(),Right:new Vec3(-.16291618,.98452002,.06464243).normalize()};
+const angles=[];
+for(let f=0;f<40;f++){
+ for(const c of run.curves){const path=c.paths[0],node=model.findByName(path.entityPath[0]),out=run.outputs[c.output],v=out.data.slice(f*out.components,(f+1)*out.components);if(out.components===4)node.setLocalRotation(...v);else if(path.propertyPath[0]==='localPosition')node.setLocalPosition(...v);else node.setLocalScale(...v);}
+ angles.push(['Left','Right'].map(side=>{const hand=model.findByName(side+'Hand'),fore=model.findByName(side+'ForeArm'),direction=hand.getPosition().clone().sub(fore.getPosition()).normalize(),palm=hand.getRotation().transformVector(palmAxes[side]).normalize();const angle=Math.acos(Math.max(-1,Math.min(1,direction.dot(palm))))*180/Math.PI;assert(angle<=12.01,'Visible wrist must stay in line with the forearm through every swing');return angle;}));
+}
+for(let f=0;f<40;f++)assert(Math.abs(angles[f][0]-angles[(f+20)%40][1])<.01,'Left visible wrist must match the right half a stride later');
+console.log('PASS: both visible wrists stay within 12 degrees of the forearm; left/right wrist flex matches throughout the cycle.');
