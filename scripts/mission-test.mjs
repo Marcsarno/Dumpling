@@ -3,6 +3,13 @@ import assert from 'node:assert/strict';
 import { MissionSystem, TASKS } from '../src/systems/MissionSystem.ts';
 import { HOUSE_TASKS } from '../src/data/house.ts';
 
+test('developer pause preserves remaining time and resumes the original deadline', () => {
+  const mission=new MissionSystem();mission.start(1000);mission.tick(6000);
+  assert.equal(mission.remaining,55000);mission.pauseFor(120000);mission.tick(126000);
+  assert.equal(mission.remaining,55000);mission.tick(181000);assert.equal(mission.state,'finished');
+  mission.pauseFor(1000);assert.equal(mission.remaining,0);
+});
+
 test('ready time is free; duplicate starts never extend an active round', () => {
   const mission = new MissionSystem();
   mission.tick(100_000); assert.equal(mission.remaining, 60_000);

@@ -4,7 +4,24 @@ Test environment: installed Microsoft Edge (Chromium), Playwright's real touch
 events with mobile emulation, and desktop mouse/keyboard input. Physical iPhone
 Safari has **not** been tested. Emulation is not a phone performance benchmark.
 
-## Marc and family-house expansion — September 16
+## Squishy Pop readability / round polish — September 17
+
+Run `node --experimental-transform-types scripts/pop-milestone-test.mjs` for 1,500 visual lineups, eligibility of all 26 discoveries, target previews, chain thresholds/backtracking and bounded finale scoring. `pop-core-test.mjs` still verifies 15,000 refills; `pop-rules-test.mjs` covers all original powers, save/coupon rules and failure handling.
+
+With Vite on 5173, `node --experimental-transform-types scripts/pop-milestone-browser.mjs` uses an isolated Edge mobile profile and real CDP touch: guided lesson with stopped timer/no retained score; full unaccelerated normal round; finger release after zero; finale, record and ticket save once; all three power previews/activations; Frenzy; practice reward isolation; reload persistence; visible 44px result buttons on 320/390/430 widths. Result: 2,190 points, 5 tickets, frame p95 ~8.1ms on this desktop; this is not physical-phone performance or a child pacing benchmark.
+
+`node scripts/pop-accessibility-browser.mjs` checks reduced motion (no moving particles/CSS cue animation, immediate result count), mute, small-phone results and rapid reopen without duplicate timer loops. Existing `developer-edge-browser.mjs` and `pop-powers-browser.mjs` pass, including twelve replays and zero lingering voices on pause. Older Pop/developer browser scripts now share `pop-learn-helper.mjs` to complete the interactive lesson. New screenshots/reports are under ignored `artifacts/pop-milestone/`.
+
+## Developer studio — September 17 (details)
+
+- `scripts/developer-saves-test.mjs`: automatic checkpoint, preservation across cheats, restore rollback after a storage failure, fresh save retaining checkpoint, unrelated-key protection and corrupt-checkpoint handling.
+- `scripts/developer-browser-test.mjs`: actual panel UI; morning completion without money; completed afternoon; resources, collection, sealed boxes, restock and clock freeze; all store jumps; Pop timer hold; 5/7/10 mouse chains and created powers; injected powers, no-move recovery; practice reward isolation; a real normal 60-second round after practice; save export/restore/fresh save; mobile widths.
+- `scripts/developer-edge-browser.mjs`: timed house pause/resume and completion/results; morning/afternoon/night and next day; chore restart; preserved favorites/locks and collection UI refresh; recess/recovery; final footer overlap, scroll area and 44px control checks at 320×568, 390×844 and 430×932; visible practice label; previous Pop pause preserved; time/shuffle controls.
+- `scripts/mission-test.mjs` adds a deadline preservation regression. Existing progress/hunt/daily/trading tests and Pop rule tests remain green. TypeScript and production build pass; development panel text/CSS absent from production assets.
+
+Developer browser scripts use isolated Edge contexts at `127.0.0.1:5173`, not the user's live profile/save. Reports and screenshots are under `artifacts/developer/`. These tests establish behavior, not whether a seven-year-old finds Pop fun; physical phone and child playtesting remain necessary. See `SQUISHY_POP_NEXT_MILESTONE.md` for the proposed quality bar.
+
+## Marc and family-house expansion — September 16 (details)
 
 The subsequent layout revision has a dedicated `family-layout-browser-test.mjs`:
 asserts nursery/bathroom north alignment and Dad/utility south alignment, walks
@@ -542,3 +559,38 @@ are required for this milestone.
 9. Stop vacuuming halfway and move away. Dirt should remain and no money be earned.
 10. Let the minute expire while carrying. Confirm the result is encouraging and
     replay restores the messy room and empty hands.
+
+## Squishy Pop V1 — September 17, 2026
+
+See SQUISHY_POP_REPORT.md for rules, balance, art correction and limitations. Checkpoint before changes: d0accf1. User's real save was not cleared or seeded.
+
+- `node --experimental-transform-types scripts/pop-core-test.mjs`: 15,000 generated/refilled boards, backtracking, invalid chains, stars, ticket bounds.
+- `node --experimental-transform-types scripts/pop-rules-test.mjs`: all powers/cascades/Frenzy, deadlock fallback, collection, atomic/idempotent tickets, failed writes, coupon price/day cap.
+- `node --experimental-transform-types scripts/pop-browser-test.mjs`: isolated prior-save store fixture, two full 60-second rounds with real CDP touch, tutorial/countdown, cancel/backtrack/pause, finish current gesture at zero, replay/results, conserved money/stock/collection/position/day/time, reload receipts, three portrait sizes, no page/asset errors.
+- `node scripts/pop-powers-browser.mjs`: development-only deterministic UI fixtures for creation/activation of all powers, Frenzy, phone layouts, touch cancellation, twelve replay cycles and released audio voices.
+- `node scripts/pop-art-check.mjs`: all 32 cached sprites viewed on the real lavender tray background; transparent cell corners verified. Contact sheet: artifacts/squishy-pop/art-contact.png.
+- Existing progress/hunt/daily-clock/trading regression suite: 22 passing checks. TypeScript and production Vite build pass; existing bundle-size advisory remains.
+- Evidence in ignored artifacts/squishy-pop/report.json, powers-report.json and PNGs. Full-round p95 frame interval ~7ms on this desktop with Edge mobile emulation; not a physical iPhone measurement. Automated optimal play does not prove subjective fun. Audio decoded and scheduled successfully; real listening/device feedback is still valuable.
+
+
+## House polish + Lilah Tornado V1 — September 17, 2026
+
+Read HOUSE_POLISH_REPORT.md for rules, controls, source terms and limits. New checks run with Node 24 and Edge in isolated mobile profiles (320×568, 390×844, 430×932). No user-origin saves were touched.
+
+- TypeScript and production build pass; Vite reports the existing large engine-bundle warning.
+- 15 tests across progress, daily clock, mission and Tornado rule scripts pass. Covers idempotent allowance receipts, failed-save preservation, daily progression, streak timeout/cap, bonus points, positive minimum reward and special-event probabilities.
+- Three complete active 55-second rounds through real joystick/tap input exercise ordinary, basket and dog cases. All receive correct saved rewards, clear temporary messes and return to EXPLORE. Round reports, positions and render samples: artifacts/house-polish/rounds.json. Doorway crowding found during early runs was fixed with a clearance escape and reroute; interaction visibility uses a narrow line-of-sight test rather than the full movement radius.
+- A complete no-cleanup round verifies the three-mess cap, 1-star/$1 minimum reward, unchanged daily time/phase, developer pause, mobile control layout, result exit and persisted reward after reload. See edge.json.
+- Separate chore run uses real inputs to take a paper towel, wipe a spill, take/use a vacuum and put it away. Checks actual Wipe/Vacuum states, task completion, carrier release and CHORE → EXPLORE. Final hand positions during wiping are approximately 0.10–0.14 m above the floor origin; cloth is offset to the floor surface. Foot anchors remain fixed during the crouch. See chores.json and daily-wipe/daily-vacuum screenshots.
+- No browser runtime, failed asset-request or audio-decode errors in passing runs. Event audio buffers are reused, there are at most three active mess roots, and particles expire promptly. Mobile emulation on this desktop is not a physical-phone performance benchmark; real iPhone/Safari is still untested.
+
+Commands:
+
+    node --experimental-transform-types --test scripts/progress-test.mjs scripts/daily-clock-test.mjs scripts/mission-test.mjs scripts/tornado-rules-test.mjs
+    node --experimental-transform-types scripts/tornado-browser-test.mjs
+    node scripts/tornado-edge-browser-test.mjs
+    node --experimental-transform-types scripts/house-chore-browser-test.mjs
+
+The browser scripts default to port 5174 to keep the user's 5173 save and live scene separate. tornado-browser-test accepts GAME_URL; the others currently use 127.0.0.1:5174. Run a local Vite server there before testing. Test source files and reports are separate from the user's localStorage; do not substitute localhost when running these fixtures in a shared browser profile.
+
+Final route verification: ordinary / basket / dog rounds cleaned **10 / 9 / 11** messes and scored **134 / 130 / 158**, each saving $3 once. Daily clock delta was zero in all three. Lilah reached the kitchen (z≈11.3) along valid routes. Median reported frame rates were 91 / 93 / 89 FPS on this desktop in 390px Edge emulation; maximum sampled draw calls were 423 / 415 / 408. Main user-facing preview on port 5173 also passed a fresh isolated load, intro and exit with no browser or asset errors.

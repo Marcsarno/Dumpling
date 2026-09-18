@@ -1,5 +1,5 @@
 import { Asset, BoundingBox, Entity, type AnimTrack, type Application, type ContainerResource, type RenderComponent } from 'playcanvas';
-import { meshyGameplay } from './MeshyGameplayAdapter';
+import { meshyGameplay, type ChoreCapture } from './MeshyGameplayAdapter';
 import { material, primitives } from '../game/primitives';
 import { CharacterAnimator, type CharacterManifest } from './CharacterAnimator';
 import { CharacterGrounding } from './CharacterGrounding';
@@ -49,7 +49,11 @@ export async function loadArianna(app: Application, character: ReturnType<typeof
   const resource = asset.resource as ContainerResource;
   const model = resource.instantiateRenderEntity({ castShadows: true });
   let tracks=((resource as ContainerResource & { animations: Asset[] }).animations ?? []).map(asset=>asset.resource as AnimTrack);
-  if(config.adapter==='meshy')({tracks,manifest}=meshyGameplay(model,tracks));
+  if(config.adapter==='meshy'){
+    const motion=await fetch(`${import.meta.env.BASE_URL}assets/animations/chores/cmu-trajectories.json`);
+    if(!motion.ok)throw new Error('Chore motion library could not load.');
+    ({tracks,manifest}=meshyGameplay(model,tracks,await motion.json() as ChoreCapture));
+  }
   // Normalize the visual only. Root position, movement and collision radius stay untouched.
   const bounds = new BoundingBox();
   let first = true;

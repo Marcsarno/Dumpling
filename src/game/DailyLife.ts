@@ -118,6 +118,21 @@ export class DailyLife {
     this.wipingPaper.enabled=false;this.eggFall=0;
   }
   pause(now:number){this.last=now;}
+  developerPhase(phase:'morning'|'afternoon'|'night',nextDay=false){
+    if(!import.meta.env.DEV)return;
+    const s=this.clock.state;if(nextDay)s.day++;
+    if(s.phase!==phase||nextDay)s.done=[];
+    s.phase=phase;s.minutes=phase==='morning'?420:phase==='afternoon'?900:1140;s.schoolSeconds=0;
+    if(phase==='morning'){s.breakfast=s.done.includes('breakfast')?'done':'eggs';s.eggDrop=null;}
+    this.phase=phase;this.pause(performance.now());this.refresh();this.save();
+  }
+  developerComplete(){
+    if(!import.meta.env.DEV)return;
+    this.clock.state.done=this.clock.tasks.map(t=>t.id);
+    if(this.clock.state.phase==='morning')this.clock.state.breakfast='done';
+    for(const task of this.lilahMesses.tasks)this.lilahMesses.complete(task.id);
+    this.refresh();this.save();
+  }
   update(now:number,held:string|null,busy:boolean){
     if(!this.active){this.last=now;return;}this.held=held;
     this.lilahMesses.syncDay(this.clock.state.day);
@@ -169,7 +184,7 @@ export class DailyLife {
     if(this.bubbles.enabled){this.bubbles.setPosition(hands);this.bubbles.translate(0,.24,0);}
     if(target?.mess){const scale=1-progress*.95;target.mess.setLocalScale(scale,scale,scale);}
     this.wipingPaper.enabled=!!target&&(target.id.startsWith('wipe-')||target.id==='lilah-mess-1')&&progress>0;
-    if(this.wipingPaper.enabled&&target){this.wipingPaper.setPosition(target.marker.x+Math.sin(progress*Math.PI*10)*.18,.09,target.marker.z+Math.cos(progress*Math.PI*6)*.09);this.wipingPaper.setLocalEulerAngles(0,Math.sin(progress*Math.PI*10)*18,0);}
+    if(this.wipingPaper.enabled&&target){this.wipingPaper.setPosition(hands.x,Math.max(.08,hands.y-.035),hands.z);this.wipingPaper.setLocalEulerAngles(0,0,0);}
   }
   get hint(){const s=this.clock.state;if(s.phase==='school')return 'At school · See you after class!';if(this.clock.schoolDue)return '🎒 Time for school. Walk to the front door in the living room.';if(s.phase==='morning'&&s.breakfast==='spill')return 'Oops! Get a paper towel and hold Action over the dropped egg.';if(s.phase==='afternoon')return 'After school · Chores earn allowance. The store closes at 7 PM.';if(this.clock.canSleep)return '🌙 Ready for bed. Walk to the bed to start a fresh day.';return s.phase==='morning'?'A fresh morning · Brush, choose clothes, and make breakfast.':'Wind down · Brush teeth, put clothes away, and read.';}
   snapshot(){return {...this.clock.state,clock:this.clock.label,canShop:this.clock.canShop,held:this.held,dirt:this.dust.map(e=>({visible:e.enabled,position:e.getPosition().toArray(),scale:e.getLocalScale().toArray()})),eggSpill:this.eggSpill.enabled,lilah:this.lilahMesses.snapshot()};}

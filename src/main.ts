@@ -10,6 +10,7 @@ import { CleanupGame } from './game/CleanupGame';
 import { GameLoop } from './game/GameLoop';
 import { HouseNavigation } from './ui/HouseNavigation';
 import { Lilah } from './game/Lilah';
+import { LilahTornado } from './game/LilahTornado';
 import { Marc } from './game/Marc';
 import './ui/styles.css';
 import './ui/cleanup.css';
@@ -38,11 +39,12 @@ function start() {
   const character = createCharacter(app);
   const joystick = new VirtualJoystick(document.querySelector('#joystick')!, document.querySelector('#joystick-knob')!);
   const controller = new PlayerController(character.player, camera.entity, room, joystick.value);
-  const cleanup = new CleanupGame(app, character, props, camera.entity, () => { joystick.reset(); controller.reset(); }, controller);
+  const cleanup = new CleanupGame(app, character, props, camera.entity, () => { joystick.reset(); controller.reset(); }, controller, camera);
   const loop = new GameLoop(app, camera, character, room, props, cleanup, controller, joystick);
   const navigation = new HouseNavigation();
   const lilah = new Lilah(app,room,props.daily!);
   const marc = new Marc(app,room,props.daily!);
+  const tornado = new LilahTornado(app,room,props,cleanup,loop,character,controller,camera,lilah);loop.tornado=tornado;
   const label = document.querySelector<HTMLElement>('#player-label')!;
   const screenPoint = new Vec3();
   const headPoint = new Vec3();
@@ -59,6 +61,7 @@ function start() {
   resize();
   app.on('update', (elapsed: number) => {
     const now = performance.now();
+    if(import.meta.env.DEV&&loop.developerPaused){loop.developerTick(now,elapsed);return;}
     loop.beforeMovement(now);
     const bulky = cleanup.carry.item?.carryPace === 'walk';
     controller.speed = bulky ? WALK_SPEED : RUN_SPEED;
@@ -73,11 +76,12 @@ function start() {
     controller.update(dt);
     if (loop.mode !== 'home') camera.follow(character.player.getPosition(), dt);
     loop.update(now);
+    tornado.update(document.hidden?0:Math.min(elapsed,.1));
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === 'cleanup', cleanup.mode);
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
     lilah.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day'&&!cleanup.movementLocked,character.player.getPosition(),camera.entity);
-    marc.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day',character.player.getPosition(),lilah.root.getPosition(),cleanup.activeInteractionId,camera.entity);
+    marc.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day'&&!tornado.active,character.player.getPosition(),lilah.root.getPosition(),cleanup.activeInteractionId,camera.entity);
     headPoint.copy(character.player.getPosition());
     headPoint.y += 1.52;
     camera.entity.camera!.worldToScreen(headPoint, screenPoint);
@@ -113,14 +117,17 @@ function start() {
         lilah: lilah.snapshot(),
         marc: marc.snapshot(),
         lighting: room.lighting!.snapshot(),
-        cleanup: cleanup.snapshot(),
+        cleanup: cleanup.snapshot(),tornado:tornado.snapshot(),cameraState:camera.state,
         loop: loop.snapshot(),
         obstacles: room.obstacles.map(box => ({ center: box.center.toArray(), halfExtents: box.halfExtents.toArray() })),
       }),
     } });
   }
+  let developerPanel:{destroy():void}|undefined;let disposed=false;
+  if(import.meta.env.DEV)void import('./dev/DeveloperPanel').then(({DeveloperPanel})=>{if(!disposed)developerPanel=new DeveloperPanel(loop,()=>({fps:app.stats.frame.fps,drawCalls:app.stats.drawCalls.total,position:character.player.getPosition().toArray()}));});
   if (import.meta.hot) import.meta.hot.dispose(() => {
-    observer.disconnect(); marc.destroy(); lilah.destroy(); navigation.destroy(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
+    disposed=true;developerPanel?.destroy();
+    observer.disconnect(); tornado.destroy(); marc.destroy(); lilah.destroy(); navigation.destroy(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
     delete (window as unknown as Record<string, unknown>).__roomTest;
   });
 }

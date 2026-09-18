@@ -13,6 +13,7 @@ export class PetCleanup {
   readonly errors: string[] = [];
   readonly tool: CleanupItem;
   readonly poop: Entity;
+  readonly dog: Entity;
   private readonly bubbles: Entity;
   private readonly water: Entity;
   private flushStart = 0;
@@ -22,7 +23,7 @@ export class PetCleanup {
     tool.setLocalPosition(...this.tool.home); props.items.push(this.tool);
     this.poop = new Entity('Dog poop', app); props.root.addChild(this.poop);
     this.poop.setLocalPosition(3.7, .04, 5.3);
-    const dog = new Entity('Little pug', app); props.root.addChild(dog); dog.setLocalPosition(4.8, .04, 5.85);
+    const dog = this.dog = new Entity('Little pug', app); props.root.addChild(dog); dog.setLocalPosition(4.8, .04, 5.85);
     const paper = new Entity('Bathroom toilet paper', app); props.root.addChild(paper); paper.setLocalPosition(6.21, .7, -.8);
     const soap = new Entity('Hand soap', app); props.root.addChild(soap); soap.setLocalPosition(3.83, .96, -3.03);
     void Promise.all([

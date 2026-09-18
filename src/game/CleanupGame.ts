@@ -12,6 +12,7 @@ import { saveId } from '../systems/saveId';
 import { PET_TASKS } from './PetCleanup';
 import { Vec3 } from 'playcanvas';
 import type { PlayerController } from '../components/PlayerController';
+import type { IsometricCamera } from './IsometricCamera';
 
 export class CleanupGame {
   roundId = saveId();
@@ -30,10 +31,10 @@ export class CleanupGame {
   private finishedHandled = false;
   private celebrationStarted = false;
   private aligning: Interaction | null = null;
-  get movementLocked() { return this.character.animator.busy || this.activity?.target.kind === 'pet' || (this.activity?.target.kind === 'daily' && !this.activity.target.hold); }
+  get movementLocked() { return this.character.animator.busy || !!this.activity; }
   get activeInteractionId(){return this.activity?.target.id??this.aligning?.id??null;}
   constructor(app: Application, private readonly character: ReturnType<typeof createCharacter>, private readonly props: CleanupProps,
-    camera: Entity, private readonly resetMovement: () => void, private readonly controller: PlayerController) {
+    camera: Entity, private readonly resetMovement: () => void, private readonly controller: PlayerController, private readonly interactionCamera:IsometricCamera) {
     this.carry = new CarrySystem(app, character.visual);
     character.animator.bindCarrySocket(this.carry.socket);
     this.interactions = new InteractionSystem(props.interactions, target => props.pet?.allows(target) ?? true);
@@ -57,7 +58,7 @@ export class CleanupGame {
     const target = this.interactions.focus;
     if (!target || this.activity || this.aligning || this.movementLocked || this.mission.state === 'finished') return;
     this.mission.start(now);
-    if (target.kind !== 'vacuum' && !target.hold) {
+    {
       this.aligning = target;
       const point = target.placement ? new Vec3(...target.placement) : target.kind === 'pickup' ? this.props.items.find(item => item.id === target.item)!.entity.getPosition() : target.marker;
       this.controller.approachProp(point, () => {
@@ -66,13 +67,13 @@ export class CleanupGame {
       }, () => { this.aligning = null; });
       return;
     }
-    this.perform(target);
   };
   private perform(target: Interaction) {
     const now = performance.now();
     const facing = target.placement ? new Vec3(...target.placement) : target.marker;
     if(target.kind==='daily') {
       if(['school-door','shop-door'].includes(target.id)) { this.props.daily!.perform(target,this.carry); return; }
+      this.interactionCamera.beginChore(this.character.player.getPosition(),facing);
       if(target.duration===0){
         const pickup=['choose-clothes','night-clothes','take-egg','take-towel','daily-vacuum'].includes(target.id);
         this.character.animator.playAction(pickup?'PickUp':'PutDown',.3,()=>{
@@ -81,10 +82,13 @@ export class CleanupGame {
         },facing);
       } else {
         this.activity={target,start:now,duration:target.duration??1000};
+        if(target.id.startsWith('wipe-')||target.id==='lilah-mess-1')this.character.animator.setWorkClip('Wipe',facing);
+        else if(target.id.includes('vacuum')||target.id==='lilah-mess-2')this.character.animator.setWorkClip('Vacuum',facing);
         if(!target.hold){this.character.animator.setCarrying(true);this.character.animator.faceTowards(facing);}
       }
       return;
     }
+    this.interactionCamera.beginChore(this.character.player.getPosition(),facing);
     if (target.kind === 'pickup') {
       const item = this.props.items.find(item => item.id === target.item)!;
       this.character.animator.playAction('PickUp', .25, () => {
@@ -121,22 +125,28 @@ export class CleanupGame {
       }, facing);
     } else {
       this.activity = { target, start: now, duration: target.kind === 'pet' ? 1600 : target.kind === 'vacuum' ? 1150 : 450 };
+      if(target.kind==='vacuum')this.character.animator.setWorkClip('Vacuum',facing);
       if (target.kind === 'pet') { this.character.animator.setCarrying(true); this.character.animator.faceTowards(target.marker); }
     }
     this.refreshFocus();
   }
   private cancelActivity() {
+    this.character.animator.setWorkClip(null);this.interactionCamera.endChore();
     if (this.activity?.target.kind === 'pet' || this.activity?.target.kind==='daily') { this.character.animator.setCarrying(!!this.carry.item); this.character.animator.faceTowards(null); }
     this.activity?.target.mess?.setLocalScale(1,1,1);
     this.activity = null; this.progress = 0;
     this.props.dirt.setLocalScale(1, 1, 1); this.props.crayonMess.setLocalScale(1, 1, 1);
   }
-  private cancelHold = () => { if (this.activity?.target.kind === 'vacuum'||this.activity?.target.hold) this.cancelActivity(); };
+  private cancelHold = () => {
+    if(this.aligning&&(this.aligning.kind==='vacuum'||this.aligning.hold)){this.controller.reset();this.aligning=null;}
+    if (this.activity?.target.kind === 'vacuum'||this.activity?.target.hold) this.cancelActivity();
+  };
   private reward(target: Interaction, now: number) {
     this.feedback.reward(target.marker, this.mission.timed || this.mode==='day' ? '+$1' : '✓', now);
     this.hud.announce(`${target.name} cleaned up. ${this.mission.timed ? 'Earned $1. ' : ''}${this.mission.completed.size} of ${this.mission.tasks.length} tasks complete.`);
   }
   update(now: number, movementIntent: boolean) {
+    if(!this.activity&&!this.character.animator.busy){this.character.animator.setWorkClip(null);this.interactionCamera.endChore();}
     if(this.mode==='day'){this.mission.tasks=this.props.daily!.tasks;for(const id of this.props.daily!.completed)this.mission.completed.add(id);}
     if (movementIntent) this.mission.start(now);
     this.mission.tick(now); this.refreshFocus();
@@ -181,6 +191,7 @@ export class CleanupGame {
       }
     }
     this.feedback.update(now, this.interactions, this.carry, this.mission);
+    if(this.activity)this.feedback.hideWorkingLabel(this.activity.target.id);
     this.props.pet?.update(now, this.activity?.target.kind === 'pet' ? this.progress : 0, this.carry.socket.getPosition());
     this.props.daily?.effect(this.activity?.target.kind==='daily'?this.activity.target:null,this.progress,this.carry.socket.getPosition());
     this.hud.update(this.mission, this.carry, this.interactions.focus, this.activity?.target.kind === 'crayons' || this.activity?.target.kind === 'pet'||(this.activity?.target.kind==='daily'&&!this.activity.target.hold), this.progress, this.character.animator.actionName, this.props.pet?.hint);
@@ -202,6 +213,24 @@ export class CleanupGame {
   setActive(active: boolean) {
     this.action.enabled = active; this.action.reset();
     if (!active) { this.feedback.hide(); this.hud.dialog.close(); }
+  }
+  developerCancel(){
+    if(!import.meta.env.DEV)return;
+    this.action.reset();this.cancelActivity();this.aligning=null;this.resetMovement();this.character.animator.cancelAction();
+    if(this.carry.item){const item=this.carry.item;this.carry.release(this.props.root,item.home);item.entity.enabled=true;}
+    this.character.animator.setCarrying(false);
+  }
+  developerComplete(){
+    if(!import.meta.env.DEV)return;
+    this.developerCancel();
+    if(this.mode==='day'){this.props.daily!.developerComplete();for(const id of this.props.daily!.completed)this.mission.completed.add(id);return;}
+    for(const task of this.mission.tasks){this.mission.completed.add(task.id);
+      const target=this.props.interactions.find(t=>t.task===task.id&&t.kind==='place');
+      if(target?.item){const item=this.props.items.find(i=>i.id===target.item);if(item){item.entity.reparent(this.props.root);if(target.placement)item.entity.setLocalPosition(...target.placement);if(target.placedStyle==='hide')item.entity.enabled=false;if(target.placedStyle==='hang')item.entity.setLocalEulerAngles(90,0,0);}}
+    }
+    this.props.dirt.enabled=false;this.props.crayonMess.enabled=false;this.props.tidyCrayons.enabled=true;
+    if(this.mission.tasks.some(t=>t.id==='pet-care')){this.props.pet!.finish();this.props.pet!.poop.enabled=false;}
+    this.mission.state='finished';this.mission.reason='complete';this.mission.allowance=0;this.mission.bonus=0;this.finishedHandled=true;
   }
   snapshot() {
     return {

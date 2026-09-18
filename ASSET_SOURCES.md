@@ -62,3 +62,17 @@ Downloads reviewed for this milestone:
 - [Building Kit ZIP](https://kenney.nl/media/pages/assets/building-kit/0de7aaa492-1743244741/kenney_building-kit.zip) (new download).
 
 The in-game Art credits page links the sources. Existing house, pet, Arianna and Lilah asset provenance remains in the corresponding `sources.json` / character manifest files.
+
+## Squishy Pop — September 17, 2026
+New reference-led sprite atlases and CC0 audio are documented in ASSET_MANIFEST.md, public/assets/pop/ART_NOTES.md, CHARACTER_PROMPTS.json and audio/SOURCES.md. The user explicitly excluded the unfinished world squishy models from this minigame. World models are unchanged. No paid or unclearly licensed stock assets were used.
+
+
+## House polish and Lilah Tornado — September 17, 2026
+
+CMU subject 13, clips 20 (washing windows) and 23 (sweeping), drive the new Wipe and Vacuum clips on Arianna's existing Meshy rig. Offline forward kinematics extracts 30 Hz hand trajectories; runtime two-bone IK adapts the motion envelope to the props. Floor wiping adds a deep crouch with foot IK to keep both feet planted. The original character GLB, locomotion and appearance remain unchanged. Pickup/putdown use the existing rig adapter clips.
+
+Source: https://mocap.cs.cmu.edu/ and https://mocap.cs.cmu.edu/search.php?maincat=5&subcat=1. CMU permits all uses, including embedding in commercial games, but forbids resale of the motion data itself. This is **not CC0**. Acknowledgment: The data used in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217.
+
+Full source URLs, terms, preprocessing and the reviewed KayKit/Quaternius alternatives are in public/assets/animations/chores/asset_manifest.json. Only selected adapted trajectories ship. Original ASF/AMC downloads stay under ignored artifacts/house-polish/sources; scripts/prepare-house-motion.mjs reproduces the conversion.
+
+Tornado sound cues reuse the previously downloaded **Kenney Interface Sounds (CC0)**, checked against https://kenney.nl/assets/interface-sounds, plus project-authored synthesized notes. Original license and sources remain in public/assets/pop/audio. No new music plays in the house. Event toys, spill, cloth and basket are project-authored; existing pug/poop models retain their earlier credits.

@@ -1,5 +1,6 @@
 import { DUMPLINGS, rollDumpling, STORE_INVENTORY } from '../data/collection.ts';
 import { saveId } from './saveId.ts';
+import { POP_RULES, roundTickets } from '../data/squishyPop.ts';
 import { TRADERS, createTradingDay, negotiate, willing, type Protection, type TraderId, type TradingDay } from '../data/trading.ts';
 import { SERIES, STORES, HUNT_RULES, boxPrice, canVisit, createHuntDay, rollSeries, storeById, type HuntDay, type SeriesId } from '../data/hunt.ts';
 
@@ -18,6 +19,7 @@ export interface ProgressData {
   hunt?: HuntDay;
   trading?: TradingDay;
   protections?: Record<string, Protection>;
+  pop?: {tickets:number;bestScore:number;rounds:string[];tutorialSeen:boolean;couponDay:number};
 }
 const fresh = (): ProgressData => ({ version: 1, balance: 0, collection: {}, boxes: [], creditedRounds: [], trip: { active: false, purchases: 0 }, location: 'cleanup', reveal: null });
 const validId = (id: unknown) => typeof id === 'string' && DUMPLINGS.some(d => d.id === id);
@@ -50,6 +52,7 @@ function parse(raw: string | null): ProgressData {
         || !Number.isInteger(n.asks) || n.asks < 0 || n.asks > 4 || !Number.isSafeInteger(n.revision) || n.revision < 0 || typeof n.done !== 'boolean' || typeof n.message !== 'string';
     })) throw Error('Trading save could not be read.');
   }
+  if(value.pop){const p=value.pop;if(!Number.isSafeInteger(p.tickets)||p.tickets<0||!Number.isSafeInteger(p.bestScore)||p.bestScore<0||!Array.isArray(p.rounds)||p.rounds.some(id=>typeof id!=='string')||typeof p.tutorialSeen!=='boolean'||!Number.isSafeInteger(p.couponDay)||p.couponDay<0)throw Error('Squishy Pop save could not be read.');}
   return value;
 }
 
@@ -69,6 +72,19 @@ export class ProgressStore {
     this.data = draft; this.problem = ''; return result;
   }
   refresh() { this.data = parse(this.repository.read()); }
+  /** Local developer tools use the same read/validate/write transaction as gameplay. */
+  developerEdit(change:(draft:ProgressData)=>void){
+    if(!import.meta.env?.DEV)throw Error('Developer controls are available in the local development build.');
+    return this.commit(data=>{change(data);parse(JSON.stringify(data));});
+  }
+  completePopRound(id:string,score:number){
+    if(!id||!Number.isSafeInteger(score)||score<0)throw Error('Invalid Squishy Pop round.');
+    return this.commit(data=>{const p=data.pop??={tickets:0,bestScore:0,rounds:[],tutorialSeen:false,couponDay:0};
+      if(!p.rounds.includes(id)){p.tickets+=roundTickets(score);p.bestScore=Math.max(p.bestScore,score);p.rounds.push(id);p.tutorialSeen=true;}
+      return p.tickets;
+    });
+  }
+  popDiscount(data=this.data){return data.pop&&data.hunt&&data.pop.tickets>=POP_RULES.couponTickets&&data.pop.couponDay!==data.hunt.day?POP_RULES.couponValue:0;}
   creditRound(id: string, amount: number) {
     if (!Number.isSafeInteger(amount) || amount < 0) throw new Error('Invalid allowance reward.');
     return this.commit(data => {
@@ -149,10 +165,12 @@ export class ProgressStore {
       if(data.location!=='store'||!data.trip.active||!id||!slot||slot.remaining<1)throw Error('This display has sold out.');
       if(!slot.discovered)throw Error('Take a look at this box first.');
       if(data.trip.purchases>=HUNT_RULES.bagLimit)throw Error('Your bag is full. Bring your surprises home!');
-      const store=storeById(id),price=boxPrice(store,slot.series);
+      const store=storeById(id),discount=this.popDiscount(data),price=boxPrice(store,slot.series)-discount;
       if(data.balance<price)throw Error(`This series costs $${price}. Save a little more allowance.`);
       const box:SealedBox={id:this.makeId(),dumplingId:rollSeries(slot.series,store,this.random).id,series:slot.series};
-      data.balance-=price;slot.remaining--;data.boxes.push(box);data.trip.purchases++;return box.id;
+      data.balance-=price;slot.remaining--;data.boxes.push(box);data.trip.purchases++;
+      if(discount){data.pop!.tickets-=POP_RULES.couponTickets;data.pop!.couponDay=data.hunt!.day;}
+      return box.id;
     });
   }
   purchase() {

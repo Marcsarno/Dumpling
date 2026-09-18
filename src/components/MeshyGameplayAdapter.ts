@@ -3,7 +3,8 @@ import type { CharacterManifest } from './CharacterAnimator';
 import { RUN_SPEED, WALK_SPEED } from './MovementPace';
 
 /** Uses supplied locomotion/idle, with temporary interaction poses outside the untouched GLB. */
-export function meshyGameplay(model: Entity, source: AnimTrack[]) {
+export type ChoreCapture = Record<'wipe'|'vacuum', {fps:number;samples:number[][]}>;
+export function meshyGameplay(model: Entity, source: AnimTrack[], chore?:ChoreCapture) {
   const walking = source.find(track => track.name === 'Walking');
   if (!walking) throw new Error('The new Arianna is missing Walking.');
   const required = (name:string) => {const track=source.find(track=>track.name===name);if(!track)throw new Error('Missing Arianna clip: '+name);return track;};
@@ -30,10 +31,22 @@ export function meshyGameplay(model: Entity, source: AnimTrack[]) {
     const to=target.clone().sub(node.getPosition()).normalize();
     node.setRotation(new Quat().mul2(new Quat().setFromDirections(from,to),node.getRotation()));
   };
-  const arms = (y: number,z: number,wide=.11) => {
+  const crouch = () => {
+    const feet=['Left','Right'].map(side=>({side,node:model.findByName(side+'Foot')!,point:model.findByName(side+'Foot')!.getPosition().clone(),rotation:model.findByName(side+'Foot')!.getRotation().clone()}));
+    const hips=model.findByName('Hips')!,p=hips.getLocalPosition();hips.setLocalPosition(p.x,p.y-.29,p.z-.06);
+    for(const foot of feet){
+      const thigh=model.findByName(foot.side+'UpLeg')!,shin=model.findByName(foot.side+'Leg')!,origin=thigh.getPosition().clone();
+      const upper=origin.distance(shin.getPosition()),lower=shin.getPosition().distance(foot.node.getPosition()),delta=foot.point.clone().sub(origin),length=delta.length();delta.normalize();
+      const pole=model.getWorldTransform().transformVector(new Vec3(0,0,1));pole.sub(delta.clone().mulScalar(pole.dot(delta))).normalize();
+      const along=(upper*upper-lower*lower+length*length)/(2*length),knee=origin.clone().add(delta.clone().mulScalar(along)).add(pole.mulScalar(Math.sqrt(Math.max(0,upper*upper-along*along))));
+      aim(thigh,shin,knee);aim(shin,foot.node,foot.point);foot.node.setRotation(foot.rotation);
+    }
+  };
+  const arms = (y: number,z: number,wide=.11, motion?:number[]) => {
     for(const [side,sign] of [['Left',1],['Right',-1]] as const) {
       const arm=model.findByName(side+'Arm')!,fore=model.findByName(side+'ForeArm')!,hand=model.findByName(side+'Hand')!;
-      const shoulder=arm.getPosition().clone(),target=model.getWorldTransform().transformPoint(new Vec3(sign*wide,y,z));
+      const i=side==='Right'?0:3;
+      const shoulder=arm.getPosition().clone(),target=model.getWorldTransform().transformPoint(new Vec3(sign*wide+(motion?.[i]??0)*.09,y+(motion?.[i+1]??0)*.055,z+(motion?.[i+2]??0)*.09));
       const upper=shoulder.distance(fore.getPosition()),lower=fore.getPosition().distance(hand.getPosition());
       const direction=target.clone().sub(shoulder),distance=Math.min(direction.length(),upper+lower-.002);direction.normalize();
       const pole=model.getWorldTransform().transformVector(new Vec3(sign,-.6,-.3));
@@ -71,6 +84,14 @@ export function meshyGameplay(model: Entity, source: AnimTrack[]) {
     pose('CarryIdle',[carry,carry],[0,2]),
     pose('PickUp',[rest,reach,carry],[0,.4,.8]),pose('PutDown',[carry,reach,rest],[0,.4,.8]),
     pose('Celebrate',[rest,happy,happy,rest],[0,.3,.7,1]),pose('SitCar',[rest,rest],[0,2])];
+  if(chore)for(const [kind,name,y,z,bend] of [['wipe','Wipe',.02,.29,80],['vacuum','Vacuum',.60,.32,12]] as const){
+    const data=chore[kind],frames=data.samples.map(sample=>{
+      restore();if(kind==='wipe')crouch();const workingSpine=spine;
+      workingSpine.setRotation(new Quat().mul2(new Quat().setFromAxisAngle(axis,bend),workingSpine.getRotation()));
+      arms(y,z,.09,sample);return capture();
+    });
+    tracks.push(pose(name,frames,frames.map((_,i)=>i/data.fps)));restore();
+  }
   const manifest:CharacterManifest={
     animations:tracks.map(track=>({name:track.name,duration_seconds:track.duration,loop:!['PickUp','PutDown','Celebrate'].includes(track.name)})),
     scale:{rest_height_m:1.20309758},locomotion:{Walk:{travel_speed_mps:WALK_SPEED},Run:{travel_speed_mps:RUN_SPEED},CarryWalk:{travel_speed_mps:WALK_SPEED},CarryRun:{travel_speed_mps:RUN_SPEED}},
@@ -79,4 +100,3 @@ export function meshyGameplay(model: Entity, source: AnimTrack[]) {
   };
   return {tracks,manifest};
 }
-

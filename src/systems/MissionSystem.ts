@@ -35,6 +35,7 @@ export class MissionSystem {
     this.remaining = Math.max(0, this.deadline - now);
     if (this.remaining === 0) this.finish('time', now);
   }
+  pauseFor(milliseconds:number){if(this.state==='running'&&this.timed)this.deadline+=Math.max(0,milliseconds);}
   complete(task: TaskId, now: number): boolean {
     this.tick(now); // A late input/hold can never score after the deadline.
     if (this.state !== 'running' || this.completed.has(task) || !this.tasks.some(entry => entry.id === task)) return false;

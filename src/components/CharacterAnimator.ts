@@ -22,6 +22,7 @@ export class CharacterAnimator {
   private time = 0;
   private carrying = false;
   private idleClip = 'Idle';
+  private workClip: string | null = null;
   private carryPace: 'walk' | 'run' = 'run';
   private action: Action | null = null;
   private socket: Entity | null = null;
@@ -57,6 +58,7 @@ export class CharacterAnimator {
   bindCarrySocket(socket: Entity) { this.socket = socket; }
   setCarrying(value: boolean) { this.carrying = value; }
   setIdleClip(name: string) { this.idleClip = name; }
+  setWorkClip(name: string|null, target?:Vec3) { this.workClip=name; this.faceTowards(target??null); }
   setCarryPace(value: 'walk' | 'run') { this.carryPace = value; }
   faceTowards(target: Vec3 | null) { this.faceTarget = target?.clone() ?? null; }
   /** Events use the imported clip clock, not guessed wall-clock delays. */
@@ -70,7 +72,7 @@ export class CharacterAnimator {
   }
   cancelAction() { this.action = null; this.faceTarget = null; }
   reset() {
-    this.carrying = false; this.idleClip='Idle'; this.cancelAction(); this.state = ''; this.time = 0; this.lastEvent = null;
+    this.carrying = false; this.idleClip='Idle'; this.workClip=null; this.cancelAction(); this.state = ''; this.time = 0; this.lastEvent = null;
     this.placeholder.setLocalPosition(0, 0, 0); this.placeholder.setLocalEulerAngles(0, 0, 0);
     if (this.model) { this.model.anim!.speed = 1; this.transition('Idle', 0); }
   }
@@ -107,7 +109,7 @@ export class CharacterAnimator {
     if (this.model) {
       const run = this.clips.has('Run') && speed > (this.state.includes('Run') ? 1.05 : 1.3);
       const gait = this.carrying ? (run && this.carryPace==='run' ? 'CarryRun' : 'CarryWalk') : run ? 'Run' : 'Walk';
-      const desired = this.action?.name ?? (moving ? gait : this.carrying ? 'CarryIdle' : this.idleClip);
+      const desired = this.action?.name ?? this.workClip ?? (moving ? gait : this.carrying ? 'CarryIdle' : this.idleClip);
       const travel = this.manifest?.locomotion[desired]?.travel_speed_mps;
       // Presentation cadence is intentionally decoupled from the asset's tiny authored stride.
       // 7.5x/12.5x looked frantic in play. Keep a relaxed gait with analog-speed response.

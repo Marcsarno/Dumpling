@@ -1,0 +1,3 @@
+<html><body style="margin:20px;background:#c9ace4;font:16px Arial;color:#55426c;display:grid;grid-template-columns:repeat(6,150px);gap:12px"><script type="module">
+import {PopArt} from '/src/ui/PopArt.ts';const art=new PopArt();await art.load();for(const [name,canvas] of [...art.friends,...art.powers]){const card=document.createElement('div');canvas.style.width='150px';canvas.style.height='150px';card.append(canvas,document.createTextNode(name));document.body.append(card);}window.ready=true;
+</script></body></html>

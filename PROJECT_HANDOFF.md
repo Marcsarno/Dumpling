@@ -1,6 +1,60 @@
 # Dumpling / Arianna game — project handoff
 
-Updated September 16, 2026. Read this before continuing in a new chat, then inspect the working tree. This document records decisions and current state; the user's next request determines the next milestone.
+## Latest milestone — House Gameplay Polish + Lilah Tornado V1 (September 17, 2026)
+
+The latest explicit user request resumed house work for this contained milestone, superseding older notes to pause house/pathing. Read HOUSE_POLISH_REPORT.md and the new animation asset manifest before changing it. STOP here; no Harper's house, review mode or world expansion is authorized.
+
+- Optional **Lilah Tornado** house button: 55 seconds, physical NPC travel/drop animation, anticipation icons, five mess types, three unfinished messes maximum, ×1/×2/×3 timed streak, visible meter, positive stars and $1–$3 paid through existing allowance receipts. Day clock pauses; real daily tasks and old saved mess records remain untouched. New random daily mess creation is disabled outside the event.
+- Rare interruptions: a dog surprise and a toy-basket dump. At most one per round; most rounds have none. Cleanup grants +10 bonus points. Temporary entities clean up on exit; the dog returns to its original placement.
+- CMU washing/sweeping hand trajectories retargeted with IK to the existing Meshy Arianna skeleton. Floor wiping uses a crouch with planted-foot IK; vacuum handle motion follows the source capture. Existing pickup/putdown and all original GLBs stay intact. Manifest: public/assets/animations/chores/asset_manifest.json. CMU's license is permissive but is not CC0 and does not permit selling the motion data itself.
+- EXPLORE/CHORE camera states: smooth focus/zoom/elevation transitions and return, with resize-safe base zoom. REVIEW/BOX_OPENING/TRADE are future presets only. Held chores now approach the prop before working and cancel cleanly on release.
+- Existing Kenney CC0 audio reused for cleanup, streak, comic and reward cues. Bounded temporary geometry and audio voices. The original pug lacks a walk cycle; its brief travel uses translation and a gentle bounce rather than changing the character asset.
+- F2 → Jump in → Lilah Tornado lab provides normal, quiet, dog and basket rounds. Developer pause freezes the event. Normal event entry needs empty hands and a morning/afternoon daily session.
+- Tests: tornado-rules-test.mjs, tornado-browser-test.mjs, tornado-edge-browser-test.mjs, house-chore-browser-test.mjs. Several complete real-time rounds were played with actual joystick/tap input in isolated Edge profiles; normal/special rewards, zero-cleanup minimum reward, day-clock preservation, reload, three phone viewport sizes and chore return were exercised. See TESTING.md and ignored artifacts/house-polish.
+- Marc authorized committing and publishing the complete current game on September 17. This release includes the preserved family/trading checkpoint, Squishy Pop and house polish. Target: Marcsarno/Dumpling, main → Vercel marcsarno/dumpling. Check Git/Vercel status for the current deployment; older milestone notes below describe their pre-release state. Never clear Marc's localhost save for testing.
+
+
+Updated September 17, 2026. Read this before continuing in a new chat, then inspect the working tree. This document records decisions and current state; the user's next request determines the next milestone.
+
+## Latest milestone: Squishy Pop readability and round polish
+
+Marc authorized the next Pop milestone and specifically reported that pieces were too similar. Implemented locally; house/pathing remain paused. The existing high-quality reference-led raster art is preserved—no placeholder world models, recolored shortcuts or new art replacements.
+
+- **Five visually distinct types per round.** `src/data/popIdentity.ts` describes each sprite's actual silhouette and dominant palette. `boardPool` excludes pairs sharing either, maximizes discovered friends, and fills with an expanded starter set. All 26 remain eligible; near-identical bunny/star/pudding/dumpling variants never share a board. Each startup selects a new compatible lineup. Tests cover 1,500 varied inventories and every individual discovery.
+- Matching friends remain bright during a drag; nonmatching ones dim. A finger-offset count previews Bomb/Rainbow/Mega at 5/7/10 and updates on backtracking. Activation area previews and effects use the same pure target calculation as score/clear resolution.
+- Distinct Bomb puff ring, Rainbow ribbons, Mega double wave; subtle Frenzy border and remaining-seconds label. Pop squash is staggered; only falling pieces bounce; settled cells accept input during other pieces' refill. Reduced motion disables shake, falls, squash, moving particles and CSS effects, and shows results immediately.
+- First play now asks for an actual guided three-piece touch chain with no clock. Its points/pieces reset before the normal countdown. Existing learned saves skip it; Pop lab can replay it.
+- At zero, finish the active gesture, let its animation settle, then resolve remaining specials in one bounded finale. Each cleared cell scores base points plus its ordinary copy bonus, once; no chain/Frenzy multiplier, no new power and no fake best-chain record. Rainbow in the finale includes its matching kind. Results then count up, compare previous best and animate tickets toward the reward line. Normal save receipts and ticket/coupon caps are unchanged; developer practice still cannot award.
+- Updated regression harnesses for the interactive lesson. New scripts: `pop-milestone-test.mjs`, `pop-milestone-browser.mjs`, `pop-accessibility-browser.mjs`. Full natural touch minute scored 2,190/5 tickets in this run, p95 ~8.1ms desktop emulation; not a child pacing or real iPhone measurement. Phone result controls, previous dev controls, twelve replay cycles, reduced motion, mute, and rapid reopening verified; TypeScript and production build pass.
+- Art/readability screenshots and reports: ignored `artifacts/pop-milestone/`. See `SQUISHY_POP_REPORT.md`. Buddy skills, stamp goals and wishlist rewards remain later work after Arianna tests the feel/readability. Nothing pushed or deployed; current work is still local/uncommitted.
+
+## Previous milestone: Developer studio and Squishy Pop assessment
+
+Marc requested a god/developer panel to skip chores, teleport to Pop, and speed up testing. He also said Pop feels undercooked and left competitor selection to our judgment. Implemented **Developer studio**, available through **DEV · F2**, backtick, or DEV inside dialogs in local Vite builds. See `DEVELOPER_MODE.md` for controls and save semantics.
+
+- Four tabs: Jump in, World, Pop lab, Save & tools. Direct Pop launch; all three stores; home/collection/recess; complete current cleaning without allowance; skip to completed afternoon; day presets/next day/clock freeze; resources/duplicates/sealed boxes/restock; recovery; diagnostics.
+- Main update and Pop timer pause while the panel is open. Timed cleaning deadlines are shifted so browsing tools does not consume the round. Existing Pop pause is retained on return.
+- Automatic checkpoint of the three game save keys before the first change; explicit capture/restore/download/fresh-save controls. Replacing a checkpoint, restoring, or clearing progress asks inside the panel. Checkpoint survives reload and fresh-save reset. Tests never clear Marc's live localhost save.
+- Pop lab changes mark the round as practice, visibly in the footer/results. No ticket or best-score awards; practice replay remains practice. New normal round resets practice/freeze. Deterministic chains, special injection, Frenzy, timer presets and deadlock recovery use existing rules.
+- Panel and CSS are dynamically imported only for DEV; production build verified to exclude them. Local changes remain uncommitted/unpublished alongside Pop V1.
+- `SQUISHY_POP_NEXT_MILESTONE.md` contains the researched assessment and proposed priorities. **Those gameplay improvements have not been implemented in this milestone.** Prioritize chain-count/power previews, distinct power effects and better final/results payoff; then guided play, buddy choice and persistent goals. Keep supplied reference art and the drag-chain mechanic. Official Tsum Tsum manual and LINE POP 2 launch design inform the comparison; no hands-on competitor playtest is claimed.
+- Verification: developer checkpoint/rollback tests, real browser controls and a normal 60-second reward round after practice; supplemental timed-cleaning/day/collection/layout tests; existing save/hunt/trading/Pop rules and TypeScript/build checks. See `TESTING.md` and ignored `artifacts/developer/` reports.
+
+## Previous milestone: Squishy Pop V1
+
+**House/layout/pathing work is explicitly paused.** The user redirected work to `SQUISHY_POP_SPEC.md`, then clarified that the in-game squishy models are unfinished placeholders and must NOT be used in the minigame. That clarification supersedes the spec's earlier preference for renders of existing models.
+
+- Before changes, checkpoint **`d0accf1` — Checkpoint current game before Squishy Pop V1** committed the existing game, including hunt/trading/family work. Squishy Pop changes are currently local and uncommitted; nothing was pushed or deployed.
+- Every existing store has an optional **PLAY SQUISHY POP** button. A modal canvas takes over, preserving the loaded scene, player position, inventory and all other game state. The daily clock and movement pause; 3D rendering pauses until return.
+- 60 seconds, 6×6 tray, six eligible types, eight-way drag matching, minimum three, no repeated cells, backtrack to undo, pop/gravity/refill, bounded automatic deadlock recovery. Current gesture finishes at zero. Tutorial, countdown, pause/mute, results, saved tickets and replay are integrated.
+- Bomb: 5–6 chain → radius-one square; Rainbow: 7–9 → wildcard within a matching chain; Mega: 10+ → radius-two square. Tap Bomb/Mega or include them in a matching chain. Powers cascade once each. Strong quick chains trigger seven seconds of ×2 Frenzy.
+- Discovered saved IDs feed the pool, supplemented with starter friends. Copies 1/2/5 give 1/2/3 stars; the last two tiers add 2%/4% piece score. This does not consume duplicates. World models and collection counts are unchanged.
+- New reference-led art covers all 26 IDs; no placeholder model renders are shipped or used. Final atlases: `public/assets/pop/garden-atlas.png`, `treats-cutout.png`, `animals-cutout.png`, `cosmic-cutout.png`, `power-atlas.png`. Built-in imagegen prompts and provenance are recorded alongside them. Reference styles come from the user's seven supplied images.
+- Round tickets: 1 + floor(score/500), capped at 8. Forty tickets automatically discount one purchased box by $1, at most once per game day. No direct allowance/box awards. Coupon price is shown before purchase. Optional `pop` save field, idempotent round IDs, atomic purchase/discount updates and failed-save retry preserve existing version-one saves.
+- CC0 Kenney effects, CC0 TinyWorlds music, plus original Web Audio musical layers. See manifest/credits. Audio is unlocked by player interaction, stops on pause/exit and offers mute.
+- Architecture: pure rules in `src/data/squishyPop.ts`; overlay/touch/timing in `src/ui/SquishyPopUI.ts`; cached atlas sprites in `PopArt.ts`; bounded Web Audio in `PopAudio.ts`; existing GameLoop/ProgressStore integration.
+- Verification: 15,000 generated/refilled boards; all power rules and coupon/save boundaries; two full unaccelerated 60-second touch rounds; separate touch fixtures for all three powers/Frenzy; 12 replay cycles; 320×568, 390×844, 430×932 layouts. Reports/screenshots in ignored `artifacts/squishy-pop/`. Measured desktop-emulated frame p95 ~7ms; this is not a physical iPhone result. Real iPhone/Safari, subjective sound mix and seven-year-old enjoyment still need user testing.
+- See `SQUISHY_POP_REPORT.md` and TESTING.md. Stop at this milestone; do not start V2 or resume house/pathing without user direction.
 
 ## Where we are
 
@@ -11,8 +65,8 @@ Updated September 16, 2026. Read this before continuing in a new chat, then insp
 - GitHub: https://github.com/Marcsarno/Dumpling
 - Production: https://dumpling-sandy.vercel.app/
 - Local branch: `master`, tracking `origin/main`.
-- Verified local HEAD: `4619e79` — `Checkpoint furnished cottage with Arianna, Lilah and daily life`.
-- **Squishy Hunt V1, Trading V1 and family expansion changes are still uncommitted and have not been deployed. Preserve the modified and untracked files.** The prior cottage checkpoint was published; production should not be assumed to contain these changes.
+- Historical pre-Pop checkpoint: `d0accf1` — `Checkpoint current game before Squishy Pop V1`. Use `git log -1` for the current release commit.
+- **The September 17 release contains Squishy Hunt V1, Trading V1, family expansion, Squishy Pop, developer tools (local builds only), and House Polish + Lilah Tornado V1.** Preserve current files. Production is https://dumpling-sandy.vercel.app/; verify the latest commit status before assuming a deployment finished.
 - The handoff itself does not authorize publishing. When publishing is requested, use **MarcSarno / Marcsarno**, never the HornerXpress account. Confirm the target repository and Vercel team before publishing.
 - Vercel project `dumpling`, team `marcsarno`; Git-connected production branch `main`. `vercel.json` uses Vite, `pnpm run build`, output `dist`.
 
@@ -181,4 +235,4 @@ On this Windows setup, extracting a new asset while Vite was watching once cause
 
 Read this file, `README.md`, `TESTING.md` and `ASSET_SOURCES.md`; inspect the current working tree and the relevant implementation. Preserve the completed local milestone. Ask for or follow Marc's next concrete change, rather than beginning an assumed roadmap. If Marc reports a Squishy Hunt issue, reproduce and fix it before adding another system.
 
-Trading V1 and the Marc/family-room expansion were subsequently requested on September 16. No commit, push or deployment has been requested for these local changes.
+Trading V1 and the Marc/family-room expansion were subsequently requested on September 16 and checkpointed before Squishy Pop at the user's request. No push or deployment has been requested.

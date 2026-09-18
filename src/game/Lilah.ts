@@ -1,4 +1,4 @@
-import {Asset,Entity,Vec3,type AnimTrack,type Application,type ContainerResource} from 'playcanvas';
+import {Asset,BoundingBox,Entity,Vec3,type AnimTrack,type Application,type ContainerResource} from 'playcanvas';
 import {CharacterAnimator,type CharacterManifest} from '../components/CharacterAnimator';
 import {CharacterGrounding} from '../components/CharacterGrounding';
 import {HousePath} from '../components/HousePath';
@@ -29,6 +29,46 @@ export class Lilah {
   private speech='Hi, Ari!';
   private speechUntil=0;
   private visited=new Set<string>();
+  private scripted=false;
+  private job:{point:Vec3;icon:string;drop:()=>void;wait:number;blocked:number}|null=null;
+  get ready(){return this.loaded;}
+  get working(){return !!this.job;}
+  beginTornado(){this.scripted=true;this.job=null;this.route=[];this.animator.cancelAction();this.carrying=false;this.toy.enabled=false;this.animator.setCarrying(false);this.say('🌪️ Ready, Ari?');}
+  endTornado(){this.scripted=false;this.job=null;this.route=[];this.animator.cancelAction();this.animator.setCarrying(false);this.toy.enabled=false;this.carrying=false;this.state='watching';this.nextDecision=this.time+10;this.say('✨ We did it together!');}
+  visitForMess(point:Vec3,icon:string,drop:()=>void){
+    if(!this.scripted||this.job)return false;
+    const start=this.root.getPosition().clone();start.y=0;const route=new HousePath(this.house,.27).route(start,point);
+    if(!route.length)return false;
+    this.route=route;this.job={point:point.clone(),icon,drop,wait:0,blocked:0};this.state='tornado-travel';this.toy.enabled=true;this.carrying=true;this.animator.setCarrying(true);this.say(icon+'  I have an idea!');return true;
+  }
+  private updateTornado(dt:number,arianna:Vec3,velocity:Vec3){
+    const job=this.job;if(!job||this.animator.busy)return;
+    if(this.route.length){
+      const p=this.root.getPosition(),next=this.route[0],delta=new Vec3(next.x-p.x,0,next.z-p.z),distance=delta.length();
+      if(distance<.035){this.route.shift();return;}
+      delta.normalize();const q=p.clone().add(delta.clone().mulScalar(Math.min(distance,1.05*dt)));
+      const separation=Math.hypot(q.x-arianna.x,q.z-arianna.z),previousSeparation=Math.hypot(p.x-arianna.x,p.z-arianna.z);
+      if(separation<.43&&separation<=previousSeparation){
+        job.blocked+=dt;
+        if(job.blocked>.45){
+          const obstacle=new BoundingBox(new Vec3(arianna.x,0,arianna.z),new Vec3(.27,2,.27)),planner=new HousePath({...this.house,obstacles:[...this.house.obstacles,obstacle]},.18),start=new Vec3(p.x,0,p.z);
+          let path=planner.route(start,job.point);
+          // A player can step into our clearance circle. First step OUT of it, then route around.
+          if(!path.length){for(let i=0;i<16;i++){const angle=i*Math.PI/8,escape=new Vec3(p.x+Math.sin(angle)*.65,0,p.z+Math.cos(angle)*.65);if(Math.hypot(escape.x-arianna.x,escape.z-arianna.z)<.55||(escape.x-p.x)*(p.x-arianna.x)+(escape.z-p.z)*(p.z-arianna.z)<=0||!this.planner.line(start,escape))continue;const rest=planner.route(escape,job.point);if(rest.length){path=[escape,...rest];break;}}}
+          if(path.length)this.route=path;job.blocked=0;
+        }
+        return;
+      }
+      if(this.planner.free(q.x,q.z)){this.root.setPosition(q);velocity.copy(delta).mulScalar(1.05);}else {this.route=this.planner.route(new Vec3(p.x,0,p.z),job.point);}
+    }else{
+      if(!job.wait){this.say(job.icon+'  …');this.state='tornado-thinking';}
+      job.wait+=dt;if(job.wait<1.1)return;
+      this.state='tornado-drop';this.animator.playAction('PutDown',.8,()=>{
+        if(this.job!==job||!this.scripted)return;
+        this.toy.enabled=false;this.carrying=false;this.animator.setCarrying(false);this.job=null;job.drop();this.say(job.icon==='🧺'?'Oops! ALL the toys!':'Ta-da! Your turn, Ari!');
+      },new Vec3(job.point.x,.1,job.point.z+.3));
+    }
+  }
   constructor(private app:Application,private house:Bedroom,private daily:DailyLife){
     this.root=new Entity('Lilah · age 2',app);app.root.addChild(this.root);this.root.setPosition(1,.09,.7);
     this.visual=new Entity('Lilah visual',app);this.root.addChild(this.visual);
@@ -70,14 +110,6 @@ export class Lilah {
       this.state='sleepy';this.say('Sleepy…');this.carrying=false;this.toy.enabled=false;this.animator.setCarrying(false);
       this.go(new Vec3(8.55,0,-1.3),'bedtime');this.nextDecision=this.time+30;return;
     }
-    const messes=this.daily.lilahMesses;
-    if(this.time>=this.nextMess&&messes.count<3&&messes.activeCount<2){
-      const spots=[new Vec3(.5,0,2.05),new Vec3(.4,0,11.15),new Vec3(1.1,0,7.4)];
-      if(this.go(spots[messes.count],'mess')){
-        this.state='mischief';this.say(['I make a tower!','Juice for everyone!','Snack time!'][messes.count]);
-        this.animator.playAction('PickUp',.8,()=>{this.toy.enabled=true;this.carrying=true;this.animator.setCarrying(true);});return;
-      }
-    }
     if(Math.random()<.55){
       for(const [x,z]of [[.9,.7],[-.9,.7],[.9,-.7],[-.9,-.7]])if(this.go(new Vec3(arianna.x+x,0,arianna.z+z),'follow'))break;
       this.state='following';this.say(['Ari! Wait for me!','I do it too!','Whatcha doing?'][Math.floor(Math.random()*3)]);
@@ -94,11 +126,12 @@ export class Lilah {
     if(!this.root.enabled||document.hidden)return;
     if(this.day!==this.daily.clock.state.day){this.day=this.daily.clock.state.day;this.time=0;this.nextMess=8;this.nextDecision=3;this.route=[];this.animator.reset();this.carrying=false;this.toy.enabled=false;}
     if(canMischief)this.time+=dt;
-    if(canMischief&&this.daily.clock.state.phase==='night'&&this.state!=='sleepy'){
+    if(!this.scripted&&canMischief&&this.daily.clock.state.phase==='night'&&this.state!=='sleepy'){
       this.route=[];this.animator.cancelAction();this.decide(arianna);
     }
     const velocity=new Vec3();
-    if(canMischief&&!this.animator.busy){
+    if(this.scripted)this.updateTornado(dt,arianna,velocity);
+    else if(canMischief&&!this.animator.busy){
       if(this.route.length){
         const p=this.root.getPosition(),next=this.route[0],dx=next.x-p.x,dz=next.z-p.z,distance=Math.hypot(dx,dz);
         if(distance<.0001){this.route.shift();if(!this.route.length)this.arrive();}
@@ -128,7 +161,7 @@ export class Lilah {
     }else if(this.destination==='bedtime'){this.state='sleepy';this.say('Zzz…');}
     else{this.state='watching';this.say(this.destination==='follow'?'You’re my favorite, Ari!':'Ooh…');}
   }
-  snapshot(){return {loaded:this.loaded,height:this.height,position:this.root.getPosition().toArray(),state:this.state,speech:this.speech,carrying:this.carrying,animation:this.animator.snapshot(),visited:[...this.visited],routeLength:this.route.length,time:this.time,nextMess:this.nextMess};}
+  snapshot(){return {loaded:this.loaded,height:this.height,position:this.root.getPosition().toArray(),state:this.state,scripted:this.scripted,job:this.job?{point:this.job.point.toArray(),icon:this.job.icon,wait:this.job.wait}:null,speech:this.speech,carrying:this.carrying,animation:this.animator.snapshot(),visited:[...this.visited],routeLength:this.route.length,time:this.time,nextMess:this.nextMess};}
   geometry(){return this.animator.geometrySnapshot();}
   destroy(){this.label.remove();this.root.destroy();}
 }
