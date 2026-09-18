@@ -1,5 +1,13 @@
 # Dumpling / Arianna game — project handoff
 
+## Squishy Pop level progression (September 17–18, 2026)
+
+- User explicitly authorized research, reusable level architecture and three playable levels while preserving the existing game, then authorized committing and deploying on September 18. Baseline deployed commit: `55f5248`. Release target: `Marcsarno/Dumpling` main → Vercel `marcsarno/dumpling`. Check Git/Vercel for the resulting release commit and status. Further levels are not authorized.
+- Read `SQUISHY_POP_PROGRESSION.md` for research sources, exact goals, architecture and verification. `src/data/popLevels.ts` owns definitions and event-based objective tracking; original board/input/power rules remain intact.
+- Trail: Level 1 earns 300 points with four types; Level 2 makes two chains of 5+ with four types; Level 3 pops 12 pictured friends and activates two powers with five types and a starting Bomb/Rainbow. All last 60 seconds. Classic remains available. One completion star unlocks the next level; optional two/three-star score thresholds support replay.
+- Optional `pop.levels` in the existing progress save stores completion, stars, best score, best chain and attempts. Ticket receipts and level results commit atomically. No new reward currency, no changed coupon rules, no save reset. Developer practice does not award progression.
+- Tests use isolated Edge contexts and a separate origin. Never clear Marc's real browser saves. No character, house, store or new art changes. Stop after these three levels.
+
 ## Running correction + live Squishy Pop shortcut (September 17, 2026)
 
 - User authorized fixing Arianna's left arm while running and adding a live-game shortcut. `RunningPose.ts` bakes a runtime copy of Run: balanced hip/spine motion and the clean right-arm swing reflected half a stride later onto the left chain. Original GLB, joint lengths, walking/carrying and chore clips stay unchanged.

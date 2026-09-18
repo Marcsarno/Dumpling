@@ -4,6 +4,17 @@ Test environment: installed Microsoft Edge (Chromium), Playwright's real touch
 events with mobile emulation, and desktop mouse/keyboard input. Physical iPhone
 Safari has **not** been tested. Emulation is not a phone performance benchmark.
 
+## Squishy Pop progression — September 17–18
+
+- `pop-levels-test.mjs` passes: 300 level boards, readable pools, opening chains, objective accounting, finale exclusion from player power-use goals, distinct Frenzy sessions, locked-level rejection, atomic failure/retry, idempotency, old-save preservation and best-record retention.
+- `pop-levels-browser.mjs` played all three full 60-second levels sequentially through CDP touch in a fresh isolated Edge context. No board injection, developer practice or accelerated timers. Reloads verified each unlock and saved record. Scores were 5,090 / 4,960 / 4,465; goals were reached in about 6 / 3 / 8 seconds by the automated chain finder, which is not child pacing. An additional full idle replay preserved prior completion/stars/bests. Classic and non-Pop save fields remained intact. No browser console/runtime/asset errors.
+- Screenshots at 320×568, 390×844 and 430×932 cover trail, briefings, live goals and results. A small-phone result overflow was corrected with a two-column action area. `pop-levels-layout.mjs` then verified all result buttons visible with 44px targets, including Next-level navigation, using presentation fixtures.
+- Existing `pop-core-test.mjs`, `pop-rules-test.mjs`, `pop-milestone-test.mjs`, `pop-powers-browser.mjs` and `pop-accessibility-browser.mjs` pass. Covers 15,000 boards, all powers, Frenzy, touch cancellation, 12 replays, reduced motion, mute and rapid reopening. Classic browser harnesses now select Classic from the new trail; they accept `POP_URL` for a separate test server.
+- TypeScript, production build and progress/hunt/daily-clock regressions pass. Vite retains its existing large-engine-chunk advisory. Browser test origin was `127.0.0.1:5175`; Marc's browser profile and saves were untouched. Reports/images: ignored `artifacts/pop-levels/`.
+- Gameplay assessment: goals progress from any matching to longer paths to targeted friend/power decisions. No faster timer or smaller targets. Physical iPhone/Safari and seven-year-old comprehension/enjoyment are not established by automated tests.
+
+Run a separate Vite server, then use `POP_URL` for browser scripts. See `SQUISHY_POP_PROGRESSION.md` for exact rules and extension guidance.
+
 ## Squishy Pop readability / round polish — September 17
 
 Run `node --experimental-transform-types scripts/pop-milestone-test.mjs` for 1,500 visual lineups, eligibility of all 26 discoveries, target previews, chain thresholds/backtracking and bounded finale scoring. `pop-core-test.mjs` still verifies 15,000 refills; `pop-rules-test.mjs` covers all original powers, save/coupon rules and failure handling.

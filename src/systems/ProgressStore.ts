@@ -1,6 +1,7 @@
 import { DUMPLINGS, rollDumpling, STORE_INVENTORY } from '../data/collection.ts';
 import { saveId } from './saveId.ts';
 import { POP_RULES, roundTickets } from '../data/squishyPop.ts';
+import { POP_LEVELS, levelStars, levelUnlocked, type PopLevelRecords, type PopLevelAttempt } from '../data/popLevels.ts';
 import { TRADERS, createTradingDay, negotiate, willing, type Protection, type TraderId, type TradingDay } from '../data/trading.ts';
 import { SERIES, STORES, HUNT_RULES, boxPrice, canVisit, createHuntDay, rollSeries, storeById, type HuntDay, type SeriesId } from '../data/hunt.ts';
 
@@ -19,7 +20,7 @@ export interface ProgressData {
   hunt?: HuntDay;
   trading?: TradingDay;
   protections?: Record<string, Protection>;
-  pop?: {tickets:number;bestScore:number;rounds:string[];tutorialSeen:boolean;couponDay:number};
+  pop?: {tickets:number;bestScore:number;rounds:string[];tutorialSeen:boolean;couponDay:number;levels?:PopLevelRecords};
 }
 const fresh = (): ProgressData => ({ version: 1, balance: 0, collection: {}, boxes: [], creditedRounds: [], trip: { active: false, purchases: 0 }, location: 'cleanup', reveal: null });
 const validId = (id: unknown) => typeof id === 'string' && DUMPLINGS.some(d => d.id === id);
@@ -53,6 +54,7 @@ function parse(raw: string | null): ProgressData {
     })) throw Error('Trading save could not be read.');
   }
   if(value.pop){const p=value.pop;if(!Number.isSafeInteger(p.tickets)||p.tickets<0||!Number.isSafeInteger(p.bestScore)||p.bestScore<0||!Array.isArray(p.rounds)||p.rounds.some(id=>typeof id!=='string')||typeof p.tutorialSeen!=='boolean'||!Number.isSafeInteger(p.couponDay)||p.couponDay<0)throw Error('Squishy Pop save could not be read.');}
+  if(value.pop?.levels){const levels=value.pop.levels;if(typeof levels!=='object'||Array.isArray(levels)||Object.values(levels).some(l=>!l||typeof l.completed!=='boolean'||![l.stars,l.bestScore,l.bestChain,l.attempts].every(n=>Number.isSafeInteger(n)&&n>=0)||l.stars>3||l.completed!==(l.stars>0)))throw Error('Squishy Pop levels could not be read.');}
   return value;
 }
 
@@ -77,10 +79,18 @@ export class ProgressStore {
     if(!import.meta.env?.DEV)throw Error('Developer controls are available in the local development build.');
     return this.commit(data=>{change(data);parse(JSON.stringify(data));});
   }
-  completePopRound(id:string,score:number){
+  completePopRound(id:string,score:number,attempt?:PopLevelAttempt){
     if(!id||!Number.isSafeInteger(score)||score<0)throw Error('Invalid Squishy Pop round.');
     return this.commit(data=>{const p=data.pop??={tickets:0,bestScore:0,rounds:[],tutorialSeen:false,couponDay:0};
-      if(!p.rounds.includes(id)){p.tickets+=roundTickets(score);p.bestScore=Math.max(p.bestScore,score);p.rounds.push(id);p.tutorialSeen=true;}
+      if(!p.rounds.includes(id)){
+        if(attempt){
+          const level=POP_LEVELS.find(l=>l.id===attempt.levelId);
+          if(!level||!levelUnlocked(level,p.levels)||!Array.isArray(attempt.values)||attempt.values.length!==level.objectives.length||!attempt.values.every(n=>Number.isSafeInteger(n)&&n>=0)||!Number.isSafeInteger(attempt.bestChain)||attempt.bestChain<0||attempt.bestChain>36)throw Error('Invalid Squishy Pop level result.');
+          const stars=levelStars(level,attempt.values,score),levels=p.levels??={},old=levels[level.id];
+          levels[level.id]={completed:!!old?.completed||stars>0,stars:Math.max(old?.stars??0,stars),bestScore:Math.max(old?.bestScore??0,score),bestChain:Math.max(old?.bestChain??0,attempt.bestChain),attempts:(old?.attempts??0)+1};
+        }
+        p.tickets+=roundTickets(score);p.bestScore=Math.max(p.bestScore,score);p.rounds.push(id);p.tutorialSeen=true;
+      }
       return p.tickets;
     });
   }

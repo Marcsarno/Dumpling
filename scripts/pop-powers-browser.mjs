@@ -8,7 +8,7 @@ const snap=()=>page.evaluate(()=>window.pop.snapshot());
 async function drag(path,finish=true){const b=await page.locator('canvas').boundingBox();for(let n=0;n<path.length;n++){const i=path[n];await cdp.send('Input.dispatchTouchEvent',{type:n?'touchMove':'touchStart',touchPoints:[{id:1,x:b.x+(i%6+.5)*b.width/6,y:b.y+(Math.floor(i/6)+.5)*b.width/6}]});await page.waitForTimeout(40);}if(finish)await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
 const shape=[0,1,2,3,4,5,11,10,9,8,7,6];
 try{
-await page.goto('http://127.0.0.1:5173/scripts/pop-core.html',{waitUntil:'domcontentloaded'});await page.locator('[data-start]').tap();await learnFirstChain(page);await page.waitForFunction(()=>window.pop.snapshot().state==='playing');
+await page.goto((process.env.POP_URL??'http://127.0.0.1:5173')+'/scripts/pop-core.html',{waitUntil:'domcontentloaded'});await page.locator('[data-classic]').click();await page.locator('[data-start]').tap();await learnFirstChain(page);await page.waitForFunction(()=>window.pop.snapshot().state==='playing');
 for(const [n,power] of [[5,'bomb'],[7,'rainbow'],[10,'mega']]){
  await page.evaluate(()=>{window.pop.board.pieces.forEach(p=>{p.kind='rosie';delete p.power;});window.pop.lockedUntil=0;});await drag(shape.slice(0,n));assert.equal((await snap()).lastResult.created,power);await page.waitForTimeout(450);await page.screenshot({path:`artifacts/squishy-pop/power-${power}.png`});
  const p=await snap(),at=p.pieces.findIndex(p=>p.power===power);assert.ok(at>=0);if(power!=='rainbow'){await drag([at]);assert.ok((await snap()).lastResult.activated.includes(power));}else{

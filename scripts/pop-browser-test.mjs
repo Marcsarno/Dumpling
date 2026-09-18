@@ -18,7 +18,7 @@ function best(pieces){
  const bomb=pieces.findIndex(p=>p.power==='bomb'||p.power==='mega');return bomb>=0?[bomb]:[];
 }
 try{
- await page.goto('http://127.0.0.1:5173',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__roomTest?.snapshot().characterLoaded,{timeout:60000});await page.locator('#play-squishy-pop').waitFor({state:'visible'});await page.locator('#play-squishy-pop').tap();await page.locator('[data-start]').waitFor({state:'visible',timeout:60000});const before=await snap();
+ await page.goto(process.env.POP_URL??'http://127.0.0.1:5173',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__roomTest?.snapshot().characterLoaded,{timeout:60000});await page.locator('#play-squishy-pop').waitFor({state:'visible'});await page.locator('#play-squishy-pop').tap();await page.locator('[data-classic]').click();await page.locator('[data-start]').waitFor({state:'visible',timeout:60000});const before=await snap();
  const storedBefore=await page.evaluate(()=>JSON.parse(localStorage.getItem('arianna.progress.v1')));
  await page.screenshot({path:'artifacts/squishy-pop/01-tutorial.png'});await page.locator('[data-start]').tap();await learnFirstChain(page);await page.waitForFunction(()=>window.__roomTest.snapshot().loop.pop.state==='playing');pass('Store launch, reference art loaded, first-play tutorial and countdown');
  let p=await pop();const invalid=p.score;await gesture([p.valid[0]]);assert.equal((await pop()).score,invalid);await gesture([p.valid[0],p.valid[1],p.valid[0]],false);assert.equal((await pop()).chain.length,1);await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});assert.equal((await pop()).score,invalid);pass('Invalid chain, backtracking and touch cancellation preserve score');

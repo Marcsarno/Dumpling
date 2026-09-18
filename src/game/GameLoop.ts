@@ -56,11 +56,11 @@ export class GameLoop {
     private readonly controller: PlayerController, private readonly joystick: VirtualJoystick) {
     this.stores = STORES.map(definition=>createStore(app,definition)); this.opening = new OpeningSequence(app);
     this.huntUI=new HuntUI(id=>this.attempt(()=>this.visit(id)));
-    this.popUI=new SquishyPopUI(()=>this.save.data.collection,(id,score)=>this.save.completePopRound(id,score),open=>{
+    this.popUI=new SquishyPopUI(()=>this.save.data.collection,(id,score,attempt)=>this.save.completePopRound(id,score,attempt),open=>{
       this.joystick.reset();this.controller.reset();this.controller.enabled=!open;this.props.daily!.pause(performance.now());
       app.autoRender=!open;app.renderNextFrame=!open;
       if(open){this.action.enabled=false;this.huntUI.panel.hidden=true;}else{this.action.enabled=true;this.findCopy='';this.wallet();}
-    },()=>!this.save.data.pop?.tutorialSeen,()=>({bestScore:this.save.data.pop?.bestScore??0,tickets:this.save.data.pop?.tickets??0}));
+    },()=>!this.save.data.pop?.tutorialSeen,()=>({bestScore:this.save.data.pop?.bestScore??0,tickets:this.save.data.pop?.tickets??0,levels:this.save.data.pop?.levels??{}}));
     this.recess=createRecess(app);
     this.tradingUI=new TradingUI(this.save,()=>{this.wallet();this.recess.sync(this.save.data.trading!);},()=>this.attempt(()=>this.leaveRecess()));
     const daily=this.props.daily!;
