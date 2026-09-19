@@ -1,6 +1,6 @@
 # Developer studio
 
-Local development builds only. Open **DEV · F2** at the bottom of the game, press **F2** or **backtick**, or use **DEV** inside Squishy Pop. Escape closes the panel. Opening it pauses world simulation, the cleaning timer and the minigame. Closing it preserves an existing minigame pause. Active cleaning interactions are cancelled and carried tools/items return to their starting place.
+Available in local and deployed builds, including phones. Tap **DEV · F2** near the bottom of the game, press **F2** or **backtick**, or use **DEV** inside Squishy Pop. No keyboard or special URL is needed on a phone. Escape closes the panel. Opening it pauses world simulation, the cleaning timer and the minigame. Closing it preserves an existing minigame pause. Active cleaning interactions are cancelled and carried tools/items return to their starting place.
 
 ## Fastest route to testing
 
@@ -25,7 +25,7 @@ Checkpoints cover persisted progress, not exact actor positions or a running arc
 
 ## Implementation and verification
 
-`main.ts` dynamically imports `src/dev/DeveloperPanel.ts` only under `import.meta.env.DEV`. Production builds exclude the panel module and CSS; mutation entry points also check DEV. This is a local testing convenience, not an authentication system or server-side economy protection.
+`main.ts` dynamically imports `src/dev/DeveloperPanel.ts` in all builds, as requested September 18. Developer commands and pause handling work in production. The read-only `window.__roomTest` test API remains development-only. This is a playtesting convenience available to anyone opening the game; actions affect that browser's save, not other players' saves.
 
 The panel uses existing transitions, save validation, daily tasks and Pop board rules. A read-only diagnostic export includes current board, score, renderer metrics and the last six panel actions. Storage writes for progress use the existing atomic transaction; checkpoint restore rolls back if a write fails where storage permits rollback.
 

@@ -1,5 +1,11 @@
 # Dumpling / Arianna game — project handoff
 
+## Developer studio restored on the live site and phones — September 18
+
+- Marc explicitly requested restoring the DEV control panel on the deployed game, including his phone. This supersedes earlier local-only notes. Keep the visible DEV launcher and dialog launchers available in production; no keyboard, special URL or opt-in flag is required.
+- Removed build-only guards from panel loading, pause handling and developer command entry points. The `window.__roomTest` diagnostic API remains development-only. Phone launcher/panel account for safe-area insets.
+- Existing checkpoint, reset/restore confirmations and Pop practice reward isolation remain intact. Opening the panel does not clear or replace saves. See `DEVELOPER_MODE.md` and `scripts/developer-production-browser.mjs`.
+
 ## Squishy Pop level progression (September 17–18, 2026)
 
 - User explicitly authorized research, reusable level architecture and three playable levels while preserving the existing game, then authorized committing and deploying on September 18. Baseline deployed commit: `55f5248`. Release target: `Marcsarno/Dumpling` main → Vercel `marcsarno/dumpling`. Check Git/Vercel for the resulting release commit and status. Further levels are not authorized.

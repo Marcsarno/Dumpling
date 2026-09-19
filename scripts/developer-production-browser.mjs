@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import {mkdir,writeFile} from 'node:fs/promises';
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE??'file:///C:/Users/marc7/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs');
+const browser=await chromium.launch({channel:'msedge',headless:true}),page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),errors=[];
+page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});page.on('response',r=>{if(r.status()>=400)errors.push(r.status()+' '+r.url());});
+const data=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('arianna.progress.v1')));
+const command=async name=>{await page.locator(`[data-command="${name}"]`).first().tap();assert.equal(await page.locator('[data-status]').getAttribute('data-error'),'false');};
+try{
+ await mkdir('artifacts/developer-production',{recursive:true});await page.goto(process.env.TEST_URL??'http://127.0.0.1:4176');await page.locator('#game[data-ready="true"]').waitFor({timeout:60000});await page.locator('.dev-launch').waitFor();
+ assert.equal(await page.evaluate(()=>typeof window.__roomTest),'undefined','Production must not expose test globals');
+ const original=await data();await page.locator('.dev-launch').tap();assert.deepEqual(await data(),original);assert.equal(await page.evaluate(()=>localStorage.getItem('arianna.developer.checkpoint.v1')),null);
+ const clock=await page.locator('[data-clock]').innerText();await page.waitForTimeout(2300);assert.equal(await page.locator('[data-clock]').innerText(),clock);
+ for(const [width,height] of [[320,568],[390,844],[430,932]]){
+   await page.setViewportSize({width,height});for(let tab=0;tab<4;tab++){await page.locator(`[data-tab="${tab}"]`).tap();const b=await page.locator('#developer-panel').boundingBox();assert.ok(b.x>=0&&b.y>=0&&b.x+b.width<=width+1&&b.y+b.height<=height+1);assert.equal(await page.locator('#developer-panel').evaluate(d=>d.scrollWidth>d.clientWidth),false);}
+   await page.locator('[data-tab="0"]').tap();await page.screenshot({path:`artifacts/developer-production/panel-${width}.png`});await page.locator('.dev-close').tap();const launch=await page.locator('.dev-launch').boundingBox();assert.ok(launch.height>=44&&launch.y>=0&&launch.y+launch.height<=height);const shortcut=await page.locator('#squishy-pop-shortcut').boundingBox();assert.ok(launch.y+launch.height<=shortcut.y||shortcut.y+shortcut.height<=launch.y);await page.screenshot({path:`artifacts/developer-production/launcher-${width}.png`});await page.locator('.dev-launch').tap();
+ }
+ await page.locator('[data-tab="1"]').tap();await command('cash');assert.equal((await data()).balance,original.balance+20);const checkpoint=await page.evaluate(()=>JSON.parse(localStorage.getItem('arianna.developer.checkpoint.v1')));assert.deepEqual(JSON.parse(checkpoint.values['arianna.progress.v1']),original);
+ await page.locator('[data-command="phase"][data-value="night"]').tap();assert.equal(await page.locator('[data-status]').getAttribute('data-error'),'false');assert.match(await page.locator('[data-clock]').innerText(),/7:00/);
+ await page.locator('[data-tab="0"]').tap();await command('skip-chores');assert.equal(await page.locator('#developer-panel').evaluate(d=>d.open),false);await page.locator('.dev-launch').tap();await command('play-pop');await page.locator('[data-classic]').tap();await page.locator('#squishy-pop .dev-inline').tap();await page.locator('[data-tab="2"]').tap();
+ await command('pop:chain');await command('pop:freeze');await page.locator('.dev-resume').tap();const time=await page.locator('#squishy-pop [data-time]').innerText();await page.waitForTimeout(1300);assert.equal(await page.locator('#squishy-pop [data-time]').innerText(),time);assert.match(await page.locator('.pop-footer').innerText(),/DEV PRACTICE/);
+ await page.locator('#squishy-pop .dev-inline').tap();await page.locator('[data-tab="2"]').tap();const prior=await data();await command('pop:finish');await page.locator('.dev-close').tap();assert.match(await page.locator('.pop-ticket-prize').innerText(),/no rewards saved/);assert.deepEqual(await data(),prior);await page.locator('#squishy-pop [data-back]').tap();
+ await page.reload();await page.locator('.dev-launch').waitFor();assert.equal((await data()).balance,original.balance+20);assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('arianna.developer.checkpoint.v1'))),checkpoint);assert.deepEqual(errors,[]);
+ await writeFile('artifacts/developer-production/report.json',JSON.stringify({url:page.url(),errors,mobileSizes:[320,390,430],checkpoint:true,worldPause:true,commands:true,popPractice:true,reload:true},null,2));console.log('PASS production DEV launcher, phone tabs/layout, pause, commands, checkpoint, practice isolation and reload; no browser errors');
+}finally{await browser.close();}

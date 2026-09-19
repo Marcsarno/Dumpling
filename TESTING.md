@@ -1,5 +1,9 @@
 # Cleanup and collection prototype verification
 
+## Live developer panel — September 18
+
+`node scripts/developer-production-browser.mjs` passes against the production build, with no debug globals. Uses an isolated Edge touch context: DEV launcher and all four tabs at 320×568, 390×844 and 430×932; no overlap with the Pop shortcut; world pause; resource/phase/skip/Pop commands; checkpoint before the first change; frozen practice timer and no practice rewards; reload retains the launcher and checkpoint. No console/runtime/asset errors. `TEST_URL` selects local preview or production. Evidence: ignored `artifacts/developer-production/`. TypeScript, production build and developer checkpoint/rollback tests pass. Physical iPhone Safari remains untested.
+
 Test environment: installed Microsoft Edge (Chromium), Playwright's real touch
 events with mobile emulation, and desktop mouse/keyboard input. Physical iPhone
 Safari has **not** been tested. Emulation is not a phone performance benchmark.

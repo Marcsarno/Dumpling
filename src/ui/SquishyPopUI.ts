@@ -140,7 +140,7 @@ export class SquishyPopUI {
   }
   private tick=(now:number)=>{
     const dt=Math.max(0,(now-this.last)/1000);this.last=now;
-    if(import.meta.env.DEV)this.q('.pop-footer').textContent=this.developerPractice?`DEV PRACTICE · no rewards saved${this.developerFreeze?' · timer frozen':''}`:'Soft friends. Happy little chains.';
+    this.q('.pop-footer').textContent=this.developerPractice?`DEV PRACTICE · no rewards saved${this.developerFreeze?' · timer frozen':''}`:'Soft friends. Happy little chains.';
     if(this.developerHold){this.audio.pause(true);if(this.isOpen)this.frame=requestAnimationFrame(this.tick);return;}
     if(this.state==='playing'&&!this.paused){this.frameSamples.push(dt*1000);if(this.frameSamples.length>600)this.frameSamples.shift();}
     if(!this.paused&&!document.hidden){this.activeTime+=dt;if(this.state==='lesson'&&this.lessonDoneAt&&this.activeTime>=this.lessonDoneAt){this.board=this.level?createLevelBoard(this.level,{...this.collection()}):new PopBoard(this.board.pool,{...this.collection()});this.levelRun=this.level?new PopLevelRun(this.level,this.board.pool):undefined;this.updateGoals();this.moves.clear();this.gone=[];this.lastResult=undefined;this.feedbackUntil=0;this.state='countdown';this.q('.pop-hint').textContent='Connect 3 or more matching friends';this.audio.setMusic(true);this.showCover();}if(this.state==='countdown'){this.countdown-=dt;this.q('.pop-count').textContent=this.countdown> .8?String(Math.ceil(this.countdown-.8)):'POP!';if(this.countdown<=0){this.state='playing';this.showCover();}}else if(this.state==='playing'){if(!this.developerFreeze)this.remaining=Math.max(0,this.remaining-dt);if(!this.remaining&&this.pointer===null)this.finish();}else if(this.state==='finale'&&this.activeTime>=this.finaleAt){if(!this.finaleDone){this.finaleDone=true;const result=this.board.finale(this.activeTime);if(result)this.pop(result);this.finaleAt=this.activeTime+(result?.9:.25);}else{this.state='results';this.audio.celebrate();this.showCover();}}}
@@ -183,10 +183,9 @@ export class SquishyPopUI {
     for(const p of this.particles){if(p.life<=0)continue;p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=5*dt;c.globalAlpha=Math.min(1,p.life*3);c.fillStyle=p.color;const heart=this.art.powers.get('heart');if(p.shape===1&&heart)c.drawImage(heart,p.x-.16,p.y-.16,.32,.32);else{c.font='.28px sans-serif';c.fillText(p.shape?'✧':'✦',p.x,p.y);}}c.globalAlpha=1;c.restore();
   }
   snapshot(){const sorted=[...this.frameSamples].sort((a,b)=>a-b);return{open:this.isOpen,level:this.level?.id,objectives:this.levelRun?.values,completed:this.levelRun?.completed,state:this.state,remaining:this.remaining,paused:this.paused,practice:this.developerPractice,timerFrozen:this.developerFreeze,chain:[...this.board.chain],pieces:this.board.pieces.map(p=>({...p})),score:this.board.score,bestChain:this.board.bestChain,valid:this.board.findChain(),pool:this.board.pool,particles:this.particles.filter(p=>p.life>0).length,frenzy:this.frenzyWas,frenzyMeter:this.board.frenzyMeter,lastResult:this.lastResult?{chain:this.lastResult.chain,created:this.lastResult.created,activated:this.lastResult.activated,shuffled:this.lastResult.shuffled}:null,audio:this.audio.snapshot(),frameP95:sorted[Math.floor(sorted.length*.95)]??0,artFriends:this.images.size};}
-  developerPause(paused:boolean){if(!import.meta.env.DEV)return;this.developerHold=paused;this.cancel();this.last=performance.now();this.audio.pause(paused||this.paused);}
+  developerPause(paused:boolean){this.developerHold=paused;this.cancel();this.last=performance.now();this.audio.pause(paused||this.paused);}
   developerStatus(){return{ready:this.prepared,practice:this.developerPractice,freeze:this.developerFreeze,held:this.developerHold};}
   developerControl(command:string,value?:number){
-    if(!import.meta.env.DEV)return;
     if(command==='close'){if(this.isOpen)this.close();return;}
     if(!this.isOpen||!this.prepared)throw Error('Open Squishy Pop first and wait for the art to load.');
     if(command==='normal'){this.level=undefined;this.developerPractice=false;this.developerFreeze=false;this.start();return;}

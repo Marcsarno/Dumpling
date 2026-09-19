@@ -119,7 +119,6 @@ export class DailyLife {
   }
   pause(now:number){this.last=now;}
   developerPhase(phase:'morning'|'afternoon'|'night',nextDay=false){
-    if(!import.meta.env.DEV)return;
     const s=this.clock.state;if(nextDay)s.day++;
     if(s.phase!==phase||nextDay)s.done=[];
     s.phase=phase;s.minutes=phase==='morning'?420:phase==='afternoon'?900:1140;s.schoolSeconds=0;
@@ -127,7 +126,6 @@ export class DailyLife {
     this.phase=phase;this.pause(performance.now());this.refresh();this.save();
   }
   developerComplete(){
-    if(!import.meta.env.DEV)return;
     this.clock.state.done=this.clock.tasks.map(t=>t.id);
     if(this.clock.state.phase==='morning')this.clock.state.breakfast='done';
     for(const task of this.lilahMesses.tasks)this.lilahMesses.complete(task.id);

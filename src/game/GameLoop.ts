@@ -367,7 +367,6 @@ export class GameLoop {
     button.setAttribute('aria-label', `${title}: ${detail}`);
   }
   developerHold(paused:boolean){
-    if(!import.meta.env.DEV)return;
     this.tornado?.pause(paused);this.developerPaused=paused;this.joystick.reset();this.controller.reset();this.props.daily!.pause(performance.now());
     if(paused)this.cleanup.developerCancel();
     this.action.enabled=!paused&&this.mode!=='cleanup'&&!this.popUI.isOpen;
@@ -375,13 +374,11 @@ export class GameLoop {
     this.popUI.developerPause(paused);
   }
   developerTick(now:number,elapsed:number){
-    if(!import.meta.env.DEV)return;
     this.props.daily!.pause(now);this.cleanup.mission.pauseFor(elapsed*1000);
     if(this.travelUntil)this.travelUntil+=elapsed*1000;if(this.inspecting)this.inspecting.until+=elapsed*1000;
   }
   developerSummary(){return{scene:this.mode,store:this.mode==='store'?this.store.definition.name:null,day:this.props.daily!.clock.state.day,time:this.props.daily!.clock.label,phase:this.props.daily!.clock.state.phase,clockFrozen:this.developerClockFrozen,balance:this.save.data.balance,tickets:this.save.data.pop?.tickets??0,discovered:DUMPLINGS.filter(d=>this.save.data.collection[d.id]>0).length,boxes:this.save.data.boxes.length,cleanup:this.cleanup.mode,completed:this.cleanup.mission.completed.size,tasks:this.cleanup.mission.tasks.length,pop:this.popUI.snapshot(),popDev:this.popUI.developerStatus()};}
   developerCommand(command:string,value=''){
-    if(!import.meta.env.DEV)throw Error('Developer controls require the local development build.');
     const daily=this.props.daily!;
     const home=()=>{
       this.tornado?.close();

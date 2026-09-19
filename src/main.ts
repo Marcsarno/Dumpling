@@ -61,7 +61,7 @@ function start() {
   resize();
   app.on('update', (elapsed: number) => {
     const now = performance.now();
-    if(import.meta.env.DEV&&loop.developerPaused){loop.developerTick(now,elapsed);return;}
+    if(loop.developerPaused){loop.developerTick(now,elapsed);return;}
     loop.beforeMovement(now);
     if(loop.popUI.isOpen)return;
     const bulky = cleanup.carry.item?.carryPace === 'walk';
@@ -125,7 +125,7 @@ function start() {
     } });
   }
   let developerPanel:{destroy():void}|undefined;let disposed=false;
-  if(import.meta.env.DEV)void import('./dev/DeveloperPanel').then(({DeveloperPanel})=>{if(!disposed)developerPanel=new DeveloperPanel(loop,()=>({fps:app.stats.frame.fps,drawCalls:app.stats.drawCalls.total,position:character.player.getPosition().toArray()}));});
+  void import('./dev/DeveloperPanel').then(({DeveloperPanel})=>{if(!disposed)developerPanel=new DeveloperPanel(loop,()=>({fps:app.stats.frame.fps,drawCalls:app.stats.drawCalls.total,position:character.player.getPosition().toArray()}));});
   if (import.meta.hot) import.meta.hot.dispose(() => {
     disposed=true;developerPanel?.destroy();
     observer.disconnect(); tornado.destroy(); marc.destroy(); lilah.destroy(); navigation.destroy(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();

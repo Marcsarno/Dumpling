@@ -74,9 +74,9 @@ export class ProgressStore {
     this.data = draft; this.problem = ''; return result;
   }
   refresh() { this.data = parse(this.repository.read()); }
-  /** Local developer tools use the same read/validate/write transaction as gameplay. */
+  /** Developer tools use the same read/validate/write transaction as gameplay. */
   developerEdit(change:(draft:ProgressData)=>void){
-    if(!import.meta.env?.DEV)throw Error('Developer controls are available in the local development build.');
+
     return this.commit(data=>{change(data);parse(JSON.stringify(data));});
   }
   completePopRound(id:string,score:number,attempt?:PopLevelAttempt){

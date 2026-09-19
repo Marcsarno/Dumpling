@@ -6,7 +6,7 @@ import './developer-panel.css';
 
 type Metrics={fps:number;drawCalls:number;position:number[]};
 const button=(label:string,command:string,value='',exit=false)=>`<button type="button" data-command="${command}" data-value="${value}" ${exit?'data-exit':''}>${label}</button>`;
-/** Loaded only by Vite's development entry point. No changes just for opening it. */
+/** Available in local and deployed builds. No changes just for opening it. */
 export class DeveloperPanel {
   private dialog=document.createElement('dialog');
   private saves=new DeveloperSaves();
@@ -18,7 +18,7 @@ export class DeveloperPanel {
   constructor(private loop:GameLoop,private metrics:()=>Metrics){
     this.dialog.id='developer-panel';this.dialog.setAttribute('aria-labelledby','dev-title');
     this.dialog.innerHTML=`<div class="dev-shell">
-      <header class="dev-header"><div><span class="dev-eyebrow"><i></i> GOD MODE · LOCAL BUILD</span><h2 id="dev-title">Developer studio<span>✦</span></h2><p>Less walking. More playtesting.</p></div><button class="dev-close" aria-label="Close developer panel">×</button></header>
+      <header class="dev-header"><div><span class="dev-eyebrow"><i></i> GOD MODE · PLAYTEST TOOLS</span><h2 id="dev-title">Developer studio<span>✦</span></h2><p>Less walking. More playtesting.</p></div><button class="dev-close" aria-label="Close developer panel">×</button></header>
       <div class="dev-live"><span data-scene></span><span data-clock></span><span data-wallet></span></div>
       <nav class="dev-tabs" role="tablist" aria-label="Developer tools">${['Jump in','World','Pop lab','Save & tools'].map((name,i)=>`<button role="tab" id="dev-tab-${i}" aria-controls="dev-section-${i}" aria-selected="${i===0}" tabindex="${i===0?0:-1}" data-tab="${i}">${name}</button>`).join('')}</nav>
       <div class="dev-content">

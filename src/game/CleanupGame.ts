@@ -215,13 +215,11 @@ export class CleanupGame {
     if (!active) { this.feedback.hide(); this.hud.dialog.close(); }
   }
   developerCancel(){
-    if(!import.meta.env.DEV)return;
     this.action.reset();this.cancelActivity();this.aligning=null;this.resetMovement();this.character.animator.cancelAction();
     if(this.carry.item){const item=this.carry.item;this.carry.release(this.props.root,item.home);item.entity.enabled=true;}
     this.character.animator.setCarrying(false);
   }
   developerComplete(){
-    if(!import.meta.env.DEV)return;
     this.developerCancel();
     if(this.mode==='day'){this.props.daily!.developerComplete();for(const id of this.props.daily!.completed)this.mission.completed.add(id);return;}
     for(const task of this.mission.tasks){this.mission.completed.add(task.id);
