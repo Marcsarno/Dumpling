@@ -1,5 +1,5 @@
 {
-  "url": "http://127.0.0.1:5186/stores/exports/game/index.html",
+  "url": "http://127.0.0.1:5186/stores/exports/completed/index.html",
   "checks": [
     "corner · walk and inspect display 0",
     "corner · purchase retains original economy",
@@ -57,22 +57,22 @@
         "cameraPosition": [
           6,
           14,
-          22.744308471679688
+          22.743717193603516
         ],
         "cameraAngles": [
-          -34.840000554463906,
+          -34.83999773034908,
           18.435000660412488,
-          -2.1221028506060187e-7
+          4.912192471829047e-7
         ],
         "cameraHeight": 5.734871794871795,
         "room": "bedroom",
         "playerScreen": [
-          194.8688234720766,
-          464.70294734426193,
-          -0.21820320357870943
+          194.8550409821003,
+          464.72659131475143,
+          -0.2182186112117458
         ],
-        "drawCalls": 529,
-        "fps": 19,
+        "drawCalls": 532,
+        "fps": 18,
         "resolution": [
           390,
           844
@@ -217,22 +217,22 @@
         ],
         "cameraRight": [
           0.948683011947834,
-          -3.513701953415833e-9,
+          8.133432495456694e-9,
           -0.31622862432358284
         ],
         "cameraForward": [
-          -0.25954482787362493,
-          -0.5712866965398291,
-          -0.7786321292373309
+          -0.25954481582812566,
+          -0.5712866700263612,
+          -0.7786321527055864
         ],
         "animationState": "Idle",
         "character": {
           "state": "Idle",
           "busy": false,
           "action": null,
-          "clipTime": 0.1,
+          "clipTime": 0.0235,
           "playbackRate": 1,
-          "frameScale": 0.39999999999999997,
+          "frameScale": 1,
           "scale": 1.1499067266015113,
           "groundY": 0.03199999779462814,
           "lastEvent": null,
@@ -644,7 +644,7 @@
         "dog": {
           "state": "Idle",
           "speed": 0,
-          "time": 0.167,
+          "time": 0.10350000000000001,
           "position": [
             4.800000190734863,
             0.03999999910593033,
@@ -658,7 +658,7 @@
           "muted": false,
           "track": "Shopping · 1",
           "requested": "Shopping · 1",
-          "source": "http://127.0.0.1:5186/stores/exports/game/files/assets/307709927/1/game__audio__Squishy shopping.mp3?t=9af9e646048d663b95464c99e6e61827",
+          "source": "http://127.0.0.1:5186/stores/exports/completed/files/assets/307709927/1/game__audio__Squishy shopping.mp3?t=9af9e646048d663b95464c99e6e61827",
           "position": 0,
           "volume": 0,
           "gap": 0,
@@ -1809,23 +1809,23 @@
               },
               {
                 "id": 2,
-                "kind": "lavendream"
+                "kind": "stardrop"
               },
               {
                 "id": 3,
-                "kind": "lavendream"
+                "kind": "rosie"
               },
               {
                 "id": 4,
-                "kind": "lavendream"
-              },
-              {
-                "id": 5,
                 "kind": "fox"
               },
               {
+                "id": 5,
+                "kind": "lavendream"
+              },
+              {
                 "id": 6,
-                "kind": "macaron"
+                "kind": "lavendream"
               },
               {
                 "id": 7,
@@ -1833,11 +1833,11 @@
               },
               {
                 "id": 8,
-                "kind": "mochi"
+                "kind": "rosie"
               },
               {
                 "id": 9,
-                "kind": "macaron"
+                "kind": "panda"
               },
               {
                 "id": 10,
@@ -1853,59 +1853,59 @@
               },
               {
                 "id": 13,
-                "kind": "macaron"
+                "kind": "panda"
               },
               {
                 "id": 14,
-                "kind": "lavendream"
+                "kind": "stardrop"
               },
               {
                 "id": 15,
-                "kind": "macaron"
+                "kind": "fox"
               },
               {
                 "id": 16,
-                "kind": "mochi"
+                "kind": "fox"
               },
               {
                 "id": 17,
-                "kind": "mochi"
+                "kind": "fox"
               },
               {
                 "id": 18,
-                "kind": "stardrop"
+                "kind": "panda"
               },
               {
                 "id": 19,
-                "kind": "fox"
-              },
-              {
-                "id": 20,
                 "kind": "lavendream"
               },
               {
-                "id": 21,
-                "kind": "mochi"
-              },
-              {
-                "id": 22,
-                "kind": "mochi"
-              },
-              {
-                "id": 23,
+                "id": 20,
                 "kind": "fox"
               },
               {
+                "id": 21,
+                "kind": "fox"
+              },
+              {
+                "id": 22,
+                "kind": "lavendream"
+              },
+              {
+                "id": 23,
+                "kind": "lavendream"
+              },
+              {
                 "id": 24,
-                "kind": "mochi"
+                "kind": "fox"
               },
               {
                 "id": 25,
-                "kind": "mochi"
+                "kind": "fox"
               },
               {
                 "id": 26,
-                "kind": "stardrop"
+                "kind": "panda"
               },
               {
                 "id": 27,
@@ -1913,35 +1913,35 @@
               },
               {
                 "id": 28,
-                "kind": "fox"
+                "kind": "lavendream"
               },
               {
                 "id": 29,
-                "kind": "lavendream"
+                "kind": "fox"
               },
               {
                 "id": 30,
-                "kind": "lavendream"
+                "kind": "rosie"
               },
               {
                 "id": 31,
-                "kind": "mochi"
+                "kind": "lavendream"
               },
               {
                 "id": 32,
-                "kind": "fox"
+                "kind": "rosie"
               },
               {
                 "id": 33,
-                "kind": "macaron"
+                "kind": "rosie"
               },
               {
                 "id": 34,
-                "kind": "fox"
+                "kind": "panda"
               },
               {
                 "id": 35,
-                "kind": "mochi"
+                "kind": "rosie"
               },
               {
                 "id": 36,
@@ -1951,16 +1951,16 @@
             "score": 0,
             "bestChain": 0,
             "valid": [
-              0,
-              1,
-              2
+              3,
+              9,
+              14
             ],
             "pool": [
               "stardrop",
-              "macaron",
-              "mochi",
               "fox",
-              "lavendream"
+              "rosie",
+              "lavendream",
+              "panda"
             ],
             "particles": 0,
             "frenzy": false,
@@ -2302,6 +2302,30 @@
                   0.6499999761581421,
                   0.4000000059604645,
                   0.4000000059604645
+                ]
+              },
+              {
+                "center": [
+                  -4.300000190734863,
+                  0.574999988079071,
+                  4.800000190734863
+                ],
+                "halfExtents": [
+                  0.3449999988079071,
+                  0.574999988079071,
+                  0.3449999988079071
+                ]
+              },
+              {
+                "center": [
+                  4.25,
+                  0.574999988079071,
+                  -3.299999952316284
+                ],
+                "halfExtents": [
+                  0.3449999988079071,
+                  0.574999988079071,
+                  0.3449999988079071
                 ]
               }
             ],
@@ -3382,22 +3406,22 @@
         "cameraPosition": [
           6,
           14,
-          23.443729400634766
+          23.448974609375
         ],
         "cameraAngles": [
           -34.83999773034908,
           18.435000660412488,
-          5.217445492689063e-8
+          4.912192471829047e-7
         ],
         "cameraHeight": 5.734871794871795,
         "room": "bedroom",
         "playerScreen": [
-          194.8553268400391,
-          464.7260837890343,
-          -0.21821824042956395
+          194.9773905960282,
+          464.5169101096825,
+          -0.21808189480464024
         ],
-        "drawCalls": 540,
-        "fps": 5,
+        "drawCalls": 542,
+        "fps": 21,
         "resolution": [
           390,
           844
@@ -3542,7 +3566,7 @@
         ],
         "cameraRight": [
           0.948683011947834,
-          8.638859522886407e-10,
+          8.133432495456694e-9,
           -0.31622862432358284
         ],
         "cameraForward": [
@@ -3555,7 +3579,7 @@
           "state": "Idle",
           "busy": false,
           "action": null,
-          "clipTime": 0.007,
+          "clipTime": 0.020900000000000547,
           "playbackRate": 1,
           "frameScale": 1,
           "scale": 1.1499067266015113,
@@ -3969,7 +3993,7 @@
         "dog": {
           "state": "Idle",
           "speed": 0,
-          "time": 0.1893000000000002,
+          "time": 0.22090000000000057,
           "position": [
             4.800000190734863,
             0.03999999910593033,
@@ -3983,7 +4007,7 @@
           "muted": false,
           "track": "Shopping · 1",
           "requested": "Shopping · 1",
-          "source": "http://127.0.0.1:5186/stores/exports/game/files/assets/307709927/1/game__audio__Squishy shopping.mp3?t=9af9e646048d663b95464c99e6e61827",
+          "source": "http://127.0.0.1:5186/stores/exports/completed/files/assets/307709927/1/game__audio__Squishy shopping.mp3?t=9af9e646048d663b95464c99e6e61827",
           "position": 0,
           "volume": 0,
           "gap": 0,
@@ -5130,31 +5154,31 @@
             "pieces": [
               {
                 "id": 1,
-                "kind": "macaron"
-              },
-              {
-                "id": 2,
-                "kind": "fox"
-              },
-              {
-                "id": 3,
-                "kind": "fox"
-              },
-              {
-                "id": 4,
-                "kind": "macaron"
-              },
-              {
-                "id": 5,
-                "kind": "macaron"
-              },
-              {
-                "id": 6,
                 "kind": "mochi"
               },
               {
-                "id": 7,
+                "id": 2,
+                "kind": "mochi"
+              },
+              {
+                "id": 3,
                 "kind": "macaron"
+              },
+              {
+                "id": 4,
+                "kind": "mochi"
+              },
+              {
+                "id": 5,
+                "kind": "comet"
+              },
+              {
+                "id": 6,
+                "kind": "fox"
+              },
+              {
+                "id": 7,
+                "kind": "comet"
               },
               {
                 "id": 8,
@@ -5162,23 +5186,23 @@
               },
               {
                 "id": 9,
-                "kind": "fox"
+                "kind": "macaron"
               },
               {
                 "id": 10,
-                "kind": "lavendream"
-              },
-              {
-                "id": 11,
                 "kind": "fox"
               },
               {
+                "id": 11,
+                "kind": "macaron"
+              },
+              {
                 "id": 12,
-                "kind": "lavendream"
+                "kind": "sunny"
               },
               {
                 "id": 13,
-                "kind": "macaron"
+                "kind": "comet"
               },
               {
                 "id": 14,
@@ -5186,27 +5210,27 @@
               },
               {
                 "id": 15,
-                "kind": "macaron"
+                "kind": "fox"
               },
               {
                 "id": 16,
-                "kind": "macaron"
+                "kind": "comet"
               },
               {
                 "id": 17,
-                "kind": "lavendream"
+                "kind": "comet"
               },
               {
                 "id": 18,
-                "kind": "mochi"
+                "kind": "sunny"
               },
               {
                 "id": 19,
-                "kind": "sunny"
+                "kind": "mochi"
               },
               {
                 "id": 20,
-                "kind": "sunny"
+                "kind": "macaron"
               },
               {
                 "id": 21,
@@ -5214,11 +5238,11 @@
               },
               {
                 "id": 22,
-                "kind": "fox"
+                "kind": "comet"
               },
               {
                 "id": 23,
-                "kind": "lavendream"
+                "kind": "comet"
               },
               {
                 "id": 24,
@@ -5226,23 +5250,23 @@
               },
               {
                 "id": 25,
-                "kind": "mochi"
+                "kind": "macaron"
               },
               {
                 "id": 26,
-                "kind": "lavendream"
+                "kind": "fox"
               },
               {
                 "id": 27,
-                "kind": "sunny"
+                "kind": "macaron"
               },
               {
                 "id": 28,
-                "kind": "mochi"
+                "kind": "fox"
               },
               {
                 "id": 29,
-                "kind": "macaron"
+                "kind": "mochi"
               },
               {
                 "id": 30,
@@ -5250,42 +5274,42 @@
               },
               {
                 "id": 31,
-                "kind": "mochi"
+                "kind": "sunny"
               },
               {
                 "id": 32,
-                "kind": "macaron"
+                "kind": "sunny"
               },
               {
                 "id": 33,
-                "kind": "mochi"
+                "kind": "macaron"
               },
               {
                 "id": 34,
-                "kind": "lavendream"
+                "kind": "macaron"
               },
               {
                 "id": 35,
-                "kind": "lavendream"
+                "kind": "mochi"
               },
               {
                 "id": 36,
-                "kind": "mochi"
+                "kind": "sunny"
               }
             ],
             "score": 0,
             "bestChain": 0,
             "valid": [
-              0,
-              6,
-              7
+              2,
+              7,
+              8
             ],
             "pool": [
-              "lavendream",
-              "macaron",
-              "mochi",
               "fox",
-              "sunny"
+              "mochi",
+              "sunny",
+              "comet",
+              "macaron"
             ],
             "particles": 0,
             "frenzy": false,
@@ -5639,6 +5663,30 @@
                   0.699999988079071,
                   0.5,
                   0.3499999940395355
+                ]
+              },
+              {
+                "center": [
+                  -4.699999809265137,
+                  0.574999988079071,
+                  5.5
+                ],
+                "halfExtents": [
+                  0.3449999988079071,
+                  0.574999988079071,
+                  0.3449999988079071
+                ]
+              },
+              {
+                "center": [
+                  4.650000095367432,
+                  0.574999988079071,
+                  -4
+                ],
+                "halfExtents": [
+                  0.3449999988079071,
+                  0.574999988079071,
+                  0.3449999988079071
                 ]
               }
             ],
@@ -6723,22 +6771,22 @@
         "cameraPosition": [
           6,
           14,
-          23.734012603759766
+          23.74911117553711
         ],
         "cameraAngles": [
-          -34.840002711188504,
-          18.435000660412488,
-          7.304729312778483e-8
+          -34.83999773034908,
+          18.43499904049138,
+          3.200582096363196e-7
         ],
         "cameraHeight": 5.734871794871795,
         "room": "bedroom",
         "playerScreen": [
-          194.62924785739477,
-          465.1134712841397,
-          -0.2184708847787667
+          194.98055528822832,
+          464.5114626247471,
+          -0.2180783465814281
         ],
-        "drawCalls": 370,
-        "fps": 14,
+        "drawCalls": 371,
+        "fps": 25,
         "resolution": [
           390,
           844
@@ -6882,23 +6930,23 @@
           }
         ],
         "cameraRight": [
-          0.948683011947834,
-          1.2094909371689456e-9,
-          -0.31622862432358284
+          0.9486830208885519,
+          5.299409341461818e-9,
+          -0.31622859750150883
         ],
         "cameraForward": [
-          -0.25954481903577525,
-          -0.5712867366913952,
-          -0.7786321027238622
+          -0.25954481582812566,
+          -0.5712866700263612,
+          -0.7786321527055864
         ],
         "animationState": "Idle",
         "character": {
           "state": "Idle",
           "busy": false,
           "action": null,
-          "clipTime": 0.013899999999999637,
+          "clipTime": 0.09710000000000037,
           "playbackRate": 1,
-          "frameScale": 1,
+          "frameScale": 0.4119464469618934,
           "scale": 1.1499067266015113,
           "groundY": 0.03199999779462814,
           "lastEvent": null,
@@ -7310,7 +7358,7 @@
         "dog": {
           "state": "Idle",
           "speed": 0,
-          "time": 0.10059999999999991,
+          "time": 0.134,
           "position": [
             4.800000190734863,
             0.03999999910593033,
@@ -7324,7 +7372,7 @@
           "muted": false,
           "track": "Shopping · 1",
           "requested": "Shopping · 1",
-          "source": "http://127.0.0.1:5186/stores/exports/game/files/assets/307709927/1/game__audio__Squishy shopping.mp3?t=9af9e646048d663b95464c99e6e61827",
+          "source": "http://127.0.0.1:5186/stores/exports/completed/files/assets/307709927/1/game__audio__Squishy shopping.mp3?t=9af9e646048d663b95464c99e6e61827",
           "position": 0,
           "volume": 0,
           "gap": 0,
@@ -8471,35 +8519,35 @@
             "pieces": [
               {
                 "id": 1,
-                "kind": "comet"
+                "kind": "stardrop"
               },
               {
                 "id": 2,
-                "kind": "panda"
+                "kind": "stardrop"
               },
               {
                 "id": 3,
-                "kind": "rosie"
+                "kind": "stardrop"
               },
               {
                 "id": 4,
-                "kind": "fox"
-              },
-              {
-                "id": 5,
                 "kind": "lavendream"
               },
               {
+                "id": 5,
+                "kind": "stardrop"
+              },
+              {
                 "id": 6,
-                "kind": "fox"
+                "kind": "lavendream"
               },
               {
                 "id": 7,
-                "kind": "comet"
+                "kind": "fox"
               },
               {
                 "id": 8,
-                "kind": "comet"
+                "kind": "macaron"
               },
               {
                 "id": 9,
@@ -8507,99 +8555,99 @@
               },
               {
                 "id": 10,
-                "kind": "panda"
+                "kind": "stardrop"
               },
               {
                 "id": 11,
-                "kind": "fox"
+                "kind": "mochi"
               },
               {
                 "id": 12,
-                "kind": "rosie"
+                "kind": "macaron"
               },
               {
                 "id": 13,
-                "kind": "rosie"
+                "kind": "fox"
               },
               {
                 "id": 14,
-                "kind": "comet"
+                "kind": "fox"
               },
               {
                 "id": 15,
-                "kind": "comet"
+                "kind": "mochi"
               },
               {
                 "id": 16,
-                "kind": "fox"
+                "kind": "stardrop"
               },
               {
                 "id": 17,
-                "kind": "rosie"
+                "kind": "macaron"
               },
               {
                 "id": 18,
-                "kind": "lavendream"
+                "kind": "fox"
               },
               {
                 "id": 19,
-                "kind": "panda"
+                "kind": "fox"
               },
               {
                 "id": 20,
-                "kind": "rosie"
+                "kind": "fox"
               },
               {
                 "id": 21,
-                "kind": "comet"
+                "kind": "fox"
               },
               {
                 "id": 22,
-                "kind": "panda"
+                "kind": "stardrop"
               },
               {
                 "id": 23,
-                "kind": "rosie"
+                "kind": "fox"
               },
               {
                 "id": 24,
-                "kind": "lavendream"
+                "kind": "macaron"
               },
               {
                 "id": 25,
-                "kind": "lavendream"
+                "kind": "macaron"
               },
               {
                 "id": 26,
-                "kind": "fox"
+                "kind": "lavendream"
               },
               {
                 "id": 27,
-                "kind": "rosie"
+                "kind": "mochi"
               },
               {
                 "id": 28,
-                "kind": "lavendream"
+                "kind": "stardrop"
               },
               {
                 "id": 29,
-                "kind": "rosie"
+                "kind": "stardrop"
               },
               {
                 "id": 30,
-                "kind": "lavendream"
+                "kind": "stardrop"
               },
               {
                 "id": 31,
-                "kind": "rosie"
+                "kind": "macaron"
               },
               {
                 "id": 32,
-                "kind": "fox"
+                "kind": "macaron"
               },
               {
                 "id": 33,
-                "kind": "comet"
+                "kind": "macaron"
               },
               {
                 "id": 34,
@@ -8607,26 +8655,26 @@
               },
               {
                 "id": 35,
-                "kind": "panda"
+                "kind": "macaron"
               },
               {
                 "id": 36,
-                "kind": "lavendream"
+                "kind": "macaron"
               }
             ],
             "score": 0,
             "bestChain": 0,
             "valid": [
               0,
-              6,
-              7
+              1,
+              2
             ],
             "pool": [
-              "rosie",
-              "lavendream",
-              "panda",
-              "comet",
-              "fox"
+              "mochi",
+              "stardrop",
+              "macaron",
+              "fox",
+              "lavendream"
             ],
             "particles": 0,
             "frenzy": false,
@@ -8968,6 +9016,30 @@
                   0.3499999940395355,
                   0.5,
                   0.3499999940395355
+                ]
+              },
+              {
+                "center": [
+                  -4.599999904632568,
+                  0.574999988079071,
+                  5.800000190734863
+                ],
+                "halfExtents": [
+                  0.3449999988079071,
+                  0.574999988079071,
+                  0.3449999988079071
+                ]
+              },
+              {
+                "center": [
+                  4.550000190734863,
+                  0.574999988079071,
+                  -4.300000190734863
+                ],
+                "halfExtents": [
+                  0.3449999988079071,
+                  0.574999988079071,
+                  0.3449999988079071
                 ]
               }
             ],

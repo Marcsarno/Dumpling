@@ -1,0 +1,943 @@
+{
+  "date": "2026-09-20",
+  "project": 1604178,
+  "units": "decimal bytes",
+  "currentAssetFileBytes": 116839987,
+  "standaloneTextureBytes": 13573398,
+  "standaloneTextureCount": 47,
+  "publishedBuildCount": 14,
+  "publishedBuildBytes": 1037925747,
+  "keepBuildIds": [
+    64260,
+    64225,
+    64216
+  ],
+  "obsoleteBuildCandidates": [
+    64259,
+    64258,
+    64256,
+    64255,
+    64253,
+    64222,
+    64220,
+    64219,
+    64218,
+    64215,
+    64214
+  ],
+  "obsoleteBuildReportedBytes": 843959943,
+  "textureCandidates": {
+    "ids": [
+      307708420,
+      307708417,
+      307708421,
+      307708419,
+      307708418,
+      307708422,
+      307744991
+    ],
+    "bytes": 1593459,
+    "note": "Six default sky faces reference a cubemap with no reported references; imported dough texture references a material with no reported references. Candidates, not deletion-approved. Embedded GLB textures excluded from standalone count."
+  },
+  "otherCandidates": {
+    "legacyMusicBytes": 4291282,
+    "names": [
+      "game__audio__cozy-house.mp3",
+      "game__audio__evening-house.mp3",
+      "game__audio__sunny-house.mp3"
+    ],
+    "note": "No matches in src/pilot code; full dependency and historical-scene validation needed."
+  },
+  "notes": [
+    "No remote deletions performed.",
+    "Published artifact byte totals are not an exact account quota reconciliation; history and other projects may contribute.",
+    "game__ assets are resolved by names at runtime; zero Editor references alone does not imply unused.",
+    "Old build deletion invalidates those preview URLs; retain latest art, migration baseline and final bedroom pilot."
+  ],
+  "builds": [
+    {
+      "id": 64261,
+      "project_id": 1604178,
+      "app_id": null,
+      "job_id": 2975635,
+      "type": "download",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Pastel stores safety export",
+        "description": null,
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "static"
+      },
+      "artifacts": [
+        {
+          "type": "download",
+          "url": "https://playcanvas.com/archives/ba4ede54b82d0de5bac33471295fe2f5/Pastel%20stores%20safety%20export.zip",
+          "bytes": 93237140
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T22:56:02.340Z",
+      "modified_at": "2026-09-20T22:56:25.154Z",
+      "completed_at": "2026-09-20T22:56:25.154Z",
+      "duration_ms": 22814
+    },
+    {
+      "id": 64260,
+      "project_id": 1604178,
+      "app_id": 778751,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Pastel stores · verified routes and clear phone prompts",
+        "description": null,
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/51f208ce",
+          "bytes": 92535561
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T22:53:03.853Z",
+      "modified_at": "2026-09-20T22:53:23.999Z",
+      "completed_at": "2026-09-20T22:53:23.999Z",
+      "duration_ms": 20146
+    },
+    {
+      "id": 64259,
+      "project_id": 1604178,
+      "app_id": 778750,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Pastel stores · all three refined",
+        "description": null,
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/20cf03a5",
+          "bytes": 92535535
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T22:48:48.013Z",
+      "modified_at": "2026-09-20T22:49:07.411Z",
+      "completed_at": "2026-09-20T22:49:07.411Z",
+      "duration_ms": 19398
+    },
+    {
+      "id": 64258,
+      "project_id": 1604178,
+      "app_id": 778749,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Stores · Clover and Peachy refined · Moonbeam first pass",
+        "description": null,
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/6c0cca31",
+          "bytes": 92533732
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T22:47:19.845Z",
+      "modified_at": "2026-09-20T22:47:39.815Z",
+      "completed_at": "2026-09-20T22:47:39.815Z",
+      "duration_ms": 19970
+    },
+    {
+      "id": 64256,
+      "project_id": 1604178,
+      "app_id": 778747,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Clover refined and Peachy first pass",
+        "description": null,
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/902bb8e6",
+          "bytes": 92497992
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T22:40:13.692Z",
+      "modified_at": "2026-09-20T22:40:33.728Z",
+      "completed_at": "2026-09-20T22:40:33.728Z",
+      "duration_ms": 20036
+    },
+    {
+      "id": 64255,
+      "project_id": 1604178,
+      "app_id": 778746,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Clover refined · Peachy first art pass",
+        "description": null,
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/610c25e2",
+          "bytes": 92460044
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T22:38:44.650Z",
+      "modified_at": "2026-09-20T22:39:04.819Z",
+      "completed_at": "2026-09-20T22:39:04.819Z",
+      "duration_ms": 20169
+    },
+    {
+      "id": 64253,
+      "project_id": 1604178,
+      "app_id": 778745,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Clover Corner · reference art first pass",
+        "description": null,
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/f1765ce4",
+          "bytes": 92460044
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T22:35:17.377Z",
+      "modified_at": "2026-09-20T22:35:36.546Z",
+      "completed_at": "2026-09-20T22:35:36.546Z",
+      "duration_ms": 19169
+    },
+    {
+      "id": 64227,
+      "project_id": 1604178,
+      "app_id": null,
+      "job_id": 2975365,
+      "type": "download",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Dumpling full game migration offline backup",
+        "description": null,
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "static"
+      },
+      "artifacts": [
+        {
+          "type": "download",
+          "url": "https://playcanvas.com/archives/44c0c32a7afd13d22661c0f352eaa985/Dumpling%20full%20game%20migration%20offline%20backup.zip",
+          "bytes": 89889511
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T17:43:49.423Z",
+      "modified_at": "2026-09-20T17:44:10.994Z",
+      "completed_at": "2026-09-20T17:44:10.994Z",
+      "duration_ms": 21571
+    },
+    {
+      "id": 64226,
+      "project_id": 1604178,
+      "app_id": null,
+      "job_id": 2975363,
+      "type": "download",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Dumpling full game isolated migration",
+        "description": null,
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "static"
+      },
+      "artifacts": [
+        {
+          "type": "download",
+          "url": "https://playcanvas.com/archives/3353408ce56d78432d64d33634674750/Dumpling%20full%20game%20isolated%20migration.zip",
+          "bytes": 89889506
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T17:42:45.332Z",
+      "modified_at": "2026-09-20T17:43:08.597Z",
+      "completed_at": "2026-09-20T17:43:08.597Z",
+      "duration_ms": 23265
+    },
+    {
+      "id": 64225,
+      "project_id": 1604178,
+      "app_id": 778735,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Dumpling full game · Editor migration verified",
+        "description": "Isolated full game migration with authored environments, prop collisions, interaction anchors and original gameplay. Production untouched.",
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/7fdb31ef",
+          "bytes": 89312148
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T17:42:02.023Z",
+      "modified_at": "2026-09-20T17:42:20.964Z",
+      "completed_at": "2026-09-20T17:42:20.964Z",
+      "duration_ms": 18941
+    },
+    {
+      "id": 64222,
+      "project_id": 1604178,
+      "app_id": 778733,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Dumpling Full Game · editable migration",
+        "description": "Complete isolated migration: house, stores, classroom, family, chores, rewards, trading and Squishy Pop. Scene-authored bookshelf and store display edits retained.",
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/90a8ff12",
+          "bytes": 89311210
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T17:31:49.543Z",
+      "modified_at": "2026-09-20T17:32:09.005Z",
+      "completed_at": "2026-09-20T17:32:09.005Z",
+      "duration_ms": 19462
+    },
+    {
+      "id": 64220,
+      "project_id": 1604178,
+      "app_id": 778732,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Dumpling Full Game · complete asset check",
+        "description": null,
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/de81bc27",
+          "bytes": 89310357
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T17:26:55.130Z",
+      "modified_at": "2026-09-20T17:27:13.940Z",
+      "completed_at": "2026-09-20T17:27:13.940Z",
+      "duration_ms": 18810
+    },
+    {
+      "id": 64219,
+      "project_id": 1604178,
+      "app_id": 778731,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Dumpling Full Game · texture-resolved",
+        "description": "Isolated full-game migration with original external texture dependencies resolved through Editor assets.",
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/7f8f3a17",
+          "bytes": 89307847
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T17:23:56.186Z",
+      "modified_at": "2026-09-20T17:24:15.131Z",
+      "completed_at": "2026-09-20T17:24:15.131Z",
+      "duration_ms": 18945
+    },
+    {
+      "id": 64218,
+      "project_id": 1604178,
+      "app_id": 778730,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Dumpling Full Game · migration verification",
+        "description": "Isolated full-game Editor migration. Separate test saves; does not replace production.",
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600724,
+            "name": "Dumpling · Full Game Migration"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/18f3698c",
+          "bytes": 89307099
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T17:21:52.005Z",
+      "modified_at": "2026-09-20T17:22:10.839Z",
+      "completed_at": "2026-09-20T17:22:10.839Z",
+      "duration_ms": 18834
+    },
+    {
+      "id": 64216,
+      "project_id": 1604178,
+      "app_id": 778728,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Bedroom migration pilot",
+        "description": "Verified prop-linked collision and book chore. Separate disposable pilot.",
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600710,
+            "name": "Arianna Bedroom Pilot"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/88b08d39",
+          "bytes": 12118095
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T16:46:37.650Z",
+      "modified_at": "2026-09-20T16:46:51.434Z",
+      "completed_at": "2026-09-20T16:46:51.434Z",
+      "duration_ms": 13784
+    },
+    {
+      "id": 64215,
+      "project_id": 1604178,
+      "app_id": 778727,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Bedroom pilot - moved bookshelf",
+        "description": "MCP-moved bookshelf with prop-relative collision and book chore.",
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600710,
+            "name": "Arianna Bedroom Pilot"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/55da127b",
+          "bytes": 12118056
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T16:44:51.323Z",
+      "modified_at": "2026-09-20T16:45:04.909Z",
+      "completed_at": "2026-09-20T16:45:04.909Z",
+      "duration_ms": 13586
+    },
+    {
+      "id": 64214,
+      "project_id": 1604178,
+      "app_id": 778726,
+      "job_id": null,
+      "type": "publish",
+      "status": "complete",
+      "attempt": 1,
+      "branch": {
+        "id": "efd09e1d-cbfb-4ad9-bc2b-4980fa9a5670",
+        "name": "main"
+      },
+      "actor": {
+        "id": 726013,
+        "username": "vibecode",
+        "name": "Marc Sarno"
+      },
+      "source": {
+        "type": "editor"
+      },
+      "settings": {
+        "name": "Bedroom pilot baseline",
+        "description": "Isolated migration pilot. Original game and saves unchanged.",
+        "version": null,
+        "release_notes": null,
+        "image_s3_key": null,
+        "scenes": [
+          {
+            "id": 2600710,
+            "name": "Arianna Bedroom Pilot"
+          }
+        ],
+        "scripts_concatenate": false,
+        "scripts_minify": false,
+        "scripts_sourcemaps": false,
+        "optimize_scene_format": false,
+        "engine_version": "2.22.2",
+        "format": "playcanvas"
+      },
+      "artifacts": [
+        {
+          "type": "app",
+          "url": "https://playcanv.as/b/bf607da5",
+          "bytes": 12118027
+        }
+      ],
+      "message": null,
+      "created_at": "2026-09-20T16:41:18.626Z",
+      "modified_at": "2026-09-20T16:41:32.263Z",
+      "completed_at": "2026-09-20T16:41:32.263Z",
+      "duration_ms": 13637
+    }
+  ]
+}

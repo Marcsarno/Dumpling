@@ -1,0 +1,91 @@
+{
+  "scene": 2600724,
+  "publishedBuild": 64264,
+  "publishedUrl": "https://playcanv.as/b/0bf140c9",
+  "downloadBuild": 64266,
+  "checkpoint": "4cb508b4-1c57-4729-bcf6-05d7f29eba7c",
+  "entityCount": 4430,
+  "planters": [
+    {
+      "id": "6b052b1d-b5d9-4c74-9ab5-dc1760092108",
+      "position": [
+        -4.3,
+        0,
+        4.8
+      ],
+      "exportMatches": true
+    },
+    {
+      "id": "16085294-e81e-4de2-80de-59c05dcdb3df",
+      "position": [
+        4.25,
+        0,
+        -3.3
+      ],
+      "exportMatches": true
+    },
+    {
+      "id": "ccd51864-d8d0-4498-80c5-42eddb164d45",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "exportMatches": true
+    },
+    {
+      "id": "d7748b2b-43c5-4a83-9f93-ad1d7a7bd532",
+      "position": [
+        -4.7,
+        0,
+        5.5
+      ],
+      "exportMatches": true
+    },
+    {
+      "id": "5ccabc0c-0698-4672-aed4-0748092ca2d3",
+      "position": [
+        4.65,
+        0,
+        -4
+      ],
+      "exportMatches": true
+    },
+    {
+      "id": "441a93eb-388e-40c2-8f4d-a6d0539c6a03",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "exportMatches": true
+    },
+    {
+      "id": "0d62914c-dbed-47fb-97dc-cf82582ddf27",
+      "position": [
+        -4.6,
+        0,
+        5.8
+      ],
+      "exportMatches": true
+    },
+    {
+      "id": "36ac34fd-6482-472d-871f-f3b3c61bf850",
+      "position": [
+        4.55,
+        0,
+        -4.3
+      ],
+      "exportMatches": true
+    },
+    {
+      "id": "23ebe91e-3fe4-4244-9fa6-16a474813d1c",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "exportMatches": true
+    }
+  ]
+}

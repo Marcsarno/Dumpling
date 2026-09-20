@@ -1,19 +1,20 @@
-# Continue the isolated Editor migration
+# Continue the isolated Editor game
 
-Read STORE_UPGRADE.md, then EDITOR_MIGRATION.md. This is the isolated worktree, not production.
-Original checkout: C:/Users/marc7/Codex Game Projects/Dumpling Game File — clean fe3ae65 on master.
-Never push this migration branch to production/main or replace Vercel without new instructions.
+Read STORE_UPGRADE.md, then EDITOR_MIGRATION.md. The store upgrade and house review are complete.
 
-The user expanded the successful bedroom pilot to the entire existing game. That migration is complete and separately published at https://playcanv.as/b/7fdb31ef.
-Editor project 1604178; scene 2600724; script asset 307711680. Bedroom pilot scene 2600710 remains intact.
-Connect MCP to this intended project/scene and read its information before editing. The free/public project incurred no charge.
+- Worktree: codex/store-visual-upgrade in this isolated dumpling-editor-pilot directory.
+- Original checkout: C:/Users/marc7/Codex Game Projects/Dumpling Game File — production fe3ae65 on master. Preserve it and all real browser saves; do not push to production/main or replace Vercel without instructions.
+- Editor project1604178, scene2600724, runtime script307711680. Bedroom pilot scene2600710 remains intact.
+- Latest separate preview: https://playcanv.as/b/0bf140c9 (build64264).
+- Final checkpoint: 4cb508b4-1c57-4729-bcf6-05d7f29eba7c.
+- Latest scene snapshot: stores/completed-scene.json (4430entities).
+- Static export: stores/exports/completed-stores.zip (build64266); extracted stores/exports/completed/index.html.
+- Comparison: http://127.0.0.1:5186/stores/comparison.html. Server: node scripts/pilot-server.mjs.
 
-Editor scene is authoritative for layout/material/light edits. TypeScript here is authoritative for gameplay. Rebuild and update only the runtime script asset for code changes; do not reimport generated layout over authored edits.
-All original assets and animation corrections are retained. Save prefix dumpling.editorMigration isolates testing from arianna.* production saves.
-Large static ZIP/extracted export and upload staging are kept locally, Git-ignored. The report documents reproducibility and tests.
-MCP Editor editing/build tools work. The embedded browser may need a reload; runtime screenshot MCP timed out even after ready=true. Use the independent preview/export browser testing workflow when needed.
-Three-store reference-art redesign is implemented on codex/store-visual-upgrade. Latest cloud art preview: https://playcanv.as/b/51f208ce (64260). The best tested local export is stores/exports/game/index.html via port 5186. See stores/comparison.html for before/after images.
+Storage is no longer blocking. The authorized cleanup removed 11 superseded published builds, totaling843959943 reported bytes; no assets/music/textures were deleted. No paid plan was purchased. Keep agreed baseline builds64260,64225,64216 and do not delete additional builds without instructions.
 
-STOP CLOUD UPLOADS: Editor reports over disk allowance. No paid plan or deletion authorized/used. A final src/main.ts store-resume entrance fix is tested locally but NOT uploaded to Editor runtime307711680. Local bundle and corrected export include it. Last confirmed Editor checkpoint remains bcf0ec9c-a2a5-4bf0-ada7-f12b0965454a (pre-art); latest scene changes survive reopening and are backed up in stores/after-scene.json and the downloaded static export.
+The saved-store entrance correction is uploaded and tested. The final preview includes nine reused leafy planters. All18display routes, purchases, reloads and phone controls are covered by store tests. House review covers61reachable approaches, touch traversal through8room areas, the bookshelf chore and13night light fixtures. House layout was retained. See the report for exact evidence and physical-device limitations.
 
-All18 display routes/inspections, purchases/reload, welcome-mat exits, hero-table collision and320/390/430 phone controls passed in disposable local-export tests. Real saves and original fe3ae65 checkout untouched. Resolve storage before further uploads, then upload only the latest runtime bundle and publish a separate build. Do not regenerate layout over authored store edits.
+Editor is authoritative for layout, materials, lights, collision footprints and interaction destinations. TypeScript here is authoritative for gameplay. Rebuild/upload only the runtime script for code changes; do not reimport generated layout over authored edits. Relaunch after moving props to refresh collision bounds.
+
+Use disposable browser contexts with dumpling.editorMigration save keys. Never clear or change arianna.* saves. Connect MCP to the intended Editor scene and read it before edits. MCP screenshots can time out; independent preview/export browser tests are reliable. Read the report before claiming a newer build or production deployment.

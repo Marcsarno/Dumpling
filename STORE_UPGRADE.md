@@ -1,57 +1,75 @@
-# Three-store visual upgrade
+# Three-store visual upgrade — completed
 
-All three stores now have distinct, reference-led layouts in the separate Editor project. The local export passes the store gameplay checks. The original production checkout remains clean at **fe3ae65**; Vercel and real saves were not changed.
+The three stores are finished in the separate PlayCanvas Editor project, with distinct reference-led layouts, reusable pastel furniture, signs, display merchandise and leafy planters. The saved-visit entrance correction is now uploaded and included in both the published preview and the untouched Editor export. Production remains separate.
 
-## Review and play
+## Play and review
 
-- [Before/after comparison](stores/comparison.html), with all three running-scene screenshots and phone views.
-- Best runnable version: http://127.0.0.1:5186/stores/exports/game/index.html — run `node scripts/pilot-server.mjs` from this worktree if needed.
-- Editor: https://playcanvas.com/editor/scene/2600724 (project 1604178).
-- Published art preview: https://playcanv.as/b/51f208ce — build **64260**. It includes all visual changes and phone/exit refinements, but **not the final saved-visit spawn correction** described below.
-- Untouched Editor download: `stores/exports/pastel-stores-editor.zip`, build **64261**.
-- Corrected runnable download: `stores/exports/pastel-stores-local-fixed.zip`. Serve its extracted directory over HTTP.
+- Published preview: https://playcanv.as/b/0bf140c9 — build **64264**.
+- Before/after comparison: http://127.0.0.1:5186/stores/comparison.html
+- Local export: http://127.0.0.1:5186/stores/exports/completed/index.html
+- Download: stores/exports/completed-stores.zip — static build **64266**, 93,241,193 bytes. Large exports stay local and Git-ignored. Serve the extracted directory over HTTP; no runtime overlay is needed.
+- Editor: https://playcanvas.com/editor/scene/2600724 — project **1604178**.
+- Final checkpoint: **4cb508b4-1c57-4729-bcf6-05d7f29eba7c**.
+- Read-back scene snapshot: stores/completed-scene.json — **4,430 entities**, including nine new leafy planters.
 
-## Storage limit and exact stopping point
-
-After the visual passes, the Editor displayed: **“You are over your disk allowance limit.”** Further uploads stopped. No plan was purchased and no storage was deleted. The full scene was reopened and read back through MCP: **4,361 entities**, including all three refinement groups and final prop/anchor edits. A new checkpoint request returned no ID; version-control status still points to the pre-art checkpoint **bcf0ec9c-a2a5-4bf0-ada7-f12b0965454a**. Do not assume the art changes have a new checkpoint.
-
-The final reload-and-walk test exposed a startup ordering issue: resuming a saved store visit initially used the old code-generated entrance before the authored layout loaded. `src/main.ts` now places Arianna at the saved Editor entrance after layout binding. This correction is built and tested in the **local export only**. The Editor runtime asset 307711680 still needs this final bundle update once storage is resolved. The cloud preview can be recovered with the existing DEV “Unstick” command if a resumed visit starts outside the room.
-
-The next step is a storage audit of unused imported assets/versions, with backups before any cleanup. Whether that frees enough space has not been established. A paid plan has not been selected or assumed necessary.
+Run `node scripts/pilot-server.mjs` from this isolated worktree if the local preview is stopped.
 
 ## Design and reuse
 
-| Reference | Store | Main composition | Screenshot-driven refinement |
-|---|---|---|---|
-| 1 | Clover Corner | Boutique arrangement, offset shelves, mint back-left checkout, flower-rug feature table | Side merchandise crate, checkout pendant and plant accents |
-| 2 | Peachy Playroom | Two aisles, giant squishy lounge, gift table and Squishy Section sign | Hanging charm rack, window/sign separation, entry clearance |
-| 3 | Moonbeam Finds | Longer parallel aisles, broad back-wall showcase, round tiered display | Pink arch, flower endcaps and showcase plants |
+| Reference | Store | Completed composition |
+|---|---|---|
+| 1 | Clover Corner | Boutique arrangement, offset shelves, mint back-left checkout, flower-rug feature table, side merchandise crate and pendant |
+| 2 | Peachy Playroom | Two aisles, giant squishy lounge, gift table, Squishy Section sign and hanging charm rack |
+| 3 | Moonbeam Finds | Long parallel aisles, back-wall showcase with pink arch, flower endcaps and round tiered display |
 
-The original dumpling/squishy geometry, collectible identities, face/accessory choices, bamboo containers, Arianna and animation corrections are retained. Display-only mesh reductions lower the squishy from 45,392 to 5,887 triangles and the closed container from 17,768 to 3,020. Original close-up/reveal assets are unchanged.
+Original collectible identities, squishy faces/accessories, bamboo containers, Arianna and her animation corrections are retained. Display-only mesh reductions lower the squishy from 45,392 to 5,887 triangles and the closed container from 17,768 to 3,020; close-up/reveal assets are unchanged.
 
-Existing Kenney bookcases, carts, registers, plants, doors, windows and trees are reused. A missing arched shelf and signs were made in Blender; native primitive helpers provide counters, tables, bins, gift boxes, rugs and stands. Shared pastel materials and static batching support reuse. Sources and rebuild instructions: [store-kit/SOURCES.md](public/assets/store-kit/SOURCES.md).
+Existing bookcases, carts, registers, doors, windows, trees and plants are reused. Blender supplies the arched shelf and signs. Native scene primitives supply counters, tables, bins, gift boxes and rugs. The final nine floor planters reuse the bedroom's pot/leaf geometry. Shared materials and static batching reduce duplication. Sources: public/assets/store-kit/SOURCES.md.
 
-## Verified
+The mockups guide palette and composition rather than exact replicas. The original dumpling-shaped merchandise remains, and shelf density and lighting are simpler than the reference renders.
 
-- Actual touch-joystick routes reach and inspect **all 18 stock sites** in the corrected local export.
-- A purchase in each store updates the original economy; all purchases and discoveries survive reload.
-- Every welcome mat returns home after reload. Original production save-key sentinels remain untouched in disposable test contexts.
-- Pushing into Clover's feature table stops at its authored collision edge.
-- Product details no longer overlap the large Pop button while browsing; the footer shortcut remains available.
-- Controls remain within 320-, 390- and 430-pixel phone viewports. Arianna loads, moves and returns to Idle; original running-pose/rig checks pass.
-- Six existing hunt/economy tests, TypeScript and bundling pass. Passing browser runs report no game/asset errors.
-- Scene edits survive Editor reopening and appear in the separately downloaded build.
+## House review
 
-Evidence: `stores/evidence/phone/report.json`, `collision.json`, `stores/evidence/final/report.json`; before/first/refined screenshots are retained. Phone checks use emulated Edge viewports, not physical iPhone/Safari. Cold screenshot FPS samples are not a device performance benchmark.
+The existing house layout was retained: no misplaced furniture or blocked room connection justified rearranging it. A snapshot comparison confirmed that all 1,822 house entities are unchanged.
 
-## Editing and source of truth
+- Static navigation audit found reachable approaches to **all 61 interaction targets**. This checks approach geometry, not execution of every chore.
+- The final published preview passed actual touch routes through **all eight room areas**: bedroom, living room, kitchen, utility room, Marc's room, nursery, landing and bathroom.
+- Bedroom book pickup, carry animation and placement at the authored bookshelf passed.
+- All **13 house light fixtures** were enabled with positive intensity at night.
+- Passing house run recorded no browser or asset errors.
+- Evidence: stores/evidence/house-verified/report.json, room screenshots, and stores/evidence/house-before/path-audit.json.
 
-**Editor scene 2600724:** layout, native art, materials, lighting, collision footprints and interaction destinations. Move the existing `prop:<store name>:<index>` parent, keeping its collider, stand/marker, merchandise and `stock:<store name>:<site>:<n>` sockets together. The custom controller reads these footprints at scene initialization; relaunch after edits. Decoration groups are separately editable. New art renders natively; it is not regenerated by the old world builder.
+The automated touch driver was tuned for gradual approach and realistic room-entry tolerance after jitter caused overprecise waypoint checks to stall. Gameplay movement and house geometry were not changed to accommodate the test.
 
-**This Git worktree:** TypeScript gameplay and Blender/source scripts. `LayoutBridge.ts` binds authored stock sockets and batches store art. `GameLoop.ts` hides the oversized Pop button during product focus. `src/main.ts` contains the pending cloud upload correction. Rebuild with `node scripts/migration-build.mjs`, then update only Editor script asset **307711680** once storage permits. No layout reimport is needed.
+## Store validation
 
-`stores/after-scene.json` is the read-back snapshot. `stores/plans/*.json` and `scripts/plan-store-upgrade.mjs` document construction; do **not** blindly reapply them to the current scene or they will duplicate art. The downloaded export includes the referenced assets. `scripts/patch-store-export.mjs` applies the local-only runtime overlay to the exported game.
+- All **18 display sites** reached and inspected with actual touch input.
+- A purchase in each store updates the original economy; purchases and discoveries survive reload.
+- Every welcome mat returns home after reload.
+- Phone controls fit **320, 390 and 430 pixels**; original character loads, moves and returns to Idle.
+- Earlier explicit collision test confirmed Clover's feature table stops Arianna at its authored footprint, and product details remain clear of the large Pop button.
+- Final scene screenshots contain the saved planter additions. Editor reopening, full scene read-back and the separate static export preserve them.
+- TypeScript check passes. Existing rig/hunt checks were already passing before this scene-only finishing pass.
+- Disposable browser contexts and the dumpling.editorMigration save prefix protect real arianna.* saves.
+
+The final export validation uses the player's actual 0.24 collision radius in its test route planner; an earlier conservative margin incorrectly rejected a valid position beside a crate. No game collision shape was loosened.
+
+Store evidence: stores/evidence/phone/report.json and stores/evidence/completed/report.json. Phone checks emulate Edge viewports; physical iPhone/Safari performance has not been tested.
+
+## Storage
+
+The user authorized removing 11 superseded published builds. That removed **843,959,943 reported bytes** and cleared the Editor disk warning. No textures, source assets, music or local archives were deleted, and no plan was purchased. See stores/storage-cleanup.json and stores/storage-audit.json.
+
+The three agreed retained builds (64260, 64225, 64216) remain, with new finishing previews 64262 and 64264 added. Do not delete more builds automatically. The previous storage-blocked/local-only notes are obsolete.
+
+## Source of truth and future edits
+
+**Editor scene 2600724** owns layout, native art, materials, lighting, collision footprints and interaction destinations. Move the existing prop:<store name>:<index> parent so its collider, marker, merchandise and stock sockets move together. Relaunch after layout changes: custom collision bounds are read at initialization. Decorative groups remain editable.
+
+**This Git worktree** owns TypeScript gameplay and Blender/source scripts. Rebuild code with `node scripts/migration-build.mjs`, then update runtime asset **307711680** only. Do not regenerate the layout over authored scene edits. The saved-visit fix in src/main.ts is now synchronized to Editor.
+
+stores/after-scene.json preserves the earlier art state; stores/completed-scene.json is the latest snapshot. Construction plans document history and must not be blindly reapplied because they would duplicate entities. The older patch-store-export script is historical; the completed export needs no patch.
 
 ## Assessment
 
-The Editor conversion is useful for continued visual iteration: the three stores now have editable, distinct furniture arrangements that keep gameplay attachments together. The reusable kit and original merchandise make subsequent rooms easier to upgrade. The result captures the pastel palette and compositions, while greenery, shelf density and lighting remain simpler than the mockups. The original dumpling silhouettes intentionally remain. Storage capacity and final cloud synchronization are the remaining workflow issues; production promotion is not part of this change.
+This workflow is useful for continued visual work: scene furniture, collisions and interaction locations can be inspected and edited together through MCP, while existing gameplay stays in TypeScript. The final stores are separate, playable and backed up. Production promotion was not authorized and has not occurred.

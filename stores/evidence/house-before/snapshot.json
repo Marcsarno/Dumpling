@@ -1,0 +1,3095 @@
+{
+  "snapshot": {
+    "position": [
+      0,
+      0.09000000357627869,
+      0.8999999761581421
+    ],
+    "velocity": [
+      0,
+      0,
+      0
+    ],
+    "input": [
+      0,
+      0
+    ],
+    "joystick": [
+      0,
+      0
+    ],
+    "cameraPosition": [
+      6,
+      14,
+      18.899999618530273
+    ],
+    "cameraAngles": [
+      -34.83999765802827,
+      18.435000660412488,
+      2.1107852777117335e-7
+    ],
+    "cameraHeight": 5.1,
+    "room": "bedroom",
+    "playerScreen": [
+      700.0017963972097,
+      612.2512166237929,
+      -0.21805527561130444
+    ],
+    "drawCalls": 663,
+    "fps": 2,
+    "resolution": [
+      1400,
+      1100
+    ],
+    "characterLoaded": true,
+    "houseArt": {
+      "loaded": 202,
+      "models": 55,
+      "errors": [],
+      "texturedMaterials": [
+        {
+          "name": "Cottage furniture/wood/#c9a078/natural",
+          "texture": "Subtle wood surface"
+        },
+        {
+          "name": "Cottage furniture/carpet/#b9a7cd/natural",
+          "texture": "Subtle fabric surface"
+        },
+        {
+          "name": "Cottage furniture/carpet/#afc3af/natural",
+          "texture": "Subtle fabric surface"
+        },
+        {
+          "name": "Cottage furniture/carpetDarker/#879f8e/natural",
+          "texture": "Subtle fabric surface"
+        },
+        {
+          "name": "Cottage furniture/carpetWhite/#efe7dc/natural",
+          "texture": "Subtle fabric surface"
+        },
+        {
+          "name": "Cottage furniture/carpet/#d9b7c3/natural",
+          "texture": "Subtle fabric surface"
+        },
+        {
+          "name": "Cottage furniture/woodDark/#987453/natural",
+          "texture": "Subtle wood surface"
+        },
+        {
+          "name": "Cottage furniture/carpet/#e7c7bd/natural",
+          "texture": "Subtle fabric surface"
+        },
+        {
+          "name": "Cottage furniture/carpet/#b5c9bc/natural",
+          "texture": "Subtle fabric surface"
+        },
+        {
+          "name": "Cottage furniture/carpet/#b9c5ac/natural",
+          "texture": "Subtle fabric surface"
+        },
+        {
+          "name": "Cottage furniture/carpetWhite/#eee9de/paint",
+          "texture": "Subtle fabric surface"
+        },
+        {
+          "name": "Cottage furniture/carpet/#667f91/paint",
+          "texture": "Subtle fabric surface"
+        },
+        {
+          "name": "Cottage furniture/carpetBlue/#c38e72/natural",
+          "texture": "Subtle fabric surface"
+        },
+        {
+          "name": "Cottage furniture/carpetBlue/#b97f65/natural",
+          "texture": "Subtle fabric surface"
+        }
+      ]
+    },
+    "walkable": [
+      {
+        "id": "bedroom",
+        "name": "Bedroom",
+        "title": "A little room of her own.",
+        "minX": -3.299999952316284,
+        "maxX": 3.299999952316284,
+        "minZ": -3.5999999046325684,
+        "maxZ": 3.5999999046325684
+      },
+      {
+        "id": "hall",
+        "name": "Landing",
+        "title": "Little everyday arrivals.",
+        "minX": 3.3000000715255737,
+        "maxX": 6.5000001192092896,
+        "minZ": 0.3999999761581421,
+        "maxZ": 3.600000023841858
+      },
+      {
+        "id": "bathroom",
+        "name": "Bathroom",
+        "title": "Freshen up.",
+        "minX": 3.3000000715255737,
+        "maxX": 6.5000001192092896,
+        "minZ": -3.600000023841858,
+        "maxZ": 0.3999999761581421
+      },
+      {
+        "id": "living",
+        "name": "Living room",
+        "title": "Make yourself at home.",
+        "minX": -3.3000000715255737,
+        "maxX": 6.5000001192092896,
+        "minZ": 3.6000001430511475,
+        "maxZ": 9.500000238418579
+      },
+      {
+        "id": "kitchen",
+        "name": "Kitchen & dining",
+        "title": "Something good cooking.",
+        "minX": -3.3000000417232513,
+        "maxX": 2.6000000536441803,
+        "minZ": 9.499999523162842,
+        "maxZ": 16.299999713897705
+      },
+      {
+        "id": "laundry",
+        "name": "Utility room",
+        "title": "Fresh little folds.",
+        "minX": 2.6000001430511475,
+        "maxX": 6.500000238418579,
+        "minZ": 9.500000357627869,
+        "maxZ": 13.200000405311584
+      },
+      {
+        "id": "nursery",
+        "name": "Lilah’s room",
+        "title": "Little dreams, big adventures.",
+        "minX": 6.5,
+        "maxX": 11,
+        "minZ": -3.5999999046325684,
+        "maxZ": 3.5999999046325684
+      },
+      {
+        "id": "marc-bedroom",
+        "name": "Marc’s room",
+        "title": "Dad’s little quiet corner.",
+        "minX": 6.5,
+        "maxX": 11,
+        "minZ": 3.59999942779541,
+        "maxZ": 13.199999809265137
+      }
+    ],
+    "cameraRight": [
+      0.948683011947834,
+      3.4949627212550454e-9,
+      -0.31622862432358284
+    ],
+    "cameraForward": [
+      -0.25954481582812566,
+      -0.5712866700263612,
+      -0.7786321527055864
+    ],
+    "animationState": "Idle",
+    "character": {
+      "state": "Idle",
+      "busy": false,
+      "action": null,
+      "clipTime": 1.0522999999999991,
+      "playbackRate": 1,
+      "frameScale": 1,
+      "scale": 1.1499067266015113,
+      "groundY": 0.06949999928474426,
+      "lastEvent": null,
+      "clips": [
+        {
+          "name": "Casual_Walk",
+          "duration_seconds": 4.266666889190674,
+          "loop": true
+        },
+        {
+          "name": "Running",
+          "duration_seconds": 0.699999988079071,
+          "loop": true
+        },
+        {
+          "name": "Walking",
+          "duration_seconds": 1.0333333015441895,
+          "loop": true
+        },
+        {
+          "name": "Walk",
+          "duration_seconds": 0.9666666314005852,
+          "loop": true
+        },
+        {
+          "name": "Run",
+          "duration_seconds": 0.6333333179354668,
+          "loop": true
+        },
+        {
+          "name": "CarryWalk",
+          "duration_seconds": 0.9666666314005852,
+          "loop": true
+        },
+        {
+          "name": "CarryRun",
+          "duration_seconds": 0.6333333179354668,
+          "loop": true
+        },
+        {
+          "name": "Idle",
+          "duration_seconds": 2,
+          "loop": true
+        },
+        {
+          "name": "CarryIdle",
+          "duration_seconds": 2,
+          "loop": true
+        },
+        {
+          "name": "EatSit",
+          "duration_seconds": 4.2,
+          "loop": true
+        },
+        {
+          "name": "PickUp",
+          "duration_seconds": 0.8,
+          "loop": false
+        },
+        {
+          "name": "PutDown",
+          "duration_seconds": 0.8,
+          "loop": false
+        },
+        {
+          "name": "Celebrate",
+          "duration_seconds": 1,
+          "loop": false
+        },
+        {
+          "name": "SitCar",
+          "duration_seconds": 2,
+          "loop": true
+        },
+        {
+          "name": "Wipe",
+          "duration_seconds": 2.966666666666667,
+          "loop": true
+        },
+        {
+          "name": "Vacuum",
+          "duration_seconds": 2.966666666666667,
+          "loop": true
+        },
+        {
+          "name": "Sleep",
+          "duration_seconds": 4,
+          "loop": true
+        },
+        {
+          "name": "SleepEnter",
+          "duration_seconds": 3.2,
+          "loop": false
+        }
+      ],
+      "yaw": 30.00000044529205,
+      "hands": [
+        [
+          0.1877959668636322,
+          0.6209139227867126,
+          0.8194273710250854
+        ],
+        [
+          -0.1603299379348755,
+          0.6298710703849792,
+          1.016278862953186
+        ]
+      ],
+      "socket": [
+        0.026232989504933357,
+        0.6253925561904907,
+        0.9395037293434143
+      ],
+      "materials": [
+        "Arianna baked game material"
+      ],
+      "feet": [
+        [
+          0.12796330451965332,
+          0.19116586446762085,
+          0.8650287985801697
+        ],
+        [
+          -0.08396411687135696,
+          0.19116570055484772,
+          0.9873851537704468
+        ],
+        [
+          0.1897101253271103,
+          0.1113298088312149,
+          0.9196513295173645
+        ],
+        [
+          -0.0728730782866478,
+          0.11383140832185745,
+          1.0702779293060303
+        ]
+      ]
+    },
+    "lilah": {
+      "loaded": true,
+      "height": 0.86465625,
+      "position": [
+        1,
+        0.09000000357627869,
+        0.699999988079071
+      ],
+      "state": "watching",
+      "scripted": false,
+      "job": null,
+      "speech": "Hi, Ari!",
+      "carrying": false,
+      "animation": {
+        "state": "Idle",
+        "busy": false,
+        "action": null,
+        "clipTime": 0.8522999999999993,
+        "playbackRate": 1,
+        "frameScale": 1,
+        "scale": 0.8394720873786408,
+        "groundY": 0.06949999928474426,
+        "lastEvent": null,
+        "clips": [
+          {
+            "name": "CarryIdle",
+            "duration_seconds": 2,
+            "loop": true
+          },
+          {
+            "name": "CarryWalk",
+            "duration_seconds": 1,
+            "loop": true
+          },
+          {
+            "name": "Celebrate",
+            "duration_seconds": 1.600000023841858,
+            "loop": false
+          },
+          {
+            "name": "Idle",
+            "duration_seconds": 2,
+            "loop": true
+          },
+          {
+            "name": "PickUp",
+            "duration_seconds": 2.4000000953674316,
+            "loop": false
+          },
+          {
+            "name": "PutDown",
+            "duration_seconds": 2.4000000953674316,
+            "loop": false
+          },
+          {
+            "name": "SitCar",
+            "duration_seconds": 2,
+            "loop": true
+          },
+          {
+            "name": "Walk",
+            "duration_seconds": 1.1333333253860474,
+            "loop": true
+          },
+          {
+            "name": "Sleep",
+            "duration_seconds": 4,
+            "loop": true
+          },
+          {
+            "name": "SleepEnter",
+            "duration_seconds": 3.2,
+            "loop": false
+          }
+        ],
+        "yaw": 0,
+        "hands": [
+          [
+            1.1690301895141602,
+            0.3822067379951477,
+            0.7244871258735657
+          ],
+          [
+            0.8309199213981628,
+            0.38220807909965515,
+            0.7245529294013977
+          ]
+        ],
+        "socket": [
+          0.9999750852584839,
+          0.3822074234485626,
+          0.7495200037956238
+        ],
+        "materials": [
+          "BakedMaterial"
+        ],
+        "feet": [
+          [
+            1.0836610794067383,
+            0.12999384105205536,
+            0.6961628198623657
+          ],
+          [
+            0.9163388609886169,
+            0.12999384105205536,
+            0.6961628198623657
+          ],
+          [
+            1.085990309715271,
+            0.092173270881176,
+            0.7615798711776733
+          ],
+          [
+            0.9140096306800842,
+            0.092173270881176,
+            0.7615798711776733
+          ]
+        ]
+      },
+      "visited": [
+        "bedroom"
+      ],
+      "routeLength": 0,
+      "time": 0.8922999999999992,
+      "nextMess": 8
+    },
+    "marc": {
+      "loaded": true,
+      "height": 1.7984850000000001,
+      "position": [
+        3.5,
+        0.09000000357627869,
+        7.366759300231934
+      ],
+      "state": "walking",
+      "target": null,
+      "route": [
+        [
+          3.5,
+          0,
+          8
+        ],
+        [
+          3.75,
+          0,
+          8.25
+        ],
+        [
+          3.914952034921933,
+          0,
+          8.18553498980734
+        ]
+      ],
+      "speech": "",
+      "cleaned": 0,
+      "sitCount": 0,
+      "standCount": 0,
+      "visited": [
+        "living"
+      ],
+      "animation": {
+        "state": "Walk",
+        "busy": false,
+        "action": null,
+        "clipTime": 0.9121399999999938,
+        "playbackRate": 0.9999999999999887,
+        "frameScale": 1,
+        "scale": 0.9991583333333334,
+        "groundY": 0.06749999523162842,
+        "lastEvent": null,
+        "clips": [
+          {
+            "name": "CarryRun",
+            "duration_seconds": 0.6333333253860474,
+            "loop": true
+          },
+          {
+            "name": "CarryWalk",
+            "duration_seconds": 0.9666666388511658,
+            "loop": true
+          },
+          {
+            "name": "Casual_Walk",
+            "duration_seconds": 4.199999809265137,
+            "loop": true
+          },
+          {
+            "name": "Idle",
+            "duration_seconds": 2,
+            "loop": true
+          },
+          {
+            "name": "Running",
+            "duration_seconds": 0.6333333253860474,
+            "loop": true
+          },
+          {
+            "name": "SitDown",
+            "duration_seconds": 1.2999999523162842,
+            "loop": false
+          },
+          {
+            "name": "SitIdle",
+            "duration_seconds": 1.6666666269302368,
+            "loop": true
+          },
+          {
+            "name": "StandUp",
+            "duration_seconds": 1,
+            "loop": false
+          },
+          {
+            "name": "Walk_Basic",
+            "duration_seconds": 1.3333333730697632,
+            "loop": true
+          },
+          {
+            "name": "Walking",
+            "duration_seconds": 0.9666666388511658,
+            "loop": true
+          },
+          {
+            "name": "Walk",
+            "duration_seconds": 1.3333333730697632,
+            "loop": true
+          },
+          {
+            "name": "Cleaning",
+            "duration_seconds": 2,
+            "loop": true
+          }
+        ],
+        "yaw": 0,
+        "hands": [
+          [
+            3.8153178691864014,
+            0.9302156567573547,
+            7.384805202484131
+          ],
+          [
+            3.1739084720611572,
+            0.9002072811126709,
+            7.171974182128906
+          ]
+        ],
+        "materials": [
+          "BakedMaterial"
+        ],
+        "feet": [
+          [
+            3.599896192550659,
+            0.36891284584999084,
+            7.085372447967529
+          ],
+          [
+            3.4042201042175293,
+            0.2330501526594162,
+            7.283844470977783
+          ],
+          [
+            3.5999138355255127,
+            0.2004077136516571,
+            7.039769172668457
+          ],
+          [
+            3.404247999191284,
+            0.143905907869339,
+            7.433934211730957
+          ]
+        ]
+      },
+      "seat": {
+        "center": [
+          4.5,
+          0,
+          7.35
+        ],
+        "entry": [
+          3.914952034921933,
+          0,
+          8.185535085174772
+        ],
+        "anchor": [
+          4.339398597821707,
+          0,
+          7.5793625724009175
+        ]
+      }
+    },
+    "dog": {
+      "state": "Idle",
+      "speed": 0,
+      "time": 1.0522999999999991,
+      "position": [
+        4.800000190734863,
+        0.03999999910593033,
+        5.849999904632568
+      ],
+      "height": 0.48000000360666206,
+      "asset": "sunny-pup.glb"
+    },
+    "houseMusic": {
+      "playing": false,
+      "muted": false,
+      "track": "Home · morning & night",
+      "requested": "Home · morning & night",
+      "source": "http://127.0.0.1:5186/stores/exports/completed/files/assets/307709924/1/game__audio__Squishy home clean.mp3?t=8c58ad23f82c62909949eced6c75aa3d",
+      "position": 0,
+      "volume": 0,
+      "gap": 0,
+      "duration": null,
+      "error": null
+    },
+    "lighting": {
+      "amount": 0,
+      "lights": [
+        {
+          "name": "Bedside lamp light",
+          "enabled": false,
+          "maxIntensity": 2.4,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            -0.5299999713897705,
+            1.3899999856948853,
+            -2.8299999237060547
+          ]
+        },
+        {
+          "name": "Reading floor lamp light",
+          "enabled": false,
+          "maxIntensity": 2.3,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            5.650000095367432,
+            1.5800000429153442,
+            7.699999809265137
+          ]
+        },
+        {
+          "name": "Lilah nursery lamp",
+          "enabled": false,
+          "maxIntensity": 2.3,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            7.099999904632568,
+            1.4800000190734863,
+            -1.149999976158142
+          ]
+        },
+        {
+          "name": "Marc bedside lamp",
+          "enabled": false,
+          "maxIntensity": 2.3,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            10.600000381469727,
+            0.9399999976158142,
+            4.5
+          ]
+        },
+        {
+          "name": "Marc reading lamp",
+          "enabled": false,
+          "maxIntensity": 2.3,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            10.550000190734863,
+            1.4800000190734863,
+            8
+          ]
+        },
+        {
+          "name": "Bedroom fixture light",
+          "enabled": false,
+          "maxIntensity": 2.1,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            0.550000011920929,
+            2.200000047683716,
+            -3.240000009536743
+          ]
+        },
+        {
+          "name": "Landing fixture light",
+          "enabled": false,
+          "maxIntensity": 2.1,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            6.099999904632568,
+            1.5800000429153442,
+            3.2799999713897705
+          ]
+        },
+        {
+          "name": "Bathroom fixture light",
+          "enabled": false,
+          "maxIntensity": 2.1,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            4.699999809265137,
+            2.200000047683716,
+            -3.2100000381469727
+          ]
+        },
+        {
+          "name": "Living room fixture light",
+          "enabled": false,
+          "maxIntensity": 2.1,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            -2.859999895095825,
+            2.200000047683716,
+            4.349999904632568
+          ]
+        },
+        {
+          "name": "Kitchen fixture light",
+          "enabled": false,
+          "maxIntensity": 2.1,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            -2.859999895095825,
+            2.4800000190734863,
+            10.100000381469727
+          ]
+        },
+        {
+          "name": "Dining fixture light",
+          "enabled": false,
+          "maxIntensity": 2.1,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            -2.859999895095825,
+            2.200000047683716,
+            15.300000190734863
+          ]
+        },
+        {
+          "name": "Utility fixture light",
+          "enabled": false,
+          "maxIntensity": 2.1,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            6.099999904632568,
+            1.5800000429153442,
+            11.449999809265137
+          ]
+        },
+        {
+          "name": "Warm interior bounce",
+          "enabled": false,
+          "maxIntensity": 0.55,
+          "intensity": 0,
+          "mask": 1,
+          "position": [
+            0,
+            0,
+            0
+          ]
+        }
+      ],
+      "glowingShades": 3,
+      "exteriorMask": 8
+    },
+    "cleanup": {
+      "state": "ready",
+      "reason": null,
+      "remaining": 60000,
+      "mode": "day",
+      "tasks": [
+        "teeth",
+        "outfit",
+        "breakfast"
+      ],
+      "timed": false,
+      "pet": {
+        "stage": "tool",
+        "loaded": true,
+        "errors": [],
+        "poopVisible": false,
+        "poopParent": "Cleanup props",
+        "washing": false,
+        "flushing": false
+      },
+      "daily": {
+        "version": 1,
+        "day": 1,
+        "minutes": 422.88225000000006,
+        "phase": "morning",
+        "done": [],
+        "eggDrop": null,
+        "breakfast": "eggs",
+        "dust": [
+          4,
+          5,
+          1
+        ],
+        "schoolSeconds": 0,
+        "petTask": "pet-care",
+        "spillSite": 1,
+        "sideTask": "living-toy",
+        "clock": "7:02 AM",
+        "canShop": false,
+        "held": null,
+        "dirt": [
+          {
+            "visible": false,
+            "position": [
+              0.20000000298023224,
+              0.03999999910593033,
+              10.600000381469727
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          {
+            "visible": false,
+            "position": [
+              2.200000047683716,
+              0.03999999910593033,
+              11.600000381469727
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          {
+            "visible": false,
+            "position": [
+              3.299999952316284,
+              0.03999999910593033,
+              6.099999904632568
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          }
+        ],
+        "eggSpill": false,
+        "lilah": {
+          "day": 1,
+          "messes": [],
+          "budget": 3
+        }
+      },
+      "completed": [],
+      "allowance": 0,
+      "bonus": 0,
+      "carrying": null,
+      "carriedParent": null,
+      "carriedPosition": null,
+      "focus": "play-lilah",
+      "holding": false,
+      "progress": 0,
+      "aligning": null,
+      "dirtVisible": false,
+      "crayonsVisible": false,
+      "tidyCrayonsVisible": true,
+      "items": [
+        {
+          "id": "teddy",
+          "position": [
+            -0.699999988079071,
+            0.10999999940395355,
+            1.5499999523162842
+          ],
+          "home": [
+            -0.7,
+            0.11,
+            1.55
+          ]
+        },
+        {
+          "id": "shirt",
+          "position": [
+            -1.7000000476837158,
+            0.11999999731779099,
+            0.550000011920929
+          ],
+          "home": [
+            -1.7,
+            0.12,
+            0.55
+          ]
+        },
+        {
+          "id": "book",
+          "position": [
+            0.25,
+            0.11999999731779099,
+            -0.800000011920929
+          ],
+          "home": [
+            0.25,
+            0.12,
+            -0.8
+          ]
+        },
+        {
+          "id": "vacuum",
+          "position": [
+            4.650000095367432,
+            0.10000000149011612,
+            12.149999618530273
+          ],
+          "home": [
+            4.65,
+            0.1,
+            12.15
+          ]
+        },
+        {
+          "id": "hall-shoes",
+          "position": [
+            4.449999809265137,
+            0.09000000357627869,
+            2.25
+          ],
+          "home": [
+            4.45,
+            0.09,
+            2.25
+          ]
+        },
+        {
+          "id": "hall-mail",
+          "position": [
+            4.050000190734863,
+            0.09000000357627869,
+            1.5499999523162842
+          ],
+          "home": [
+            4.05,
+            0.09,
+            1.55
+          ]
+        },
+        {
+          "id": "living-toy",
+          "position": [
+            1,
+            0.09000000357627869,
+            5.25
+          ],
+          "home": [
+            1,
+            0.09,
+            5.25
+          ]
+        },
+        {
+          "id": "living-cushion",
+          "position": [
+            1,
+            0.09000000357627869,
+            6.800000190734863
+          ],
+          "home": [
+            1,
+            0.09,
+            6.8
+          ]
+        },
+        {
+          "id": "kitchen-dish",
+          "position": [
+            -0.550000011920929,
+            0.09000000357627869,
+            11.600000381469727
+          ],
+          "home": [
+            -0.55,
+            0.09,
+            11.6
+          ]
+        },
+        {
+          "id": "kitchen-trash",
+          "position": [
+            0.4000000059604645,
+            0.09000000357627869,
+            10.5
+          ],
+          "home": [
+            0.4,
+            0.09,
+            10.5
+          ]
+        },
+        {
+          "id": "laundry-clothes",
+          "position": [
+            4.300000190734863,
+            0.09000000357627869,
+            10.899999618530273
+          ],
+          "home": [
+            4.3,
+            0.09,
+            10.9
+          ]
+        },
+        {
+          "id": "laundry-clean",
+          "position": [
+            5.849999904632568,
+            0.47999998927116394,
+            10.5
+          ],
+          "home": [
+            5.85,
+            0.48,
+            10.5
+          ]
+        },
+        {
+          "id": "bath-towel",
+          "position": [
+            4.650000095367432,
+            0.09000000357627869,
+            -1.4500000476837158
+          ],
+          "home": [
+            4.65,
+            0.09,
+            -1.45
+          ]
+        },
+        {
+          "id": "bath-bottle",
+          "position": [
+            4.699999809265137,
+            0.09000000357627869,
+            -2.1500000953674316
+          ],
+          "home": [
+            4.7,
+            0.09,
+            -2.15
+          ]
+        },
+        {
+          "id": "scooper",
+          "position": [
+            3.799999952316284,
+            0.03999999910593033,
+            3
+          ],
+          "home": [
+            3.8,
+            0.04,
+            3
+          ]
+        },
+        {
+          "id": "daily-outfit",
+          "position": [
+            -0.699999988079071,
+            0.699999988079071,
+            3.049999952316284
+          ],
+          "home": [
+            -0.699999988079071,
+            0.7,
+            3.049999952316284
+          ]
+        },
+        {
+          "id": "paper-towel",
+          "position": [
+            -2.6500000953674316,
+            1.0199999809265137,
+            10.5
+          ],
+          "home": [
+            -2.65,
+            1.02,
+            10.5
+          ]
+        },
+        {
+          "id": "breakfast-egg",
+          "position": [
+            -2.680000066757202,
+            1.149999976158142,
+            14.550000190734863
+          ],
+          "home": [
+            -2.680000095367432,
+            1.15,
+            14.550000190734863
+          ]
+        },
+        {
+          "id": "breakfast-plate",
+          "position": [
+            0.550000011920929,
+            0.9750000238418579,
+            13.279999732971191
+          ],
+          "home": [
+            -2.630000028610229,
+            1.13,
+            12.649999618530273
+          ]
+        }
+      ],
+      "targets": [
+        {
+          "id": "pickup-teddy",
+          "position": [
+            -0.7,
+            0.11,
+            1.55
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "pickup-shirt",
+          "position": [
+            -1.7,
+            0.12,
+            0.55
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "pickup-book",
+          "position": [
+            0.25,
+            0.12,
+            -0.8
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "pickup-vacuum",
+          "position": [
+            4.65,
+            0.1,
+            12.15
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "toy-chest",
+          "position": [
+            2.4800000190734863,
+            0,
+            -0.7899999618530273
+          ],
+          "range": 1.1
+        },
+        {
+          "id": "hamper",
+          "position": [
+            -2.549999952316284,
+            0,
+            1
+          ],
+          "range": 1.05
+        },
+        {
+          "id": "bookshelf",
+          "position": [
+            1.5499999523162842,
+            0,
+            -2.049999952316284
+          ],
+          "range": 1.05
+        },
+        {
+          "id": "crayons",
+          "position": [
+            1.6,
+            0,
+            1.05
+          ],
+          "range": 0.88
+        },
+        {
+          "id": "dirt",
+          "position": [
+            -1.4,
+            0,
+            2.65
+          ],
+          "range": 1
+        },
+        {
+          "id": "pickup-hall-shoes",
+          "position": [
+            4.45,
+            0.09,
+            2.25
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "place-hall-shoes",
+          "position": [
+            5.150000095367432,
+            0,
+            2.5
+          ],
+          "range": 0.95
+        },
+        {
+          "id": "pickup-hall-mail",
+          "position": [
+            4.05,
+            0.09,
+            1.55
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "place-hall-mail",
+          "position": [
+            5.150000095367432,
+            0,
+            1.100000023841858
+          ],
+          "range": 0.95
+        },
+        {
+          "id": "pickup-living-toy",
+          "position": [
+            1,
+            0.09,
+            5.25
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "place-living-toy",
+          "position": [
+            1.9500000476837158,
+            0,
+            7.850000381469727
+          ],
+          "range": 0.95
+        },
+        {
+          "id": "pickup-living-cushion",
+          "position": [
+            1,
+            0.09,
+            6.8
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "place-living-cushion",
+          "position": [
+            -1.2999999523162842,
+            0,
+            6
+          ],
+          "range": 1.05
+        },
+        {
+          "id": "pickup-kitchen-dish",
+          "position": [
+            -0.55,
+            0.09,
+            11.6
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "place-kitchen-dish",
+          "position": [
+            -1.7000000476837158,
+            0,
+            11.449999809265137
+          ],
+          "range": 1.05
+        },
+        {
+          "id": "pickup-kitchen-trash",
+          "position": [
+            0.4,
+            0.09,
+            10.5
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "place-kitchen-trash",
+          "position": [
+            1.3000000715255737,
+            0,
+            10.300000190734863
+          ],
+          "range": 0.95
+        },
+        {
+          "id": "pickup-laundry-clothes",
+          "position": [
+            4.3,
+            0.09,
+            10.9
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "place-laundry-clothes",
+          "position": [
+            3.3499999046325684,
+            0,
+            11.149999618530273
+          ],
+          "range": 0.95
+        },
+        {
+          "id": "pickup-laundry-clean",
+          "position": [
+            5.85,
+            0.48,
+            10.5
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "place-laundry-clean",
+          "position": [
+            5.800000190734863,
+            0,
+            11.75
+          ],
+          "range": 0.95
+        },
+        {
+          "id": "pickup-bath-towel",
+          "position": [
+            4.65,
+            0.09,
+            -1.45
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "place-bath-towel",
+          "position": [
+            4.049999713897705,
+            0,
+            -0.5249999761581421
+          ],
+          "range": 0.95
+        },
+        {
+          "id": "pickup-bath-bottle",
+          "position": [
+            4.7,
+            0.09,
+            -2.15
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "place-bath-bottle",
+          "position": [
+            4.119999885559082,
+            0,
+            -2.3499999046325684
+          ],
+          "range": 0.95
+        },
+        {
+          "id": "pickup-scooper",
+          "position": [
+            3.8,
+            0.04,
+            3
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "scoop-poop",
+          "position": [
+            3.7,
+            0,
+            5.3
+          ],
+          "range": 0.9
+        },
+        {
+          "id": "flush-poop",
+          "position": [
+            5.15,
+            0,
+            -0.38
+          ],
+          "range": 0.85
+        },
+        {
+          "id": "wash-hands",
+          "position": [
+            4.12,
+            0,
+            -2.35
+          ],
+          "range": 0.9
+        },
+        {
+          "id": "lilah-mess-0",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "range": 1
+        },
+        {
+          "id": "lilah-mess-1",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "range": 1
+        },
+        {
+          "id": "lilah-mess-2",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "range": 1
+        },
+        {
+          "id": "play-lilah",
+          "position": [
+            1,
+            0.09000000357627869,
+            0.699999988079071
+          ],
+          "range": 1.1
+        },
+        {
+          "id": "feed-dog",
+          "position": [
+            4.800000190734863,
+            0,
+            8.800000190734863
+          ],
+          "range": 1
+        },
+        {
+          "id": "daily-teeth",
+          "position": [
+            4.119999885559082,
+            0,
+            -2.3499999046325684
+          ],
+          "range": 1
+        },
+        {
+          "id": "choose-clothes",
+          "position": [
+            -0.699999988079071,
+            0,
+            2.4000000953674316
+          ],
+          "range": 1
+        },
+        {
+          "id": "get-dressed",
+          "position": [
+            -0.8499999046325684,
+            0,
+            -0.6500000953674316
+          ],
+          "range": 1
+        },
+        {
+          "id": "night-clothes",
+          "position": [
+            -0.8499999046325684,
+            0,
+            -0.6500000953674316
+          ],
+          "range": 1
+        },
+        {
+          "id": "clothes-drawer",
+          "position": [
+            -0.699999988079071,
+            0,
+            2.4000000953674316
+          ],
+          "range": 1
+        },
+        {
+          "id": "take-egg",
+          "position": [
+            -1.8000000715255737,
+            0,
+            14.550000190734863
+          ],
+          "range": 1
+        },
+        {
+          "id": "crack-egg",
+          "position": [
+            -1.7999999523162842,
+            0,
+            12.649999618530273
+          ],
+          "range": 1
+        },
+        {
+          "id": "cook-egg",
+          "position": [
+            -1.7999999523162842,
+            0,
+            12.649999618530273
+          ],
+          "range": 1
+        },
+        {
+          "id": "take-breakfast",
+          "position": [
+            -1.7999999523162842,
+            0,
+            12.649999618530273
+          ],
+          "range": 1
+        },
+        {
+          "id": "serve-breakfast",
+          "position": [
+            0.550000011920929,
+            0,
+            11.90000057220459
+          ],
+          "range": 1
+        },
+        {
+          "id": "eat-breakfast",
+          "position": [
+            0.550000011920929,
+            0,
+            11.90000057220459
+          ],
+          "range": 1
+        },
+        {
+          "id": "take-towel",
+          "position": [
+            -1.7999999523162842,
+            0,
+            10.5
+          ],
+          "range": 1
+        },
+        {
+          "id": "wipe-egg",
+          "position": [
+            -1.5,
+            0,
+            12.55
+          ],
+          "range": 1
+        },
+        {
+          "id": "wipe-spill",
+          "position": [
+            1.7,
+            0,
+            10.7
+          ],
+          "range": 1
+        },
+        {
+          "id": "daily-vacuum",
+          "position": [
+            4.650000095367432,
+            0.10000000149011612,
+            12.15000057220459
+          ],
+          "range": 1
+        },
+        {
+          "id": "vacuum-0",
+          "position": [
+            0.2,
+            0,
+            10.6
+          ],
+          "range": 1
+        },
+        {
+          "id": "vacuum-1",
+          "position": [
+            2.2,
+            0,
+            11.6
+          ],
+          "range": 1
+        },
+        {
+          "id": "vacuum-2",
+          "position": [
+            3.3,
+            0,
+            6.1
+          ],
+          "range": 1
+        },
+        {
+          "id": "put-tool-away",
+          "position": [
+            -2.65,
+            1.02,
+            10.5
+          ],
+          "range": 1
+        },
+        {
+          "id": "bedtime-book",
+          "position": [
+            -0.8499999046325684,
+            0,
+            -0.8000000715255737
+          ],
+          "range": 1
+        },
+        {
+          "id": "school-door",
+          "position": [
+            -2.3499999046325684,
+            0,
+            8.199999809265137
+          ],
+          "range": 1
+        },
+        {
+          "id": "shop-door",
+          "position": [
+            -2.3499999046325684,
+            0,
+            8.199999809265137
+          ],
+          "range": 1
+        },
+        {
+          "id": "sleep",
+          "position": [
+            -0.8499999046325684,
+            0,
+            -1.600000023841858
+          ],
+          "range": 1
+        }
+      ]
+    },
+    "tornado": {
+      "phase": "idle",
+      "elapsed": 0,
+      "score": 0,
+      "cleaned": 0,
+      "streak": 0,
+      "bestStreak": 0,
+      "stars": 1,
+      "reward": 1,
+      "paid": false,
+      "special": "none",
+      "specialStarted": false,
+      "created": 0,
+      "spots": [],
+      "messes": [],
+      "audio": {
+        "decoded": 0,
+        "failures": [],
+        "voices": 0,
+        "music": false,
+        "played": 0,
+        "muted": false
+      }
+    },
+    "cameraState": "EXPLORE",
+    "loop": {
+      "mode": "cleanup",
+      "balance": 0,
+      "boxes": 0,
+      "purchases": 0,
+      "collection": {},
+      "phase": "closed",
+      "reveal": null,
+      "focus": "",
+      "opening": {
+        "phase": "closed",
+        "elapsed": 0,
+        "rarity": "Common",
+        "vfx": {
+          "enabled": false,
+          "drawCalls": 0,
+          "triangles": 0,
+          "burstStars": 0,
+          "maxIdleGlints": 0
+        },
+        "lidAngle": 0
+      },
+      "pop": {
+        "open": false,
+        "state": "levels",
+        "remaining": 60,
+        "paused": false,
+        "practice": false,
+        "timerFrozen": false,
+        "chain": [],
+        "pieces": [
+          {
+            "id": 1,
+            "kind": "lavendream"
+          },
+          {
+            "id": 2,
+            "kind": "sunny"
+          },
+          {
+            "id": 3,
+            "kind": "sunny"
+          },
+          {
+            "id": 4,
+            "kind": "rosie"
+          },
+          {
+            "id": 5,
+            "kind": "lavendream"
+          },
+          {
+            "id": 6,
+            "kind": "lavendream"
+          },
+          {
+            "id": 7,
+            "kind": "comet"
+          },
+          {
+            "id": 8,
+            "kind": "fox"
+          },
+          {
+            "id": 9,
+            "kind": "rosie"
+          },
+          {
+            "id": 10,
+            "kind": "sunny"
+          },
+          {
+            "id": 11,
+            "kind": "sunny"
+          },
+          {
+            "id": 12,
+            "kind": "lavendream"
+          },
+          {
+            "id": 13,
+            "kind": "lavendream"
+          },
+          {
+            "id": 14,
+            "kind": "sunny"
+          },
+          {
+            "id": 15,
+            "kind": "comet"
+          },
+          {
+            "id": 16,
+            "kind": "comet"
+          },
+          {
+            "id": 17,
+            "kind": "rosie"
+          },
+          {
+            "id": 18,
+            "kind": "rosie"
+          },
+          {
+            "id": 19,
+            "kind": "sunny"
+          },
+          {
+            "id": 20,
+            "kind": "rosie"
+          },
+          {
+            "id": 21,
+            "kind": "lavendream"
+          },
+          {
+            "id": 22,
+            "kind": "lavendream"
+          },
+          {
+            "id": 23,
+            "kind": "rosie"
+          },
+          {
+            "id": 24,
+            "kind": "fox"
+          },
+          {
+            "id": 25,
+            "kind": "lavendream"
+          },
+          {
+            "id": 26,
+            "kind": "comet"
+          },
+          {
+            "id": 27,
+            "kind": "rosie"
+          },
+          {
+            "id": 28,
+            "kind": "fox"
+          },
+          {
+            "id": 29,
+            "kind": "lavendream"
+          },
+          {
+            "id": 30,
+            "kind": "rosie"
+          },
+          {
+            "id": 31,
+            "kind": "lavendream"
+          },
+          {
+            "id": 32,
+            "kind": "sunny"
+          },
+          {
+            "id": 33,
+            "kind": "fox"
+          },
+          {
+            "id": 34,
+            "kind": "comet"
+          },
+          {
+            "id": 35,
+            "kind": "lavendream"
+          },
+          {
+            "id": 36,
+            "kind": "fox"
+          }
+        ],
+        "score": 0,
+        "bestChain": 0,
+        "valid": [
+          1,
+          2,
+          9
+        ],
+        "pool": [
+          "sunny",
+          "comet",
+          "rosie",
+          "fox",
+          "lavendream"
+        ],
+        "particles": 0,
+        "frenzy": false,
+        "frenzyMeter": 0,
+        "lastResult": null,
+        "audio": {
+          "decoded": 0,
+          "failures": [],
+          "voices": 0,
+          "music": false,
+          "played": 0,
+          "muted": false
+        },
+        "frameP95": 0,
+        "artFriends": 0
+      },
+      "recess": null,
+      "hunt": {
+        "day": 1,
+        "stores": {
+          "corner": {
+            "slots": [
+              {
+                "site": 0,
+                "series": "treats",
+                "remaining": 1,
+                "discovered": false
+              },
+              {
+                "site": 4,
+                "series": "garden",
+                "remaining": 1,
+                "discovered": false
+              },
+              {
+                "site": 2,
+                "series": "treats",
+                "remaining": 1,
+                "discovered": false
+              },
+              {
+                "site": 3,
+                "series": "garden",
+                "remaining": 1,
+                "discovered": false
+              }
+            ],
+            "rumor": "Recently restocked. Worth a little look?",
+            "visited": false
+          },
+          "toys": {
+            "slots": [
+              {
+                "site": 5,
+                "series": "animals",
+                "remaining": 2,
+                "discovered": false
+              },
+              {
+                "site": 4,
+                "series": "treats",
+                "remaining": 1,
+                "discovered": false
+              },
+              {
+                "site": 1,
+                "series": "garden",
+                "remaining": 1,
+                "discovered": false
+              },
+              {
+                "site": 0,
+                "series": "animals",
+                "remaining": 1,
+                "discovered": false
+              },
+              {
+                "site": 3,
+                "series": "treats",
+                "remaining": 1,
+                "discovered": false
+              },
+              {
+                "site": 2,
+                "series": "garden",
+                "remaining": 1,
+                "discovered": false
+              }
+            ],
+            "rumor": "Pocket Pals spotted today.",
+            "visited": false
+          },
+          "collector": {
+            "slots": [
+              {
+                "site": 4,
+                "series": "galaxy",
+                "remaining": 1,
+                "discovered": false
+              },
+              {
+                "site": 1,
+                "series": "animals",
+                "remaining": 1,
+                "discovered": false
+              },
+              {
+                "site": 0,
+                "series": "galaxy",
+                "remaining": 1,
+                "discovered": false
+              },
+              {
+                "site": 5,
+                "series": "animals",
+                "remaining": 1,
+                "discovered": false
+              }
+            ],
+            "rumor": "A friend heard an unusual box might be here.",
+            "visited": false
+          }
+        },
+        "activeStore": null,
+        "clockFloor": 0
+      },
+      "store": null
+    },
+    "obstacles": [
+      {
+        "center": [
+          -2.049999952316284,
+          0.699999988079071,
+          -1.7000000476837158
+        ],
+        "halfExtents": [
+          0.8799999952316284,
+          1.399999976158142,
+          1.475000023841858
+        ]
+      },
+      {
+        "center": [
+          1.5499999523162842,
+          0.699999988079071,
+          -2.549999952316284
+        ],
+        "halfExtents": [
+          0.824999988079071,
+          1.399999976158142,
+          0.36500000953674316
+        ]
+      },
+      {
+        "center": [
+          -0.5299999713897705,
+          0.699999988079071,
+          -2.799999952316284
+        ],
+        "halfExtents": [
+          0.41499999165534973,
+          1.399999976158142,
+          0.375
+        ]
+      },
+      {
+        "center": [
+          2.4800000190734863,
+          0.699999988079071,
+          -1.5499999523162842
+        ],
+        "halfExtents": [
+          0.574999988079071,
+          1.399999976158142,
+          0.6800000071525574
+        ]
+      },
+      {
+        "center": [
+          2.3299999237060547,
+          0.699999988079071,
+          1.2400000095367432
+        ],
+        "halfExtents": [
+          0.7699999809265137,
+          1.399999976158142,
+          0.5249999761581421
+        ]
+      },
+      {
+        "center": [
+          2.049999952316284,
+          0.699999988079071,
+          2.1500000953674316
+        ],
+        "halfExtents": [
+          0.3449999988079071,
+          1.399999976158142,
+          0.3449999988079071
+        ]
+      },
+      {
+        "center": [
+          -2.6600000858306885,
+          0.699999988079071,
+          2.450000047683716
+        ],
+        "halfExtents": [
+          0.30000001192092896,
+          1.399999976158142,
+          0.30000001192092896
+        ]
+      },
+      {
+        "center": [
+          3.299999952316284,
+          0.699999988079071,
+          -0.7875000238418579
+        ],
+        "halfExtents": [
+          0.07000000029802322,
+          1.399999976158142,
+          2.8125
+        ]
+      },
+      {
+        "center": [
+          3.299999952316284,
+          0.699999988079071,
+          3.487499952316284
+        ],
+        "halfExtents": [
+          0.07000000029802322,
+          1.399999976158142,
+          0.11249999701976776
+        ]
+      },
+      {
+        "center": [
+          3.6875,
+          0.699999988079071,
+          0.4000000059604645
+        ],
+        "halfExtents": [
+          0.38749998807907104,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          6.012499809265137,
+          0.699999988079071,
+          0.4000000059604645
+        ],
+        "halfExtents": [
+          0.48750001192092896,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          -1.975000023841858,
+          0.699999988079071,
+          3.5999999046325684
+        ],
+        "halfExtents": [
+          1.3250000476837158,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          2.549999952316284,
+          0.699999988079071,
+          3.5999999046325684
+        ],
+        "halfExtents": [
+          1.399999976158142,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          6.074999809265137,
+          0.699999988079071,
+          3.5999999046325684
+        ],
+        "halfExtents": [
+          0.42500001192092896,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          -2.049999952316284,
+          0.699999988079071,
+          9.5
+        ],
+        "halfExtents": [
+          1.25,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          2.625,
+          0.699999988079071,
+          9.5
+        ],
+        "halfExtents": [
+          1.3250000476837158,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          6.074999809265137,
+          0.699999988079071,
+          9.5
+        ],
+        "halfExtents": [
+          0.42500001192092896,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          2.5999999046325684,
+          0.699999988079071,
+          10.125
+        ],
+        "halfExtents": [
+          0.07000000029802322,
+          1.399999976158142,
+          0.625
+        ]
+      },
+      {
+        "center": [
+          2.5999999046325684,
+          0.699999988079071,
+          12.725000381469727
+        ],
+        "halfExtents": [
+          0.07000000029802322,
+          1.399999976158142,
+          0.4749999940395355
+        ]
+      },
+      {
+        "center": [
+          4.550000190734863,
+          0.699999988079071,
+          13.199999809265137
+        ],
+        "halfExtents": [
+          1.9500000476837158,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          -0.3499999940395355,
+          0.699999988079071,
+          16.299999237060547
+        ],
+        "halfExtents": [
+          2.950000047683716,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          2.5999999046325684,
+          0.699999988079071,
+          14.75
+        ],
+        "halfExtents": [
+          0.07000000029802322,
+          1.399999976158142,
+          1.5499999523162842
+        ]
+      },
+      {
+        "center": [
+          6.5,
+          0.699999988079071,
+          -1.149999976158142
+        ],
+        "halfExtents": [
+          0.07000000029802322,
+          1.399999976158142,
+          2.450000047683716
+        ]
+      },
+      {
+        "center": [
+          6.5,
+          0.699999988079071,
+          4.050000190734863
+        ],
+        "halfExtents": [
+          0.07000000029802322,
+          1.399999976158142,
+          1.25
+        ]
+      },
+      {
+        "center": [
+          6.5,
+          0.699999988079071,
+          10.050000190734863
+        ],
+        "halfExtents": [
+          0.07000000029802322,
+          1.399999976158142,
+          3.1500000953674316
+        ]
+      },
+      {
+        "center": [
+          8.75,
+          0.699999988079071,
+          -3.5999999046325684
+        ],
+        "halfExtents": [
+          2.25,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          6.737500190734863,
+          0.699999988079071,
+          3.5999999046325684
+        ],
+        "halfExtents": [
+          0.23749999701976776,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          9.712499618530273,
+          0.699999988079071,
+          3.5999999046325684
+        ],
+        "halfExtents": [
+          1.287500023841858,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          11,
+          0.699999988079071,
+          4.800000190734863
+        ],
+        "halfExtents": [
+          0.07000000029802322,
+          1.399999976158142,
+          8.399999618530273
+        ]
+      },
+      {
+        "center": [
+          8.75,
+          0.699999988079071,
+          13.199999809265137
+        ],
+        "halfExtents": [
+          2.25,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          4.900000095367432,
+          0.699999988079071,
+          -3.5999999046325684
+        ],
+        "halfExtents": [
+          1.600000023841858,
+          1.399999976158142,
+          0.07000000029802322
+        ]
+      },
+      {
+        "center": [
+          -3.299999952316284,
+          0.699999988079071,
+          6.550000190734863
+        ],
+        "halfExtents": [
+          0.07000000029802322,
+          1.399999976158142,
+          2.950000047683716
+        ]
+      },
+      {
+        "center": [
+          -3.299999952316284,
+          0.699999988079071,
+          12.899999618530273
+        ],
+        "halfExtents": [
+          0.07000000029802322,
+          1.399999976158142,
+          3.4000000953674316
+        ]
+      },
+      {
+        "center": [
+          -3.3499999046325684,
+          0.699999988079071,
+          0
+        ],
+        "halfExtents": [
+          0.07500000298023224,
+          1.399999976158142,
+          3.6500000953674316
+        ]
+      },
+      {
+        "center": [
+          0,
+          0.699999988079071,
+          -3.6500000953674316
+        ],
+        "halfExtents": [
+          3.4000000953674316,
+          1.399999976158142,
+          0.07500000298023224
+        ]
+      },
+      {
+        "center": [
+          6.019999980926514,
+          0.699999988079071,
+          3.049999952316284
+        ],
+        "halfExtents": [
+          0.25,
+          1.399999976158142,
+          0.4000000059604645
+        ]
+      },
+      {
+        "center": [
+          3.799999952316284,
+          0.699999988079071,
+          1
+        ],
+        "halfExtents": [
+          0.20000000298023224,
+          1.399999976158142,
+          0.20000000298023224
+        ]
+      },
+      {
+        "center": [
+          5.800000190734863,
+          0.699999988079071,
+          1.100000023841858
+        ],
+        "halfExtents": [
+          0.375,
+          1.399999976158142,
+          0.22499999403953552
+        ]
+      },
+      {
+        "center": [
+          6.099999904632568,
+          0.699999988079071,
+          3.2799999713897705
+        ],
+        "halfExtents": [
+          0.17499999701976776,
+          1.399999976158142,
+          0.17499999701976776
+        ]
+      },
+      {
+        "center": [
+          -2.299999952316284,
+          0.699999988079071,
+          6.050000190734863
+        ],
+        "halfExtents": [
+          0.6000000238418579,
+          1.399999976158142,
+          1.524999976158142
+        ]
+      },
+      {
+        "center": [
+          -0.47999998927116394,
+          0.699999988079071,
+          6.300000190734863
+        ],
+        "halfExtents": [
+          0.6499999761581421,
+          1.399999976158142,
+          0.375
+        ]
+      },
+      {
+        "center": [
+          2,
+          0.699999988079071,
+          4.199999809265137
+        ],
+        "halfExtents": [
+          0.8999999761581421,
+          1.399999976158142,
+          0.30000001192092896
+        ]
+      },
+      {
+        "center": [
+          4.5,
+          0.699999988079071,
+          7.349999904632568
+        ],
+        "halfExtents": [
+          0.550000011920929,
+          1.399999976158142,
+          0.550000011920929
+        ]
+      },
+      {
+        "center": [
+          5.650000095367432,
+          0.699999988079071,
+          7.699999809265137
+        ],
+        "halfExtents": [
+          0.17499999701976776,
+          1.399999976158142,
+          0.17499999701976776
+        ]
+      },
+      {
+        "center": [
+          5.650000095367432,
+          0.699999988079071,
+          6.599999904632568
+        ],
+        "halfExtents": [
+          0.25,
+          1.399999976158142,
+          0.25
+        ]
+      },
+      {
+        "center": [
+          5.949999809265137,
+          0.699999988079071,
+          4.900000095367432
+        ],
+        "halfExtents": [
+          0.30000001192092896,
+          1.399999976158142,
+          0.7250000238418579
+        ]
+      },
+      {
+        "center": [
+          5.900000095367432,
+          0.699999988079071,
+          8.75
+        ],
+        "halfExtents": [
+          0.25,
+          1.399999976158142,
+          0.25
+        ]
+      },
+      {
+        "center": [
+          1.9500000476837158,
+          0.699999988079071,
+          8.550000190734863
+        ],
+        "halfExtents": [
+          0.4099999964237213,
+          1.399999976158142,
+          0.30000001192092896
+        ]
+      },
+      {
+        "center": [
+          -2.7200000286102295,
+          0.699999988079071,
+          10.25
+        ],
+        "halfExtents": [
+          0.4749999940395355,
+          1.399999976158142,
+          0.550000011920929
+        ]
+      },
+      {
+        "center": [
+          -2.7200000286102295,
+          0.699999988079071,
+          11.449999809265137
+        ],
+        "halfExtents": [
+          0.4749999940395355,
+          1.399999976158142,
+          0.6000000238418579
+        ]
+      },
+      {
+        "center": [
+          -2.7200000286102295,
+          0.699999988079071,
+          12.649999618530273
+        ],
+        "halfExtents": [
+          0.4749999940395355,
+          1.399999976158142,
+          0.550000011920929
+        ]
+      },
+      {
+        "center": [
+          -2.6500000953674316,
+          0.699999988079071,
+          14.550000190734863
+        ],
+        "halfExtents": [
+          0.5249999761581421,
+          1.399999976158142,
+          0.5249999761581421
+        ]
+      },
+      {
+        "center": [
+          0.550000011920929,
+          0.699999988079071,
+          13.850000381469727
+        ],
+        "halfExtents": [
+          0.824999988079071,
+          1.399999976158142,
+          0.824999988079071
+        ]
+      },
+      {
+        "center": [
+          0.550000011920929,
+          0.699999988079071,
+          12.550000190734863
+        ],
+        "halfExtents": [
+          0.2750000059604645,
+          1.399999976158142,
+          0.2750000059604645
+        ]
+      },
+      {
+        "center": [
+          0.550000011920929,
+          0.699999988079071,
+          15.050000190734863
+        ],
+        "halfExtents": [
+          0.2750000059604645,
+          1.399999976158142,
+          0.2750000059604645
+        ]
+      },
+      {
+        "center": [
+          1.7799999713897705,
+          0.699999988079071,
+          13.850000381469727
+        ],
+        "halfExtents": [
+          0.2750000059604645,
+          1.399999976158142,
+          0.2750000059604645
+        ]
+      },
+      {
+        "center": [
+          -0.699999988079071,
+          0.699999988079071,
+          13.850000381469727
+        ],
+        "halfExtents": [
+          0.2750000059604645,
+          1.399999976158142,
+          0.2750000059604645
+        ]
+      },
+      {
+        "center": [
+          1.9500000476837158,
+          0.699999988079071,
+          10.300000190734863
+        ],
+        "halfExtents": [
+          0.20000000298023224,
+          1.399999976158142,
+          0.20000000298023224
+        ]
+      },
+      {
+        "center": [
+          3.3499999046325684,
+          0.699999988079071,
+          10.199999809265137
+        ],
+        "halfExtents": [
+          0.5249999761581421,
+          1.399999976158142,
+          0.4749999940395355
+        ]
+      },
+      {
+        "center": [
+          3.25,
+          0.699999988079071,
+          12.399999618530273
+        ],
+        "halfExtents": [
+          0.5249999761581421,
+          1.399999976158142,
+          0.4749999940395355
+        ]
+      },
+      {
+        "center": [
+          5.78000020980835,
+          0.699999988079071,
+          12.630000114440918
+        ],
+        "halfExtents": [
+          0.5249999761581421,
+          1.399999976158142,
+          0.44999998807907104
+        ]
+      },
+      {
+        "center": [
+          5.849999904632568,
+          0.699999988079071,
+          10.5
+        ],
+        "halfExtents": [
+          0.32499998807907104,
+          1.399999976158142,
+          0.30000001192092896
+        ]
+      },
+      {
+        "center": [
+          6.099999904632568,
+          0.699999988079071,
+          11.449999809265137
+        ],
+        "halfExtents": [
+          0.17499999701976776,
+          1.399999976158142,
+          0.17499999701976776
+        ]
+      },
+      {
+        "center": [
+          4.119999885559082,
+          0.699999988079071,
+          -3.0799999237060547
+        ],
+        "halfExtents": [
+          0.5,
+          1.399999976158142,
+          0.3499999940395355
+        ]
+      },
+      {
+        "center": [
+          5.75,
+          0.699999988079071,
+          -2.119999885559082
+        ],
+        "halfExtents": [
+          0.4699999988079071,
+          1.399999976158142,
+          1.0750000476837158
+        ]
+      },
+      {
+        "center": [
+          5.980000019073486,
+          0.699999988079071,
+          -0.3199999928474426
+        ],
+        "halfExtents": [
+          0.4000000059604645,
+          1.399999976158142,
+          0.28999999165534973
+        ]
+      },
+      {
+        "center": [
+          3.619999885559082,
+          0.699999988079071,
+          -0.5249999761581421
+        ],
+        "halfExtents": [
+          0.07999999821186066,
+          1.399999976158142,
+          0.4000000059604645
+        ]
+      },
+      {
+        "center": [
+          9.800000190734863,
+          0.699999988079071,
+          -1.7000000476837158
+        ],
+        "halfExtents": [
+          0.800000011920929,
+          1.399999976158142,
+          1
+        ]
+      },
+      {
+        "center": [
+          7.300000190734863,
+          0.699999988079071,
+          -2.8499999046325684
+        ],
+        "halfExtents": [
+          0.44999998807907104,
+          1.399999976158142,
+          0.3499999940395355
+        ]
+      },
+      {
+        "center": [
+          10.550000190734863,
+          0.699999988079071,
+          1.5499999523162842
+        ],
+        "halfExtents": [
+          0.30000001192092896,
+          1.399999976158142,
+          0.75
+        ]
+      },
+      {
+        "center": [
+          7.150000095367432,
+          0.699999988079071,
+          -0.10000000149011612
+        ],
+        "halfExtents": [
+          0.42500001192092896,
+          1.399999976158142,
+          0.42500001192092896
+        ]
+      },
+      {
+        "center": [
+          7.099999904632568,
+          0.699999988079071,
+          -1.149999976158142
+        ],
+        "halfExtents": [
+          0.15000000596046448,
+          1.399999976158142,
+          0.15000000596046448
+        ]
+      },
+      {
+        "center": [
+          9.449999809265137,
+          0.699999988079071,
+          2.799999952316284
+        ],
+        "halfExtents": [
+          0.30000001192092896,
+          1.399999976158142,
+          0.2750000059604645
+        ]
+      },
+      {
+        "center": [
+          9.300000190734863,
+          0.699999988079071,
+          5.150000095367432
+        ],
+        "halfExtents": [
+          0.9750000238418579,
+          1.399999976158142,
+          1.2000000476837158
+        ]
+      },
+      {
+        "center": [
+          8,
+          0.699999988079071,
+          4.5
+        ],
+        "halfExtents": [
+          0.2750000059604645,
+          1.399999976158142,
+          0.25
+        ]
+      },
+      {
+        "center": [
+          10.600000381469727,
+          0.699999988079071,
+          4.5
+        ],
+        "halfExtents": [
+          0.2750000059604645,
+          1.399999976158142,
+          0.25
+        ]
+      },
+      {
+        "center": [
+          7.019999980926514,
+          0.699999988079071,
+          8.449999809265137
+        ],
+        "halfExtents": [
+          0.375,
+          1.399999976158142,
+          0.7749999761581421
+        ]
+      },
+      {
+        "center": [
+          8.449999809265137,
+          0.699999988079071,
+          12.649999618530273
+        ],
+        "halfExtents": [
+          0.8999999761581421,
+          1.399999976158142,
+          0.375
+        ]
+      },
+      {
+        "center": [
+          8.449999809265137,
+          0.699999988079071,
+          11.550000190734863
+        ],
+        "halfExtents": [
+          0.32499998807907104,
+          1.399999976158142,
+          0.32499998807907104
+        ]
+      },
+      {
+        "center": [
+          10.050000190734863,
+          0.699999988079071,
+          9.149999618530273
+        ],
+        "halfExtents": [
+          0.550000011920929,
+          1.399999976158142,
+          0.550000011920929
+        ]
+      },
+      {
+        "center": [
+          9.899999618530273,
+          0.699999988079071,
+          10.600000381469727
+        ],
+        "halfExtents": [
+          0.3100000023841858,
+          1.399999976158142,
+          0.3100000023841858
+        ]
+      },
+      {
+        "center": [
+          10.550000190734863,
+          0.699999988079071,
+          8
+        ],
+        "halfExtents": [
+          0.15000000596046448,
+          1.399999976158142,
+          0.15000000596046448
+        ]
+      },
+      {
+        "center": [
+          10.5,
+          0.699999988079071,
+          12.399999618530273
+        ],
+        "halfExtents": [
+          0.25,
+          1.399999976158142,
+          0.25
+        ]
+      },
+      {
+        "center": [
+          -2.7200000286102295,
+          0.699999988079071,
+          15.649999618530273
+        ],
+        "halfExtents": [
+          0.4749999940395355,
+          1.399999976158142,
+          0.44999998807907104
+        ]
+      },
+      {
+        "center": [
+          -2.549999952316284,
+          0,
+          1
+        ],
+        "halfExtents": [
+          0.3499999940395355,
+          1,
+          0.3499999940395355
+        ]
+      },
+      {
+        "center": [
+          -0.699999988079071,
+          0.5,
+          3.049999952316284
+        ],
+        "halfExtents": [
+          0.3499999940395355,
+          1,
+          0.3499999940395355
+        ]
+      }
+    ]
+  },
+  "errors": []
+}

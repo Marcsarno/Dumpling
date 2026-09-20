@@ -1,0 +1,5 @@
+import fs from 'node:fs';import {Vec3,BoundingBox} from 'playcanvas';import {HousePath} from '../src/components/HousePath.ts';
+const s=JSON.parse(fs.readFileSync('stores/evidence/house-before/snapshot.json')).snapshot;
+const planner=new HousePath({walkable:s.walkable,obstacles:s.obstacles.map(o=>new BoundingBox(new Vec3(...o.center),new Vec3(...o.halfExtents)))},.265),start=new Vec3(...s.position);
+const targets=s.cleanup.targets.map(t=>{const candidates=[];for(let r=0;r< t.range*.8;r+=.15)for(let a=0;a<Math.PI*2;a+=Math.PI/8){const p=new Vec3(t.position[0]+Math.cos(a)*r,0,t.position[2]+Math.sin(a)*r);if(planner.free(p.x,p.z))candidates.push(p);}candidates.sort((a,b)=>a.distance(start)-b.distance(start));const point=candidates.find(p=>planner.route(start,p).length);return{id:t.id,reachable:!!point,point:point?.toArray()};});
+fs.writeFileSync('stores/evidence/house-before/path-audit.json',JSON.stringify(targets,null,2));console.log(JSON.stringify({count:targets.length,unreachable:targets.filter(t=>!t.reachable)}));

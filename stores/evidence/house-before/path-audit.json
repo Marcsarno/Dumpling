@@ -1,0 +1,551 @@
+[
+  {
+    "id": "pickup-teddy",
+    "reachable": true,
+    "point": [
+      -0.27573593128807117,
+      0,
+      1.125735931288072
+    ]
+  },
+  {
+    "id": "pickup-shirt",
+    "reachable": true,
+    "point": [
+      -1.145672280493228,
+      0,
+      0.7796100594190539
+    ]
+  },
+  {
+    "id": "pickup-book",
+    "reachable": true,
+    "point": [
+      0.25000000000000006,
+      0,
+      -0.20000000000000007
+    ]
+  },
+  {
+    "id": "pickup-vacuum",
+    "reachable": true,
+    "point": [
+      4.420389940580947,
+      0,
+      11.595672280493229
+    ]
+  },
+  {
+    "id": "toy-chest",
+    "reachable": true,
+    "point": [
+      1.9496699331835758,
+      0,
+      -0.25966987596311664
+    ]
+  },
+  {
+    "id": "hamper",
+    "reachable": true,
+    "point": [
+      -1.7999999523162842,
+      0,
+      1
+    ]
+  },
+  {
+    "id": "bookshelf",
+    "reachable": true,
+    "point": [
+      1.262987378042467,
+      0,
+      -1.3570903029328192
+    ]
+  },
+  {
+    "id": "crayons",
+    "reachable": true,
+    "point": [
+      1,
+      0,
+      1.05
+    ]
+  },
+  {
+    "id": "dirt",
+    "reachable": true,
+    "point": [
+      -0.8696699141100889,
+      0,
+      2.11966991411009
+    ]
+  },
+  {
+    "id": "pickup-hall-shoes",
+    "reachable": true,
+    "point": [
+      3.895672280493228,
+      0,
+      2.0203899405809462
+    ]
+  },
+  {
+    "id": "place-hall-shoes",
+    "reachable": true,
+    "point": [
+      4.457090445983966,
+      0,
+      2.212987425726183
+    ]
+  },
+  {
+    "id": "pickup-hall-mail",
+    "reachable": true,
+    "point": [
+      3.75,
+      0,
+      1.55
+    ]
+  },
+  {
+    "id": "place-hall-mail",
+    "reachable": true,
+    "point": [
+      4.400000095367432,
+      0,
+      1.100000023841858
+    ]
+  },
+  {
+    "id": "pickup-living-toy",
+    "reachable": true,
+    "point": [
+      0.7703899405809458,
+      0,
+      4.695672280493228
+    ]
+  },
+  {
+    "id": "place-living-toy",
+    "reachable": true,
+    "point": [
+      1.6629874734098982,
+      0,
+      7.157090732086262
+    ]
+  },
+  {
+    "id": "pickup-living-cushion",
+    "reachable": true,
+    "point": [
+      0.9999999999999999,
+      0,
+      6.2
+    ]
+  },
+  {
+    "id": "place-living-cushion",
+    "reachable": true,
+    "point": [
+      -1.0129873780424667,
+      0,
+      5.3070903506165354
+    ]
+  },
+  {
+    "id": "pickup-kitchen-dish",
+    "reachable": true,
+    "point": [
+      -0.5500000000000002,
+      0,
+      11
+    ]
+  },
+  {
+    "id": "place-kitchen-dish",
+    "reachable": true,
+    "point": [
+      -1.700000047683716,
+      0,
+      10.699999809265137
+    ]
+  },
+  {
+    "id": "pickup-kitchen-trash",
+    "reachable": true,
+    "point": [
+      0.3999999999999999,
+      0,
+      9.9
+    ]
+  },
+  {
+    "id": "place-kitchen-trash",
+    "reachable": true,
+    "point": [
+      1.012987497251756,
+      0,
+      9.607090541351399
+    ]
+  },
+  {
+    "id": "pickup-laundry-clothes",
+    "reachable": true,
+    "point": [
+      4.3,
+      0,
+      10.3
+    ]
+  },
+  {
+    "id": "place-laundry-clothes",
+    "reachable": true,
+    "point": [
+      2.5999999046325684,
+      0,
+      11.149999618530273
+    ]
+  },
+  {
+    "id": "pickup-laundry-clean",
+    "reachable": true,
+    "point": [
+      5.25,
+      0,
+      10.5
+    ]
+  },
+  {
+    "id": "place-laundry-clean",
+    "reachable": true,
+    "point": [
+      5.269670104844953,
+      0,
+      11.219669914110089
+    ]
+  },
+  {
+    "id": "pickup-bath-towel",
+    "reachable": true,
+    "point": [
+      4.095672280493228,
+      0,
+      -1.220389940580946
+    ]
+  },
+  {
+    "id": "place-bath-towel",
+    "reachable": true,
+    "point": [
+      4.049999713897705,
+      0,
+      -0.07499997615814213
+    ]
+  },
+  {
+    "id": "pickup-bath-bottle",
+    "reachable": true,
+    "point": [
+      4.145672280493228,
+      0,
+      -1.920389940580946
+    ]
+  },
+  {
+    "id": "place-bath-bottle",
+    "reachable": true,
+    "point": [
+      3.832987311285265,
+      0,
+      -1.6570902552491034
+    ]
+  },
+  {
+    "id": "pickup-scooper",
+    "reachable": true,
+    "point": [
+      3.2456722804932276,
+      0,
+      2.7703899405809462
+    ]
+  },
+  {
+    "id": "scoop-poop",
+    "reachable": true,
+    "point": [
+      3.2757359312880716,
+      0,
+      4.875735931288071
+    ]
+  },
+  {
+    "id": "flush-poop",
+    "reachable": true,
+    "point": [
+      4.595672280493228,
+      0,
+      -0.15038994058094607
+    ]
+  },
+  {
+    "id": "wash-hands",
+    "reachable": true,
+    "point": [
+      3.6957359312880715,
+      0,
+      -1.9257359312880715
+    ]
+  },
+  {
+    "id": "lilah-mess-0",
+    "reachable": true,
+    "point": [
+      4.592425496802574e-17,
+      0,
+      0.75
+    ]
+  },
+  {
+    "id": "lilah-mess-1",
+    "reachable": true,
+    "point": [
+      4.592425496802574e-17,
+      0,
+      0.75
+    ]
+  },
+  {
+    "id": "lilah-mess-2",
+    "reachable": true,
+    "point": [
+      4.592425496802574e-17,
+      0,
+      0.75
+    ]
+  },
+  {
+    "id": "play-lilah",
+    "reachable": true,
+    "point": [
+      0.307090350616535,
+      0,
+      0.9870125623528885
+    ]
+  },
+  {
+    "id": "feed-dog",
+    "reachable": true,
+    "point": [
+      4.269670104844953,
+      0,
+      8.269670104844952
+    ]
+  },
+  {
+    "id": "daily-teeth",
+    "reachable": true,
+    "point": [
+      3.832987311285265,
+      0,
+      -1.6570902552491034
+    ]
+  },
+  {
+    "id": "choose-clothes",
+    "reachable": true,
+    "point": [
+      -0.41298741380525356,
+      0,
+      1.7070904459839666
+    ]
+  },
+  {
+    "id": "get-dressed",
+    "reachable": true,
+    "point": [
+      -0.5629873303587509,
+      0,
+      0.04290955401603336
+    ]
+  },
+  {
+    "id": "night-clothes",
+    "reachable": true,
+    "point": [
+      -0.5629873303587509,
+      0,
+      0.04290955401603336
+    ]
+  },
+  {
+    "id": "clothes-drawer",
+    "reachable": true,
+    "point": [
+      -0.41298741380525356,
+      0,
+      1.7070904459839666
+    ]
+  },
+  {
+    "id": "take-egg",
+    "reachable": true,
+    "point": [
+      -1.800000071525574,
+      0,
+      13.800000190734863
+    ]
+  },
+  {
+    "id": "crack-egg",
+    "reachable": true,
+    "point": [
+      -1.7999999523162844,
+      0,
+      11.899999618530273
+    ]
+  },
+  {
+    "id": "cook-egg",
+    "reachable": true,
+    "point": [
+      -1.7999999523162844,
+      0,
+      11.899999618530273
+    ]
+  },
+  {
+    "id": "take-breakfast",
+    "reachable": true,
+    "point": [
+      -1.7999999523162844,
+      0,
+      11.899999618530273
+    ]
+  },
+  {
+    "id": "serve-breakfast",
+    "reachable": true,
+    "point": [
+      0.5500000119209288,
+      0,
+      11.15000057220459
+    ]
+  },
+  {
+    "id": "eat-breakfast",
+    "reachable": true,
+    "point": [
+      0.5500000119209288,
+      0,
+      11.15000057220459
+    ]
+  },
+  {
+    "id": "take-towel",
+    "reachable": true,
+    "point": [
+      -1.2696698664263733,
+      0,
+      9.96966991411009
+    ]
+  },
+  {
+    "id": "wipe-egg",
+    "reachable": true,
+    "point": [
+      -1.5000000000000002,
+      0,
+      11.8
+    ]
+  },
+  {
+    "id": "wipe-spill",
+    "reachable": true,
+    "point": [
+      1.412987425726182,
+      0,
+      10.007090350616535
+    ]
+  },
+  {
+    "id": "daily-vacuum",
+    "reachable": true,
+    "point": [
+      4.362987521093614,
+      0,
+      11.457090922821125
+    ]
+  },
+  {
+    "id": "vacuum-0",
+    "reachable": true,
+    "point": [
+      0.19999999999999987,
+      0,
+      9.85
+    ]
+  },
+  {
+    "id": "vacuum-1",
+    "reachable": true,
+    "point": [
+      1.9129874257261825,
+      0,
+      10.907090350616535
+    ]
+  },
+  {
+    "id": "vacuum-2",
+    "reachable": true,
+    "point": [
+      3.012987425726182,
+      0,
+      5.407090350616535
+    ]
+  },
+  {
+    "id": "put-tool-away",
+    "reachable": true,
+    "point": [
+      -1.9570903506165345,
+      0,
+      10.212987425726183
+    ]
+  },
+  {
+    "id": "bedtime-book",
+    "reachable": true,
+    "point": [
+      -0.5629873303587509,
+      0,
+      -0.10709042214210873
+    ]
+  },
+  {
+    "id": "school-door",
+    "reachable": true,
+    "point": [
+      -1.657090255249103,
+      0,
+      7.91298723499132
+    ]
+  },
+  {
+    "id": "shop-door",
+    "reachable": true,
+    "point": [
+      -1.657090255249103,
+      0,
+      7.91298723499132
+    ]
+  },
+  {
+    "id": "sleep",
+    "reachable": true,
+    "point": [
+      -0.5629873303587509,
+      0,
+      -0.9070903744583929
+    ]
+  }
+]
