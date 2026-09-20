@@ -1,0 +1,46 @@
+{
+  "date": "2026-09-20",
+  "sourceRelease": "fe3ae65",
+  "projectId": 1604178,
+  "sceneId": 2600724,
+  "buildId": 64225,
+  "url": "https://playcanv.as/b/7fdb31ef",
+  "staticBuildId": 64227,
+  "checkpoint": "b800faac-8daa-4fab-89a8-d83a1f340199",
+  "runtimeSha256": "9F48DF88155A01B771AA0DC03EE41F290CC0B019A3D230209D2A2F0D6D84E207",
+  "archiveSha256": "155B409AABEBFF274386AFF5EFD35AC6D3657D5EF0D3CFA1CA8CAC1D3A37C526",
+  "typecheck": "pass",
+  "unitChecks": 34,
+  "runningRig": "pass; original clips and bones preserved; wrist correction verified",
+  "music": {
+    "script": "scripts/house-music-browser.mjs",
+    "buildId": 64225,
+    "result": "pass",
+    "tracks": 5,
+    "checks": [
+      "actual decode",
+      "routing",
+      "store alternation",
+      "Pop pause/resume",
+      "end/repeat gap",
+      "persistent mute",
+      "DEV pause",
+      "unlock unused"
+    ]
+  },
+  "pop": {
+    "buildId": 64222,
+    "finalChange": "classroom grouping only"
+  },
+  "originalCheckout": {
+    "head": "fe3ae65",
+    "branch": "master",
+    "clean": true
+  },
+  "realSaves": "untouched; disposable contexts and separate keys",
+  "limits": [
+    "physical iPhone/Safari untested",
+    "MCP capture_runtime timed out; independent browser screenshots used"
+  ],
+  "noPurchase": true
+}

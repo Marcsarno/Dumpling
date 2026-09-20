@@ -1,4 +1,5 @@
 import {Vec3} from 'playcanvas';
+import {propPoint,propHeight,propYaw} from '../editor/PropSpace.ts';
 export const BED_ENTRY_SECONDS=3.2;
 /** Matched to SleepEnter's reach, tuck, sit and recline keys. */
 export function bedEntry(start:Vec3,startYaw:number,crib:boolean,progress:number){
@@ -10,6 +11,7 @@ export function bedEntry(start:Vec3,startYaw:number,crib:boolean,progress:number
   {t:0,p:start,h:.027,y:startYaw},{t:.20,p:new Vec3(-1.0,.09,-1.75),h:.08,y:90},
   {t:.43,p:new Vec3(-1.35,.09,-1.85),h:.91,y:90},{t:.65,p:new Vec3(-1.8,.09,-1.85),h:.91,y:35},{t:1,p:end,h:.91,y:yaw},
  ];
+ const space=crib?'crib':'bed';for(let i=1;i<keys.length;i++){keys[i].p=propPoint(space,keys[i].p);keys[i].h=propHeight(space,keys[i].h);keys[i].y=propYaw(space,keys[i].y);}
  const t=Math.max(0,Math.min(1,progress)),b=keys.findIndex(k=>k.t>=t),i=Math.max(1,b),a=keys[i-1],z=keys[i],raw=(t-a.t)/(z.t-a.t),u=raw*raw*(3-2*raw),delta=((z.y-a.y+540)%360)-180;
  return {position:new Vec3().lerp(a.p,z.p,u),height:a.h+(z.h-a.h)*u,yaw:a.y+delta*u};
 }

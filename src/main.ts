@@ -1,3 +1,4 @@
+import {captureWorld} from './editor/LayoutBridge';
 import {DogRoaming} from './game/DogRoaming';
 import {HouseMusic} from './ui/HouseMusic';
 import {loadSquishyArt} from './game/SquishyArt';
@@ -20,26 +21,28 @@ import './ui/cleanup.css';
 import './ui/collection.css';
 import './ui/house.css';
 
-async function start() {
+export async function startGame(editorApp?:Application) {
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
-  const app = new Application(canvas, { graphicsDeviceOptions: { alpha: false, antialias: true, powerPreference: 'low-power' } });
+  const app = editorApp ?? new Application(canvas, { graphicsDeviceOptions: { alpha: false, antialias: true, powerPreference: 'low-power' } });
   app.graphicsDevice.maxPixelRatio = Math.min(window.devicePixelRatio || 1, 1.75);
   app.setCanvasFillMode(FILLMODE_NONE);
   app.setCanvasResolution(RESOLUTION_AUTO);
   await loadSquishyArt(app);
-  app.scene.ambientLight = new Color(0.72, 0.68, 0.77);
-  const sun = new Entity('Soft afternoon sunlight', app);
-  sun.addComponent('light', {
+  const ambientBase=editorApp?app.scene.ambientLight.clone():new Color(0.72, 0.68, 0.77);
+  app.scene.ambientLight = ambientBase.clone();
+  const sun = (editorApp?.root.findByTag('migration.sun')[0] as Entity) ?? new Entity('Soft afternoon sunlight', app);
+  if(!sun.light) sun.addComponent('light', {
     type: 'directional', color: new Color(1, 0.92, 0.83), intensity: 1.2,
     castShadows: true, shadowResolution: 1024, shadowDistance: 35,
     shadowType: SHADOW_PCF3_32F, shadowBias: 0.2, normalOffsetBias: 0.04,
   });
-  sun.setEulerAngles(48, -30, 0);
-  app.root.addChild(sun);
+  if(!editorApp)sun.setEulerAngles(48, -30, 0);
+  const sunBase={intensity:sun.light!.intensity,color:sun.light!.color.clone()};
+  if(!sun.parent)app.root.addChild(sun);
   sun.light!.mask = 9;
   const room = createHouse(app);
   const props = createHouseProps(app, room);
-  const camera = new IsometricCamera(app);
+  const camera = new IsometricCamera(app,editorApp?.root.findByTag('migration.camera')[0] as Entity|undefined);
   const character = createCharacter(app);
   const joystick = new VirtualJoystick(document.querySelector('#joystick')!, document.querySelector('#joystick-knob')!);
   const controller = new PlayerController(character.player, camera.entity, room, joystick.value);
@@ -78,9 +81,9 @@ async function start() {
     const dt = document.hidden ? 0 : Math.min(elapsed, 0.04);
     room.lighting!.update(night,dt);
     const dusk = room.lighting!.nightAmount;
-    sun.light!.intensity = 1.2 - .98*dusk;
-    sun.light!.color.set(1-.28*dusk,.92-.12*dusk,.83+.17*dusk);
-    app.scene.ambientLight.set(.72-.42*dusk,.68-.36*dusk,.77-.31*dusk);
+    sun.light!.intensity = sunBase.intensity*(1-.98/1.2*dusk);
+    sun.light!.color.set(sunBase.color.r*(1-.28*dusk),sunBase.color.g*(1-.12/.92*dusk),sunBase.color.b*(1+.17/.83*dusk));
+    app.scene.ambientLight.set(ambientBase.r*(1-.42/.72*dusk),ambientBase.g*(1-.36/.68*dusk),ambientBase.b*(1-.31/.77*dusk));
     if(loop.mode==='home')app.scene.ambientLight.set(.7,.68,.65);
     controller.update(dt);
     if (loop.mode !== 'home') camera.follow(character.player.getPosition(), dt);
@@ -99,7 +102,9 @@ async function start() {
     // worldToScreen is already expressed in CSS/client pixels in PlayCanvas.
     label.style.transform = `translate(${screenPoint.x - label.offsetWidth / 2}px, ${screenPoint.y - label.offsetHeight - 5}px)`;
   });
-  app.start();
+  await captureWorld(app,room,props,loop,!!editorApp);
+  controller.setRoom(loop.mode==='store'?loop.store:loop.mode==='recess'?loop.recess:room);
+  if(!editorApp)app.start();
   document.querySelector('#loading')!.remove();
   document.querySelector('#game')!.setAttribute('data-ready', 'true');
   void loadArianna(app, character).catch(error => console.warn('Keeping the Arianna placeholder:', error));
@@ -146,7 +151,7 @@ async function start() {
   });
 }
 
-void start().catch(error => {
+if(!(window as any).__editorMode)void startGame().catch(error => {
   console.error('Unable to start the bedroom:', error);
   document.querySelector('#loading')?.remove();
   document.querySelector<HTMLElement>('#error')!.hidden = false;

@@ -52,7 +52,8 @@ export class HouseLighting {
     this.amount += Math.sign(target-this.amount)*Math.min(Math.abs(target-this.amount),dt/1.2);
     for(const {entity,intensity} of this.lights) {
       entity.enabled = this.amount > .001;
-      entity.light!.intensity = intensity*this.amount;
+      const authored=(entity.parent as Entity)?.light;
+      entity.light!.intensity = (authored?.intensity??intensity)*this.amount;
     }
     for(const shade of [...this.shades,...this.importedShades]) {
       shade.emissive.set(1,.67,.3);
@@ -61,7 +62,7 @@ export class HouseLighting {
     }
   }
   snapshot() {
-    return {amount:this.amount, lights:this.lights.map(({entity})=>({name:entity.name,enabled:entity.enabled,
+    return {amount:this.amount, lights:this.lights.map(({entity,intensity})=>({name:entity.name,enabled:entity.enabled,maxIntensity:intensity,
       intensity:entity.light!.intensity,mask:entity.light!.mask,position:entity.getPosition().toArray()})),
       glowingShades:this.shades.length+this.importedShades.length, exteriorMask:8};
   }

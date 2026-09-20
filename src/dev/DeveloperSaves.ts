@@ -1,5 +1,5 @@
-const KEYS=['arianna.progress.v1','arianna.daily.v1','arianna.lilah.v1'] as const;
-const CHECKPOINT='arianna.developer.checkpoint.v1';
+const KEYS=['dumpling.editorMigration.progress.v1','dumpling.editorMigration.daily.v1','dumpling.editorMigration.lilah.v1'] as const;
+const CHECKPOINT='dumpling.editorMigration.developer.checkpoint.v1';
 type Checkpoint={version:1;created:string;values:Record<string,string|null>};
 /** Capture before the first cheat. Restoring only ever touches the three game keys. */
 export class DeveloperSaves {

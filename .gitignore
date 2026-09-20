@@ -5,3 +5,12 @@ dist/
 .vercel/
 artifacts/
 *.local
+
+# Migration staging and generated standalone downloads (kept locally).
+migration/upload/
+migration/exports/
+migration/entity-batches/
+migration/evidence/**/failure.*
+migration/evidence/**/FAIL-*
+pilot/arianna-original.bin
+pilot/exporter.mjs

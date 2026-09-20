@@ -1,3 +1,4 @@
+import {propTuple} from '../editor/PropSpace';
 import { BoundingBox, Entity, Vec3, type Application } from 'playcanvas';
 import { DailyClock, DUST_LOCATIONS, SPILL_LOCATIONS } from '../systems/DailyClock';
 import type { CleanupItem, CleanupProps, Interaction } from './cleanupProps';
@@ -9,7 +10,7 @@ import { material, primitives, type Triple } from './primitives';
 import { LilahMesses } from './LilahMesses';
 import type { TaskDefinition } from '../systems/MissionSystem';
 
-const SAVE_KEY='arianna.daily.v1';
+const SAVE_KEY='dumpling.editorMigration.daily.v1';
 export class DailyLife {
   readonly clock: DailyClock;
   active=false;
@@ -58,7 +59,7 @@ export class DailyLife {
     const eggShape=primitives(app,this.egg.entity);eggShape('Egg placeholder','sphere',[0,.1,0],[.14,.2,.14],m.trim);
     // Small readable breakfast props share the kitchen's palette.
     const pan=shape('Breakfast pan','cylinder',[-2.63,1.08,12.65],[.55,.06,.55],m.dark);shape('Pan handle','box',[-2.2,1.09,12.65],[.5,.04,.08],m.dark);
-    this.cooked=new Entity('Cooked breakfast',app);this.root.addChild(this.cooked);this.cooked.setLocalPosition(-2.63,1.12,12.65);
+    this.cooked=new Entity('Cooked breakfast',app);this.root.addChild(this.cooked);this.cooked.setLocalPosition(...propTuple('stove',[-2.63,1.12,12.65]));
     const food=primitives(app,this.cooked);food('Egg white','sphere',[0,0,0],[.37,.025,.3],m.trim);food('Egg yolk','sphere',[0,.025,0],[.15,.05,.15],m.yellow);
     this.plate=item('breakfast-plate','Egg on a plate','🍳',[-2.63,1.13,12.65]);this.plate.carryPace='walk';
     const plate=primitives(app,this.plate.entity);plate('Breakfast plate rim','cylinder',[0,0,0],[.53,.035,.53],m.blue);plate('Breakfast plate','cylinder',[0,.021,0],[.46,.012,.46],m.trim);plate('Plated egg white','sphere',[0,.039,0],[.35,.025,.30],m.trim);plate('Plated egg yolk','sphere',[0,.060,0],[.15,.055,.15],m.yellow);
@@ -120,11 +121,11 @@ export class DailyLife {
     this.spill.enabled=s.phase==='afternoon'&&!s.done.includes('spill');this.eggSpill.enabled=s.breakfast==='spill'&&s.phase==='morning';
     this.cooked.enabled=s.phase==='morning'&&s.breakfast==='cook';
     this.cooked.setLocalPosition(-2.63,1.12,12.65);
-    this.plate.entity.reparent(this.root);this.plate.entity.enabled=s.phase==='morning'&&s.breakfast==='serve';this.plate.entity.setLocalPosition(...(s.breakfastAtTable===false?this.plate.home:[.55,.975,13.28] as Triple));
+    this.plate.entity.reparent(this.root);this.plate.entity.enabled=s.phase==='morning'&&s.breakfast==='serve';this.plate.entity.setLocalPosition(...(s.breakfastAtTable===false?this.plate.home:propTuple('dining',[.55,.975,13.28]) as Triple));
     this.props.items.find(i=>i.id==='vacuum')!.entity.enabled=s.phase==='afternoon'||this.lilahMesses.needs('crumbs');
     for(const item of [this.outfit,this.towel,this.egg])if(item.entity.parent!==this.root){item.entity.reparent(this.root);item.entity.setLocalPosition(...item.home);}
     this.outfit.entity.enabled=(s.phase==='morning'||s.phase==='night')&&!s.done.includes('outfit');
-    this.outfit.entity.setLocalPosition(...(s.phase==='night'?[-1.4,.91,-.65] as Triple:this.outfit.home));
+    this.outfit.entity.setLocalPosition(...(s.phase==='night'?propTuple('bed',[-1.4,.91,-.65]):this.outfit.home));
     this.egg.entity.enabled=s.phase==='morning'&&s.breakfast==='eggs';this.egg.entity.setLocalEulerAngles(0,0,0);this.towel.entity.enabled=true;
     this.bubbles.enabled=false;
     this.wipingPaper.enabled=false;this.eggFall=0;
@@ -149,7 +150,7 @@ export class DailyLife {
     if(this.lilahMesses.needs('crumbs'))this.props.items.find(i=>i.id==='vacuum')!.entity.enabled=true;
     if(this.eggFall){
       const t=Math.min(1,(now-this.eggFall)/420);
-      this.egg.entity.setLocalPosition(-2.63+1.13*t,1.12*(1-t*t),12.65-.1*t);
+      this.egg.entity.setLocalPosition(...propTuple('stove',[-2.63+1.13*t,1.12*(1-t*t),12.65-.1*t]));
       this.egg.entity.setLocalEulerAngles(0,0,t*140);
       if(t===1){this.eggFall=0;this.egg.entity.enabled=false;this.eggSpill.enabled=true;}
     }
@@ -181,7 +182,7 @@ export class DailyLife {
       case 'wipe-spill':this.spill.enabled=false;release();break;
       case 'cook-egg':this.clock.state.breakfast='serve';this.clock.state.breakfastAtTable=false;this.cooked.enabled=false;take(this.plate);break;
       case 'take-breakfast':take(this.plate);break;
-      case 'serve-breakfast':carry.release(this.root,[.55,.975,13.28]);this.clock.state.breakfastAtTable=true;break;
+      case 'serve-breakfast':carry.release(this.root,propTuple('dining',[.55,.975,13.28]));this.clock.state.breakfastAtTable=true;break;
       case 'eat-breakfast':this.plate.entity.enabled=false;this.clock.state.breakfast='done';break;
       case 'get-dressed':case 'clothes-drawer':release();break;
       case 'school-door':this.clock.goSchool();break;

@@ -1,3 +1,4 @@
+import {assetUrl,containerOptions} from '../editor/AssetUrls';
 import {Asset,BoundingBox,Entity,Quat,Texture,StandardMaterial,CULLFACE_NONE,type AnimTrack,type Application,type ContainerResource,type RenderComponent} from 'playcanvas';
 import {TRADERS,type TradingDay} from '../data/trading';
 import {dailyWish} from '../data/tradeHelp';
@@ -20,7 +21,8 @@ export class Classmates {
   this.ready=Promise.all(TRADERS.map(async(t,i)=>{
    const x=(i-1)*1.75;this.signs[i]=classroomSign(app,parent,t.name+' nameplate',t.name+'\n'+t.title,[x,.87,.47],1.35,.30,t.color);
    try{
-    const asset=new Asset(t.name+' classmate','container',{url:'/assets/characters/classmates/'+names[i]+'.glb'});
+    const path='/assets/characters/classmates/'+names[i]+'.glb';
+    const asset=new Asset(t.name+' classmate','container',{url:assetUrl(path)},{},containerOptions(path));
     await new Promise<void>((resolve,reject)=>{asset.once('load',resolve);asset.once('error',reject);app.assets.add(asset);app.assets.load(asset);});
     const resource=asset.resource as ContainerResource&{animations:Asset[]},model=resource.instantiateRenderEntity({castShadows:true});
     const bounds=new BoundingBox();let first=true;for(const r of model.findComponents('render'))for(const m of (r as RenderComponent).meshInstances){if(first){bounds.copy(m.aabb);first=false;}else bounds.add(m.aabb);}
@@ -33,6 +35,10 @@ export class Classmates {
   })).then(()=>{});
  }
  sync(day:TradingDay){TRADERS.forEach((t,i)=>this.signs[i]?.(t.name+'\n'+(day.traders[t.id].done?'Thanks for trading!':'Wishes for '+dailyWish(day,t.id).name)));}
+ attachLayout(group:Entity){
+  const nodes=[...this.actors.map(a=>a.model),...TRADERS.map(t=>group.root.findByName(t.name+' nameplate') as Entity)];
+  for(const node of nodes){const p=node.getLocalPosition().clone();node.reparent(group);node.setLocalPosition(p.x,p.y,p.z+.3);}
+ }
  update(now:number,focus:string){const dt=this.last?Math.min(.04,(now-this.last)/1000):0;this.last=now;this.time+=dt;for(const a of this.actors){if(focus===a.id&&!a.near)a.hello=this.time;a.near=focus===a.id;const greeting=this.time-a.hello,wave=greeting<1.5?Math.sin(greeting*Math.PI/1.5)*.7:0;a.arm.setLocalRotation(new Quat().mul2(a.armRest,new Quat().setFromEulerAngles(0,0,wave*45+Math.sin(greeting*14)*wave*12)));a.head.setLocalRotation(new Quat().mul2(a.headRest,new Quat().setFromEulerAngles(Math.sin(this.time*1.4)*2,a.near?0:Math.sin(this.time*.5)*5,0)));}}
  snapshot(){return{loaded:this.loaded,errors:[...this.errors]};}
 }

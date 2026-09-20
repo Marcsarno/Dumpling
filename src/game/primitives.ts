@@ -1,4 +1,5 @@
 import { Color, Entity, StandardMaterial, type Application } from 'playcanvas';
+import {recordLayout} from '../editor/LayoutBridge';
 
 export type Shape = 'box' | 'sphere' | 'cylinder' | 'capsule' | 'cone';
 export type Triple = [number, number, number];
@@ -21,6 +22,7 @@ export function primitives(app: Application, parent: Entity, batchGroupId = -1) 
     entity.setLocalPosition(...position);
     entity.setLocalScale(...scale);
     parent.addChild(entity);
+    recordLayout(entity,parent);
     return entity;
   };
 }

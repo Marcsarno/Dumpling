@@ -1,0 +1,5639 @@
+{
+  "materials": {
+    "Soft lavender": {
+      "diffuse": [
+        0.7019607843137254,
+        0.6039215686274509,
+        0.8431372549019608
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Light oak": {
+      "diffuse": [
+        0.8901960784313725,
+        0.7411764705882353,
+        0.5686274509803921
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Floor seams": {
+      "diffuse": [
+        0.8352941176470589,
+        0.6823529411764706,
+        0.5254901960784314
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Warm blush plaster": {
+      "diffuse": [
+        0.9333333333333333,
+        0.8196078431372549,
+        0.8235294117647058
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Lilac plaster": {
+      "diffuse": [
+        0.8313725490196079,
+        0.7803921568627451,
+        0.8941176470588236
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Ivory trim": {
+      "diffuse": [
+        1,
+        0.9450980392156862,
+        0.8745098039215686
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Window sky": {
+      "diffuse": [
+        0.7686274509803922,
+        0.8941176470588236,
+        0.9176470588235294
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Rose": {
+      "diffuse": [
+        0.9137254901960784,
+        0.615686274509804,
+        0.7254901960784313
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Petal pink": {
+      "diffuse": [
+        0.9647058823529412,
+        0.7843137254901961,
+        0.8431372549019608
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Lilac rug": {
+      "diffuse": [
+        0.7568627450980392,
+        0.6705882352941176,
+        0.8509803921568627
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Rug daisies": {
+      "diffuse": [
+        0.8705882352941177,
+        0.807843137254902,
+        0.9137254901960784
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Butter yellow": {
+      "diffuse": [
+        0.9529411764705882,
+        0.8392156862745098,
+        0.5607843137254902
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Honey birch": {
+      "diffuse": [
+        0.8313725490196079,
+        0.6549019607843137,
+        0.47058823529411764
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Powder blue": {
+      "diffuse": [
+        0.611764705882353,
+        0.7450980392156863,
+        0.8352941176470589
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Soft sage": {
+      "diffuse": [
+        0.5882352941176471,
+        0.7294117647058823,
+        0.6313725490196078
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Bedside lamp shade": {
+      "diffuse": [
+        0.9529411764705882,
+        0.8392156862745098,
+        0.5607843137254902
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Leaf green": {
+      "diffuse": [
+        0.4392156862745098,
+        0.6,
+        0.4588235294117647
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Cleanup ivory": {
+      "diffuse": [
+        1,
+        0.9411764705882353,
+        0.8627450980392157
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Cleanup book blue": {
+      "diffuse": [
+        0.45098039215686275,
+        0.6235294117647059,
+        0.8117647058823529
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    },
+    "Crayon yellow": {
+      "diffuse": [
+        0.9450980392156862,
+        0.803921568627451,
+        0.4588235294117647
+      ],
+      "specular": [
+        0.08,
+        0.07,
+        0.09
+      ],
+      "shininess": 15,
+      "useMetalness": true,
+      "metalness": 0
+    }
+  },
+  "room": {
+    "name": "Arianna bedroom",
+    "children": [
+      {
+        "name": "Bedroom architecture",
+        "children": [
+          {
+            "name": "Room foundation",
+            "position": [
+              0,
+              -0.22,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.8,
+              0.4,
+              7.4
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft lavender"
+          },
+          {
+            "name": "Oak floor",
+            "position": [
+              0,
+              -0.025,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.1,
+              7.2
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Light oak"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              -3.3
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              -2.8499999999999996
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              -2.3999999999999995
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              -1.9499999999999995
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              -1.4999999999999996
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              -1.0499999999999996
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              -0.5999999999999996
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              -0.14999999999999963
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              0.3000000000000004
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              0.7500000000000004
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              1.2000000000000004
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              1.6500000000000004
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              2.1000000000000005
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              2.5500000000000007
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              3.000000000000001
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Plank joint",
+            "position": [
+              0,
+              0.03,
+              3.450000000000001
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.004,
+              0.012
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -2.8,
+              0.031,
+              -3.375
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -0.5499999999999998,
+              0.031,
+              -3.375
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              1.7000000000000002,
+              0.031,
+              -3.375
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -2.05,
+              0.031,
+              -2.925
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              0.20000000000000018,
+              0.031,
+              -2.925
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              2.45,
+              0.031,
+              -2.925
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -1.2999999999999998,
+              0.031,
+              -2.475
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              0.9500000000000002,
+              0.031,
+              -2.475
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              3.2,
+              0.031,
+              -2.475
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -2.8,
+              0.031,
+              -2.025
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -0.5499999999999998,
+              0.031,
+              -2.025
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              1.7000000000000002,
+              0.031,
+              -2.025
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -2.05,
+              0.031,
+              -1.575
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              0.20000000000000018,
+              0.031,
+              -1.575
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              2.45,
+              0.031,
+              -1.575
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -1.2999999999999998,
+              0.031,
+              -1.125
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              0.9500000000000002,
+              0.031,
+              -1.125
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              3.2,
+              0.031,
+              -1.125
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -2.8,
+              0.031,
+              -0.6749999999999998
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -0.5499999999999998,
+              0.031,
+              -0.6749999999999998
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              1.7000000000000002,
+              0.031,
+              -0.6749999999999998
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -2.05,
+              0.031,
+              -0.2250000000000001
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              0.20000000000000018,
+              0.031,
+              -0.2250000000000001
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              2.45,
+              0.031,
+              -0.2250000000000001
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -1.2999999999999998,
+              0.031,
+              0.2250000000000001
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              0.9500000000000002,
+              0.031,
+              0.2250000000000001
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              3.2,
+              0.031,
+              0.2250000000000001
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -2.8,
+              0.031,
+              0.6749999999999998
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -0.5499999999999998,
+              0.031,
+              0.6749999999999998
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              1.7000000000000002,
+              0.031,
+              0.6749999999999998
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -2.05,
+              0.031,
+              1.125
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              0.20000000000000018,
+              0.031,
+              1.125
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              2.45,
+              0.031,
+              1.125
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -1.2999999999999998,
+              0.031,
+              1.5750000000000002
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              0.9500000000000002,
+              0.031,
+              1.5750000000000002
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              3.2,
+              0.031,
+              1.5750000000000002
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -2.8,
+              0.031,
+              2.0250000000000004
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -0.5499999999999998,
+              0.031,
+              2.0250000000000004
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              1.7000000000000002,
+              0.031,
+              2.0250000000000004
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -2.05,
+              0.031,
+              2.4750000000000005
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              0.20000000000000018,
+              0.031,
+              2.4750000000000005
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              2.45,
+              0.031,
+              2.4750000000000005
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              -1.2999999999999998,
+              0.031,
+              2.925
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              0.9500000000000002,
+              0.031,
+              2.925
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Staggered plank end",
+            "position": [
+              3.2,
+              0.031,
+              2.925
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.012,
+              0.003,
+              0.44
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Floor seams"
+          },
+          {
+            "name": "Back wall",
+            "position": [
+              0,
+              1.4,
+              -3.65
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.8,
+              2.8,
+              0.15
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Warm blush plaster"
+          },
+          {
+            "name": "Left wall",
+            "position": [
+              -3.35,
+              1.4,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.15,
+              2.8,
+              7.3
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Lilac plaster"
+          },
+          {
+            "name": "Back skirting",
+            "position": [
+              0,
+              0.16,
+              -3.53
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.6,
+              0.23,
+              0.09
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Left skirting",
+            "position": [
+              -3.23,
+              0.16,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.09,
+              0.23,
+              7.1
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Back wall cap",
+            "position": [
+              0,
+              2.83,
+              -3.65
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              6.87,
+              0.09,
+              0.23
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Left wall cap",
+            "position": [
+              -3.35,
+              2.83,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.23,
+              0.09,
+              7.4
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Window frame",
+            "position": [
+              -3.22,
+              1.86,
+              -0.8
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.16,
+              1.62,
+              2.12
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Window glass",
+            "position": [
+              -3.12,
+              1.86,
+              -0.8
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.018,
+              1.42,
+              1.92
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Window sky"
+          },
+          {
+            "name": "Window crossbar",
+            "position": [
+              -3.09,
+              1.86,
+              -0.8
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.04,
+              0.055,
+              1.97
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Window mullion",
+            "position": [
+              -3.09,
+              1.86,
+              -0.8
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.04,
+              1.44,
+              0.065
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Window sill",
+            "position": [
+              -3.08,
+              1.06,
+              -0.8
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.42,
+              0.09,
+              2.3
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Curtain",
+            "position": [
+              -3.04,
+              1.83,
+              -2
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.14,
+              1.87,
+              0.38
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Curtain tie",
+            "position": [
+              -2.94,
+              1.38,
+              -2
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.045,
+              0.1,
+              0.4
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Petal pink"
+          },
+          {
+            "name": "Curtain",
+            "position": [
+              -3.04,
+              1.83,
+              0.4
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.14,
+              1.87,
+              0.38
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Curtain tie",
+            "position": [
+              -2.94,
+              1.38,
+              0.4
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.045,
+              0.1,
+              0.4
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Petal pink"
+          },
+          {
+            "name": "Round rug",
+            "position": [
+              0,
+              0.055,
+              0.7
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              3.65,
+              0.025,
+              3.65
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cylinder",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Lilac rug"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              -0.8,
+              0.078,
+              0.4
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              -0.6097886967409694,
+              0.078,
+              0.2618033988749895
+            ],
+            "rotation": [
+              0,
+              72.00000000000001,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              -0.6824429495415054,
+              0.078,
+              0.038196601125010526
+            ],
+            "rotation": [
+              180,
+              36,
+              180
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              -0.9175570504584947,
+              0.078,
+              0.0381966011250105
+            ],
+            "rotation": [
+              180,
+              -35.99999999999999,
+              180
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              -0.9902113032590307,
+              0.078,
+              0.2618033988749895
+            ],
+            "rotation": [
+              0,
+              -72.00000000000001,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy center",
+            "position": [
+              -0.8,
+              0.084,
+              0.2
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.19,
+              0.005,
+              0.19
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cylinder",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Butter yellow"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              0.65,
+              0.078,
+              0.30000000000000004
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              0.8402113032590307,
+              0.078,
+              0.1618033988749895
+            ],
+            "rotation": [
+              0,
+              72.00000000000001,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              0.7675570504584946,
+              0.078,
+              -0.06180339887498948
+            ],
+            "rotation": [
+              180,
+              36,
+              180
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              0.5324429495415054,
+              0.078,
+              -0.06180339887498951
+            ],
+            "rotation": [
+              180,
+              -35.99999999999999,
+              180
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              0.4597886967409693,
+              0.078,
+              0.16180339887498946
+            ],
+            "rotation": [
+              0,
+              -72.00000000000001,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy center",
+            "position": [
+              0.65,
+              0.084,
+              0.1
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.19,
+              0.005,
+              0.19
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cylinder",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Butter yellow"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              -0.65,
+              0.078,
+              1.75
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              -0.45978869674096934,
+              0.078,
+              1.6118033988749896
+            ],
+            "rotation": [
+              0,
+              72.00000000000001,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              -0.5324429495415054,
+              0.078,
+              1.3881966011250106
+            ],
+            "rotation": [
+              180,
+              36,
+              180
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              -0.7675570504584946,
+              0.078,
+              1.3881966011250104
+            ],
+            "rotation": [
+              180,
+              -35.99999999999999,
+              180
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              -0.8402113032590308,
+              0.078,
+              1.6118033988749896
+            ],
+            "rotation": [
+              0,
+              -72.00000000000001,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy center",
+            "position": [
+              -0.65,
+              0.084,
+              1.55
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.19,
+              0.005,
+              0.19
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cylinder",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Butter yellow"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              0.8,
+              0.078,
+              1.55
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              0.9902113032590307,
+              0.078,
+              1.4118033988749896
+            ],
+            "rotation": [
+              0,
+              72.00000000000001,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              0.9175570504584947,
+              0.078,
+              1.1881966011250107
+            ],
+            "rotation": [
+              180,
+              36,
+              180
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              0.6824429495415054,
+              0.078,
+              1.1881966011250107
+            ],
+            "rotation": [
+              180,
+              -35.99999999999999,
+              180
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy petal",
+            "position": [
+              0.6097886967409694,
+              0.078,
+              1.4118033988749896
+            ],
+            "rotation": [
+              0,
+              -72.00000000000001,
+              0
+            ],
+            "scale": [
+              0.27,
+              0.009,
+              0.42
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rug daisies"
+          },
+          {
+            "name": "Daisy center",
+            "position": [
+              0.8,
+              0.084,
+              1.35
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.19,
+              0.005,
+              0.19
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cylinder",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Butter yellow"
+          },
+          {
+            "name": "Picture frame",
+            "position": [
+              -1,
+              2.03,
+              -3.52
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.89,
+              1.07,
+              0.08
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Picture paper",
+            "position": [
+              -1,
+              2.03,
+              -3.47
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.75,
+              0.93,
+              0.018
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Picture petal",
+            "position": [
+              -1,
+              2.24,
+              -3.445
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.2,
+              0.2,
+              0.016
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Picture petal",
+            "position": [
+              -0.8614359353944898,
+              2.16,
+              -3.445
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.2,
+              0.2,
+              0.016
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Picture petal",
+            "position": [
+              -0.8614359353944898,
+              2,
+              -3.445
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.2,
+              0.2,
+              0.016
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Picture petal",
+            "position": [
+              -1,
+              1.9200000000000002,
+              -3.445
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.2,
+              0.2,
+              0.016
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Picture petal",
+            "position": [
+              -1.1385640646055102,
+              2,
+              -3.445
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.2,
+              0.2,
+              0.016
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Picture petal",
+            "position": [
+              -1.1385640646055102,
+              2.16,
+              -3.445
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.2,
+              0.2,
+              0.016
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Picture center",
+            "position": [
+              -1,
+              2.08,
+              -3.425
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.17,
+              0.17,
+              0.015
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Butter yellow"
+          },
+          {
+            "name": "Picture caption",
+            "position": [
+              -1,
+              1.72,
+              -3.435
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.3,
+              0.025,
+              0.01
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft lavender"
+          }
+        ]
+      },
+      {
+        "name": "Bed",
+        "position": [
+          -2.05,
+          0,
+          -1.7
+        ],
+        "tags": [
+          "pilot.prop"
+        ],
+        "children": [
+          {
+            "name": "Collision footprint",
+            "position": [
+              0,
+              0.7,
+              0
+            ],
+            "scale": [
+              1.76,
+              2.8,
+              2.95
+            ],
+            "tags": [
+              "pilot.collider"
+            ]
+          },
+          {
+            "name": "Bed frame",
+            "position": [
+              0,
+              0.42,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.65,
+              0.28,
+              2.85
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Bed leg",
+            "position": [
+              -0.7200000000000002,
+              0.24,
+              -1.3299999999999998
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.13,
+              0.45,
+              0.13
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Bed leg",
+            "position": [
+              -0.7200000000000002,
+              0.24,
+              1.33
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.13,
+              0.45,
+              0.13
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Bed leg",
+            "position": [
+              0.7199999999999998,
+              0.24,
+              -1.3299999999999998
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.13,
+              0.45,
+              0.13
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Bed leg",
+            "position": [
+              0.7199999999999998,
+              0.24,
+              1.33
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.13,
+              0.45,
+              0.13
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Headboard",
+            "position": [
+              0,
+              0.92,
+              -1.3299999999999998
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.75,
+              1.3,
+              0.13
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Headboard inset",
+            "position": [
+              0,
+              1.03,
+              -1.24
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.47,
+              0.55,
+              0.055
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Petal pink"
+          },
+          {
+            "name": "Mattress",
+            "position": [
+              0,
+              0.64,
+              0.050000000000000044
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.55,
+              0.23,
+              2.65
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Pink duvet",
+            "position": [
+              0,
+              0.79,
+              0.54
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.59,
+              0.19,
+              1.7
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Folded lavender blanket",
+            "position": [
+              0,
+              0.895,
+              0.97
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.62,
+              0.035,
+              0.47
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft lavender"
+          },
+          {
+            "name": "Pillow",
+            "position": [
+              0,
+              0.88,
+              -0.8
+            ],
+            "rotation": [
+              0,
+              -5.000000000000001,
+              0
+            ],
+            "scale": [
+              1.12,
+              0.24,
+              0.58
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Petal pink"
+          },
+          {
+            "name": "Pillow button",
+            "position": [
+              0,
+              1.015,
+              -0.78
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.19,
+              0.035,
+              0.19
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          }
+        ]
+      },
+      {
+        "name": "Bookshelf",
+        "position": [
+          1.12,
+          0,
+          -3.05
+        ],
+        "tags": [
+          "pilot.prop"
+        ],
+        "children": [
+          {
+            "name": "Collision footprint",
+            "position": [
+              0,
+              0.7,
+              0
+            ],
+            "scale": [
+              1.65,
+              2.8,
+              0.73
+            ],
+            "tags": [
+              "pilot.collider"
+            ]
+          },
+          {
+            "name": "Shelf back",
+            "position": [
+              0,
+              0.99,
+              -0.26000000000000023
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.6,
+              1.9,
+              0.1
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Shelf side",
+            "position": [
+              -0.8,
+              1.02,
+              0.009999999999999787
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.12,
+              1.97,
+              0.65
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Shelf side",
+            "position": [
+              0.7999999999999998,
+              1.02,
+              0.009999999999999787
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.12,
+              1.97,
+              0.65
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Shelf board",
+            "position": [
+              0,
+              0.15,
+              0.029999999999999805
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.76,
+              0.1,
+              0.75
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Shelf board",
+            "position": [
+              0,
+              0.73,
+              0.029999999999999805
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.76,
+              0.1,
+              0.75
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Shelf board",
+            "position": [
+              0,
+              1.31,
+              0.029999999999999805
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.76,
+              0.1,
+              0.75
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Shelf board",
+            "position": [
+              0,
+              1.97,
+              0.029999999999999805
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.76,
+              0.1,
+              0.75
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Book",
+            "position": [
+              -0.5800000000000001,
+              1.56,
+              0.020000000000000018
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.17,
+              0.41,
+              0.38
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft lavender"
+          },
+          {
+            "name": "Book",
+            "position": [
+              -0.3450000000000001,
+              1.56,
+              0.020000000000000018
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.17,
+              0.52,
+              0.38
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Book",
+            "position": [
+              -0.1100000000000001,
+              1.56,
+              0.020000000000000018
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.17,
+              0.41,
+              0.38
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Powder blue"
+          },
+          {
+            "name": "Book",
+            "position": [
+              0.125,
+              1.56,
+              0.020000000000000018
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.17,
+              0.52,
+              0.38
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft sage"
+          },
+          {
+            "name": "Book",
+            "position": [
+              0.3599999999999999,
+              1.56,
+              0.020000000000000018
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.17,
+              0.41,
+              0.38
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Butter yellow"
+          },
+          {
+            "name": "Storage basket",
+            "position": [
+              0.019999999999999796,
+              0.43,
+              0.029999999999999805
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.2,
+              0.44,
+              0.52
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Basket label",
+            "position": [
+              0.019999999999999796,
+              0.44,
+              0.2999999999999998
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.29,
+              0.13,
+              0.018
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Petal pink"
+          },
+          {
+            "name": "Stacked book",
+            "position": [
+              -0.31000000000000005,
+              0.83,
+              0.05999999999999961
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.65,
+              0.075,
+              0.4
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Powder blue"
+          },
+          {
+            "name": "Stacked book",
+            "position": [
+              -0.31000000000000005,
+              0.9199999999999999,
+              0.05999999999999961
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.6,
+              0.075,
+              0.4
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Butter yellow"
+          },
+          {
+            "name": "Stacked book",
+            "position": [
+              -0.31000000000000005,
+              1.01,
+              0.05999999999999961
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.55,
+              0.075,
+              0.4
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft lavender"
+          },
+          {
+            "name": "Plant pot",
+            "position": [
+              0.5,
+              2.1559999999999997,
+              0.009999999999999787
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.27999999999999997,
+              0.252,
+              0.27999999999999997
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cylinder",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.5,
+              2.3869999999999996,
+              0.12199999999999989
+            ],
+            "rotation": [
+              29.999999999999996,
+              0,
+              0
+            ],
+            "scale": [
+              0.13999999999999999,
+              0.392,
+              0.105
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft sage"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.6065183298250572,
+              2.3869999999999996,
+              0.04460990336999382
+            ],
+            "rotation": [
+              9.270509831248422,
+              0,
+              -28.53169548885461
+            ],
+            "scale": [
+              0.13999999999999999,
+              0.392,
+              0.105
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Leaf green"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.5658319482567571,
+              2.3869999999999996,
+              -0.0806099033699943
+            ],
+            "rotation": [
+              -24.270509831248425,
+              -3.975693351829396e-16,
+              -17.633557568774204
+            ],
+            "scale": [
+              0.13999999999999999,
+              0.392,
+              0.105
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft sage"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.43416805174324313,
+              2.3869999999999996,
+              -0.0806099033699943
+            ],
+            "rotation": [
+              -24.27050983124843,
+              -3.975693351829396e-16,
+              17.633557568774187
+            ],
+            "scale": [
+              0.13999999999999999,
+              0.392,
+              0.105
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Leaf green"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.39348167017494284,
+              2.3869999999999996,
+              0.04460990336999382
+            ],
+            "rotation": [
+              9.270509831248416,
+              -3.975693351829396e-16,
+              28.53169548885461
+            ],
+            "scale": [
+              0.13999999999999999,
+              0.392,
+              0.105
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft sage"
+          },
+          {
+            "name": "Book standing point",
+            "position": [
+              0,
+              0,
+              0.5
+            ],
+            "tags": [
+              "pilot.destination"
+            ]
+          },
+          {
+            "name": "Book placement",
+            "position": [
+              0.39,
+              0.79,
+              0.06
+            ],
+            "tags": [
+              "pilot.placement"
+            ]
+          },
+          {
+            "name": "Book marker",
+            "position": [
+              0,
+              2.35,
+              0
+            ]
+          }
+        ]
+      },
+      {
+        "name": "Nightstand",
+        "position": [
+          -0.53,
+          0,
+          -2.8
+        ],
+        "tags": [
+          "pilot.prop"
+        ],
+        "children": [
+          {
+            "name": "Collision footprint",
+            "position": [
+              0,
+              0.7,
+              0
+            ],
+            "scale": [
+              0.83,
+              2.8,
+              0.75
+            ],
+            "tags": [
+              "pilot.collider"
+            ]
+          },
+          {
+            "name": "Nightstand",
+            "position": [
+              0,
+              0.44,
+              -0.03000000000000025
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.75,
+              0.78,
+              0.68
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Drawer",
+            "position": [
+              0,
+              0.61,
+              0.32499999999999973
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.64,
+              0.23,
+              0.027
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Petal pink"
+          },
+          {
+            "name": "Drawer pull",
+            "position": [
+              0,
+              0.61,
+              0.36499999999999977
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.07,
+              0.07,
+              0.07
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Lamp base",
+            "position": [
+              0,
+              0.88,
+              -0.03000000000000025
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.32,
+              0.06,
+              0.32
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cylinder",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Butter yellow"
+          },
+          {
+            "name": "Lamp stem",
+            "position": [
+              0,
+              1.09,
+              -0.03000000000000025
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.05,
+              0.41,
+              0.05
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cylinder",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Lamp shade",
+            "position": [
+              0,
+              1.39,
+              -0.03000000000000025
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.53,
+              0.49,
+              0.53
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cone",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Bedside lamp shade"
+          },
+          {
+            "name": "Bedside lamp light",
+            "position": [
+              0,
+              1.39,
+              -0.03
+            ],
+            "components": {
+              "light": {
+                "type": "omni",
+                "color": [
+                  1,
+                  0.84,
+                  0.67
+                ],
+                "intensity": 0,
+                "range": 3.8,
+                "castShadows": false
+              }
+            },
+            "enabled": false
+          }
+        ]
+      },
+      {
+        "name": "Toy chest",
+        "position": [
+          2.48,
+          0,
+          -1.55
+        ],
+        "tags": [
+          "pilot.prop"
+        ],
+        "children": [
+          {
+            "name": "Collision footprint",
+            "position": [
+              0,
+              0.7,
+              0
+            ],
+            "scale": [
+              1.15,
+              2.8,
+              1.36
+            ],
+            "tags": [
+              "pilot.collider"
+            ]
+          },
+          {
+            "name": "Toy chest",
+            "position": [
+              0,
+              0.4,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.08,
+              0.7,
+              1.22
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Toy chest lid",
+            "position": [
+              0,
+              0.78,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.16,
+              0.1,
+              1.32
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Butter yellow"
+          },
+          {
+            "name": "Chest label",
+            "position": [
+              0,
+              0.46,
+              0.623
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.52,
+              0.21,
+              0.015
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          }
+        ]
+      },
+      {
+        "name": "Desk",
+        "position": [
+          2.33,
+          0,
+          1.24
+        ],
+        "tags": [
+          "pilot.prop"
+        ],
+        "children": [
+          {
+            "name": "Collision footprint",
+            "position": [
+              0,
+              0.7,
+              0
+            ],
+            "scale": [
+              1.54,
+              2.8,
+              1.05
+            ],
+            "tags": [
+              "pilot.collider"
+            ]
+          },
+          {
+            "name": "Desk top",
+            "position": [
+              0,
+              1.05,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1.55,
+              0.13,
+              1.03
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Desk leg",
+            "position": [
+              -0.6100000000000001,
+              0.53,
+              -0.37
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.1,
+              1,
+              0.1
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Desk leg",
+            "position": [
+              -0.6100000000000001,
+              0.53,
+              0.3899999999999999
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.1,
+              1,
+              0.1
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Desk leg",
+            "position": [
+              0.6099999999999999,
+              0.53,
+              -0.37
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.1,
+              1,
+              0.1
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Desk leg",
+            "position": [
+              0.6099999999999999,
+              0.53,
+              0.3899999999999999
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.1,
+              1,
+              0.1
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Notebook",
+            "position": [
+              -0.010000000000000231,
+              1.145,
+              0.07000000000000006
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.5,
+              0.05,
+              0.62
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Notebook pages",
+            "position": [
+              -0.010000000000000231,
+              1.178,
+              0.07000000000000006
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.44,
+              0.015,
+              0.56
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Plant pot",
+            "position": [
+              0.3599999999999999,
+              1.219,
+              -0.21999999999999997
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.22000000000000003,
+              0.198,
+              0.22000000000000003
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cylinder",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.3599999999999999,
+              1.4005,
+              -0.1319999999999999
+            ],
+            "rotation": [
+              29.999999999999996,
+              0,
+              0
+            ],
+            "scale": [
+              0.11000000000000001,
+              0.30800000000000005,
+              0.0825
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft sage"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.4436929734339734,
+              1.4005,
+              -0.1928065044950047
+            ],
+            "rotation": [
+              9.270509831248422,
+              0,
+              -28.53169548885461
+            ],
+            "scale": [
+              0.11000000000000001,
+              0.30800000000000005,
+              0.0825
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Leaf green"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.4117251022017374,
+              1.4005,
+              -0.2911934955049953
+            ],
+            "rotation": [
+              -24.270509831248425,
+              -3.975693351829396e-16,
+              -17.633557568774204
+            ],
+            "scale": [
+              0.11000000000000001,
+              0.30800000000000005,
+              0.0825
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft sage"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.30827489779826234,
+              1.4005,
+              -0.2911934955049954
+            ],
+            "rotation": [
+              -24.27050983124843,
+              -3.975693351829396e-16,
+              17.633557568774187
+            ],
+            "scale": [
+              0.11000000000000001,
+              0.30800000000000005,
+              0.0825
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Leaf green"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.27630702656602635,
+              1.4005,
+              -0.1928065044950047
+            ],
+            "rotation": [
+              9.270509831248416,
+              -3.975693351829396e-16,
+              28.53169548885461
+            ],
+            "scale": [
+              0.11000000000000001,
+              0.30800000000000005,
+              0.0825
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft sage"
+          }
+        ]
+      },
+      {
+        "name": "Stool",
+        "position": [
+          2.05,
+          0,
+          2.15
+        ],
+        "tags": [
+          "pilot.prop"
+        ],
+        "children": [
+          {
+            "name": "Collision footprint",
+            "position": [
+              0,
+              0.7,
+              0
+            ],
+            "scale": [
+              0.69,
+              2.8,
+              0.69
+            ],
+            "tags": [
+              "pilot.collider"
+            ]
+          },
+          {
+            "name": "Stool cushion",
+            "position": [
+              0,
+              0.56,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.66,
+              0.17,
+              0.66
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cylinder",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Rose"
+          },
+          {
+            "name": "Stool leg",
+            "position": [
+              -0.20999999999999974,
+              0.27,
+              -0.20999999999999996
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.07,
+              0.49,
+              0.07
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Stool leg",
+            "position": [
+              -0.20999999999999974,
+              0.27,
+              0.20999999999999996
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.07,
+              0.49,
+              0.07
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Stool leg",
+            "position": [
+              0.20999999999999996,
+              0.27,
+              -0.20999999999999996
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.07,
+              0.49,
+              0.07
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          },
+          {
+            "name": "Stool leg",
+            "position": [
+              0.20999999999999996,
+              0.27,
+              0.20999999999999996
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.07,
+              0.49,
+              0.07
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Honey birch"
+          }
+        ]
+      },
+      {
+        "name": "Floor plant",
+        "position": [
+          -2.66,
+          0,
+          2.45
+        ],
+        "tags": [
+          "pilot.prop"
+        ],
+        "children": [
+          {
+            "name": "Collision footprint",
+            "position": [
+              0,
+              0.7,
+              0
+            ],
+            "scale": [
+              0.6,
+              2.8,
+              0.6
+            ],
+            "tags": [
+              "pilot.collider"
+            ]
+          },
+          {
+            "name": "Plant pot",
+            "position": [
+              0,
+              0.255,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.5,
+              0.44999999999999996,
+              0.5
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "cylinder",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Ivory trim"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0,
+              0.6675,
+              0.20000000000000018
+            ],
+            "rotation": [
+              29.999999999999996,
+              0,
+              0
+            ],
+            "scale": [
+              0.25,
+              0.7000000000000001,
+              0.1875
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft sage"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.1902113032590309,
+              0.6675,
+              0.06180339887498931
+            ],
+            "rotation": [
+              9.270509831248422,
+              0,
+              -28.53169548885461
+            ],
+            "scale": [
+              0.25,
+              0.7000000000000001,
+              0.1875
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Leaf green"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              0.11755705045849485,
+              0.6675,
+              -0.1618033988749894
+            ],
+            "rotation": [
+              -24.270509831248425,
+              -3.975693351829396e-16,
+              -17.633557568774204
+            ],
+            "scale": [
+              0.25,
+              0.7000000000000001,
+              0.1875
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft sage"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              -0.1175570504584944,
+              0.6675,
+              -0.1618033988749894
+            ],
+            "rotation": [
+              -24.27050983124843,
+              -3.975693351829396e-16,
+              17.633557568774187
+            ],
+            "scale": [
+              0.25,
+              0.7000000000000001,
+              0.1875
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Leaf green"
+          },
+          {
+            "name": "Plant leaf",
+            "position": [
+              -0.1902113032590309,
+              0.6675,
+              0.06180339887498931
+            ],
+            "rotation": [
+              9.270509831248416,
+              -3.975693351829396e-16,
+              28.53169548885461
+            ],
+            "scale": [
+              0.25,
+              0.7000000000000001,
+              0.1875
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Soft sage"
+          }
+        ]
+      },
+      {
+        "name": "Book",
+        "position": [
+          0.25,
+          0.12,
+          -0.8
+        ],
+        "rotation": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ],
+        "children": [
+          {
+            "name": "Book pages",
+            "position": [
+              0,
+              0.055,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.36,
+              0.09,
+              0.46
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Cleanup ivory"
+          },
+          {
+            "name": "Book cover",
+            "position": [
+              0,
+              0.005,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.4,
+              0.02,
+              0.5
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Cleanup book blue"
+          },
+          {
+            "name": "Book cover",
+            "position": [
+              0,
+              0.11,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.4,
+              0.02,
+              0.5
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Cleanup book blue"
+          },
+          {
+            "name": "Book spine",
+            "position": [
+              -0.19,
+              0.055,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.025,
+              0.12,
+              0.5
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "box",
+                "castShadows": true,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Cleanup book blue"
+          },
+          {
+            "name": "Cover star",
+            "position": [
+              0,
+              0.125,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              0.12,
+              0.012,
+              0.12
+            ],
+            "children": [],
+            "components": {
+              "render": {
+                "type": "sphere",
+                "castShadows": false,
+                "receiveShadows": true
+              }
+            },
+            "materialName": "Crayon yellow"
+          }
+        ],
+        "tags": [
+          "pilot.book"
+        ]
+      },
+      {
+        "name": "Player start",
+        "position": [
+          0,
+          0.09,
+          0.9
+        ]
+      },
+      {
+        "name": "Room bounds",
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          6.6,
+          1,
+          7.2
+        ],
+        "tags": [
+          "pilot.bounds"
+        ]
+      }
+    ]
+  },
+  "source": "fe3ae65"
+}

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#ede6f4" />
+    <meta name="description" content="A little room, a little adventure. Explore Arianna's cozy 3D bedroom." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Arianna · A little room</title>
+  </head>
+  <body>
+    <main id="game" aria-label="Arianna's bedroom game">
+      <canvas id="game-canvas" aria-label="3D bedroom. Move Arianna with the joystick or arrow keys." tabindex="0"></canvas>
+      <div id="home-vignette" hidden aria-hidden="true"></div>
+      <header class="topbar">
+        <div class="wordmark"><span class="flower" aria-hidden="true">✿</span><span>Arianna<small>LITTLE EVERYDAY ADVENTURES</small></span></div>
+        <div class="mission-stats"><span id="mission-clock" aria-label="Time remaining">1:00</span><span class="allowance-label">ALLOWANCE <b id="allowance">$0</b></span><span id="trip-wallet" hidden>WALLET <b id="trip-balance">$0</b></span></div>
+      </header>
+      <section class="room-title" aria-label="Current room">
+        <span class="eyebrow"><i></i> <span id="scene-kicker">ONE COZY MINUTE</span> <span id="task-count">0 / 5</span></span>
+        <h1>Home, sweet home.</h1>
+        <ul id="task-list" class="task-list" aria-label="Cleanup tasks"></ul>
+        <p id="day-label">Day 1 · Morning</p><div id="mission-picker" aria-label="Choose a cleanup mission"><button id="mission-day" type="button" aria-pressed="true">Daily life</button><button id="mission-house" type="button" aria-pressed="true">House · 6</button><button id="mission-bedroom" type="button" aria-pressed="false">Bedroom · 5</button><button id="mission-pet" type="button" aria-pressed="false">Puppy · 1</button><button id="mission-practice" type="button" aria-pressed="false">Explore</button></div>
+        <p id="room-connections"></p>
+        <p id="scene-subtitle" hidden></p>
+      </section>
+      <div id="player-label" class="player-label" aria-hidden="true">Arianna <span>♡</span></div>
+      <div id="cleanup-effects" aria-hidden="true"></div>
+      <div id="house-doors" aria-hidden="true"></div>
+      <div id="store-markers" hidden><span id="shop-display-marker" class="cleanup-marker">🎁 Blind boxes</span><span id="shop-exit-marker" class="cleanup-marker">⌂ Go Home</span></div>
+      <div id="reveal-copy" hidden aria-live="polite"></div>
+      <div id="save-message" role="status" hidden></div>
+      <div class="move-tip cleanup-tip" id="move-tip"><span id="cleanup-hint">Move to start · 60 seconds · $1 per task</span></div>
+      <div id="cleanup-announcement" class="sr-only" role="status" aria-live="polite"></div>
+      <div class="controls">
+        <div class="joystick-group">
+          <div id="joystick" role="group" aria-label="Movement joystick. Drag to move. Arrow keys or WASD also work.">
+            <span class="direction up" aria-hidden="true">⌃</span><span class="direction right" aria-hidden="true">›</span><span class="direction down" aria-hidden="true">⌄</span><span class="direction left" aria-hidden="true">‹</span>
+            <div id="joystick-knob"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 5v22M5 16h22M12 9l4-4 4 4M12 23l4 4 4-4M9 12l-4 4 4 4M23 12l4 4-4 4"/></svg></div>
+          </div>
+          <span class="control-label">LET’S EXPLORE</span>
+        </div>
+        <div class="action-group">
+          <button id="action-button" type="button" disabled><span id="action-icon" aria-hidden="true">✋</span><strong id="action-title">Action</strong><small id="action-detail">Come closer</small></button>
+          <span class="control-label">ACTION · SPACE / E</span>
+        </div>
+      </div>
+      <section id="school-transition" hidden><span>🎒</span><h2>A little time at school</h2><p>See you after class!</p></section><footer><span class="build-badge">WALLET <b id="wallet">$0</b></span><a class="asset-credits" href="./asset-credits.html" target="_blank" rel="noopener">Art credits</a><button id="collection-button" type="button">Collection · 0 / 8</button></footer>
+      <dialog id="results" aria-labelledby="results-title" aria-describedby="results-summary">
+        <div class="results-flower" aria-hidden="true">✿</div><span class="eyebrow">A LITTLE HELP GOES A LONG WAY</span>
+        <h2 id="results-title">Nice helping!</h2><p id="results-summary"></p>
+        <div class="results-totals"><div><strong id="results-tasks">0 / 5</strong><span>tasks completed</span></div><div><strong id="results-money">$0</strong><span>allowance earned</span></div></div>
+        <p id="results-bonus" hidden></p><ul id="results-list" aria-label="Completed tasks"></ul>
+        <p id="results-wallet"></p><button id="go-shopping" class="loop-button pink-button" type="button">Go Shopping →</button>
+        <button id="replay" type="button" autofocus>Play again <span aria-hidden="true">↻</span></button>
+      </dialog>
+      <dialog id="collection-dialog" aria-labelledby="collection-title">
+        <span class="eyebrow">LITTLE FRIENDS, LITTLE JOYS</span><h2 id="collection-title">Your dumplings</h2>
+        <p id="collection-summary"></p><div id="collection-grid"></div>
+        <button id="open-next" class="loop-button pink-button" type="button">Open a box</button>
+        <button id="back-cleanup" class="loop-button" type="button">Back to cleanup ↻</button>
+      </dialog>
+      <div id="loading" role="status"><span class="loading-flower">✿</span><p>Making room for you…</p></div>
+      <div id="error" role="alert" hidden><h2>We couldn’t open your room.</h2><p>Please use a browser with WebGL 2 enabled, then refresh.</p></div>
+    </main>
+    <link rel="stylesheet" href="/migration/local.css"><script type="importmap">{"imports":{"playcanvas":"/engine.mjs"}}</script><script type="module" src="/migration/local.mjs"></script>
+  </body>
+</html>

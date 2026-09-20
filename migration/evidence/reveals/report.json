@@ -1,0 +1,254 @@
+[
+  {
+    "id": "rosie",
+    "rarity": "Common",
+    "duplicate": false,
+    "width": 390,
+    "height": 844,
+    "reduced": false,
+    "duration": 3.1517999999523116,
+    "drawCalls": 89,
+    "vfx": {
+      "enabled": true,
+      "drawCalls": 1,
+      "triangles": 64,
+      "burstStars": 0,
+      "maxIdleGlints": 0
+    },
+    "timing": {
+      "p50": 6.900000000000546,
+      "p95": 7.100000000000364,
+      "frames": 526
+    },
+    "idleTiming": {
+      "p50": 6.900000000001455,
+      "p95": 7.100000000000364,
+      "frames": 174
+    },
+    "errors": []
+  },
+  {
+    "id": "mochi",
+    "rarity": "Common",
+    "duplicate": true,
+    "width": 320,
+    "height": 568,
+    "reduced": false,
+    "duration": 3.1559999999999953,
+    "drawCalls": 89,
+    "vfx": {
+      "enabled": true,
+      "drawCalls": 1,
+      "triangles": 64,
+      "burstStars": 0,
+      "maxIdleGlints": 0
+    },
+    "timing": {
+      "p50": 7,
+      "p95": 13.699999999999818,
+      "frames": 490
+    },
+    "idleTiming": {
+      "p50": 6.900000000001455,
+      "p95": 7.100000000000364,
+      "frames": 172
+    },
+    "errors": []
+  },
+  {
+    "id": "blueberry",
+    "rarity": "Rare",
+    "duplicate": false,
+    "width": 390,
+    "height": 844,
+    "reduced": false,
+    "duration": 3.3538999999761523,
+    "drawCalls": 95,
+    "vfx": {
+      "enabled": true,
+      "drawCalls": 1,
+      "triangles": 416,
+      "burstStars": 10,
+      "maxIdleGlints": 2
+    },
+    "timing": {
+      "p50": 6.900000000000546,
+      "p95": 13.800000000000182,
+      "frames": 527
+    },
+    "idleTiming": {
+      "p50": 6.900000000001455,
+      "p95": 7.099999999998545,
+      "frames": 174
+    },
+    "errors": []
+  },
+  {
+    "id": "cocoa",
+    "rarity": "Rare",
+    "duplicate": true,
+    "width": 320,
+    "height": 568,
+    "reduced": false,
+    "duration": 3.356699999988078,
+    "drawCalls": 89,
+    "vfx": {
+      "enabled": true,
+      "drawCalls": 1,
+      "triangles": 416,
+      "burstStars": 10,
+      "maxIdleGlints": 2
+    },
+    "timing": {
+      "p50": 6.900000000000546,
+      "p95": 7,
+      "frames": 538
+    },
+    "idleTiming": {
+      "p50": 6.900000000000546,
+      "p95": 7,
+      "frames": 174
+    },
+    "errors": []
+  },
+  {
+    "id": "peachy",
+    "rarity": "Epic",
+    "duplicate": false,
+    "width": 390,
+    "height": 844,
+    "reduced": false,
+    "duration": 3.552099999964241,
+    "drawCalls": 92,
+    "vfx": {
+      "enabled": true,
+      "drawCalls": 1,
+      "triangles": 488,
+      "burstStars": 18,
+      "maxIdleGlints": 3
+    },
+    "timing": {
+      "p50": 6.900000000000546,
+      "p95": 7,
+      "frames": 585
+    },
+    "idleTiming": {
+      "p50": 6.900000000000546,
+      "p95": 7,
+      "frames": 174
+    },
+    "errors": []
+  },
+  {
+    "id": "lavendream",
+    "rarity": "Epic",
+    "duplicate": true,
+    "width": 320,
+    "height": 568,
+    "reduced": false,
+    "duration": 3.55180000001192,
+    "drawCalls": 74,
+    "vfx": {
+      "enabled": true,
+      "drawCalls": 1,
+      "triangles": 488,
+      "burstStars": 18,
+      "maxIdleGlints": 3
+    },
+    "timing": {
+      "p50": 6.900000000000546,
+      "p95": 7,
+      "frames": 562
+    },
+    "idleTiming": {
+      "p50": 6.900000000000546,
+      "p95": 7,
+      "frames": 174
+    },
+    "errors": []
+  },
+  {
+    "id": "supernova",
+    "rarity": "Legendary",
+    "duplicate": false,
+    "width": 390,
+    "height": 844,
+    "reduced": false,
+    "duration": 3.803099999964239,
+    "drawCalls": 101,
+    "vfx": {
+      "enabled": true,
+      "drawCalls": 1,
+      "triangles": 588,
+      "burstStars": 28,
+      "maxIdleGlints": 4
+    },
+    "timing": {
+      "p50": 6.900000000000546,
+      "p95": 7,
+      "frames": 604
+    },
+    "idleTiming": {
+      "p50": 6.900000000000546,
+      "p95": 7,
+      "frames": 174
+    },
+    "errors": []
+  },
+  {
+    "id": "stardrop",
+    "rarity": "Legendary",
+    "duplicate": true,
+    "width": 320,
+    "height": 568,
+    "reduced": false,
+    "duration": 3.804099999964239,
+    "drawCalls": 92,
+    "vfx": {
+      "enabled": true,
+      "drawCalls": 1,
+      "triangles": 588,
+      "burstStars": 28,
+      "maxIdleGlints": 4
+    },
+    "timing": {
+      "p50": 6.900000000000546,
+      "p95": 7,
+      "frames": 601
+    },
+    "idleTiming": {
+      "p50": 6.900000000000546,
+      "p95": 7,
+      "frames": 174
+    },
+    "errors": []
+  },
+  {
+    "id": "supernova",
+    "rarity": "Legendary",
+    "duplicate": true,
+    "width": 430,
+    "height": 932,
+    "reduced": true,
+    "duration": 0,
+    "drawCalls": 101,
+    "vfx": {
+      "enabled": true,
+      "drawCalls": 1,
+      "triangles": 64,
+      "burstStars": 28,
+      "maxIdleGlints": 4
+    },
+    "timing": {
+      "p50": 6.900000000000091,
+      "p95": 7.099999999999909,
+      "frames": 79
+    },
+    "idleTiming": {
+      "p50": 6.900000000000546,
+      "p95": 7,
+      "frames": 174
+    },
+    "errors": []
+  }
+]

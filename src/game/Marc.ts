@@ -1,3 +1,5 @@
+import {propPoint,propYaw} from '../editor/PropSpace';
+import {assetUrl} from '../editor/AssetUrls';
 import { Asset, AnimData, AnimTrack, Entity, Quat, Vec3, type Application, type ContainerResource } from 'playcanvas';
 import { CharacterAnimator, type CharacterManifest } from '../components/CharacterAnimator';
 import { CharacterGrounding } from '../components/CharacterGrounding';
@@ -63,8 +65,8 @@ export class Marc {
     void this.load().catch(error=>console.error('Marc could not load:',error));
   }
   private async load(){
-    const config=await(await fetch(`${import.meta.env.BASE_URL}assets/characters/arianna/character.json`)).json();this.height=config.height*1.3;
-    const asset=new Asset('Marc animation v2','container',{url:`${import.meta.env.BASE_URL}assets/characters/marc/marc.glb`});
+    const config=await(await fetch(assetUrl(`${import.meta.env.BASE_URL}assets/characters/arianna/character.json`))).json();this.height=config.height*1.3;
+    const asset=new Asset('Marc animation v2','container',{url:assetUrl(`${import.meta.env.BASE_URL}assets/characters/marc/marc.glb`)});
     await new Promise<void>((resolve,reject)=>{asset.once('load',resolve);asset.once('error',reject);this.app.assets.add(asset);this.app.assets.load(asset);});
     const resource=asset.resource as ContainerResource & {animations:Asset[]};
     const model=resource.instantiateRenderEntity({castShadows:true}),source=resource.animations.map(a=>a.resource as AnimTrack);
@@ -127,7 +129,7 @@ export class Marc {
           this.blockedFor=0;if(dt>0)this.velocity.set((x-p.x)/dt,0,(z-p.z)/dt);this.root.setPosition(x,p.y,z);
           if(distance<=step+.00001){this.route.shift();if(!this.route.length){
             if(this.purpose==='seat'){
-              this.state='sitting-down';this.transitionStart=this.time;this.until=this.time+1.3;this.visual.setLocalEulerAngles(0,YAW,0);this.animator.setIdleClip('SitIdle');this.animator.playAction('SitDown',1.3);this.sitCount++;
+              this.state='sitting-down';this.transitionStart=this.time;this.until=this.time+1.3;this.visual.setLocalEulerAngles(0,propYaw('marc-seat',YAW),0);this.animator.setIdleClip('SitIdle');this.animator.playAction('SitDown',1.3);this.sitCount++;
             }else if(this.purpose==='mess'&&this.mess()){
               this.state='cleaning';this.transitionStart=this.time;this.until=this.time+3;this.animator.setIdleClip('Cleaning');const mess=this.mess()!;this.animator.faceTowards(new Vec3(mess.x,0,mess.z));this.say(['These blocks are plotting against my feet.','Ah, floor juice. My least favorite flavor.','Crumbs: the glitter of snack time.'][Number(mess.id.at(-1))]);
             }else{this.state='idle';this.until=this.time+6;}
@@ -136,7 +138,7 @@ export class Marc {
       }
     }else if(this.state==='sitting-down'||this.state==='standing-up'){
       const down=this.state==='sitting-down',t=Math.min(1,(this.time-this.transitionStart)/(down?1.3:1)),smooth=t*t*(3-2*t);
-      const p=new Vec3().lerp(down?ENTRY:SEATED,down?SEATED:ENTRY,smooth);this.root.setPosition(p.x,.09,p.z);this.visual.setLocalEulerAngles(0,YAW,0);
+      const p=new Vec3().lerp(propPoint('marc-seat',down?ENTRY:SEATED),propPoint('marc-seat',down?SEATED:ENTRY),smooth);this.root.setPosition(p.x,.09,p.z);this.visual.setLocalEulerAngles(0,propYaw('marc-seat',YAW),0);
       if(this.time>=this.until&&!this.animator.busy){
         if(down){this.state='seated';this.until=this.time+18;}
         else{this.state='idle';this.until=this.time+1;if(this.target&&!this.approachMess())this.target=null;}
@@ -150,10 +152,10 @@ export class Marc {
       if(this.time>=this.until)this.stand();
     }else if(this.time>=this.until){
       if(this.purpose==='seat'||this.purpose==='mess'){const point=PATROL[this.patrolIndex++%PATROL.length];if(!this.go(new Vec3(point[0],0,point[1]),'wander'))this.until=this.time+3;}
-      else if(!this.go(ENTRY,'seat'))this.until=this.time+3;
+      else if(!this.go(propPoint('marc-seat',ENTRY),'seat'))this.until=this.time+3;
     }
     // The first destination is the chair, so a later Lilah incident can interrupt a real rest.
-    if(this.time<2&&this.state==='idle'){this.go(ENTRY,'seat');}
+    if(this.time<2&&this.state==='idle'){this.go(propPoint('marc-seat',ENTRY),'seat');}
     if(this.time>=this.nextSpeech&&arianna.distance(this.root.getPosition())<5&&this.state!=='cleaning')this.say(REMARKS[this.lineIndex++%REMARKS.length]);
     this.grounding?.update();this.animator.update(dt,this.velocity,elapsed);
     const p=this.root.getPosition(),room=HOUSE_ROOMS.find(r=>p.x>=r.minX&&p.x<=r.maxX&&p.z>=r.minZ&&p.z<=r.maxZ);if(room)this.visited.add(room.id);

@@ -1,3 +1,4 @@
+import {assetUrl} from '../editor/AssetUrls';
 /** Reuses decoded buffers and one music source. Every one-shot disconnects on end. */
 export class PopAudio {
   private context?:AudioContext;private master?:GainNode;private music?:AudioBufferSourceNode;
@@ -7,7 +8,7 @@ export class PopAudio {
   async unlock(){
     this.context??=new AudioContext();if(!this.master){this.master=this.context.createGain();this.master.connect(this.context.destination);}this.master.gain.value=this.muted?0:.5;
     await this.context.resume();
-    this.loading??=Promise.all(['click_001','drop_001','drop_002','drop_003','pluck_001','confirmation_001','happy-adventure'].map(async name=>{try{const response=await fetch(`/assets/pop/audio/${name}.${name==='happy-adventure'?'mp3':'wav'}`);if(!response.ok)throw Error(name);this.buffers.set(name,await this.context!.decodeAudioData(await response.arrayBuffer()));}catch{this.failures.push(name);}})).then(()=>{});
+    this.loading??=Promise.all(['click_001','drop_001','drop_002','drop_003','pluck_001','confirmation_001','happy-adventure'].map(async name=>{try{const response=await fetch(assetUrl(`/assets/pop/audio/${name}.${name==='happy-adventure'?'mp3':'wav'}`));if(!response.ok)throw Error(name);this.buffers.set(name,await this.context!.decodeAudioData(await response.arrayBuffer()));}catch{this.failures.push(name);}})).then(()=>{});
     await this.loading;if(this.musicWanted&&!this.suspended)this.startMusic();
   }
   private sample(name:string,pitch=1,volume=.45){const ctx=this.context,buffer=this.buffers.get(name);if(!ctx||!buffer||this.voices.size>=20||this.suspended)return;

@@ -1,3 +1,5 @@
+import {assetUrl,containerOptions} from '../editor/AssetUrls';
+import {recordArt,trackArt} from '../editor/LayoutBridge';
 import { Asset, BoundingBox, Color, Entity, StandardMaterial, type Application, type ContainerResource, type RenderComponent } from 'playcanvas';
 import type { Triple } from './primitives';
 import type { SurfaceTextures } from './SurfaceTextures';
@@ -24,7 +26,8 @@ export class HouseArt {
   add(pack: 'furniture' | 'nature' | 'market' | 'building' | 'nursery' | 'school', name: string, position: Triple, size: number, yaw = 0, dimension: 'height' | 'width' = 'height', colors: Record<string, string> = {}, exterior = pack === 'nature', pitch = 0, finish: 'natural'|'paint' = 'natural') {
     const key = `${pack}/${name}`;
     if (!this.assets.has(key)) this.assets.set(key, new Promise<ContainerResource>((resolve, reject) => {
-      const asset = new Asset(key, 'container', { url: `${import.meta.env.BASE_URL}assets/environment/${pack==='nursery'||pack==='school'?'':'kenney/'}${key}.glb` });
+      const path=`${import.meta.env.BASE_URL}assets/environment/${pack==='nursery'||pack==='school'?'':'kenney/'}${key}.glb`;
+      const asset = new Asset(key, 'container', { url: assetUrl(path) },{},containerOptions(path));
       asset.once('load', () => resolve(asset.resource as ContainerResource)); asset.once('error', reject);
       this.app.assets.add(asset); this.app.assets.load(asset);
     }));
@@ -58,10 +61,12 @@ export class HouseArt {
       normalization.setLocalScale(scale, scale, scale);
       normalization.setLocalPosition(-bounds.center.x * scale, -(bounds.center.y - bounds.halfExtents.y) * scale, -bounds.center.z * scale);
       anchor.setLocalPosition(...position); anchor.setLocalEulerAngles(pitch, yaw, 0);
+      recordArt(anchor,this.root,`environment/${pack==='nursery'||pack==='school'?'':'kenney/'}${key}.glb`);
       for (const render of renderers) render.batchGroupId = this.group.id;
       this.loaded++;
     }).catch(error => { this.errors.push(key); console.error(`Could not load house art ${key}`, error); });
     this.pending.push(task);
+    trackArt(task);
   }
   async finish() { await Promise.all(this.pending); this.app.batcher.generate([this.group.id]); }
   snapshot() { return { loaded: this.loaded, models: this.assets.size, errors: this.errors,

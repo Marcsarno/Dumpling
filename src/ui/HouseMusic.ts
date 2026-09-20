@@ -1,3 +1,4 @@
+import {assetUrl} from '../editor/AssetUrls';
 export interface MusicScene {
  mode:'cleanup'|'home'|'store'|'recess'; phase:string; store:string;
  paused:boolean; revealing:boolean;
@@ -18,17 +19,17 @@ export class HouseMusic {
  private current:Track='home';private desired:Track='home';private lastStore='';private secondStore=false;
  private gap=0;private pending=false;
  constructor(){
-  try{this.muted=localStorage.getItem('arianna.house-music.muted')==='true';}catch{}
+  try{this.muted=localStorage.getItem('dumpling.editorMigration.house-music.muted')==='true';}catch{}
   this.audio.volume=0;this.audio.preload='none';this.audio.src=this.url(this.current);
   this.audio.addEventListener('ended',()=>{this.gap=5;this.audio.volume=0;},{signal:this.abort.signal});
   this.button.id='house-music';this.button.type='button';this.paint();document.querySelector('footer')!.prepend(this.button);
-  this.button.onclick=()=>{this.muted=!this.muted;try{localStorage.setItem('arianna.house-music.muted',String(this.muted));}catch{}this.paint();this.sync();};
+  this.button.onclick=()=>{this.muted=!this.muted;try{localStorage.setItem('dumpling.editorMigration.house-music.muted',String(this.muted));}catch{}this.paint();this.sync();};
   const unlock=()=>{this.unlocked=true;this.sync();};
   document.addEventListener('pointerdown',unlock,{signal:this.abort.signal});
   document.addEventListener('keydown',unlock,{signal:this.abort.signal});
   document.addEventListener('visibilitychange',()=>this.sync(),{signal:this.abort.signal});
  }
- private url(track:Track){return `${import.meta.env.BASE_URL}assets/audio/${encodeURIComponent(tracks[track].file)}`;}
+ private url(track:Track){return assetUrl(`${import.meta.env.BASE_URL}assets/audio/${encodeURIComponent(tracks[track].file)}`);}
  private paint(){this.button.textContent=this.muted?'♫ Off':'♫ Music';this.button.title=tracks[this.desired].name+' · tap to '+(this.muted?'play':'mute');this.button.setAttribute('aria-label',this.muted?'Turn music on':'Mute music');this.button.setAttribute('aria-pressed',String(!this.muted));}
  private sync(){
   if(this.wanted&&this.unlocked&&!this.muted&&!document.hidden&&!this.gap){

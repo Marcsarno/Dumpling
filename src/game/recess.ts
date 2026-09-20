@@ -57,5 +57,13 @@ export function createRecess(app: Application) {
       });
     });
   };
-  return {...room,seats,sync,update:(dt:number,focus:string)=>classmates.update(dt,focus)};
+  const bindLayout=(group:Entity)=>{
+    classmates.attachLayout(group);
+    offers.reparent(group);offers.setLocalPosition(0,0,.3);
+    for(const seat of seats){const p=seat.glow.getLocalPosition().clone();seat.glow.reparent(group);seat.glow.setLocalPosition(p.x,p.y,p.z+.3);
+      const anchor=app.root.findByTag('trading-anchor:'+seat.id)[0] as Entity|undefined;
+      if(anchor)seat.anchor.copy(anchor.getPosition());else group.getWorldTransform().transformPoint(seat.anchor.clone().add(new Vec3(0,0,.3)),seat.anchor);
+    }
+  };
+  return {...room,seats,sync,bindLayout,update:(dt:number,focus:string)=>classmates.update(dt,focus)};
 }

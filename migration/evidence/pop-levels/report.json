@@ -1,0 +1,82 @@
+{
+  "rounds": [
+    {
+      "level": "little-chains",
+      "objectives": [
+        4910
+      ],
+      "score": 4910,
+      "bestChain": 7,
+      "moves": 43,
+      "goalAt": 5,
+      "created": [
+        "rainbow",
+        "bomb"
+      ],
+      "activated": [
+        "bomb",
+        "rainbow"
+      ],
+      "record": {
+        "completed": true,
+        "stars": 3,
+        "bestScore": 4910,
+        "bestChain": 7,
+        "attempts": 1
+      }
+    },
+    {
+      "level": "big-squishes",
+      "objectives": [
+        22
+      ],
+      "score": 4970,
+      "bestChain": 7,
+      "moves": 43,
+      "goalAt": 3,
+      "created": [
+        "rainbow",
+        "bomb"
+      ],
+      "activated": [
+        "bomb",
+        "rainbow"
+      ],
+      "record": {
+        "completed": true,
+        "stars": 3,
+        "bestScore": 4970,
+        "bestChain": 7,
+        "attempts": 1
+      }
+    },
+    {
+      "level": "friend-party",
+      "objectives": [
+        61,
+        20
+      ],
+      "score": 4495,
+      "bestChain": 5,
+      "moves": 43,
+      "goalAt": 6,
+      "created": [
+        "bomb"
+      ],
+      "activated": [
+        "bomb",
+        "rainbow"
+      ],
+      "record": {
+        "completed": true,
+        "stars": 3,
+        "bestScore": 4495,
+        "bestChain": 5,
+        "attempts": 1
+      }
+    }
+  ],
+  "errors": [],
+  "replayRetained": true,
+  "classic": true
+}

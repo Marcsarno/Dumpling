@@ -1,3 +1,4 @@
+import {assetUrl} from '../editor/AssetUrls';
 import {Asset,Color,type Application,type ContainerResource,type Entity,type RenderComponent,type StandardMaterial,type Texture} from 'playcanvas';
 import type {DumplingDefinition} from '../data/collection';
 import { SQUISHY_PRESENTATION } from '../data/squishyPresentation';
@@ -7,10 +8,10 @@ const loaded=new WeakMap<Application,Art>();
 /** Load once before scene factories. All instances share immutable meshes/textures. */
 export async function loadSquishyArt(app:Application){
  const load=(name:string)=>new Promise<ContainerResource>((resolve,reject)=>{
-  const asset=new Asset(name,'container',{url:`${import.meta.env.BASE_URL}assets/squishies/${name}.glb`});
+  const asset=new Asset(name,'container',{url:assetUrl(`${import.meta.env.BASE_URL}assets/squishies/${name}.glb`)});
   asset.once('load',()=>resolve(asset.resource as ContainerResource));asset.once('error',reject);app.assets.add(asset);app.assets.load(asset);
  });
- const texture=(name:string)=>new Promise<Texture>((resolve,reject)=>{const asset=new Asset(name,'texture',{url:`${import.meta.env.BASE_URL}assets/squishies/materials/${name}.png`});asset.once('load',()=>resolve(asset.resource as Texture));asset.once('error',reject);app.assets.add(asset);app.assets.load(asset);});
+ const texture=(name:string)=>new Promise<Texture>((resolve,reject)=>{const asset=new Asset(name,'texture',{url:assetUrl(`${import.meta.env.BASE_URL}assets/squishies/materials/${name}.png`)});asset.once('load',()=>resolve(asset.resource as Texture));asset.once('error',reject);app.assets.add(asset);app.assets.load(asset);});
  const [bao,steamer,shelf,color,surface]=await Promise.all([load('bao-squishy'),load('bamboo-steamer'),load('bamboo-steamer-shelf'),texture('satin-color'),texture('satin-surface')]);loaded.set(app,{bao,steamer,shelf,color,surface});
 }
 export function squishyModel(app:Application,data:DumplingDefinition){

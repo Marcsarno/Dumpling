@@ -1,0 +1,4 @@
+import {chromium} from 'file:///C:/Users/marc7/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {writeFile} from 'node:fs/promises';
+const browser=await chromium.launch({channel:'msedge',headless:true});
+try{const page=await browser.newPage();page.on('pageerror',e=>console.error(e));page.on('console',m=>{if(m.type()==='error')console.error(m.text())});await page.goto('http://127.0.0.1:5186/migration/source.html');await page.waitForFunction(()=>window.__migration?.ready,undefined,{timeout:90000});const data=await page.evaluate(()=>window.__migrationSource);await writeFile('migration/layout-source.json',JSON.stringify(data,null,2));console.log(JSON.stringify({records:data.records.length,rooms:data.rooms.map(r=>[r.name,r.obstacles.length])}));await page.screenshot({path:'migration/source.png'});}finally{await browser.close();}

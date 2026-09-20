@@ -1,3 +1,5 @@
+import {propPoint} from '../editor/PropSpace';
+import {assetUrl} from '../editor/AssetUrls';
 import {Asset,BoundingBox,Entity,Vec3,type AnimTrack,type Application,type ContainerResource} from 'playcanvas';
 import {CharacterAnimator,type CharacterManifest} from '../components/CharacterAnimator';
 import {CharacterGrounding} from '../components/CharacterGrounding';
@@ -87,12 +89,12 @@ export class Lilah {
     void this.load().catch(error=>{console.error('Lilah could not load:',error);this.label.textContent='Lilah is still loading';});
   }
   private async load(){
-    const config=await (await fetch(`${import.meta.env.BASE_URL}assets/characters/arianna/character.json`)).json();this.height=config.height*.625;
-    const asset=new Asset('Lilah Meshy review','container',{url:`${import.meta.env.BASE_URL}assets/characters/lilah/lilah.glb`});
+    const config=await (await fetch(assetUrl(`${import.meta.env.BASE_URL}assets/characters/arianna/character.json`))).json();this.height=config.height*.625;
+    const asset=new Asset('Lilah Meshy review','container',{url:assetUrl(`${import.meta.env.BASE_URL}assets/characters/lilah/lilah.glb`)});
     await new Promise<void>((resolve,reject)=>{asset.once('load',resolve);asset.once('error',reject);this.app.assets.add(asset);this.app.assets.load(asset);});
     const resource=asset.resource as ContainerResource & {animations:Asset[]};
     const model=resource.instantiateRenderEntity({castShadows:true}),tracks=resource.animations.map(a=>a.resource as AnimTrack);
-    const sleep=sleepingTrack(model,tracks.find(t=>t.name==='Idle')!,await(await fetch('/assets/animations/rest/sleep.json')).json());tracks.push(sleep,bedEntryTrack(model,tracks.find(t=>t.name==='Idle')!,sleep));
+    const sleep=sleepingTrack(model,tracks.find(t=>t.name==='Idle')!,await(await fetch(assetUrl('/assets/animations/rest/sleep.json'))).json());tracks.push(sleep,bedEntryTrack(model,tracks.find(t=>t.name==='Idle')!,sleep));
     const manifest:CharacterManifest={animations:tracks.map(t=>({name:t.name,duration_seconds:t.duration,loop:!['PickUp','PutDown','Celebrate','SleepEnter'].includes(t.name)})),
       scale:{rest_height_m:1.03},locomotion:{Walk:{travel_speed_mps:.7},CarryWalk:{travel_speed_mps:.7}},
       interaction_events:{PickUp:[{time_seconds:1.1,event:'take-toy'}],PutDown:[{time_seconds:1.3,event:'drop-toy'}]},action_playback:3,walk_playback:1};
@@ -112,7 +114,7 @@ export class Lilah {
     const clock=this.daily.clock;
     if(clock.state.phase==='night'){
       this.state='sleepy';this.say('Sleepy…');this.carrying=false;this.toy.enabled=false;this.animator.setCarrying(false);
-      this.go(new Vec3(8.55,0,-1.3),'bedtime');this.nextDecision=this.time+30;return;
+      this.go(propPoint('crib',new Vec3(8.55,0,-1.3)),'bedtime');this.nextDecision=this.time+30;return;
     }
     if(Math.random()<.55){
       for(const [x,z]of [[.9,.7],[-.9,.7],[.9,-.7],[-.9,-.7]])if(this.go(new Vec3(arianna.x+x,0,arianna.z+z),'follow'))break;
@@ -128,8 +130,8 @@ export class Lilah {
     this.daily.lilahAvailable=this.root.enabled&&!this.animator.busy&&this.state!=='sleeping'&&!this.bedStart;
     const target=this.daily.lilahTarget;target.anchor.copy(this.root.getPosition());target.marker.copy(target.anchor);target.marker.y+=this.height+.08;
     if(!this.root.enabled||document.hidden)return;
-    if(this.day!==this.daily.clock.state.day){this.day=this.daily.clock.state.day;this.time=0;this.nextMess=8;this.nextDecision=3;this.route=[];this.animator.reset();this.carrying=false;this.toy.enabled=false;if(this.grounding)this.grounding.surfaceHeight=null;if(this.state==='sleeping'||this.bedStart)this.root.setPosition(8.55,.09,-1.3);this.bedStart=null;this.state='watching';}
-    if((this.state==='sleeping'||this.bedStart)&&this.daily.clock.state.phase!=='night'){this.root.setPosition(8.55,.09,-1.3);this.state='watching';this.bedStart=null;this.animator.setWorkClip(null);this.animator.setIdleClip('Idle');if(this.grounding)this.grounding.surfaceHeight=null;}
+    if(this.day!==this.daily.clock.state.day){this.day=this.daily.clock.state.day;this.time=0;this.nextMess=8;this.nextDecision=3;this.route=[];this.animator.reset();this.carrying=false;this.toy.enabled=false;if(this.grounding)this.grounding.surfaceHeight=null;if(this.state==='sleeping'||this.bedStart)this.root.setPosition(propPoint('crib',new Vec3(8.55,.09,-1.3)));this.bedStart=null;this.state='watching';}
+    if((this.state==='sleeping'||this.bedStart)&&this.daily.clock.state.phase!=='night'){this.root.setPosition(propPoint('crib',new Vec3(8.55,.09,-1.3)));this.state='watching';this.bedStart=null;this.animator.setWorkClip(null);this.animator.setIdleClip('Idle');if(this.grounding)this.grounding.surfaceHeight=null;}
     if(canMischief)this.time+=dt;
     if(!this.scripted&&canMischief&&this.daily.clock.state.phase==='night'&&this.state!=='sleepy'&&this.state!=='sleeping'&&!this.bedStart){
       this.route=[];this.animator.cancelAction();this.decide(arianna);

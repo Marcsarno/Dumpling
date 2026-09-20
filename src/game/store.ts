@@ -9,6 +9,7 @@ import type { Bedroom } from './bedroom';
 /** Fixtures are imported CC0 models. Only the game-specific boxes, floor and simple trim are bespoke. */
 export function createStore(app:Application,definition:StoreDefinition){
   const root=new Entity(definition.name,app);app.root.addChild(root);
+  root.tags.add('migration.store');
   const surfaces=new SurfaceTextures(app),art=new HouseArt(app,root,surfaces),shape=primitives(app,root),obstacles:BoundingBox[]=[];
   const [accent,secondary,ivory]=definition.palette;
   const width=definition.layout===1?4.1:3.4,depth=definition.layout===0?7.2:definition.layout===1?9:8.4;

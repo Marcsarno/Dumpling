@@ -1,3 +1,4 @@
+import {assetUrl} from '../editor/AssetUrls';
 import { Asset, BoundingBox, Entity, type AnimTrack, type Application, type ContainerResource, type RenderComponent } from 'playcanvas';
 import { meshyGameplay, type ChoreCapture } from './MeshyGameplayAdapter';
 import { material, primitives } from '../game/primitives';
@@ -32,15 +33,15 @@ export function createCharacter(app: Application) {
 }
 
 /** Optional, engine-native container loading; absent assets never block play. */
-export async function loadArianna(app: Application, character: ReturnType<typeof createCharacter>): Promise<void> {
-  const configResponse = await fetch(`${import.meta.env.BASE_URL}assets/characters/arianna/character.json`);
+export async function loadArianna(app: Application, character: ReturnType<typeof createCharacter>, resolveAsset = (path: string) => assetUrl(`${import.meta.env.BASE_URL}${path}`)): Promise<void> {
+  const configResponse = await fetch(resolveAsset('assets/characters/arianna/character.json'));
   if (!configResponse.ok) return;
   const config: { url: string | null; height?: number; yaw?: number; manifest: string; adapter?: string } = await configResponse.json();
   if (!config.url) return;
-  const response = await fetch(`${import.meta.env.BASE_URL}assets/characters/arianna/${config.manifest}`);
+  const response = await fetch(resolveAsset(`assets/characters/arianna/${config.manifest}`));
   if (!response.ok) throw new Error('Arianna manifest could not load.');
   let manifest: CharacterManifest = await response.json();
-  const asset = new Asset('Arianna GLB', 'container', { url: `${import.meta.env.BASE_URL}assets/characters/arianna/${config.url}` });
+  const asset = new Asset('Arianna GLB', 'container', { url: resolveAsset(`assets/characters/arianna/${config.url}`) });
   await new Promise<void>((resolve, reject) => {
     asset.once('load', () => resolve());
     asset.once('error', reject);
@@ -51,10 +52,10 @@ export async function loadArianna(app: Application, character: ReturnType<typeof
   const model = resource.instantiateRenderEntity({ castShadows: true });
   let tracks=((resource as ContainerResource & { animations: Asset[] }).animations ?? []).map(asset=>asset.resource as AnimTrack);
   if(config.adapter==='meshy'){
-    const motion=await fetch(`${import.meta.env.BASE_URL}assets/animations/chores/cmu-trajectories.json`);
+    const motion=await fetch(resolveAsset('assets/animations/chores/cmu-trajectories.json'));
     if(!motion.ok)throw new Error('Chore motion library could not load.');
     ({tracks,manifest}=meshyGameplay(model,tracks,await motion.json() as ChoreCapture));
-    const sleep=sleepingTrack(model,tracks.find(t=>t.name==='Idle')!,await(await fetch('/assets/animations/rest/sleep.json')).json());tracks.push(sleep,bedEntryTrack(model,tracks.find(t=>t.name==='Idle')!,sleep));manifest.animations.push({name:'Sleep',duration_seconds:4,loop:true},{name:'SleepEnter',duration_seconds:3.2,loop:false});
+    const sleep=sleepingTrack(model,tracks.find(t=>t.name==='Idle')!,await(await fetch(resolveAsset('assets/animations/rest/sleep.json'))).json());tracks.push(sleep,bedEntryTrack(model,tracks.find(t=>t.name==='Idle')!,sleep));manifest.animations.push({name:'Sleep',duration_seconds:4,loop:true},{name:'SleepEnter',duration_seconds:3.2,loop:false});
   }
   // Normalize the visual only. Root position, movement and collision radius stay untouched.
   const bounds = new BoundingBox();

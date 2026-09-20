@@ -1,8 +1,9 @@
+import {assetUrl} from '../editor/AssetUrls';
 import { Asset, BoundingBox, Entity, type Application, type ContainerResource, type RenderComponent, type AnimTrack } from 'playcanvas';
 
 /** Unbatched imported props can be carried and animated without baking their transforms. */
 export async function importProp(app: Application, parent: Entity, name: string, height: number, idle = false, rotation: [number, number, number] = [0, 0, 0]) {
-  const asset = new Asset(name, 'container', { url: `${import.meta.env.BASE_URL}assets/pets/${name}.glb` });
+  const asset = new Asset(name, 'container', { url: assetUrl(`${import.meta.env.BASE_URL}assets/pets/${name}.glb`) });
   await new Promise<void>((resolve, reject) => { asset.once('load', resolve); asset.once('error', reject); app.assets.add(asset); app.assets.load(asset); });
   const resource = asset.resource as ContainerResource & { animations: Asset[] }, model = resource.instantiateRenderEntity();
   parent.addChild(model);

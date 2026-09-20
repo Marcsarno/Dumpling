@@ -1,0 +1,1914 @@
+[
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\animations__chores__asset_manifest.json",
+    "name": "game:animations/chores/asset_manifest.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:animations/chores/asset_manifest.json"
+    ],
+    "bytes": 3285
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\animations__chores__cmu-trajectories.json",
+    "name": "game:animations/chores/cmu-trajectories.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:animations/chores/cmu-trajectories.json"
+    ],
+    "bytes": 8957
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\animations__rest__sleep.json",
+    "name": "game:animations/rest/sleep.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:animations/rest/sleep.json"
+    ],
+    "bytes": 183
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\animations__rest__SOURCES.md",
+    "name": "game:animations/rest/SOURCES.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:animations/rest/SOURCES.md"
+    ],
+    "bytes": 1465
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\audio__cozy-house.mp3",
+    "name": "game:audio/cozy-house.mp3",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:audio/cozy-house.mp3"
+    ],
+    "bytes": 633971
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\audio__evening-house.mp3",
+    "name": "game:audio/evening-house.mp3",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:audio/evening-house.mp3"
+    ],
+    "bytes": 1438397
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\audio__SOURCES.md",
+    "name": "game:audio/SOURCES.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:audio/SOURCES.md"
+    ],
+    "bytes": 2455
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\audio__Squishy Home clean v2.mp3",
+    "name": "game:audio/Squishy Home clean v2.mp3",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:audio/Squishy Home clean v2.mp3"
+    ],
+    "bytes": 2444489
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\audio__Squishy home clean.mp3",
+    "name": "game:audio/Squishy home clean.mp3",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:audio/Squishy home clean.mp3"
+    ],
+    "bytes": 2939251
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\audio__Squishy school trading.mp3",
+    "name": "game:audio/Squishy school trading.mp3",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:audio/Squishy school trading.mp3"
+    ],
+    "bytes": 1667659
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\audio__Squishy shopping v2.mp3",
+    "name": "game:audio/Squishy shopping v2.mp3",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:audio/Squishy shopping v2.mp3"
+    ],
+    "bytes": 2835741
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\audio__Squishy shopping.mp3",
+    "name": "game:audio/Squishy shopping.mp3",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:audio/Squishy shopping.mp3"
+    ],
+    "bytes": 3034430
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\audio__Squishy unlock.mp3",
+    "name": "game:audio/Squishy unlock.mp3",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:audio/Squishy unlock.mp3"
+    ],
+    "bytes": 248902
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\audio__sunny-house.mp3",
+    "name": "game:audio/sunny-house.mp3",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:audio/sunny-house.mp3"
+    ],
+    "bytes": 2218914
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__arianna__arianna.glb.bin",
+    "name": "game:characters/arianna/arianna.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/arianna/arianna.glb"
+    ],
+    "bytes": 6226316
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__arianna__asset_manifest.json",
+    "name": "game:characters/arianna/asset_manifest.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/arianna/asset_manifest.json"
+    ],
+    "bytes": 958
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__arianna__character.json",
+    "name": "game:characters/arianna/character.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/arianna/character.json"
+    ],
+    "bytes": 110
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__arianna__gltf_validation.json",
+    "name": "game:characters/arianna/gltf_validation.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/arianna/gltf_validation.json"
+    ],
+    "bytes": 1511
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__arianna__PLAYCANVAS_HANDOFF.md",
+    "name": "game:characters/arianna/PLAYCANVAS_HANDOFF.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/arianna/PLAYCANVAS_HANDOFF.md"
+    ],
+    "bytes": 984
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__arianna__preservation_check.json",
+    "name": "game:characters/arianna/preservation_check.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/arianna/preservation_check.json"
+    ],
+    "bytes": 982
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__arianna__README.md",
+    "name": "game:characters/arianna/README.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/arianna/README.md"
+    ],
+    "bytes": 1694
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__classmates__character-female-b.glb.bin",
+    "name": "game:characters/classmates/character-female-b.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/classmates/character-female-b.glb"
+    ],
+    "bytes": 252140
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__classmates__character-female-f.glb.bin",
+    "name": "game:characters/classmates/character-female-f.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/classmates/character-female-f.glb"
+    ],
+    "bytes": 259488
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__classmates__character-male-a.glb.bin",
+    "name": "game:characters/classmates/character-male-a.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/classmates/character-male-a.glb"
+    ],
+    "bytes": 246916
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__classmates__License.txt",
+    "name": "game:characters/classmates/License.txt",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/classmates/License.txt"
+    ],
+    "bytes": 718
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__classmates__SOURCES.md",
+    "name": "game:characters/classmates/SOURCES.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/classmates/SOURCES.md"
+    ],
+    "bytes": 490
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__classmates__Textures__colormap.png",
+    "name": "game:characters/classmates/Textures/colormap.png",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/classmates/Textures/colormap.png"
+    ],
+    "bytes": 8706
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__lilah__asset_manifest.json",
+    "name": "game:characters/lilah/asset_manifest.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/lilah/asset_manifest.json"
+    ],
+    "bytes": 462
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__lilah__lilah.glb.bin",
+    "name": "game:characters/lilah/lilah.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/lilah/lilah.glb"
+    ],
+    "bytes": 13098548
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__lilah__README.md",
+    "name": "game:characters/lilah/README.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/lilah/README.md"
+    ],
+    "bytes": 1543
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__marc__LICENSE_ANIMATIONS_CC0.txt",
+    "name": "game:characters/marc/LICENSE_ANIMATIONS_CC0.txt",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/marc/LICENSE_ANIMATIONS_CC0.txt"
+    ],
+    "bytes": 7169
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__marc__marc.glb.bin",
+    "name": "game:characters/marc/marc.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/marc/marc.glb"
+    ],
+    "bytes": 12653872
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__marc__motion_sources.json",
+    "name": "game:characters/marc/motion_sources.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/marc/motion_sources.json"
+    ],
+    "bytes": 647
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__marc__README.md",
+    "name": "game:characters/marc/README.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/marc/README.md"
+    ],
+    "bytes": 1348
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__marc__REJECTED_ANIMATION.txt",
+    "name": "game:characters/marc/REJECTED_ANIMATION.txt",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/marc/REJECTED_ANIMATION.txt"
+    ],
+    "bytes": 339
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\characters__marc__SOURCE_README.md",
+    "name": "game:characters/marc/SOURCE_README.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:characters/marc/SOURCE_README.md"
+    ],
+    "bytes": 2810
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__building__door-rotate-round-a.glb.bin",
+    "name": "game:environment/kenney/building/door-rotate-round-a.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/building/door-rotate-round-a.glb"
+    ],
+    "bytes": 23288
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__building__floor.glb.bin",
+    "name": "game:environment/kenney/building/floor.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/building/floor.glb"
+    ],
+    "bytes": 2832
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__building__License.txt",
+    "name": "game:environment/kenney/building/License.txt",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/building/License.txt"
+    ],
+    "bytes": 715
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__building__Textures__colormap.png",
+    "name": "game:environment/kenney/building/Textures/colormap.png",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/building/Textures/colormap.png"
+    ],
+    "bytes": 10051
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__building__wall-doorway-round.glb.bin",
+    "name": "game:environment/kenney/building/wall-doorway-round.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/building/wall-doorway-round.glb"
+    ],
+    "bytes": 11052
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__building__wall-window-wide-round.glb.bin",
+    "name": "game:environment/kenney/building/wall-window-wide-round.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/building/wall-window-wide-round.glb"
+    ],
+    "bytes": 15384
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__bathroomMirror.glb.bin",
+    "name": "game:environment/kenney/furniture/bathroomMirror.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/bathroomMirror.glb"
+    ],
+    "bytes": 6792
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__bathroomSink.glb.bin",
+    "name": "game:environment/kenney/furniture/bathroomSink.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/bathroomSink.glb"
+    ],
+    "bytes": 22536
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__bathtub.glb.bin",
+    "name": "game:environment/kenney/furniture/bathtub.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/bathtub.glb"
+    ],
+    "bytes": 35500
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__bear.glb.bin",
+    "name": "game:environment/kenney/furniture/bear.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/bear.glb"
+    ],
+    "bytes": 11884
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__bedDouble.glb.bin",
+    "name": "game:environment/kenney/furniture/bedDouble.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/bedDouble.glb"
+    ],
+    "bytes": 23368
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__benchCushion.glb.bin",
+    "name": "game:environment/kenney/furniture/benchCushion.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/benchCushion.glb"
+    ],
+    "bytes": 12500
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__bookcaseClosedDoors.glb.bin",
+    "name": "game:environment/kenney/furniture/bookcaseClosedDoors.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/bookcaseClosedDoors.glb"
+    ],
+    "bytes": 22644
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__bookcaseOpen.glb.bin",
+    "name": "game:environment/kenney/furniture/bookcaseOpen.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/bookcaseOpen.glb"
+    ],
+    "bytes": 18020
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__bookcaseOpenLow.glb.bin",
+    "name": "game:environment/kenney/furniture/bookcaseOpenLow.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/bookcaseOpenLow.glb"
+    ],
+    "bytes": 11520
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__books.glb.bin",
+    "name": "game:environment/kenney/furniture/books.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/books.glb"
+    ],
+    "bytes": 6864
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__cabinetBed.glb.bin",
+    "name": "game:environment/kenney/furniture/cabinetBed.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/cabinetBed.glb"
+    ],
+    "bytes": 7496
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__cabinetBedDrawer.glb.bin",
+    "name": "game:environment/kenney/furniture/cabinetBedDrawer.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/cabinetBedDrawer.glb"
+    ],
+    "bytes": 16088
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__cabinetBedDrawerTable.glb.bin",
+    "name": "game:environment/kenney/furniture/cabinetBedDrawerTable.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/cabinetBedDrawerTable.glb"
+    ],
+    "bytes": 12200
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__cabinetTelevision.glb.bin",
+    "name": "game:environment/kenney/furniture/cabinetTelevision.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/cabinetTelevision.glb"
+    ],
+    "bytes": 10524
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__chairCushion.glb.bin",
+    "name": "game:environment/kenney/furniture/chairCushion.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/chairCushion.glb"
+    ],
+    "bytes": 12588
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__chairDesk.glb.bin",
+    "name": "game:environment/kenney/furniture/chairDesk.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/chairDesk.glb"
+    ],
+    "bytes": 39016
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__chairModernFrameCushion.glb.bin",
+    "name": "game:environment/kenney/furniture/chairModernFrameCushion.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/chairModernFrameCushion.glb"
+    ],
+    "bytes": 18592
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__coatRackStanding.glb.bin",
+    "name": "game:environment/kenney/furniture/coatRackStanding.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/coatRackStanding.glb"
+    ],
+    "bytes": 13288
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__desk.glb.bin",
+    "name": "game:environment/kenney/furniture/desk.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/desk.glb"
+    ],
+    "bytes": 15048
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__dryer.glb.bin",
+    "name": "game:environment/kenney/furniture/dryer.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/dryer.glb"
+    ],
+    "bytes": 17760
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__hoodModern.glb.bin",
+    "name": "game:environment/kenney/furniture/hoodModern.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/hoodModern.glb"
+    ],
+    "bytes": 3968
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__kitchenCabinetDrawer.glb.bin",
+    "name": "game:environment/kenney/furniture/kitchenCabinetDrawer.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/kitchenCabinetDrawer.glb"
+    ],
+    "bytes": 15384
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__kitchenCabinetUpperDouble.glb.bin",
+    "name": "game:environment/kenney/furniture/kitchenCabinetUpperDouble.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/kitchenCabinetUpperDouble.glb"
+    ],
+    "bytes": 18184
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__kitchenCoffeeMachine.glb.bin",
+    "name": "game:environment/kenney/furniture/kitchenCoffeeMachine.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/kitchenCoffeeMachine.glb"
+    ],
+    "bytes": 13332
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__kitchenFridge.glb.bin",
+    "name": "game:environment/kenney/furniture/kitchenFridge.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/kitchenFridge.glb"
+    ],
+    "bytes": 20116
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__kitchenMicrowave.glb.bin",
+    "name": "game:environment/kenney/furniture/kitchenMicrowave.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/kitchenMicrowave.glb"
+    ],
+    "bytes": 11248
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__kitchenSink.glb.bin",
+    "name": "game:environment/kenney/furniture/kitchenSink.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/kitchenSink.glb"
+    ],
+    "bytes": 23480
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__kitchenStove.glb.bin",
+    "name": "game:environment/kenney/furniture/kitchenStove.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/kitchenStove.glb"
+    ],
+    "bytes": 54324
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__lampRoundFloor.glb.bin",
+    "name": "game:environment/kenney/furniture/lampRoundFloor.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/lampRoundFloor.glb"
+    ],
+    "bytes": 6600
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__lampRoundTable.glb.bin",
+    "name": "game:environment/kenney/furniture/lampRoundTable.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/lampRoundTable.glb"
+    ],
+    "bytes": 6604
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__lampSquareTable.glb.bin",
+    "name": "game:environment/kenney/furniture/lampSquareTable.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/lampSquareTable.glb"
+    ],
+    "bytes": 5624
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__laptop.glb.bin",
+    "name": "game:environment/kenney/furniture/laptop.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/laptop.glb"
+    ],
+    "bytes": 5540
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__License.txt",
+    "name": "game:environment/kenney/furniture/License.txt",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/License.txt"
+    ],
+    "bytes": 614
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__loungeChairRelax.glb.bin",
+    "name": "game:environment/kenney/furniture/loungeChairRelax.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/loungeChairRelax.glb"
+    ],
+    "bytes": 13904
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__loungeChairUpright.glb.bin",
+    "name": "game:environment/kenney/furniture/loungeChairUpright.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/loungeChairUpright.glb"
+    ],
+    "bytes": 10544
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__loungeDesignChair.glb.bin",
+    "name": "game:environment/kenney/furniture/loungeDesignChair.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/loungeDesignChair.glb"
+    ],
+    "bytes": 9136
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__loungeSofa.glb.bin",
+    "name": "game:environment/kenney/furniture/loungeSofa.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/loungeSofa.glb"
+    ],
+    "bytes": 9644
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__pillow.glb.bin",
+    "name": "game:environment/kenney/furniture/pillow.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/pillow.glb"
+    ],
+    "bytes": 5044
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__pillowLong.glb.bin",
+    "name": "game:environment/kenney/furniture/pillowLong.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/pillowLong.glb"
+    ],
+    "bytes": 5072
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__plantSmall1.glb.bin",
+    "name": "game:environment/kenney/furniture/plantSmall1.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/plantSmall1.glb"
+    ],
+    "bytes": 8224
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__plantSmall2.glb.bin",
+    "name": "game:environment/kenney/furniture/plantSmall2.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/plantSmall2.glb"
+    ],
+    "bytes": 12996
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__pottedPlant.glb.bin",
+    "name": "game:environment/kenney/furniture/pottedPlant.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/pottedPlant.glb"
+    ],
+    "bytes": 7576
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__radio.glb.bin",
+    "name": "game:environment/kenney/furniture/radio.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/radio.glb"
+    ],
+    "bytes": 25020
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__sideTable.glb.bin",
+    "name": "game:environment/kenney/furniture/sideTable.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/sideTable.glb"
+    ],
+    "bytes": 8800
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__sideTableDrawers.glb.bin",
+    "name": "game:environment/kenney/furniture/sideTableDrawers.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/sideTableDrawers.glb"
+    ],
+    "bytes": 19072
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__tableCoffee.glb.bin",
+    "name": "game:environment/kenney/furniture/tableCoffee.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/tableCoffee.glb"
+    ],
+    "bytes": 8256
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__tableCoffeeGlassSquare.glb.bin",
+    "name": "game:environment/kenney/furniture/tableCoffeeGlassSquare.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/tableCoffeeGlassSquare.glb"
+    ],
+    "bytes": 9448
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__tableRound.glb.bin",
+    "name": "game:environment/kenney/furniture/tableRound.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/tableRound.glb"
+    ],
+    "bytes": 6444
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__televisionModern.glb.bin",
+    "name": "game:environment/kenney/furniture/televisionModern.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/televisionModern.glb"
+    ],
+    "bytes": 6368
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__toaster.glb.bin",
+    "name": "game:environment/kenney/furniture/toaster.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/toaster.glb"
+    ],
+    "bytes": 14924
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__toilet.glb.bin",
+    "name": "game:environment/kenney/furniture/toilet.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/toilet.glb"
+    ],
+    "bytes": 18112
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__trashcan.glb.bin",
+    "name": "game:environment/kenney/furniture/trashcan.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/trashcan.glb"
+    ],
+    "bytes": 6452
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__furniture__washer.glb.bin",
+    "name": "game:environment/kenney/furniture/washer.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/furniture/washer.glb"
+    ],
+    "bytes": 48104
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__market__cash-register.glb.bin",
+    "name": "game:environment/kenney/market/cash-register.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/market/cash-register.glb"
+    ],
+    "bytes": 20332
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__market__License.txt",
+    "name": "game:environment/kenney/market/License.txt",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/market/License.txt"
+    ],
+    "bytes": 768
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__market__shelf-bags.glb.bin",
+    "name": "game:environment/kenney/market/shelf-bags.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/market/shelf-bags.glb"
+    ],
+    "bytes": 78444
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__market__shelf-boxes.glb.bin",
+    "name": "game:environment/kenney/market/shelf-boxes.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/market/shelf-boxes.glb"
+    ],
+    "bytes": 56780
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__market__shelf-end.glb.bin",
+    "name": "game:environment/kenney/market/shelf-end.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/market/shelf-end.glb"
+    ],
+    "bytes": 44560
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__market__shopping-basket.glb.bin",
+    "name": "game:environment/kenney/market/shopping-basket.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/market/shopping-basket.glb"
+    ],
+    "bytes": 25864
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__market__shopping-cart.glb.bin",
+    "name": "game:environment/kenney/market/shopping-cart.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/market/shopping-cart.glb"
+    ],
+    "bytes": 34832
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__market__Textures__colormap.png",
+    "name": "game:environment/kenney/market/Textures/colormap.png",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/market/Textures/colormap.png"
+    ],
+    "bytes": 8706
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__nature__fence_planksDouble.glb.bin",
+    "name": "game:environment/kenney/nature/fence_planksDouble.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/nature/fence_planksDouble.glb"
+    ],
+    "bytes": 11160
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__nature__flower_purpleA.glb.bin",
+    "name": "game:environment/kenney/nature/flower_purpleA.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/nature/flower_purpleA.glb"
+    ],
+    "bytes": 7112
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__nature__flower_yellowC.glb.bin",
+    "name": "game:environment/kenney/nature/flower_yellowC.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/nature/flower_yellowC.glb"
+    ],
+    "bytes": 7616
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__nature__grass_large.glb.bin",
+    "name": "game:environment/kenney/nature/grass_large.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/nature/grass_large.glb"
+    ],
+    "bytes": 18504
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__nature__License.txt",
+    "name": "game:environment/kenney/nature/License.txt",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/nature/License.txt"
+    ],
+    "bytes": 611
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__nature__plant_bushDetailed.glb.bin",
+    "name": "game:environment/kenney/nature/plant_bushDetailed.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/nature/plant_bushDetailed.glb"
+    ],
+    "bytes": 10172
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__nature__tree_detailed.glb.bin",
+    "name": "game:environment/kenney/nature/tree_detailed.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/nature/tree_detailed.glb"
+    ],
+    "bytes": 31412
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__nature__tree_oak.glb.bin",
+    "name": "game:environment/kenney/nature/tree_oak.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/nature/tree_oak.glb"
+    ],
+    "bytes": 14644
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__kenney__sources.json",
+    "name": "game:environment/kenney/sources.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/kenney/sources.json"
+    ],
+    "bytes": 2182
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__nursery__crib.glb.bin",
+    "name": "game:environment/nursery/crib.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/nursery/crib.glb"
+    ],
+    "bytes": 180356
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__nursery__README.md",
+    "name": "game:environment/nursery/README.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/nursery/README.md"
+    ],
+    "bytes": 503
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__school__blackboard.glb.bin",
+    "name": "game:environment/school/blackboard.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/school/blackboard.glb"
+    ],
+    "bytes": 28336
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__school__bulletin-board.glb.bin",
+    "name": "game:environment/school/bulletin-board.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/school/bulletin-board.glb"
+    ],
+    "bytes": 29208
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\environment__school__sources.json",
+    "name": "game:environment/school/sources.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:environment/school/sources.json"
+    ],
+    "bytes": 772
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pets__LICENSES.md",
+    "name": "game:pets/LICENSES.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pets/LICENSES.md"
+    ],
+    "bytes": 551
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pets__paper.glb.bin",
+    "name": "game:pets/paper.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pets/paper.glb"
+    ],
+    "bytes": 13428
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pets__poop.glb.bin",
+    "name": "game:pets/poop.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pets/poop.glb"
+    ],
+    "bytes": 13080
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pets__shovel.glb.bin",
+    "name": "game:pets/shovel.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pets/shovel.glb"
+    ],
+    "bytes": 11084
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pets__soap.glb.bin",
+    "name": "game:pets/soap.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pets/soap.glb"
+    ],
+    "bytes": 175632
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pets__sources.json",
+    "name": "game:pets/sources.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pets/sources.json"
+    ],
+    "bytes": 2459
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pets__sunny-pup.glb.bin",
+    "name": "game:pets/sunny-pup.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pets/sunny-pup.glb"
+    ],
+    "bytes": 16863052
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pets__SUNNY_PUP.md",
+    "name": "game:pets/SUNNY_PUP.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pets/SUNNY_PUP.md"
+    ],
+    "bytes": 1934
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__animals-cutout.png",
+    "name": "game:pop/animals-cutout.png",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/animals-cutout.png"
+    ],
+    "bytes": 1742544
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__ART_NOTES.md",
+    "name": "game:pop/ART_NOTES.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/ART_NOTES.md"
+    ],
+    "bytes": 3341
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__audio__click_001.wav",
+    "name": "game:pop/audio/click_001.wav",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/audio/click_001.wav"
+    ],
+    "bytes": 9366
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__audio__confirmation_001.wav",
+    "name": "game:pop/audio/confirmation_001.wav",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/audio/confirmation_001.wav"
+    ],
+    "bytes": 27868
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__audio__drop_001.wav",
+    "name": "game:pop/audio/drop_001.wav",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/audio/drop_001.wav"
+    ],
+    "bytes": 10492
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__audio__drop_002.wav",
+    "name": "game:pop/audio/drop_002.wav",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/audio/drop_002.wav"
+    ],
+    "bytes": 18108
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__audio__drop_003.wav",
+    "name": "game:pop/audio/drop_003.wav",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/audio/drop_003.wav"
+    ],
+    "bytes": 18108
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__audio__happy-adventure.mp3",
+    "name": "game:pop/audio/happy-adventure.mp3",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/audio/happy-adventure.mp3"
+    ],
+    "bytes": 636925
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__audio__Kenney-License.txt",
+    "name": "game:pop/audio/Kenney-License.txt",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/audio/Kenney-License.txt"
+    ],
+    "bytes": 574
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__audio__pluck_001.wav",
+    "name": "game:pop/audio/pluck_001.wav",
+    "type": "audio",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/audio/pluck_001.wav"
+    ],
+    "bytes": 9598
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__audio__SOURCES.md",
+    "name": "game:pop/audio/SOURCES.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/audio/SOURCES.md"
+    ],
+    "bytes": 1050
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__CHARACTER_PROMPTS.json",
+    "name": "game:pop/CHARACTER_PROMPTS.json",
+    "type": "json",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/CHARACTER_PROMPTS.json"
+    ],
+    "bytes": 4796
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__cosmic-cutout.png",
+    "name": "game:pop/cosmic-cutout.png",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/cosmic-cutout.png"
+    ],
+    "bytes": 1760474
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__garden-atlas.png",
+    "name": "game:pop/garden-atlas.png",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/garden-atlas.png"
+    ],
+    "bytes": 1173368
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__power-atlas.png",
+    "name": "game:pop/power-atlas.png",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/power-atlas.png"
+    ],
+    "bytes": 850338
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\pop__treats-cutout.png",
+    "name": "game:pop/treats-cutout.png",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:pop/treats-cutout.png"
+    ],
+    "bytes": 1882794
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__bamboo-steamer-shelf.glb.bin",
+    "name": "game:squishies/bamboo-steamer-shelf.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/bamboo-steamer-shelf.glb"
+    ],
+    "bytes": 708820
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__bamboo-steamer.glb.bin",
+    "name": "game:squishies/bamboo-steamer.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/bamboo-steamer.glb"
+    ],
+    "bytes": 2133112
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__bao-squishy.glb.bin",
+    "name": "game:squishies/bao-squishy.glb.bin",
+    "type": "binary",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/bao-squishy.glb"
+    ],
+    "bytes": 1905092
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__materials__satin-color.png",
+    "name": "game:squishies/materials/satin-color.png",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/materials/satin-color.png"
+    ],
+    "bytes": 23462
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__materials__satin-surface.png",
+    "name": "game:squishies/materials/satin-surface.png",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/materials/satin-surface.png"
+    ],
+    "bytes": 69581
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__aurora.webp",
+    "name": "game:squishies/portraits/aurora.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/aurora.webp"
+    ],
+    "bytes": 4556
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__blueberry.webp",
+    "name": "game:squishies/portraits/blueberry.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/blueberry.webp"
+    ],
+    "bytes": 5144
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__bunny.webp",
+    "name": "game:squishies/portraits/bunny.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/bunny.webp"
+    ],
+    "bytes": 4536
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__cocoa.webp",
+    "name": "game:squishies/portraits/cocoa.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/cocoa.webp"
+    ],
+    "bytes": 5534
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__comet.webp",
+    "name": "game:squishies/portraits/comet.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/comet.webp"
+    ],
+    "bytes": 4610
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__custard.webp",
+    "name": "game:squishies/portraits/custard.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/custard.webp"
+    ],
+    "bytes": 4278
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__fox.webp",
+    "name": "game:squishies/portraits/fox.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/fox.webp"
+    ],
+    "bytes": 5578
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__goldenbear.webp",
+    "name": "game:squishies/portraits/goldenbear.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/goldenbear.webp"
+    ],
+    "bytes": 6072
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__kitten.webp",
+    "name": "game:squishies/portraits/kitten.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/kitten.webp"
+    ],
+    "bytes": 4250
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__lavendream.webp",
+    "name": "game:squishies/portraits/lavendream.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/lavendream.webp"
+    ],
+    "bytes": 4300
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__macaron.webp",
+    "name": "game:squishies/portraits/macaron.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/macaron.webp"
+    ],
+    "bytes": 4846
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__minty.webp",
+    "name": "game:squishies/portraits/minty.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/minty.webp"
+    ],
+    "bytes": 4206
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__mochi.webp",
+    "name": "game:squishies/portraits/mochi.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/mochi.webp"
+    ],
+    "bytes": 4368
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__moonbean.webp",
+    "name": "game:squishies/portraits/moonbean.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/moonbean.webp"
+    ],
+    "bytes": 3864
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__nebula.webp",
+    "name": "game:squishies/portraits/nebula.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/nebula.webp"
+    ],
+    "bytes": 5224
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__orbit.webp",
+    "name": "game:squishies/portraits/orbit.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/orbit.webp"
+    ],
+    "bytes": 4486
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__panda.webp",
+    "name": "game:squishies/portraits/panda.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/panda.webp"
+    ],
+    "bytes": 4084
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__peachy.webp",
+    "name": "game:squishies/portraits/peachy.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/peachy.webp"
+    ],
+    "bytes": 5286
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__rosie.webp",
+    "name": "game:squishies/portraits/rosie.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/rosie.webp"
+    ],
+    "bytes": 4482
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__shortcake.webp",
+    "name": "game:squishies/portraits/shortcake.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/shortcake.webp"
+    ],
+    "bytes": 4944
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__sleepykoala.webp",
+    "name": "game:squishies/portraits/sleepykoala.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/sleepykoala.webp"
+    ],
+    "bytes": 3844
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__sorbet.webp",
+    "name": "game:squishies/portraits/sorbet.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/sorbet.webp"
+    ],
+    "bytes": 4540
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__stardrop.webp",
+    "name": "game:squishies/portraits/stardrop.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/stardrop.webp"
+    ],
+    "bytes": 5634
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__sugarstar.webp",
+    "name": "game:squishies/portraits/sugarstar.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/sugarstar.webp"
+    ],
+    "bytes": 5544
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__sunny.webp",
+    "name": "game:squishies/portraits/sunny.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/sunny.webp"
+    ],
+    "bytes": 5012
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__portraits__supernova.webp",
+    "name": "game:squishies/portraits/supernova.webp",
+    "type": "texture",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/portraits/supernova.webp"
+    ],
+    "bytes": 5646
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\migration\\upload\\squishies__SOURCES.md",
+    "name": "game:squishies/SOURCES.md",
+    "type": "text",
+    "preload": false,
+    "tags": [
+      "migration.asset",
+      "path:squishies/SOURCES.md"
+    ],
+    "bytes": 2735
+  },
+  {
+    "path": "C:\\Users\\marc7\\.codex\\visualizations\\2026\\09\\20\\01a0bf81-a7a0-7d63-a78f-613b597b3366\\dumpling-editor-pilot\\public\\asset-credits.html",
+    "name": "game:asset-credits.html",
+    "type": "html",
+    "preload": false,
+    "tags": [
+      "migration.asset"
+    ]
+  }
+]

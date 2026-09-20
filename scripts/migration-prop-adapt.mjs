@@ -1,0 +1,18 @@
+import {readFileSync as read,writeFileSync as write} from 'node:fs';
+throw new Error('One-time prop conversion already applied. Do not rerun on migrated sources. Use migration-build.mjs.');
+let p='src/game/DailyLife.ts',s=read(p,'utf8');s="import {propTuple} from '../editor/PropSpace';\n"+s;
+s=s.replace('this.cooked.setLocalPosition(-2.63,1.12,12.65)','this.cooked.setLocalPosition(...propTuple(\'stove\',[-2.63,1.12,12.65]))');
+s=s.replaceAll('[.55,.975,13.28]','propTuple(\'dining\',[.55,.975,13.28])');
+s=s.replace("[-1.4,.91,-.65] as Triple","propTuple('bed',[-1.4,.91,-.65])");
+s=s.replace('this.egg.entity.setLocalPosition(-2.63+1.13*t,1.12*(1-t*t),12.65-.1*t)',"this.egg.entity.setLocalPosition(...propTuple('stove',[-2.63+1.13*t,1.12*(1-t*t),12.65-.1*t]))");write(p,s);
+p='src/game/CleanupGame.ts';s=read(p,'utf8');s="import {propPoint,propYaw} from '../editor/PropSpace';\n"+s;
+s=s.replace('this.character.player.setPosition(.55,.09,12.49);this.character.visual.setLocalEulerAngles(0,0,0)',"this.character.player.setPosition(propPoint('dining',new Vec3(.55,.09,12.49)));this.character.visual.setLocalEulerAngles(0,propYaw('dining',0),0)");
+s=s.replace("setWorkClip('EatSit',new Vec3(.55,1,13.85))","setWorkClip('EatSit',propPoint('dining',new Vec3(.55,1,13.85)))");write(p,s);
+p='src/game/Marc.ts';s=read(p,'utf8');s="import {propPoint,propYaw} from '../editor/PropSpace';\n"+s;
+s=s.replaceAll('this.go(ENTRY,',"this.go(propPoint('marc-seat',ENTRY),");
+s=s.replace('down?ENTRY:SEATED,down?SEATED:ENTRY',"propPoint('marc-seat',down?ENTRY:SEATED),propPoint('marc-seat',down?SEATED:ENTRY)");
+s=s.replaceAll('setLocalEulerAngles(0,YAW,0)',"setLocalEulerAngles(0,propYaw('marc-seat',YAW),0)");write(p,s);
+p='src/game/Lilah.ts';s=read(p,'utf8');s="import {propPoint} from '../editor/PropSpace';\n"+s;
+s=s.replaceAll('this.go(new Vec3(8.55,0,-1.3)',"this.go(propPoint('crib',new Vec3(8.55,0,-1.3))");
+s=s.replaceAll('this.root.setPosition(8.55,.09,-1.3)',"this.root.setPosition(propPoint('crib',new Vec3(8.55,.09,-1.3)))");write(p,s);
+console.log('Preserved original motion paths in editable prop coordinates.');

@@ -1,3 +1,7 @@
+## Isolated Editor migration — newer than the notes below
+
+Read FRESH_EDITOR_MIGRATION.md and EDITOR_MIGRATION.md first. Full-game migration is published separately; production remains fe3ae65. This checkout is the isolated migration branch.
+
 # Fresh-chat handoff — September 20, 2026
 
 ## Start here
