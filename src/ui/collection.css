@@ -14,13 +14,13 @@
 #collection-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; margin:17px 0; }
 .dumpling-card { background:#efe7f4; border:1px solid #fff; border-radius:14px; padding:6px 2px 9px; min-width:0; }
 .dumpling-card.owned { background:linear-gradient(#fff9,var(--rarity)); }
-.dumpling-card img { width:100%; display:block; }
+.dumpling-card img { width:100%; height:auto; display:block; }
 .dumpling-card strong { font-size:10px; display:block; }
 .dumpling-card small { display:block; font-size:8px; margin-top:3px; }
 .dumpling-card .copies { font-size:10px; font-weight:800; margin-top:5px; }
 #store-markers { position:absolute; inset:0; pointer-events:none; }
 #shop-display-marker { background:#f5ffe7ed; color:#547457; font-size:10px; font-weight:800; padding:5px 7px; border:2px solid #fff9; }
-#reveal-copy { position:absolute; top:62%; left:10%; width:80%; text-align:center; color:#775887; font-size:13px; pointer-events:none; }
+#reveal-copy { position:absolute; top:71%; left:10%; width:80%; text-align:center; color:#775887; font-size:13px; pointer-events:none; }
 #reveal-copy small { color:#684e7c; padding:5px 13px; border-radius:20px; background:var(--rarity,#eee1f6); font-size:10px; font-weight:800; letter-spacing:1px; }
 #reveal-copy h2 { margin:13px 0 4px; font-size:34px; letter-spacing:-1px; }
 #reveal-copy p { font-size:11px; margin:0; }
@@ -29,11 +29,30 @@
 #save-message { position:absolute; bottom:26%; left:8%; width:84%; padding:12px; border-radius:14px; background:#fff5de; color:#796143; font-size:12px; text-align:center; z-index:8; pointer-events:none; }
 #game[data-scene=home] .joystick-group { visibility:hidden; }
 #game[data-scene=home] .cleanup-tip { display:none; }
+#squish-friend { position:absolute;left:8%;bottom:12%;min-width:100px;min-height:48px;padding:12px 20px;border:2px solid #fff;border-radius:25px;background:#f1d6dd;color:#795268;font:800 16px "Trebuchet MS",sans-serif;box-shadow:0 4px 12px #75534a15;cursor:pointer;touch-action:manipulation; }
 #home-vignette { position:absolute; inset:0; pointer-events:none; background:linear-gradient(#ede6f4ed,transparent 29%,transparent 75%,#ede6f4dd); }
 #trip-wallet { font-size:8px; letter-spacing:1px; color:#887298; text-align:right; }
 #trip-balance { display:block; font-size:24px; letter-spacing:-1px; color:#638269; }
 #reveal-copy { isolation:isolate; }
 #game[data-scene=home] .topbar, #game[data-scene=home] .room-title, #game[data-scene=home] footer { text-shadow:0 1px 8px #fff; }
 #reveal-copy.has-reveal::before { content:''; position:absolute; pointer-events:none; z-index:-1; width:var(--aura-size); height:var(--aura-size); border-radius:50%; left:50%; top:-145px; transform:translate(-50%,-50%); background:radial-gradient(closest-side,var(--rarity),transparent); opacity:.38; }
-@media(max-height:740px) { #reveal-copy { top:60%; } #reveal-copy h2 { font-size:27px; } #collection-dialog { padding-top:15px; } #collection-grid { margin:10px 0; } }
+@media(max-height:740px) { #reveal-copy { top:68%; } #reveal-copy h2 { font-size:27px; } #collection-dialog { padding-top:15px; } #collection-grid { margin:10px 0; } }
 @media(prefers-reduced-motion:reduce) { .reveal-spark { animation:none; display:none; } }
+@media(max-height:650px) {
+ #game[data-scene=home] .room-title { top:83px;left:20px;right:88px;text-align:left; }
+ #game[data-scene=home] .room-title .eyebrow,#game[data-scene=home] #day-label { display:none; }
+ #game[data-scene=home] .room-title h1 { font-size:20px;margin:2px 0 4px; }
+ #game[data-scene=home] .room-title p { margin:0;font-size:10px; }
+ #game[data-scene=home] #reveal-copy { top:64%; }
+ #game[data-scene=home] #reveal-copy h2 { margin:7px 0 3px;font-size:24px; }
+ #game[data-scene=home] #reveal-copy small { font-size:8px;padding:4px 10px; }
+ #game[data-scene=home] #reveal-copy p { font-size:10px; }
+ #game[data-scene=home] .controls { bottom:70px;right:18px;justify-content:flex-end; }
+ #game[data-scene=home] .joystick-group,#game[data-scene=home] .control-label { display:none; }
+ #game[data-scene=home] #action-button { width:136px;height:48px;border-radius:25px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px; }
+ #game[data-scene=home] #action-icon { font-size:20px;margin:0; }
+ #game[data-scene=home] #action-title { font-size:13px;margin:0; }
+ #game[data-scene=home] #action-detail { display:none; }
+ #game[data-scene=home] #squish-friend { bottom:70px;left:18px;min-width:130px;font-size:14px; }
+ body:has(#game[data-scene=home]) .dev-launch { top:77px;right:18px;left:auto;bottom:auto;transform:none;min-width:60px; }
+}

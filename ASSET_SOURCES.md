@@ -92,6 +92,11 @@ Tornado sound cues reuse the previously downloaded **Kenney Interface Sounds (CC
 Classroom Blackboard and Bulletin board by Poly by Google (CC BY 3.0); see `public/assets/environment/school/sources.json`. Additional Kenney Furniture Kit props use distinct painted school colors. Dad’s chair derives from the original CC0 `loungeChairRelax.glb`, with only the footrest faces removed by `scripts/prepare-upright-chair.py`. Original retained. House music: joaquinton’s CC0 relax_background1, converted to MP3; see `public/assets/audio/SOURCES.md`. Resting elbow/knee flex uses the initial CMU 140_08 excerpt with authored rig fit and breathing, not a full source bed-entry clip; see `public/assets/animations/rest/SOURCES.md`.
 # September 20 follow-up assets
 
+The subsequent 3D squishy art pass uses original custom Blender meshes/textures
+based on Marc's supplied dumpling and bamboo-container images. Includes 26 matching
+rendered portraits and a closed shelf LOD. No researched third-party model was
+downloaded into the game. See `public/assets/squishies/SOURCES.md` and SQUISHY_ART.md.
+
 - Classroom pupils: Kenney Mini Characters, CC0, https://kenney.nl/assets/mini-characters.
   Three original GLBs and shared texture, seated clip plus authored greetings.
   See `public/assets/characters/classmates/SOURCES.md` and retained license.

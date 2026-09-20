@@ -1,4 +1,4 @@
-import { Entity, Color, PROJECTION_ORTHOGRAPHIC, Vec3, type Application } from 'playcanvas';
+import { Entity, Color, PROJECTION_ORTHOGRAPHIC, TONEMAP_LINEAR, Vec3, type Application } from 'playcanvas';
 
 export type CameraState='EXPLORE'|'CHORE'|'REVIEW'|'BOX_OPENING'|'TRADE';
 export const CAMERA_PRESETS={EXPLORE:{zoom:1},CHORE:{zoom:.76},REVIEW:{zoom:.65},BOX_OPENING:{zoom:.7},TRADE:{zoom:.85}} as const;
@@ -47,5 +47,5 @@ export class IsometricCamera {
     this.entity.setPosition(6 + this.offset.x, 14+this.interactionLift, 18.9 + this.offset.z);
     this.entity.lookAt(new Vec3(this.offset.x,.8,.9+this.offset.z));
   }
-  reset() { if(this.returnZoom!==null)this.entity.camera!.orthoHeight=this.returnZoom;this.returnZoom=null;this.returning=false;this.interactionLift=0;this.target=null;this.state='EXPLORE';this.offset.set(0, 0, 0); this.entity.setPosition(6, 14, 18.9);this.entity.lookAt(new Vec3(0,.8,.9)); }
+  reset() { this.entity.camera!.toneMapping=TONEMAP_LINEAR;if(this.returnZoom!==null)this.entity.camera!.orthoHeight=this.returnZoom;this.returnZoom=null;this.returning=false;this.interactionLift=0;this.target=null;this.state='EXPLORE';this.offset.set(0, 0, 0); this.entity.setPosition(6, 14, 18.9);this.entity.lookAt(new Vec3(0,.8,.9)); }
 }

@@ -46,10 +46,10 @@ export function createStore(app:Application,definition:StoreDefinition){
     const half=i===0?[.48,.30]:i===1?[.3,.55]:i===2?[.53,.55]:i===3?[.36,.4]:i===4?[.34,.53]:[.76,definition.layout===2?.88:.46];
     obstacles.push(new BoundingBox(new Vec3(site.fixture[0],0,site.fixture[2]),new Vec3(half[0],1,half[1])));
     boxes.push([0,1].map(n=>{
-      const box=createBlindBox(app,root).root;box.name=`${STOCK_SITES[i]} surprise ${n}`;box.setLocalScale(.4,.4,.4);
+      const box=createBlindBox(app,root,true).root;box.name=`${STOCK_SITES[i]} surprise ${n}`;box.setLocalScale(.24,.24,.24);
       const sideways=i===1||i===4;
       const spread=(n-.5)*.34;
-      box.setLocalPosition(site.box[0]+(sideways||i===3?0:spread),site.box[1]+(i===3?n*.22:0),site.box[2]+(sideways?spread:0));
+      box.setLocalPosition(site.box[0]+(sideways||i===3?0:spread),site.box[1]+(i===3?n*.16:0),site.box[2]+(sideways?spread:0));
       box.setLocalEulerAngles(0,i===1?90:i===4?-90:0,0);box.enabled=false;return box;
     }));
     const glow=shape('Nearby display aura','cylinder',[site.point[0],.027,site.point[2]],[.85,.02,.85],material('Soft golden aura','#ffe8ad'),false);glow.enabled=false;glows.push(glow);

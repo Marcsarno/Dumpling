@@ -1,5 +1,22 @@
 # Dumpling / Arianna game — project handoff
 
+## Reference-led squishy art release — September 20
+
+Marc requested better 3D dumplings and a hinged bamboo reward container based on
+two supplied images. Custom Blender assets now replace the primitive dumpling and
+gift box, with 26 matching portrait renders. Read **SQUISHY_ART.md** and the asset
+SOURCES.md for design, rebuild steps and tests. Reward presentation now has its
+own close-up lighting/camera, a hinge/rise/settle animation, a Squish button and
+short-phone layout. IDs, collection, wallet, sealed receipts, trade protections
+and Pop gameplay remain unchanged. Existing real saves were not touched.
+Marc explicitly requested **commit and deploy** for this art pass. Release target:
+`Marcsarno/Dumpling` main, connected to https://dumpling-sandy.vercel.app/.
+The release commit is titled `Replace squishies and rewards with sculpted bao and bamboo steamers`.
+Check GitHub deployment status for its published state. The previous deployed
+baseline was **50fe15a** (family-life/classroom/collecting polish). All 18 art,
+progress and trading checks, touch reward/reload tests, TypeScript and the
+production build passed before release.
+
 ## September 20 release
 
 Marc explicitly requested **commit and deploy** for the completed family-life

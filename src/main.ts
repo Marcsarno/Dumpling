@@ -1,5 +1,6 @@
 import {DogRoaming} from './game/DogRoaming';
 import {HouseMusic} from './ui/HouseMusic';
+import {loadSquishyArt} from './game/SquishyArt';
 import { Application, Color, Entity, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 } from 'playcanvas';
 import { createHouse } from './game/house';
 import { IsometricCamera } from './game/IsometricCamera';
@@ -19,12 +20,13 @@ import './ui/cleanup.css';
 import './ui/collection.css';
 import './ui/house.css';
 
-function start() {
+async function start() {
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
   const app = new Application(canvas, { graphicsDeviceOptions: { alpha: false, antialias: true, powerPreference: 'low-power' } });
   app.graphicsDevice.maxPixelRatio = Math.min(window.devicePixelRatio || 1, 1.75);
   app.setCanvasFillMode(FILLMODE_NONE);
   app.setCanvasResolution(RESOLUTION_AUTO);
+  await loadSquishyArt(app);
   app.scene.ambientLight = new Color(0.72, 0.68, 0.77);
   const sun = new Entity('Soft afternoon sunlight', app);
   sun.addComponent('light', {
@@ -72,13 +74,14 @@ function start() {
     const bulky = cleanup.carry.item?.carryPace === 'walk';
     controller.speed = bulky ? WALK_SPEED : RUN_SPEED;
     character.animator.setCarryPace(bulky ? 'walk' : 'run');
-    const night=cleanup.mode==='day'&&props.daily!.clock.state.phase==='night'&&loop.mode!=='store'&&loop.mode!=='recess';
+    const night=cleanup.mode==='day'&&props.daily!.clock.state.phase==='night'&&loop.mode==='cleanup';
     const dt = document.hidden ? 0 : Math.min(elapsed, 0.04);
     room.lighting!.update(night,dt);
     const dusk = room.lighting!.nightAmount;
     sun.light!.intensity = 1.2 - .98*dusk;
     sun.light!.color.set(1-.28*dusk,.92-.12*dusk,.83+.17*dusk);
     app.scene.ambientLight.set(.72-.42*dusk,.68-.36*dusk,.77-.31*dusk);
+    if(loop.mode==='home')app.scene.ambientLight.set(.7,.68,.65);
     controller.update(dt);
     if (loop.mode !== 'home') camera.follow(character.player.getPosition(), dt);
     loop.update(now);
@@ -143,8 +146,8 @@ function start() {
   });
 }
 
-try { start(); } catch (error) {
+void start().catch(error => {
   console.error('Unable to start the bedroom:', error);
   document.querySelector('#loading')?.remove();
   document.querySelector<HTMLElement>('#error')!.hidden = false;
-}
+});

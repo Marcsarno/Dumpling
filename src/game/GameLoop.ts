@@ -170,7 +170,7 @@ export class GameLoop {
     this.mode = mode; this.cleanup.setActive(mode === 'cleanup'); this.action.enabled = mode !== 'cleanup'; this.action.reset();
     this.camera.reset();
     this.joystick.reset(); this.controller.reset(); this.opening.hide();
-    this.room.root.enabled = mode !== 'store' && mode !== 'recess'; this.props.root.enabled = mode === 'cleanup';
+    this.room.root.enabled = mode === 'cleanup'; this.props.root.enabled = mode === 'cleanup';
     this.recess.root.enabled=mode==='recess';this.tradingUI.leave.hidden=mode!=='recess';this.tradingUI.close();
     for(const store of this.stores)store.root.enabled=mode==='store'&&store.definition.id===this.activeStoreId;
     this.huntUI.panel.hidden=true;this.huntUI.dialog.close();this.findCopy='';this.inspecting=null;
@@ -182,7 +182,8 @@ export class GameLoop {
     el('#mission-clock').hidden = mode !== 'cleanup'; el('.allowance-label').hidden = mode !== 'cleanup';
     el('#trip-wallet').hidden = mode === 'cleanup'; el('#home-vignette').hidden = mode !== 'home';
     el('#scene-subtitle').hidden = mode === 'cleanup'; el<HTMLDialogElement>('#collection-dialog').close();
-    this.camera.entity.camera!.orthoHeight = mode === 'home' ? 3.25 : this.baseZoom;
+    this.camera.entity.camera!.orthoHeight = this.baseZoom;
+    if(mode==='home')this.opening.frame(this.camera.entity,el('#game').clientWidth,el('#game').clientHeight);
     el('#action-button').classList.remove('holding'); this.focus = '';
     el('#save-message').hidden = true;
   }
@@ -210,7 +211,7 @@ export class GameLoop {
   }
   private enterHome() {
     this.transition('home'); el('#scene-kicker').textContent = 'BACK IN YOUR COZY ROOM'; el('h1').textContent = 'Hello, little surprise.';
-    el('#scene-subtitle').textContent = `${this.save.data.boxes.length} unopened ${this.save.data.boxes.length === 1 ? 'box' : 'boxes'}`;
+    el('#scene-subtitle').textContent = `${this.save.data.boxes.length} unopened ${this.save.data.boxes.length === 1 ? 'basket' : 'baskets'}`;
     this.opening.show(this.save.data.reveal);
     if (!this.save.data.boxes.length && !this.save.data.reveal) {
       this.opening.root.enabled = false;
@@ -232,7 +233,7 @@ export class GameLoop {
       const count = this.save.data.collection[data.id] || 0; if (count) discovered++; total += count;
       const card = document.createElement('article'); card.className = `dumpling-card${count ? ' owned' : ''}`; card.dataset.id = data.id;
       card.style.setProperty('--rarity', `${RARITIES[data.rarity].color}66`);
-      const image = document.createElement('img'); image.src = dumplingPortrait(data, !count); image.alt = count ? data.name : 'Undiscovered dumpling';
+      const image = document.createElement('img'); image.src = dumplingPortrait(data, !count); image.alt = count ? data.name : 'Undiscovered dumpling';image.loading='lazy';image.width=320;image.height=320;
       const name = document.createElement('strong'); name.textContent = count ? data.name : '???';
       const tier = document.createElement('small'); tier.textContent = data.rarity;
       const copies = document.createElement('small'); copies.className = 'copies'; copies.textContent = count ? `×${count} · Pop ${'★'.repeat(starLevel(count))}` : 'Locked';
@@ -274,7 +275,7 @@ export class GameLoop {
     } else if (this.mode === 'home') {
       if (this.opening.phase === 'closed' && this.save.data.boxes.length) {
         const receipt = this.save.openNext(); this.wallet(); this.opening.begin(receipt, performance.now());
-        el('#scene-subtitle').textContent = `${this.save.data.boxes.length} unopened ${this.save.data.boxes.length === 1 ? 'box' : 'boxes'} waiting`;
+        el('#scene-subtitle').textContent = `${this.save.data.boxes.length} unopened ${this.save.data.boxes.length === 1 ? 'basket' : 'baskets'} waiting`;
       } else if (this.opening.phase !== 'opening') this.collection();
     }
   });
@@ -367,7 +368,7 @@ export class GameLoop {
     } else {
       this.opening.update(now);
       const opening = this.opening.phase === 'opening', canOpen = this.opening.phase === 'closed' && this.save.data.boxes.length > 0;
-      title = opening ? 'A surprise…' : canOpen ? 'Open box' : 'Collection'; detail = opening ? 'Here it comes' : canOpen ? 'Tap to unwrap' : 'Meet your friends'; icon = canOpen ? '🎁' : '✦'; enabled = !opening;
+      title = opening ? 'A surprise…' : canOpen ? 'Open basket' : 'Collection'; detail = opening ? 'Here it comes' : canOpen ? 'Meet your squishy' : 'Meet your friends'; icon = canOpen ? '🎁' : '✦'; enabled = !opening;
       this.focus = canOpen ? 'open-box' : opening ? '' : 'collection';
     }
     const button = el<HTMLButtonElement>('#action-button'); button.disabled = !enabled || this.tradingUI.dialog.open || el<HTMLDialogElement>('#collection-dialog').open; button.dataset.target = enabled ? this.focus : '';
@@ -427,9 +428,9 @@ export class GameLoop {
     }
     this.wallet();if(el<HTMLDialogElement>('#collection-dialog').open)this.renderCollection();this.findCopy='';this.props.daily!.pause(performance.now());
   }
-  resized() { this.baseZoom = this.camera.exploreHeight; if (this.mode === 'home') this.camera.entity.camera!.orthoHeight = 3.25; }
+  resized() { this.baseZoom = this.camera.exploreHeight; if (this.mode === 'home')this.opening.frame(this.camera.entity,el('#game').clientWidth,el('#game').clientHeight); }
   snapshot() { return { mode: this.mode, balance: this.save.data.balance, boxes: this.save.data.boxes.length, purchases: this.save.data.trip.purchases, collection: { ...this.save.data.collection }, phase: this.opening.phase, reveal: this.save.data.reveal ? { ...this.save.data.reveal } : null, focus: this.focus,
-    pop:this.popUI.snapshot(),popSave:this.save.data.pop,trading:this.save.data.trading, recess:this.mode==='recess'?{seats:this.recess.seats.map(s=>({id:s.id,position:s.anchor.toArray()})),art:this.recess.artStats?.()}:null,
+    opening:this.opening.snapshot(),pop:this.popUI.snapshot(),popSave:this.save.data.pop,trading:this.save.data.trading, recess:this.mode==='recess'?{seats:this.recess.seats.map(s=>({id:s.id,position:s.anchor.toArray()})),art:this.recess.artStats?.()}:null,
     hunt:this.save.data.hunt,store:this.mode==='store'?{id:this.activeStoreId,sites:this.store.sites.map(s=>({id:s.id,position:s.anchor.toArray()})),exit:this.store.exitAnchor.toArray(),walkable:this.store.walkable,obstacles:this.store.obstacles.map(b=>({center:b.center.toArray(),halfExtents:b.halfExtents.toArray()})),art:this.store.artStats?.()}:null }; }
   destroy() { this.popUI.destroy();this.abort.abort();document.querySelector('#squishy-pop-shortcut')?.remove(); this.action.destroy(); this.opening.destroy(); this.huntUI.destroy(); this.tradingUI.destroy(); }
 }

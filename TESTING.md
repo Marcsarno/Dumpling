@@ -1,5 +1,25 @@
 # Cleanup and collection prototype verification
 
+## Reference-led squishy art — September 20
+
+- TypeScript and Vite production build pass (existing engine chunk advisory).
+- 18 checks across `squishy-art-test.mjs`, `progress-test.mjs` and
+  `trading-test.mjs`: embedded textures/finite mesh positions, real hinge,
+  shelf geometry budget, 26 compact portraits, continuous reveal motion,
+  preserved receipts and trade protections.
+- `squishy-art-browser.mjs` passes at 320/390/430px: actual touch opening,
+  reload while the animation is running, no duplicate reward, existing balance,
+  collection/tickets preserved, Squish without save changes, rendered portraits,
+  second/Legendary reward, return to house, reduced motion and unobstructed DEV.
+- `squishy-production-browser.mjs` passes against the production bundle with
+  no debug globals: reveal, squish, receipt persistence, rendered portraits and
+  imported classroom collectibles. Existing trading touch regression passes.
+- Blender front/three-quarter/steamer renders and actual game screenshots were
+  inspected. Interactive review: `scripts/squishy-viewer.html`. Ignored evidence
+  and editable `.blend`: `artifacts/squishy-art/`.
+- Tests use isolated browser profiles. Physical iPhone performance and the
+  family's subjective art preferences are not established by automated checks.
+
 ## Remaining-fixes follow-up — September 20
 
 - TypeScript and production Vite build pass; the existing large engine chunk
