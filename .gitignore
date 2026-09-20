@@ -14,3 +14,5 @@ migration/evidence/**/failure.*
 migration/evidence/**/FAIL-*
 pilot/arianna-original.bin
 pilot/exporter.mjs
+stores/exports/
+stores/evidence/**/failure.*

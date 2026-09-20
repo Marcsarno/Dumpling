@@ -1,0 +1,24 @@
+{
+  "checks": [
+    "Product panel clear of large Pop button; footer shortcut remains",
+    "Actual touch push stops at edited hero-table collision"
+  ],
+  "errors": [],
+  "position": [
+    -1.0007975101470947,
+    0.09000000357627869,
+    3.7092928886413574
+  ],
+  "obstacle": {
+    "center": [
+      0.6000000238418579,
+      0.5,
+      3.3499999046325684
+    ],
+    "halfExtents": [
+      1.350000023841858,
+      0.75,
+      0.824999988079071
+    ]
+  }
+}

@@ -665,6 +665,22 @@ async function captureWorld(app, house, props, loop, editor) {
         child.setLocalPosition(p);
       }
     }
+    for (const s of loop.stores) {
+      for (let i = 0; i < s.sites.length; i++) {
+        s.boxes[i].forEach((box, n) => {
+          const socket = app.root.findByTag("stock:" + s.root.name + ":" + i + ":" + n)[0];
+          if (socket) {
+            box.setLocalPosition(socket.getLocalPosition());
+            box.setLocalEulerAngles(socket.getLocalEulerAngles());
+            box.setLocalScale(socket.getLocalScale());
+          }
+        });
+        const anchor = app.root.findByTag(s.root.name + ":" + i + ":anchor")[0];
+        if (anchor) s.glows[i].setLocalPosition(anchor.getLocalPosition().clone().add(new Vec32(0, 0.027, 0)));
+      }
+      const batch = app.batcher.addGroup("Store art " + s.root.name, false, 32);
+      for (const e of s.root.findByTag("store.art")) for (const r of e.findComponents("render")) r.batchGroupId = batch.id;
+    }
     const classroom = app.root.findByTag("prop:Classroom trading club:0")[0];
     if (classroom) loop.recess.bindLayout(classroom);
     app.batcher.generate();
@@ -8041,7 +8057,7 @@ var GameLoop = class {
   update(now) {
     this.nextStore.hidden = this.mode !== "store" || this.popUI.isOpen || !!this.travelUntil || Object.values(this.save.data.hunt?.stores ?? {}).filter((s) => s.visited).length >= 2;
     if (this.tornado?.active) return;
-    this.popUI.launch.hidden = this.mode !== "store" || this.popUI.isOpen || !!this.travelUntil || !!this.inspecting || this.huntUI.dialog.open;
+    this.popUI.launch.hidden = this.mode !== "store" || this.popUI.isOpen || !!this.travelUntil || !!this.inspecting || this.huntUI.dialog.open || this.focus.startsWith("hunt-site-");
     if (this.popUI.isOpen) return;
     const daily = this.cleanup.mode === "day", clock = this.props.daily.clock;
     if (now - this.lastHuntRefresh > 1e3) {
@@ -9646,6 +9662,10 @@ async function startGame(editorApp) {
   });
   await captureWorld(app, room, props, loop, !!editorApp);
   controller.setRoom(loop.mode === "store" ? loop.store : loop.mode === "recess" ? loop.recess : room);
+  if (editorApp && loop.mode === "store") {
+    character.player.setPosition(loop.store.exitAnchor.x, 0.09, loop.store.exitAnchor.z - 0.4);
+    camera.reset();
+  }
   if (!editorApp) app.start();
   document.querySelector("#loading").remove();
   document.querySelector("#game").setAttribute("data-ready", "true");

@@ -301,7 +301,7 @@ export class GameLoop {
   update(now: number) {
     this.nextStore.hidden=this.mode!=='store'||this.popUI.isOpen||!!this.travelUntil||Object.values(this.save.data.hunt?.stores??{}).filter(s=>s.visited).length>=2;
     if(this.tornado?.active)return;
-    this.popUI.launch.hidden=this.mode!=='store'||this.popUI.isOpen||!!this.travelUntil||!!this.inspecting||this.huntUI.dialog.open;
+    this.popUI.launch.hidden=this.mode!=='store'||this.popUI.isOpen||!!this.travelUntil||!!this.inspecting||this.huntUI.dialog.open||this.focus.startsWith('hunt-site-');
     if(this.popUI.isOpen)return;
     const daily=this.cleanup.mode==='day',clock=this.props.daily!.clock;
     if(now-this.lastHuntRefresh>1000){

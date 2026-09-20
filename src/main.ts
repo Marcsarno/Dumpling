@@ -104,6 +104,12 @@ export async function startGame(editorApp?:Application) {
   });
   await captureWorld(app,room,props,loop,!!editorApp);
   controller.setRoom(loop.mode==='store'?loop.store:loop.mode==='recess'?loop.recess:room);
+  // A saved store visit starts before the authored layout is loaded. Reposition
+  // at its edited entrance after binding, rather than the original generated one.
+  if(editorApp&&loop.mode==='store'){
+    character.player.setPosition(loop.store.exitAnchor.x,.09,loop.store.exitAnchor.z-.4);
+    camera.reset();
+  }
   if(!editorApp)app.start();
   document.querySelector('#loading')!.remove();
   document.querySelector('#game')!.setAttribute('data-ready', 'true');

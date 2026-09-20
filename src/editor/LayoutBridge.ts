@@ -59,6 +59,15 @@ export async function captureWorld(app:Application,house:Bedroom,props:CleanupPr
   for(const i of props.interactions){const a=app.root.findByTag('anchor:'+i.id)[0] as Entity|undefined,marker=app.root.findByTag('marker:'+i.id)[0] as Entity|undefined,p=app.root.findByTag('placement:'+i.id)[0] as Entity|undefined;if(a)i.anchor.copy(a.getPosition());if(marker)i.marker.copy(marker.getPosition());if(p&&i.placement)i.placement.splice(0,3,...p.getPosition().toArray());}
   for(const s of loop.stores){for(const site of s.sites){for(const field of ['anchor','marker'] as const){const e=app.root.findByTag(s.root.name+':'+site.id+':'+field)[0] as Entity|undefined;if(e)site[field].copy(e.getPosition());}}const exit=app.root.findByTag('exit:'+s.root.name)[0] as Entity|undefined;if(exit)s.exitAnchor.copy(exit.getPosition());}
   for(const s of loop.stores)for(let i=0;i<s.sites.length;i++){const group=app.root.findByTag('prop:'+s.root.name+':'+i)[0] as Entity,origin=data.rooms.find(r=>r.name===s.root.name)!.obstacles[i].center;for(const child of [...s.boxes[i],s.glows[i]]){const p=child.getLocalPosition().clone().sub(new Vec3(origin[0],0,origin[2]));child.reparent(group);child.setLocalPosition(p);}}
+  // Authored stock sockets let reused display furniture change height and orientation.
+  for(const s of loop.stores){
+   for(let i=0;i<s.sites.length;i++){
+    s.boxes[i].forEach((box,n)=>{const socket=app.root.findByTag('stock:'+s.root.name+':'+i+':'+n)[0] as Entity|undefined;if(socket){box.setLocalPosition(socket.getLocalPosition());box.setLocalEulerAngles(socket.getLocalEulerAngles());box.setLocalScale(socket.getLocalScale());}});
+    const anchor=app.root.findByTag(s.root.name+':'+i+':anchor')[0] as Entity|undefined;if(anchor)s.glows[i].setLocalPosition(anchor.getLocalPosition().clone().add(new Vec3(0,.027,0)));
+   }
+   const batch=app.batcher.addGroup('Store art '+s.root.name,false,32);
+   for(const e of s.root.findByTag('store.art') as Entity[])for(const r of e.findComponents('render') as RenderComponent[])r.batchGroupId=batch.id;
+  }
   const classroom=app.root.findByTag('prop:Classroom trading club:0')[0] as Entity|undefined;
   if(classroom)loop.recess.bindLayout(classroom);
   app.batcher.generate();
