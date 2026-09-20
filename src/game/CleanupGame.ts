@@ -11,6 +11,7 @@ import type { CleanupProps, Interaction } from './cleanupProps';
 import { saveId } from '../systems/saveId';
 import { PET_TASKS } from './PetCleanup';
 import { Vec3 } from 'playcanvas';
+import {bedEntry,BED_ENTRY_SECONDS} from '../components/BedEntry';
 import type { PlayerController } from '../components/PlayerController';
 import type { IsometricCamera } from './IsometricCamera';
 
@@ -31,6 +32,8 @@ export class CleanupGame {
   private finishedHandled = false;
   private celebrationStarted = false;
   private aligning: Interaction | null = null;
+  private seatReturn:Vec3|null=null;
+  private bedYaw=0;
   get movementLocked() { return this.character.animator.busy || !!this.activity; }
   get activeInteractionId(){return this.activity?.target.id??this.aligning?.id??null;}
   constructor(app: Application, private readonly character: ReturnType<typeof createCharacter>, private readonly props: CleanupProps,
@@ -75,13 +78,19 @@ export class CleanupGame {
       if(['school-door','shop-door'].includes(target.id)) { this.props.daily!.perform(target,this.carry); return; }
       this.interactionCamera.beginChore(this.character.player.getPosition(),facing);
       if(target.duration===0){
-        const pickup=['choose-clothes','night-clothes','take-egg','take-towel','daily-vacuum'].includes(target.id);
+        const pickup=['choose-clothes','night-clothes','take-egg','take-towel','daily-vacuum','take-breakfast'].includes(target.id);
         this.character.animator.playAction(pickup?'PickUp':'PutDown',.3,()=>{
           this.props.daily!.perform(target,this.carry);this.character.animator.setCarrying(!!this.carry.item);
           if(target.task){this.mission.completed.add(target.task);this.feedback.reward(target.marker,'+$1',performance.now());}
         },facing);
       } else {
         this.activity={target,start:now,duration:target.duration??1000};
+        if(target.id==='sleep'){
+          this.seatReturn=this.character.player.getPosition().clone();this.bedYaw=this.character.visual.getLocalEulerAngles().y;this.controller.reset();this.character.animator.setCarrying(false);this.character.animator.setWorkClip('SleepEnter');return;
+        }
+        if(target.id==='eat-breakfast'){
+          this.seatReturn=this.character.player.getPosition().clone();this.controller.reset();this.character.player.setPosition(.55,.09,12.49);this.character.visual.setLocalEulerAngles(0,0,0);this.character.animator.setCarrying(false);this.character.animator.setWorkClip('EatSit',new Vec3(.55,1,13.85));return;
+        }
         if(target.id.startsWith('wipe-')||target.id==='lilah-mess-1')this.character.animator.setWorkClip('Wipe',facing);
         else if(target.id.includes('vacuum')||target.id==='lilah-mess-2')this.character.animator.setWorkClip('Vacuum',facing);
         if(!target.hold){this.character.animator.setCarrying(true);this.character.animator.faceTowards(facing);}
@@ -131,6 +140,7 @@ export class CleanupGame {
     this.refreshFocus();
   }
   private cancelActivity() {
+    this.leaveSeat();
     this.character.animator.setWorkClip(null);this.interactionCamera.endChore();
     if (this.activity?.target.kind === 'pet' || this.activity?.target.kind==='daily') { this.character.animator.setCarrying(!!this.carry.item); this.character.animator.faceTowards(null); }
     this.activity?.target.mess?.setLocalScale(1,1,1);
@@ -141,6 +151,7 @@ export class CleanupGame {
     if(this.aligning&&(this.aligning.kind==='vacuum'||this.aligning.hold)){this.controller.reset();this.aligning=null;}
     if (this.activity?.target.kind === 'vacuum'||this.activity?.target.hold) this.cancelActivity();
   };
+  private leaveSeat(){if(this.seatReturn){this.character.player.setPosition(this.seatReturn);this.seatReturn=null;this.character.animator.setWorkClip(null);if(this.character.grounding)this.character.grounding.surfaceHeight=null;}}
   private reward(target: Interaction, now: number) {
     this.feedback.reward(target.marker, this.mission.timed || this.mode==='day' ? '+$1' : '✓', now);
     this.hud.announce(`${target.name} cleaned up. ${this.mission.timed ? 'Earned $1. ' : ''}${this.mission.completed.size} of ${this.mission.tasks.length} tasks complete.`);
@@ -162,7 +173,8 @@ export class CleanupGame {
       } else if (!this.character.animator.busy) this.hud.showResults(this.mission);
     } else if (this.activity) {
       const { target, start, duration } = this.activity;
-      const inRange = this.interactions.distance(target, this.character.player.getPosition()) <= target.range + 0.1;
+      if(target.id==='sleep'&&this.seatReturn){const t=(now-start)/(BED_ENTRY_SECONDS*1000),pose=bedEntry(this.seatReturn,this.bedYaw,false,t);this.character.player.setPosition(pose.position);this.character.visual.setLocalEulerAngles(0,pose.yaw,0);if(this.character.grounding)this.character.grounding.surfaceHeight=pose.height;if(t>=1)this.character.animator.setWorkClip('Sleep');}
+      const inRange = !!this.seatReturn||this.interactions.distance(target, this.character.player.getPosition()) <= target.range + 0.1;
       if (!inRange || document.hidden || ((target.kind === 'vacuum'||target.hold) && !this.action.held)) this.cancelActivity();
       else {
         this.progress = Math.min(1, (now - start) / duration);
@@ -171,12 +183,13 @@ export class CleanupGame {
         messy?.setLocalScale(size, size, size);
         if(this.progress>=1 && target.kind==='daily'){
           this.props.daily!.perform(target,this.carry);
+          this.leaveSeat();
           if(target.task)this.mission.completed.add(target.task);
           this.character.animator.setCarrying(!!this.carry.item);this.character.animator.faceTowards(null);
           this.feedback.reward(target.marker,target.task?'+$1':'✓',now);this.activity=null;this.progress=0;
         } else if (this.progress >= 1 && this.mission.complete(target.task!, now)) {
           if (messy) messy.enabled = false;
-          if (target.kind === 'pet') { this.props.pet!.finish(); this.character.animator.setCarrying(false); this.character.animator.faceTowards(null); }
+          if (target.kind === 'pet') { this.props.pet!.finish();if(this.mode==='day')this.props.daily!.complete('pet-care'); this.character.animator.setCarrying(false); this.character.animator.faceTowards(null); }
           else if (target.kind === 'crayons') this.props.tidyCrayons.enabled = true;
           else {
             const vacuum = this.props.items.find(item => item.id === 'vacuum')!;
@@ -194,7 +207,7 @@ export class CleanupGame {
     if(this.activity)this.feedback.hideWorkingLabel(this.activity.target.id);
     this.props.pet?.update(now, this.activity?.target.kind === 'pet' ? this.progress : 0, this.carry.socket.getPosition());
     this.props.daily?.effect(this.activity?.target.kind==='daily'?this.activity.target:null,this.progress,this.carry.socket.getPosition());
-    this.hud.update(this.mission, this.carry, this.interactions.focus, this.activity?.target.kind === 'crayons' || this.activity?.target.kind === 'pet'||(this.activity?.target.kind==='daily'&&!this.activity.target.hold), this.progress, this.character.animator.actionName, this.props.pet?.hint);
+    this.hud.update(this.mission, this.carry, this.activity?.target??this.interactions.focus, this.activity?.target.kind === 'crayons' || this.activity?.target.kind === 'pet'||(this.activity?.target.kind==='daily'&&!this.activity.target.hold), this.progress, this.character.animator.actionName, this.props.pet?.hint);
     if(this.mode==='day'){document.querySelector('#mission-clock')!.textContent=this.props.daily!.clock.label;document.querySelector('#cleanup-hint')!.textContent=this.props.daily!.hint;}
     if (this.aligning) { document.querySelector<HTMLButtonElement>('#action-button')!.disabled = true; document.querySelector('#action-title')!.textContent = 'Moving closer…'; }
   }
@@ -202,7 +215,8 @@ export class CleanupGame {
     if (!this.beforeReplay()) return;
     this.roundId = saveId();
     this.action.reset(); this.cancelActivity(); this.carry.item = null;
-    this.props.reset(); this.mission.reset(); this.feedback.reset(); this.hud.reset();
+    if(this.mode==='house'){const tasks=this.props.roundMesses!.houseTasks();this.mission.configure(tasks,true);this.props.configure?.(tasks.map(t=>t.id));}
+    this.props.reset(); this.props.roundMesses?.apply(this.mode); this.mission.reset(); this.feedback.reset(); this.hud.reset();
     if(this.mode==='day')for(const id of this.props.daily!.completed)this.mission.completed.add(id);
     this.character.animator.reset(); this.character.player.setPosition(0, 0.09, 0.9);
     this.character.visual.setLocalEulerAngles(0, 30, 0);

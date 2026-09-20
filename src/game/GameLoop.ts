@@ -20,6 +20,7 @@ import { createRecess } from './recess';
 import { TRADERS } from '../data/trading';
 import { SquishyPopUI } from '../ui/SquishyPopUI';
 import { starLevel } from '../data/squishyPop';
+import {TicketShop} from '../ui/TicketShop';
 
 const el = <T extends HTMLElement = HTMLElement>(id: string) => document.querySelector<T>(id)!;
 import type {LilahTornado} from './LilahTornado';
@@ -32,6 +33,8 @@ export class GameLoop {
   readonly huntUI: HuntUI;
   readonly tradingUI: TradingUI;
   readonly popUI: SquishyPopUI;
+  readonly ticketShop:TicketShop;
+  private nextStore=document.createElement('button');
   readonly recess;
   private recessFromSchool = false;
   private travelUntil=0;
@@ -56,12 +59,16 @@ export class GameLoop {
     private readonly controller: PlayerController, private readonly joystick: VirtualJoystick) {
     this.stores = STORES.map(definition=>createStore(app,definition)); this.opening = new OpeningSequence(app);
     this.huntUI=new HuntUI(id=>this.attempt(()=>this.visit(id)));
+    this.ticketShop=new TicketShop(this.save,()=>this.props.daily!.clock.state.day,()=>this.wallet());
     this.popUI=new SquishyPopUI(()=>this.save.data.collection,(id,score,attempt)=>this.save.completePopRound(id,score,attempt),open=>{
       this.joystick.reset();this.controller.reset();this.controller.enabled=!open;this.props.daily!.pause(performance.now());
       app.autoRender=!open;app.renderNextFrame=!open;
       if(open){this.action.enabled=false;this.huntUI.panel.hidden=true;}else{this.action.enabled=true;this.findCopy='';this.wallet();}
     },()=>!this.save.data.pop?.tutorialSeen,()=>({bestScore:this.save.data.pop?.bestScore??0,tickets:this.save.data.pop?.tickets??0,levels:this.save.data.pop?.levels??{}}));
     this.recess=createRecess(app);
+    this.popUI.onPrizes=()=>{void this.ticketShop.open();this.controller.reset();};
+    const prizes=document.createElement('button');prizes.className='loop-button';prizes.textContent='🎟 Spend tickets · Squishy prize shelf';prizes.onclick=()=>{el<HTMLDialogElement>('#collection-dialog').close();void this.ticketShop.open();};el('#collection-dialog').prepend(prizes);
+    this.nextStore.id='travel-next-store';this.nextStore.textContent='Travel to next store →';this.nextStore.hidden=true;this.nextStore.onclick=()=>this.attempt(()=>this.chooseStore());el('#game').append(this.nextStore);
     this.tradingUI=new TradingUI(this.save,()=>{this.wallet();this.recess.sync(this.save.data.trading!);},()=>this.attempt(()=>this.leaveRecess()));
     const daily=this.props.daily!;
     daily.onReward=id=>{this.pendingCredit={id,amount:1};this.creditPending();};
@@ -69,12 +76,11 @@ export class GameLoop {
     daily.onPhaseChange=()=>{
       if(this.cleanup.mode!=='day')return;
       if(daily.clock.state.phase==='school'){this.attempt(()=>this.enterRecess(true));return;}
+      if(this.mode==='store')return;
       const away=this.mode!=='cleanup';
       if(away&&daily.clock.state.phase!=='night')return;
       this.huntUI.dialog.close();
-      if(this.mode==='store'&&daily.clock.state.phase==='night'){
-        this.save.goHome();this.cleanup.configure('day');this.enterHome();this.message('The shops are closing. Home with your finds!');return;
-      }
+
       const position=this.character.player.getPosition().clone();
       if(this.mode!=='cleanup'&&daily.clock.state.phase==='night')this.startCleanup();
       this.cleanup.configure('day');
@@ -97,7 +103,7 @@ export class GameLoop {
     }),{signal:this.abort.signal});
     on('#back-cleanup', () => this.attempt(() => this.startCleanup()));
     on('#open-next', () => this.attempt(() => { this.save.goHome(); this.enterHome(); }));
-    const tradeButton=document.createElement('button');tradeButton.id='visit-recess';tradeButton.className='loop-button pink-button';tradeButton.textContent='Visit recess trading table';
+    const tradeButton=document.createElement('button');tradeButton.id='visit-recess';tradeButton.className='loop-button pink-button';tradeButton.textContent='Visit classroom trading club';
     el('#collection-dialog').insertBefore(tradeButton,el('#collection-grid'));
     tradeButton.addEventListener('click',()=>this.attempt(()=>this.enterRecess(false)),{signal:this.abort.signal});
     for (const mode of ['day','house', 'bedroom', 'pet', 'practice'] as const) on(`#mission-${mode}`, () => {
@@ -120,7 +126,7 @@ export class GameLoop {
   private chooseStore(){
     const daily=this.props.daily!;
     if(!daily.clock.canShop){this.message('Shopping is an after-school adventure. Finish your morning and come back this afternoon.');return;}
-    if(!daily.clock.ready){this.message('Finish your afternoon helping first. Every chore earns spending money!');return;}
+    if(daily.clock.state.phase==='afternoon'&&!daily.clock.ready){this.message('Finish your afternoon helping first. Every chore earns spending money!');return;}
     if(!this.creditPending())return;
     this.save.ensureHuntDay(daily.clock.state.day);
     el<HTMLDialogElement>('#results').close();this.joystick.reset();this.controller.reset();
@@ -128,7 +134,7 @@ export class GameLoop {
   }
   private visit(id:string){
     const daily=this.props.daily!;
-    if(!daily.clock.canShop||!daily.clock.ready)throw Error('Shopping starts after your afternoon helping.');
+    if(!daily.clock.canShop||(daily.clock.state.phase==='afternoon'&&!daily.clock.ready))throw Error('Shopping starts after your afternoon helping.');
     const minutes=this.save.visitStore(id,daily.clock.state.day,daily.clock.state.minutes);
     daily.clock.state.minutes=minutes;daily.save();this.activeStoreId=id;
     this.huntUI.showTravel(storeById(id).name);this.travelUntil=performance.now()+1100;
@@ -192,7 +198,7 @@ export class GameLoop {
     this.save.ensureTradingDay(this.props.daily!.clock.state.day);
     this.recessFromSchool=fromSchool;this.transition('recess');this.controller.setRoom(this.recess);
     this.character.player.setPosition(0,.09,3.3);this.character.animator.reset();this.recess.sync(this.save.data.trading!);
-    el('#scene-kicker').textContent='THE RECESS TABLE';el('h1').textContent='Got any doubles?';
+    el('#scene-kicker').textContent='CLASSROOM TRADING CLUB';el('h1').textContent='Got any doubles?';
     el('#scene-subtitle').textContent='Bring extras. Find a new favorite.';
     this.tradingUI.leave.textContent=fromSchool?'Finish school →':'Back to collection →';
   }
@@ -283,14 +289,16 @@ export class GameLoop {
     if(this.tornado?.active){this.tornado.beforeMovement(now);return;}
     if(this.popUI.isOpen){this.props.daily!.pause(now);this.controller.enabled=false;return;}
     if(this.developerClockFrozen)this.props.daily!.pause(now);
-    if(this.mode!=='recess')this.props.daily!.update(now,this.cleanup.carry.item?.id??null,this.cleanup.movementLocked||this.controller.approaching||this.opening.phase==='opening');
+    if(this.mode==='store'||this.travelUntil||this.huntUI.dialog.open||this.ticketShop.dialog.open)this.props.daily!.pause(now);
+    else if(this.mode!=='recess')this.props.daily!.update(now,this.cleanup.carry.item?.id??null,this.cleanup.movementLocked||this.controller.approaching||this.opening.phase==='opening');
     else this.props.daily!.pause(now);
     const school=this.cleanup.mode==='day'&&this.props.daily!.clock.state.phase==='school';
     el('#school-transition').hidden=!school||this.mode==='recess';
     if (this.mode === 'cleanup') this.cleanup.mission.tick(now);
-    this.controller.enabled = (!school||this.mode==='recess')&&!this.tradingUI.dialog.open&&!this.travelUntil&&!this.inspecting&&!this.huntUI.dialog.open&&(this.mode === 'recess'||this.mode === 'store' || (this.mode === 'cleanup' && this.cleanup.mission.state !== 'finished' && !this.cleanup.movementLocked)) && !el<HTMLDialogElement>('#collection-dialog').open;
+    this.controller.enabled = (!school||this.mode==='recess')&&!this.ticketShop.dialog.open&&!this.tradingUI.dialog.open&&!this.travelUntil&&!this.inspecting&&!this.huntUI.dialog.open&&(this.mode === 'recess'||this.mode === 'store' || (this.mode === 'cleanup' && this.cleanup.mission.state !== 'finished' && !this.cleanup.movementLocked)) && !el<HTMLDialogElement>('#collection-dialog').open;
   }
   update(now: number) {
+    this.nextStore.hidden=this.mode!=='store'||this.popUI.isOpen||!!this.travelUntil||Object.values(this.save.data.hunt?.stores??{}).filter(s=>s.visited).length>=2;
     if(this.tornado?.active)return;
     this.popUI.launch.hidden=this.mode!=='store'||this.popUI.isOpen||!!this.travelUntil||!!this.inspecting||this.huntUI.dialog.open;
     if(this.popUI.isOpen)return;
@@ -305,10 +313,10 @@ export class GameLoop {
     el('#day-label').hidden=!daily;
     if(daily){
       el('#day-label').textContent=`Day ${clock.state.day} · ${clock.state.phase==='afternoon'?'After school':clock.state.phase}`;
-      el('#mission-clock').hidden=false;
+      el('#mission-clock').hidden=this.mode==='store';
       el('#mission-clock').textContent=clock.label;
     }
-    if(this.mode==='recess')el('#day-label').textContent=`Day ${clock.state.day} · Recess`;
+    if(this.mode==='recess')el('#day-label').textContent=`Day ${clock.state.day} · Classroom`;
     const running = this.mode === 'cleanup' && this.cleanup.mission.state === 'running' && this.cleanup.mission.timed;
     for (const mode of ['day','house', 'bedroom', 'pet', 'practice']) {
       const button = el<HTMLButtonElement>(`#mission-${mode}`); button.disabled = running;
@@ -326,9 +334,9 @@ export class GameLoop {
     let title = 'Action', detail = 'Come closer', icon = '✋', enabled = false;
     if(this.mode==='recess'){
       const p=this.character.player.getPosition();const seat=this.recess.seats.filter(s=>p.distance(s.anchor)<1.05).sort((a,b)=>p.distance(a.anchor)-p.distance(b.anchor))[0];
-      this.focus=seat?.id??'';this.recess.seats.forEach(s=>s.glow.enabled=s===seat);
+      this.focus=seat?.id??'';this.recess.update(now,this.focus);this.recess.seats.forEach(s=>s.glow.enabled=s===seat);
       const trader=TRADERS.find(t=>t.id===seat?.id);
-      el('#cleanup-hint').textContent='Walk up to a classmate. Bring extras, and see what they love.';
+      el('#cleanup-hint').textContent='Walk to a classmate’s desk. Bring extras and find a new friend.';
       if(trader){title='Trade with '+trader.name;detail=trader.title;icon=trader.icon;enabled=!this.tradingUI.dialog.open;}
     }else if (this.mode === 'store') {
       this.storeFocus(); const data = this.save.data;

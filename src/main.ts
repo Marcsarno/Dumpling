@@ -1,3 +1,5 @@
+import {DogRoaming} from './game/DogRoaming';
+import {HouseMusic} from './ui/HouseMusic';
 import { Application, Color, Entity, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 } from 'playcanvas';
 import { createHouse } from './game/house';
 import { IsometricCamera } from './game/IsometricCamera';
@@ -59,7 +61,10 @@ function start() {
   const observer = new ResizeObserver(resize);
   observer.observe(viewport);
   resize();
+  const houseMusic=new HouseMusic();
+  const dogRoaming=new DogRoaming(room,props.pet!.dog);
   app.on('update', (elapsed: number) => {
+    houseMusic.update(loop.mode==='cleanup'&&!loop.popUI.isOpen&&!loop.developerPaused&&!tornado.active,props.daily!.clock.state.phase==='night',Math.min(elapsed,.1));
     const now = performance.now();
     if(loop.developerPaused){loop.developerTick(now,elapsed);return;}
     loop.beforeMovement(now);
@@ -78,6 +83,7 @@ function start() {
     if (loop.mode !== 'home') camera.follow(character.player.getPosition(), dt);
     loop.update(now);
     tornado.update(document.hidden?0:Math.min(elapsed,.1));
+    dogRoaming.update(dt,loop.mode==='cleanup'&&!tornado.active&&!!props.pet?.loaded,[character.player.getPosition(),lilah.root.getPosition(),marc.root.getPosition()]);
     props.pet?.dogAnimator?.update(dt);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === 'cleanup', cleanup.mode);
     character.grounding?.update();
@@ -99,6 +105,8 @@ function start() {
   if (import.meta.env.DEV) {
     Object.defineProperty(window, '__roomTest', { configurable: true, value: {
       characterGeometry: () => character.animator.geometrySnapshot(),
+      nearbyGeometry:()=>app.root.findComponents('render').flatMap(r=>(r as import('playcanvas').RenderComponent).meshInstances.filter(m=>m.node.enabled&&m.aabb.center.distance(character.player.getPosition())<3).map(m=>({name:m.node.name,parent:m.node.parent?.name,center:m.aabb.center.toArray(),half:m.aabb.halfExtents.toArray()}))),
+      furnitureGeometry:()=>['Art tableRound','Art loungeChairUpright','Art crib'].map(name=>{const n=app.root.findByName(name) as Entity|undefined;return{name,position:n?.getPosition().toArray(),meshes:n?.findComponents('render').flatMap(r=>(r as import('playcanvas').RenderComponent).meshInstances.map(m=>({center:m.aabb.center.toArray(),half:m.aabb.halfExtents.toArray()})))};}),
       lilahGeometry: () => lilah.geometry(),
       marcGeometry: () => marc.geometry(),
       snapshot: () => ({
@@ -118,7 +126,7 @@ function start() {
         character: character.animator.snapshot(),
         lilah: lilah.snapshot(),
         marc: marc.snapshot(),
-        dog:props.pet?.dogAnimator?.snapshot(),
+        dog:props.pet?.dogAnimator?.snapshot(),houseMusic:houseMusic.snapshot(),
         lighting: room.lighting!.snapshot(),
         cleanup: cleanup.snapshot(),tornado:tornado.snapshot(),cameraState:camera.state,
         loop: loop.snapshot(),

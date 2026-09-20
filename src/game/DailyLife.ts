@@ -1,5 +1,5 @@
 import { BoundingBox, Entity, Vec3, type Application } from 'playcanvas';
-import { DAILY_TASKS, DailyClock, DUST_LOCATIONS } from '../systems/DailyClock';
+import { DailyClock, DUST_LOCATIONS, SPILL_LOCATIONS } from '../systems/DailyClock';
 import type { CleanupItem, CleanupProps, Interaction } from './cleanupProps';
 import type { Bedroom } from './bedroom';
 import type { CarrySystem } from '../components/CarrySystem';
@@ -17,6 +17,7 @@ export class DailyLife {
   readonly outfit: CleanupItem;
   readonly towel: CleanupItem;
   readonly egg: CleanupItem;
+  readonly plate: CleanupItem;
   readonly dust: Entity[]=[];
   readonly spill: Entity;
   readonly eggSpill: Entity;
@@ -29,6 +30,7 @@ export class DailyLife {
   private readonly cooked: Entity;
   private readonly bubbles: Entity;
   private readonly wipingPaper: Entity;
+  private readonly dogFood:Entity;
   private eggFall=0;
   private held: string | null = null;
   private last=0;
@@ -54,10 +56,12 @@ export class DailyLife {
     this.towel=item('paper-towel','Paper towel','🧻',[-2.65,1.02,10.5]);void importProp(app,this.towel.entity,'paper',.23);
     this.egg=item('breakfast-egg','Egg','🥚',[-2.68,1.15,14.55]);
     const eggShape=primitives(app,this.egg.entity);eggShape('Egg placeholder','sphere',[0,.1,0],[.14,.2,.14],m.trim);
-    // Replaced by cooking assets once the pending download is approved.
+    // Small readable breakfast props share the kitchen's palette.
     const pan=shape('Breakfast pan','cylinder',[-2.63,1.08,12.65],[.55,.06,.55],m.dark);shape('Pan handle','box',[-2.2,1.09,12.65],[.5,.04,.08],m.dark);
     this.cooked=new Entity('Cooked breakfast',app);this.root.addChild(this.cooked);this.cooked.setLocalPosition(-2.63,1.12,12.65);
     const food=primitives(app,this.cooked);food('Egg white','sphere',[0,0,0],[.37,.025,.3],m.trim);food('Egg yolk','sphere',[0,.025,0],[.15,.05,.15],m.yellow);
+    this.plate=item('breakfast-plate','Egg on a plate','🍳',[-2.63,1.13,12.65]);this.plate.carryPace='walk';
+    const plate=primitives(app,this.plate.entity);plate('Breakfast plate rim','cylinder',[0,0,0],[.53,.035,.53],m.blue);plate('Breakfast plate','cylinder',[0,.021,0],[.46,.012,.46],m.trim);plate('Plated egg white','sphere',[0,.039,0],[.35,.025,.30],m.trim);plate('Plated egg yolk','sphere',[0,.060,0],[.15,.055,.15],m.yellow);
     // Mess geometry is separate from the cleaning controller so artists can substitute it.
     const makeSpill=(name:string,position:Triple)=>{
       const root=new Entity(name,app);this.root.addChild(root);root.setLocalPosition(...position);const s=primitives(app,root);
@@ -75,6 +79,9 @@ export class DailyLife {
       props.interactions.push({id,name,icon,kind:'daily',actionLabel:name,anchor:new Vec3(...anchor),marker:new Vec3(...marker),range:1,task,duration,hold,mess,available:carried=>this.active&&available(carried)});
     };
     const phase=()=>this.clock.state.phase,notDone=(id:string)=>!this.clock.state.done.includes(id);
+    shape('Puppy bowl','cylinder',[4.95,.10,8.55],[.48,.16,.48],m.blue);shape('Puppy bowl inside','cylinder',[4.95,.185,8.55],[.37,.012,.37],m.dark);
+    this.dogFood=shape('Puppy kibble','sphere',[4.95,.19,8.55],[.33,.055,.33],material('Kibble','#b58655'));
+    target('feed-dog','Fill puppy’s bowl','🐾',[4.8,0,8.8],[4.95,.2,8.55],h=>!h&&phase()==='afternoon'&&this.clock.state.petTask==='feed-dog'&&notDone('feed-dog'),1400,'feed-dog');
     target('daily-teeth','Brush teeth','🪥',[4.12,0,-2.35],[4.12,1.15,-3.03],h=>!h&&(phase()==='morning'||phase()==='night')&&notDone('teeth'),1800,'teeth');
     target('choose-clothes','Choose clothes','👕',[-.7,0,2.4],[-.7,.8,3.05],h=>!h&&phase()==='morning'&&notDone('outfit'),0);
     target('get-dressed','Get dressed','👕',[-.85,0,-.65],[-1.35,.9,-.65],h=>h==='daily-outfit'&&phase()==='morning',850,'outfit');
@@ -83,18 +90,20 @@ export class DailyLife {
     target('take-egg','Take an egg','🥚',[-1.8,0,14.55],[-2.6,1.1,14.55],h=>!h&&phase()==='morning'&&this.clock.state.breakfast==='eggs',0);
     target('crack-egg','Crack egg','🥚',[-1.8,0,12.65],[-2.63,1.15,12.65],h=>h==='breakfast-egg',0);
     target('cook-egg','Cook breakfast','🍳',[-1.8,0,12.65],[-2.63,1.15,12.65],h=>!h&&phase()==='morning'&&this.clock.state.breakfast==='cook',2200);
-    target('eat-breakfast','Eat breakfast','🍽',[.4,0,12.5],[.55,1,13.85],h=>!h&&phase()==='morning'&&this.clock.state.breakfast==='serve',1500,'breakfast');
+    target('take-breakfast','Carry breakfast','🍳',[-1.8,0,12.65],[-2.63,1.15,12.65],h=>!h&&phase()==='morning'&&this.clock.state.breakfast==='serve'&&this.clock.state.breakfastAtTable===false,0);
+    target('serve-breakfast','Put breakfast on table','🍽',[.55,0,11.9],[.55,.9,13.15],h=>h==='breakfast-plate',0);
+    target('eat-breakfast','Eat breakfast','🍽',[.55,0,11.9],[.55,.9,13.15],h=>!h&&phase()==='morning'&&this.clock.state.breakfast==='serve'&&this.clock.state.breakfastAtTable!==false,4200,'breakfast');
     target('take-towel','Take paper towel','🧻',[-1.8,0,10.5],[-2.65,1.15,10.5],h=>!h&&(this.clock.state.breakfast==='spill'||phase()==='afternoon'&&notDone('spill')||this.lilahMesses.needs('spill')),0);
     target('wipe-egg','Wipe dropped egg','🧻',[-1.5,0,12.55],[-1.5,.12,12.55],h=>h==='paper-towel'&&this.clock.state.breakfast==='spill',1200,undefined,true,this.eggSpill);
     target('wipe-spill','Wipe spill','🧻',[.1,0,11.1],[.1,.12,11.1],h=>h==='paper-towel'&&phase()==='afternoon'&&notDone('spill'),1200,'spill',true,this.spill);
     const vacuum=props.items.find(i=>i.id==='vacuum')!;
-    target('daily-vacuum','Pick up vacuum','✦',vacuum.home,[vacuum.home[0],1,vacuum.home[2]],h=>!h&&(phase()==='afternoon'&&this.dust.some((_,i)=>notDone('dust-'+i))||this.lilahMesses.needs('crumbs')),0);
-    for(let i=0;i<3;i++)target('vacuum-'+i,'Hold to vacuum','✦',[0,0,0],[0,.3,0],h=>h==='vacuum'&&phase()==='afternoon'&&notDone('dust-'+i),1150,'dust-'+i,true,this.dust[i]);
+    target('daily-vacuum','Pick up vacuum','✦',vacuum.home,[vacuum.home[0],1,vacuum.home[2]],h=>!h&&(phase()==='afternoon'&&this.clock.tasks.some(t=>t.id.startsWith('dust-')&&notDone(t.id))||this.lilahMesses.needs('crumbs')),0);
+    for(let i=0;i<3;i++)target('vacuum-'+i,'Hold to vacuum','✦',[0,0,0],[0,.3,0],h=>h==='vacuum'&&phase()==='afternoon'&&this.clock.tasks.some(t=>t.id==='dust-'+i)&&notDone('dust-'+i),1150,'dust-'+i,true,this.dust[i]);
     target('put-tool-away','Put tool away','↩',[0,0,0],[0,.8,0],h=>h==='vacuum'||h==='paper-towel',0);
     target('bedtime-book','Read a bedtime book','📘',[-.85,0,-.8],[-1.4,.9,-.8],h=>!h&&phase()==='night'&&notDone('read'),1600,'read');
     target('school-door','Go to school','🎒',[-2.35,0,8.2],[-3.1,1.1,8.2],h=>!h&&this.clock.schoolDue,0);
-    target('shop-door','Choose a store','🛍',[-2.35,0,8.2],[-3.1,1.1,8.2],h=>!h&&this.clock.canShop&&this.clock.ready,0);
-    target('sleep','Go to bed','🌙',[-.85,0,-1.6],[-1.4,.8,-1.6],h=>!h&&this.clock.canSleep,0);
+    target('shop-door','Choose a store','🛍',[-2.35,0,8.2],[-3.1,1.1,8.2],h=>!h&&this.clock.canShop&&(phase()==='night'||this.clock.ready),0);
+    target('sleep','Go to bed','🌙',[-.85,0,-1.6],[-1.4,.8,-1.6],h=>!h&&this.clock.canSleep,6500);
     this.refresh();void pan;
   }
   get tasks(){const key=this.clock.state.phase+'-'+this.clock.state.day+'-'+this.lilahMesses.count;if(key!==this.taskKey){this.taskKey=key;this.taskCache=[...this.clock.tasks,...this.lilahMesses.tasks];}return this.taskCache;}
@@ -103,12 +112,15 @@ export class DailyLife {
   setActive(active:boolean){this.active=active;this.root.enabled=active;this.last=0;this.refresh();}
   refresh(){
     const s=this.clock.state;
-    this.lilahMesses.syncDay(s.day);this.lilahMesses.refresh();
+    const spill=SPILL_LOCATIONS[s.spillSite??0]??SPILL_LOCATIONS[0];this.spill.setLocalPosition(spill[0],.04,spill[1]);const spillTarget=this.props.interactions.find(t=>t.id==='wipe-spill')!;spillTarget.anchor.set(spill[0],0,spill[1]);spillTarget.marker.set(spill[0],.12,spill[1]);
+    this.dogFood.enabled=s.done.includes('feed-dog')||s.phase!=='afternoon'||s.petTask!=='feed-dog';
+    this.lilahMesses.syncDay(s.day);this.lilahMesses.refresh();if(s.done.includes('pet-care')){this.props.pet?.finish();this.props.pet!.poop.enabled=false;}
     for(const mess of [...this.dust,this.spill,this.eggSpill])mess.setLocalScale(1,1,1);
-    for(let i=0;i<3;i++){const p=DUST_LOCATIONS[s.dust[i]],t=this.props.interactions.find(t=>t.id==='vacuum-'+i)!;this.dust[i].setLocalPosition(p[0],.04,p[1]);t.anchor.set(p[0],0,p[1]);t.marker.set(p[0],.35,p[1]);this.dust[i].enabled=s.phase==='afternoon'&&!s.done.includes('dust-'+i);}
+    for(let i=0;i<3;i++){const p=DUST_LOCATIONS[s.dust[i]],t=this.props.interactions.find(t=>t.id==='vacuum-'+i)!;this.dust[i].setLocalPosition(p[0],.04,p[1]);t.anchor.set(p[0],0,p[1]);t.marker.set(p[0],.35,p[1]);this.dust[i].enabled=s.phase==='afternoon'&&this.clock.tasks.some(t=>t.id==='dust-'+i)&&!s.done.includes('dust-'+i);}
     this.spill.enabled=s.phase==='afternoon'&&!s.done.includes('spill');this.eggSpill.enabled=s.breakfast==='spill'&&s.phase==='morning';
-    this.cooked.enabled=s.phase==='morning'&&(s.breakfast==='cook'||s.breakfast==='serve');
-    this.cooked.setLocalPosition(...(s.breakfast==='serve'?[.55,.98,13.85] as Triple:[-2.63,1.12,12.65] as Triple));
+    this.cooked.enabled=s.phase==='morning'&&s.breakfast==='cook';
+    this.cooked.setLocalPosition(-2.63,1.12,12.65);
+    this.plate.entity.reparent(this.root);this.plate.entity.enabled=s.phase==='morning'&&s.breakfast==='serve';this.plate.entity.setLocalPosition(...(s.breakfastAtTable===false?this.plate.home:[.55,.975,13.28] as Triple));
     this.props.items.find(i=>i.id==='vacuum')!.entity.enabled=s.phase==='afternoon'||this.lilahMesses.needs('crumbs');
     for(const item of [this.outfit,this.towel,this.egg])if(item.entity.parent!==this.root){item.entity.reparent(this.root);item.entity.setLocalPosition(...item.home);}
     this.outfit.entity.enabled=(s.phase==='morning'||s.phase==='night')&&!s.done.includes('outfit');
@@ -157,6 +169,7 @@ export class DailyLife {
       this.save();return;
     }
     switch(target.id){
+      case 'feed-dog':this.dogFood.enabled=true;break;
       case 'play-lilah':this.onPlayLilah();break;
       case 'choose-clothes':case 'night-clothes':take(this.outfit);break;
       case 'take-egg':take(this.egg);break;
@@ -166,8 +179,10 @@ export class DailyLife {
       case 'crack-egg':release();this.clock.crackEgg();this.eggSpill.enabled=false;this.cooked.enabled=this.clock.state.breakfast==='cook';if(!this.cooked.enabled){this.egg.entity.enabled=true;this.eggFall=performance.now();}break;
       case 'wipe-egg':this.eggSpill.enabled=false;release();this.clock.state.breakfast='cook';this.cooked.enabled=true;break;
       case 'wipe-spill':this.spill.enabled=false;release();break;
-      case 'cook-egg':this.clock.state.breakfast='serve';this.cooked.setLocalPosition(.55,.98,13.85);break;
-      case 'eat-breakfast':this.cooked.enabled=false;this.clock.state.breakfast='done';break;
+      case 'cook-egg':this.clock.state.breakfast='serve';this.clock.state.breakfastAtTable=false;this.cooked.enabled=false;take(this.plate);break;
+      case 'take-breakfast':take(this.plate);break;
+      case 'serve-breakfast':carry.release(this.root,[.55,.975,13.28]);this.clock.state.breakfastAtTable=true;break;
+      case 'eat-breakfast':this.plate.entity.enabled=false;this.clock.state.breakfast='done';break;
       case 'get-dressed':case 'clothes-drawer':release();break;
       case 'school-door':this.clock.goSchool();break;
       case 'shop-door':this.onStore();break;
@@ -184,6 +199,6 @@ export class DailyLife {
     this.wipingPaper.enabled=!!target&&(target.id.startsWith('wipe-')||target.id==='lilah-mess-1')&&progress>0;
     if(this.wipingPaper.enabled&&target){this.wipingPaper.setPosition(hands.x,Math.max(.08,hands.y-.035),hands.z);this.wipingPaper.setLocalEulerAngles(0,0,0);}
   }
-  get hint(){const s=this.clock.state;if(s.phase==='school')return 'At school · See you after class!';if(this.clock.schoolDue)return '🎒 Time for school. Walk to the front door in the living room.';if(s.phase==='morning'&&s.breakfast==='spill')return 'Oops! Get a paper towel and hold Action over the dropped egg.';if(s.phase==='afternoon')return 'After school · Chores earn allowance. The store closes at 7 PM.';if(this.clock.canSleep)return '🌙 Ready for bed. Walk to the bed to start a fresh day.';return s.phase==='morning'?'A fresh morning · Brush, choose clothes, and make breakfast.':'Wind down · Brush teeth, put clothes away, and read.';}
+  get hint(){const s=this.clock.state;if(s.phase==='school')return 'At school · See you after class!';if(this.clock.schoolDue)return '🎒 Time for school. Walk to the front door in the living room.';if(s.phase==='morning'&&s.breakfast==='spill')return 'Oops! Get a paper towel and hold Action over the dropped egg.';if(s.phase==='afternoon')return 'After school · Help a little, then visit two stores. Take your time!';if(this.clock.canSleep)return '🌙 Ready for bed. Walk to the bed to start a fresh day.';return s.phase==='morning'?'A fresh morning · Brush, choose clothes, and make breakfast.':'Wind down · Brush teeth, put clothes away, and read.';}
   snapshot(){return {...this.clock.state,clock:this.clock.label,canShop:this.clock.canShop,held:this.held,dirt:this.dust.map(e=>({visible:e.enabled,position:e.getPosition().toArray(),scale:e.getLocalScale().toArray()})),eggSpill:this.eggSpill.enabled,lilah:this.lilahMesses.snapshot()};}
 }

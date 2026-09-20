@@ -21,10 +21,10 @@ export class HouseArt {
   constructor(private readonly app: Application, private readonly root: Entity, private readonly surfaces?: SurfaceTextures) {
     this.group = app.batcher.addGroup('Cottage imported art', false, 12);
   }
-  add(pack: 'furniture' | 'nature' | 'market' | 'building' | 'nursery', name: string, position: Triple, size: number, yaw = 0, dimension: 'height' | 'width' = 'height', colors: Record<string, string> = {}, exterior = pack === 'nature', pitch = 0, finish: 'natural'|'paint' = 'natural') {
+  add(pack: 'furniture' | 'nature' | 'market' | 'building' | 'nursery' | 'school', name: string, position: Triple, size: number, yaw = 0, dimension: 'height' | 'width' = 'height', colors: Record<string, string> = {}, exterior = pack === 'nature', pitch = 0, finish: 'natural'|'paint' = 'natural') {
     const key = `${pack}/${name}`;
     if (!this.assets.has(key)) this.assets.set(key, new Promise<ContainerResource>((resolve, reject) => {
-      const asset = new Asset(key, 'container', { url: `${import.meta.env.BASE_URL}assets/environment/${pack==='nursery'?'':'kenney/'}${key}.glb` });
+      const asset = new Asset(key, 'container', { url: `${import.meta.env.BASE_URL}assets/environment/${pack==='nursery'||pack==='school'?'':'kenney/'}${key}.glb` });
       asset.once('load', () => resolve(asset.resource as ContainerResource)); asset.once('error', reject);
       this.app.assets.add(asset); this.app.assets.load(asset);
     }));
@@ -51,6 +51,8 @@ export class HouseArt {
         mesh.mask = exterior ? 8 : 1;
       }
       const scale = size / (2 * (dimension === 'height' ? bounds.halfExtents.y : bounds.halfExtents.x));
+      // Cropping the footrest must not recenter Dad's existing seat or change scale.
+      if(name==='loungeChairUpright')bounds.center.z=-.33735;
       const anchor = new Entity(`Art ${name}`, this.app), normalization = new Entity('Art normalization', this.app);
       normalization.addChild(model); anchor.addChild(normalization); this.root.addChild(anchor);
       normalization.setLocalScale(scale, scale, scale);

@@ -112,7 +112,7 @@ export function createHouse(app: Application): Bedroom {
   for(const z of [4.7,7.7])box('Rug woven border',-.9,.067,z,3.2,.004,.035,m.trim);
   furniture('cabinetTelevision',2.0,4.2,1.8,0,'width',[1.8,.6]);
   furniture('televisionModern',2.0,4.2,1.28,0,'width',undefined,.68,{metal:'#718d91'});
-  furniture('loungeChairRelax',4.5,7.35,1.0,-35,'height',[1.1,1.1],.027,{carpet:'#d9b7c3'});
+  furniture('loungeChairUpright',4.5,7.35,1.0,-35,'height',[1.1,1.1],.027,{carpet:'#d9b7c3'});
   furniture('lampRoundFloor',5.65,7.7,1.8,0,'height',[.35,.35]);
   furniture('sideTable',5.65,6.6,.55,0,'height',[.5,.5]);
   furniture('radio',5.65,6.6,.32,0,'width',undefined,.61);
@@ -161,7 +161,7 @@ export function createHouse(app: Application): Bedroom {
   furniture('plantSmall1',4.35,-3.12,.22,0,'height',undefined,.95);
 
   // A few small imported details enrich the original bedroom without moving its cleanup furniture.
-  furniture('pillow',-2.08,-1.97,.6,0,'width',undefined,.91,{carpet:'#bba4d4'});
+  // The existing soft bed pillow leaves the sleeping pose unobstructed.
   furniture('bear',-2.53,-2.5,.32,0,'height',undefined,.92);
   furniture('books',2.45,1.05,.3,20,'width',undefined,1.18);
 

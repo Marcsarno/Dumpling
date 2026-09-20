@@ -44,7 +44,7 @@ export function createCleanupProps(app: Application, room: Bedroom): CleanupProp
     item('teddy', 'Teddy', '🧸', [-0.7, 0.11, 1.55]),
     item('shirt', 'Shirt', '👕', [-1.7, 0.12, 0.55]),
     item('book', 'Book', '📘', [0.25, 0.12, -0.8]),
-    item('vacuum', 'Vacuum', '✦', [0.1, 0.1, 2.65]),
+    item('vacuum', 'Vacuum', '✦', [4.65, 0.1, 12.15]),
   ];
   const teddy = primitives(app, items[0].entity);
   teddy('Teddy body', 'sphere', [0, 0.16, 0], [0.3, 0.34, 0.25], m.bear);
@@ -127,6 +127,7 @@ export function createCleanupProps(app: Application, room: Bedroom): CleanupProp
   return { root, items, interactions, crayonMess, tidyCrayons, dirt, reset };
 }
 export interface CleanupProps {
+  roundMesses?: import('./RoundMesses').RoundMesses;
   daily?: DailyLife;
   pet?: PetCleanup;
   root: Entity; items: CleanupItem[]; interactions: Interaction[];

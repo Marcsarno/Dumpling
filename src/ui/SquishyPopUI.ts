@@ -8,6 +8,7 @@ import './squishy-pop.css';
 type Particle={x:number;y:number;vx:number;vy:number;life:number;color:string;shape:number};
 /** One canvas and a bounded effects pool; the store remains loaded behind the dialog. */
 export class SquishyPopUI {
+  onPrizes:()=>void=()=>{};
   readonly dialog=document.createElement('dialog');
   readonly launch=document.createElement('button');
   private canvas!:HTMLCanvasElement;private ctx!:CanvasRenderingContext2D;
@@ -36,6 +37,7 @@ export class SquishyPopUI {
     const goals=document.createElement('div');goals.className='pop-goals';goals.setAttribute('aria-live','polite');this.q('.pop-tray').before(goals);
     const cue=document.createElement('div');cue.className='pop-chain-cue';cue.hidden=true;cue.setAttribute('aria-live','polite');this.q('.pop-tray').append(cue);
     const signal=this.abort.signal;
+    const prizes=document.createElement('button');prizes.className='pop-prizes';prizes.textContent='🎟 Prizes';prizes.setAttribute('aria-label','Spend tickets on squishy prizes');this.q('.pop-title').append(prizes);prizes.addEventListener('click',()=>{if(['playing','countdown','finale'].includes(this.state)){this.q('.pop-hint').textContent='Finish this round, then pick your prize!';return;}this.close();this.onPrizes();},{signal});
     this.launch.addEventListener('click',()=>this.open(),{signal});
     this.dialog.addEventListener('cancel',e=>{e.preventDefault();this.togglePause();},{signal});
     this.dialog.querySelector('.pop-pause')!.addEventListener('click',()=>this.togglePause(),{signal});
@@ -96,7 +98,7 @@ export class SquishyPopUI {
   private results(){
     let total=this.ticketTotal,error='';try{if(!this.developerPractice&&!this.saved)total=this.award(this.receipt,this.board.score,this.levelRun?.attempt(this.board.bestChain));this.ticketTotal=total;this.saved=true;}catch(e){error=(e as Error).message;}
     this.resultsAt=this.activeTime;const record=!this.developerPractice&&!error&&this.board.score>this.previousBest;
-    const cover=this.q('.pop-cover');cover.hidden=false;cover.innerHTML=`<span class="pop-result-star">${record?'★':'✦'}</span><h3>${record?'A new personal best!':'So squishy!'}</h3><div class="pop-result-numbers"><span>Score<b data-result-score>${this.board.score.toLocaleString()}</b></span><span>Best chain<b>${this.board.bestChain}</b></span></div><small class="pop-previous-best">Previous best ${this.previousBest.toLocaleString()}</small><div class="pop-ticket-flight" aria-hidden="true">${Array.from({length:this.developerPractice||error?0:roundTickets(this.board.score)},(_,i)=>`<img style="--i:${i}" src="${this.art.powers.get('ticket')!.toDataURL()}" alt="">`).join('')}</div><strong class="pop-ticket-prize">${error?'Tickets not saved yet':`+${roundTickets(this.board.score)} Squishy Tickets`}</strong><p>${error||`${total} tickets in your wallet · ${total>=POP_RULES.couponTickets?'$1 box coupon funded · one per day.':`${POP_RULES.couponTickets-total} more for a $1 box coupon.`}`}</p><progress max="${POP_RULES.couponTickets}" value="${Math.min(total,POP_RULES.couponTickets)}"></progress><button data-replay>${error?'Retry saving':'PLAY AGAIN'}</button><button data-back>BACK TO STORE</button>`;
+    const cover=this.q('.pop-cover');cover.hidden=false;cover.innerHTML=`<span class="pop-result-star">${record?'★':'✦'}</span><h3>${record?'A new personal best!':'So squishy!'}</h3><div class="pop-result-numbers"><span>Score<b data-result-score>${this.board.score.toLocaleString()}</b></span><span>Best chain<b>${this.board.bestChain}</b></span></div><small class="pop-previous-best">Previous best ${this.previousBest.toLocaleString()}</small><div class="pop-ticket-flight" aria-hidden="true">${Array.from({length:this.developerPractice||error?0:roundTickets(this.board.score)},(_,i)=>`<img style="--i:${i}" src="${this.art.powers.get('ticket')!.toDataURL()}" alt="">`).join('')}</div><strong class="pop-ticket-prize">${error?'Tickets not saved yet':`+${roundTickets(this.board.score)} Squishy Tickets`}</strong><p>${error||`${total} tickets saved · Pick a squishy from the prize shelf, starting at 1 ticket!`}</p><progress max="8" value="${Math.min(total,8)}"></progress><button data-replay>${error?'Retry saving':'PLAY AGAIN'}</button><button data-back>BACK TO GAME</button>`;
     cover.querySelector('[data-replay]')!.addEventListener('click',()=>{if(this.saved)this.start();else this.results();});cover.querySelector('[data-back]')!.addEventListener('click',()=>{if(this.saved)this.close();else this.results();});
     if(this.level&&this.levelRun){
       const stars=levelStars(this.level,this.levelRun.values,this.board.score),won=stars>0;
@@ -125,7 +127,9 @@ export class SquishyPopUI {
   private pop(result:PopResult){
     if(this.state!=='lesson'){this.levelRun?.observe(result,this.board.score,this.state==='finale',this.board.frenzyUntil);this.updateGoals();}
     this.gone=result.cleared;this.lastResult=result;this.audio.pop(result.chain);for(const power of new Set(result.activated))this.audio.power(power);
-    this.burst=this.activeTime;this.lockedUntil=this.activeTime+.35;this.moves=new Map(result.moves.map(m=>[m.piece.id,{from:m.from,to:m.to}]));this.feedback=result.shuffled?'A little shuffle!':`${result.label} +${result.score}`;this.feedbackUntil=this.activeTime+.8;
+    const rainbow=result.activated.includes('rainbow'),tier=rainbow?'rainbow':result.chain>=8?'super':result.chain>=5?'great':'normal';
+    this.q('.pop-feedback').dataset.tier=tier;this.q('.pop-tray').dataset.celebration=tier;
+    this.burst=this.activeTime;this.lockedUntil=this.activeTime+.35;this.moves=new Map(result.moves.map(m=>[m.piece.id,{from:m.from,to:m.to}]));this.feedback=result.shuffled?'A little shuffle!':`${rainbow?'RAINBOW MAGIC!':result.chain>=8?'SUPER SQUISH!':result.chain>=5?'AMAZING CHAIN!':result.label} +${result.score}`;this.feedbackUntil=this.activeTime+(tier==='normal'?.8:1.6);
     this.q('.pop-hint').textContent=result.created==='rainbow'?'Rainbow joins any matching chain!':result.created?'Tap your new '+(result.created==='mega'?'Mega Squish!':'Pop Bomb!'):'Drag through matching Squishies!';
     if(this.levelRun?.completed)this.q('.pop-hint').textContent='Goal complete! Keep popping for stars.';
     if(!this.reduced)for(const c of result.cleared){for(let i=0;i<Math.min(5,2+Math.floor(result.chain/5));i++){const p=this.particles.find(p=>p.life<=0);if(!p)break;Object.assign(p,{x:c.index%6+.5,y:Math.floor(c.index/6)+.5,vx:(Math.random()-.5)*3,vy:-1-Math.random()*3,life:.55+Math.random()*.3,color:['#ff86b8','#fff0a5','#fff','#9ee1e7'][i%4],shape:i%3});}}
@@ -148,12 +152,12 @@ export class SquishyPopUI {
     this.q('[data-score]').textContent=this.board.score.toLocaleString();this.q('[data-tickets]').textContent=String(roundTickets(this.board.score));this.q<HTMLProgressElement>('[data-tickets-bar]').value=roundTickets(this.board.score)===POP_RULES.maximumTickets?POP_RULES.pointsPerTicket:this.board.score%POP_RULES.pointsPerTicket;
     const count=Math.max(0,Math.ceil(this.countdown-.8));if(this.state==='countdown'&&count!==this.lastCount){this.audio.countdown(count);this.lastCount=count;}
     const second=Math.ceil(this.remaining);if(this.state==='playing'&&second<=10&&second>0&&second!==this.lastSecond)this.audio.warning();this.lastSecond=second;
-    const frenzy=this.state==='playing'&&this.activeTime<this.board.frenzyUntil;if(frenzy&&!this.frenzyWas){this.audio.power('frenzy');this.feedback='FRENZY! ×2';this.feedbackUntil=this.activeTime+1;}
+    const frenzy=this.state==='playing'&&this.activeTime<this.board.frenzyUntil;if(frenzy&&!this.frenzyWas){this.audio.power('frenzy');if(this.activeTime>=this.feedbackUntil||this.q('.pop-feedback').dataset.tier==='normal'){this.q('.pop-feedback').dataset.tier='normal';this.feedback='FRENZY! ×2';this.feedbackUntil=this.activeTime+1;}}
     this.frenzyWas=frenzy;this.dialog.classList.toggle('is-frenzy',frenzy);this.q<HTMLProgressElement>('.pop-frenzy progress').value=frenzy?(this.board.frenzyUntil-this.activeTime)/POP_RULES.frenzySeconds*100:this.board.frenzyMeter;this.audio.energy(frenzy,second<=10);
     this.q('.pop-frenzy b').textContent=frenzy?`${Math.ceil(this.board.frenzyUntil-this.activeTime)}s · ×2`:'×2';
     this.chainFeedback();
     if(this.state==='results'){const score=this.q('[data-result-score]');if(score)score.textContent=Math.round(this.board.score*(this.reduced?1:Math.min(1,(this.activeTime-this.resultsAt)/.9))).toLocaleString();}
-    this.q('.pop-feedback').textContent=this.activeTime<this.feedbackUntil?this.feedback:'';
+    const feedback=this.q('.pop-feedback');feedback.hidden=this.activeTime>=this.feedbackUntil;feedback.textContent=feedback.hidden?'':this.feedback;if(feedback.hidden)this.q('.pop-tray').dataset.celebration='normal';
     this.draw(this.paused?0:Math.min(dt,.05));if(this.isOpen)this.frame=requestAnimationFrame(this.tick);
   };
   private draw(dt:number){

@@ -10,18 +10,14 @@ test('Daily stock uses configured sites, quantities, series and fresh assortment
  for(let day=1;day<300;day++)for(const store of STORES){const s=createHuntDay(day,random(day)).stores[store.id];assert.equal(new Set(s.slots.map(x=>x.site)).size,s.slots.length);assert.ok(s.slots.length>=1&&s.slots.length<=6);assert.ok(s.slots.reduce((n,x)=>n+x.remaining,0)<=store.stock[1]);for(const slot of s.slots)assert.ok(store.series.some(x=>x.id===slot.series));}
  for(const series of SERIES)for(const rarity of ['Common','Rare','Epic','Legendary'])assert.ok(DUMPLINGS.some(d=>series.items.includes(d.id)&&d.rarity===rarity));
 });
-test('Clock allows nearby plus toys, but never all three; specialty consumes the afternoon',()=>{
- let minute=925;assert.ok(canVisit(STORES[0],minute));minute+=55+18;assert.ok(canVisit(STORES[1],minute));minute+=90+18;assert.equal(canVisit(STORES[2],minute),false);
- minute=925+165+18;assert.equal(canVisit(STORES[0],minute),false);assert.equal(canVisit(STORES[1],minute),false);
- assert.equal(canVisit(STORES[2],1140-165-HUNT_RULES.minimumSearchMinutes),true);assert.equal(canVisit(STORES[2],1140-165-HUNT_RULES.minimumSearchMinutes+.1),false);
-});
+test('All stores allow untimed afternoon and night trips',()=>{for(const store of STORES){assert.equal(canVisit(store,899),false);assert.equal(canVisit(store,900),true);assert.equal(canVisit(store,1260),true);}});
 test('Buy, reload, open, revisit, and next-day restock preserve economy and receipts',()=>{
  const f=fixture(),s=f.store;s.creditRound('test',100);s.ensureHuntDay(1);const day=structuredClone(s.data.hunt);s.ensureHuntDay(1);assert.deepEqual(day,s.data.hunt);
- const minute=s.visitStore('corner',1,925),slot=s.data.hunt.stores.corner.slots[0];assert.equal(minute,980);assert.throws(()=>s.purchaseStock(slot.site),/look/);s.discover(slot.site);
+ const minute=s.visitStore('corner',1,925),slot=s.data.hunt.stores.corner.slots[0];assert.equal(minute,925);assert.throws(()=>s.purchaseStock(slot.site),/look/);s.discover(slot.site);
  const price=boxPrice(STORES[0],slot.series),qty=slot.remaining;s.purchaseStock(slot.site);assert.equal(s.data.balance,100-price);assert.equal(s.data.hunt.stores.corner.slots[0].remaining,qty-1);
- let reload=f.reload();assert.equal(reload.data.hunt.clockFloor,980);assert.equal(reload.data.boxes.length,1);assert.throws(()=>reload.purchaseStock(slot.site),/sold out/);
+ let reload=f.reload();assert.equal(reload.data.hunt.clockFloor,0);assert.equal(reload.data.boxes.length,1);assert.throws(()=>reload.purchaseStock(slot.site),/sold out/);
  reload.goHome();const receipt=reload.openNext();assert.ok(SERIES.find(x=>x.id===slot.series).items.includes(receipt.dumplingId));assert.deepEqual(f.reload().openNext(),receipt);
- reload.showCollection();reload.startCleanup();reload.visitStore('toys',1,920);assert.equal(reload.data.hunt.clockFloor,1070,'saved travel floor prevents clock rollback');assert.throws(()=>reload.visitStore('collector',1,1070),/Not enough/);
+ reload.showCollection();reload.startCleanup();reload.visitStore('toys',1,920);assert.equal(reload.data.hunt.clockFloor,0,'untimed travel does not advance the daily clock');assert.throws(()=>reload.visitStore('collector',1,1070),/Two/);
  reload.goHome();reload.ensureHuntDay(2);assert.equal(reload.data.balance,100-price);assert.equal(reload.data.collection[receipt.dumplingId],1);assert.equal(reload.data.hunt.day,2);assert.notDeepEqual(reload.data.hunt.stores,day.stores);
 });
 test('Storage failure, insufficient money and bag limit cannot consume stock',()=>{

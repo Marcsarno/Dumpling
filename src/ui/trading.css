@@ -20,3 +20,5 @@
 .collection-protection { border:0; background:#fff9; border-radius:8px; margin:4px 1px 0; min-width:30px; min-height:32px; font-size:14px; cursor:pointer; }.collection-protection[aria-pressed=true] { background:#e5c6e9; outline:1px solid #b68ec0; }
 #game[data-scene=recess] #trip-wallet,#game[data-scene=recess] #mission-clock { display:none!important; }
 @media(max-height:650px) { .trade-header { padding:8px 12px; }.trade-header h2 { font-size:21px; }.trade-header p { font-size:11px; }.trade-item img { height:42px; }.trade-controls button { min-height:60px; }.trade-footer { padding:6px 10px; } }
+
+#trade-suggest{width:100%;min-height:44px;border:2px solid #b4d4bd;border-radius:16px;background:#edf8ed;font-weight:800}.trade-help{font-size:11px;color:#6d6477}.trade-loved{border-color:#bad8bb!important}.trade-header>small{display:block;margin-top:7px;font-size:11px}

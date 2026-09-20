@@ -14,7 +14,7 @@ export class CleanupFeedback {
   private readonly screen = new Vec3();
   private readonly popups: { element: HTMLDivElement; point: Vec3; until: number }[] = [];
   constructor(app: Application, private readonly camera: Entity, private readonly layer: HTMLElement, targets: Interaction[]) {
-    this.mesh = Mesh.fromGeometry(app.graphicsDevice, new TorusGeometry({ tubeRadius: 0.02, ringRadius: 0.43, segments: 28, sides: 5 }));
+    this.mesh = Mesh.fromGeometry(app.graphicsDevice, new TorusGeometry({ tubeRadius: 0.055, ringRadius: 0.43, segments: 32, sides: 8 }));
     this.glow = material('Interaction glow', '#ffe6a2');
     this.glow.useLighting = false; this.glow.emissive.set(1, 0.81, 0.42); this.glow.update();
     for (const target of targets) {
@@ -48,7 +48,7 @@ export class CleanupFeedback {
       const nearby = interactions.focus === target && available && !(target.id==='put-tool-away'&&primary&&primary!==target);
       ring.enabled = nearby || destination || (available && !carried && target.id!=='play-lilah');
       ring.setPosition(target.anchor.x,.105,target.anchor.z);
-      const scale = (destination ? 1.25 : nearby ? .85 : .55) + Math.sin(now / 220) * (destination?.07:.025);
+      const scale = (destination ? 1.3 : nearby ? 1.1 : .85) + Math.sin(now / 300) * (destination?.10:.035);
       ring.setLocalScale(scale, 1, scale);
       label.hidden = !nearby && !destination;
       if(target.id==='play-lilah')label.hidden=true;

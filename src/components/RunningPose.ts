@@ -38,6 +38,7 @@ export function balancedRun(model: Entity, track: AnimTrack): AnimTrack {
     hand.setRotation(new Quat().slerp(straight,rotation,Math.min(1,RUN_WRIST_LIMIT/Math.max(angle,.001))));
   };
   const frames:number[][][]=[];const count=40;
+  let fixedLeftWrist:Quat|undefined;
   for(let f=0;f<=count;f++){
     const phase=f===count?0:f/count;
     sample((phase+.5)%1);
@@ -57,6 +58,11 @@ export function balancedRun(model: Entity, track: AnimTrack): AnimTrack {
       bones[left].setRotation(mirror(new Quat().mul2(opposite[right],bind[right])));
     }
     bones.LeftHand.setRotation(new Quat().mul2(bones.LeftHand.getRotation(),palmAlignment));
+    // A world-space mirror can still roll at the wrist as the forearm swings.
+    // Calibrate from the good right hand once, then lock the LEFT hand to its
+    // forearm for the entire cycle. The right-arm animation stays as supplied.
+    fixedLeftWrist??=bones.LeftHand.getLocalRotation().clone();
+    bones.LeftHand.setLocalRotation(fixedLeftWrist);
     frames.push(bindings.map(({path},i)=>path.propertyPath[0]==='localRotation'?nodes[i].getLocalRotation().toArray():
       (path.propertyPath[0]==='localPosition'?nodes[i].getLocalPosition():nodes[i].getLocalScale()).toArray()));
   }

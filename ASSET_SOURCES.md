@@ -86,3 +86,17 @@ Source: https://mocap.cs.cmu.edu/ and https://mocap.cs.cmu.edu/search.php?mainca
 Full source URLs, terms, preprocessing and the reviewed KayKit/Quaternius alternatives are in public/assets/animations/chores/asset_manifest.json. Only selected adapted trajectories ship. Original ASF/AMC downloads stay under ignored artifacts/house-polish/sources; scripts/prepare-house-motion.mjs reproduces the conversion.
 
 Tornado sound cues reuse the previously downloaded **Kenney Interface Sounds (CC0)**, checked against https://kenney.nl/assets/interface-sounds, plus project-authored synthesized notes. Original license and sources remain in public/assets/pop/audio. No new music plays in the house. Event toys, spill, cloth and basket are project-authored; existing pug/poop models retain their earlier credits.
+
+## September 20 family-life polish
+
+Classroom Blackboard and Bulletin board by Poly by Google (CC BY 3.0); see `public/assets/environment/school/sources.json`. Additional Kenney Furniture Kit props use distinct painted school colors. Dad’s chair derives from the original CC0 `loungeChairRelax.glb`, with only the footrest faces removed by `scripts/prepare-upright-chair.py`. Original retained. House music: joaquinton’s CC0 relax_background1, converted to MP3; see `public/assets/audio/SOURCES.md`. Resting elbow/knee flex uses the initial CMU 140_08 excerpt with authored rig fit and breathing, not a full source bed-entry clip; see `public/assets/animations/rest/SOURCES.md`.
+# September 20 follow-up assets
+
+- Classroom pupils: Kenney Mini Characters, CC0, https://kenney.nl/assets/mini-characters.
+  Three original GLBs and shared texture, seated clip plus authored greetings.
+  See `public/assets/characters/classmates/SOURCES.md` and retained license.
+- House playlist: Tarush Singhal's Happy Ukelele Island Surfing Theme and Kistol's
+  Forget Me Not, both CC0. URLs and level/fade processing are recorded in
+  `public/assets/audio/SOURCES.md` and the public credits page.
+- Bed and crib entry: authored runtime pose/placement sequence leading into
+  existing CMU-derived rest; provenance in `public/assets/animations/rest/SOURCES.md`.

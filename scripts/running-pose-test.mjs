@@ -44,3 +44,5 @@ for(let f=0;f<40;f++){
 }
 for(let f=0;f<40;f++)assert(Math.abs(angles[f][0]-angles[(f+20)%40][1])<.01,'Left visible wrist must match the right half a stride later');
 console.log('PASS: both visible wrists stay within 12 degrees of the forearm; left/right wrist flex matches throughout the cycle.');
+
+const left=run.curves.find(c=>c.paths[0].entityPath[0]==='LeftHand'&&c.paths[0].propertyPath[0]==='localRotation'),wrist=run.outputs[left.output].data;for(let i=4;i<wrist.length;i++)assert.equal(wrist[i],wrist[i%4],'No local left wrist twist at any run phase');console.log('PASS left wrist is fixed relative to forearm throughout the swing');

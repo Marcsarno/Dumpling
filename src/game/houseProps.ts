@@ -4,6 +4,7 @@ import { createCleanupProps, type CleanupItem, type CleanupProps } from './clean
 import { primitives, type Triple } from './primitives';
 import { PetCleanup } from './PetCleanup';
 import { DailyLife } from './DailyLife';
+import {RoundMesses} from './RoundMesses';
 
 /** Data-driven Carryable/DropZone pairs use the bedroom's existing interaction and carry systems. */
 export function createHouseProps(app: Application, house: Bedroom): CleanupProps {
@@ -66,5 +67,6 @@ export function createHouseProps(app: Application, house: Bedroom): CleanupProps
     if(props.daily!.active) props.daily!.refresh();
   };
   props.configure = tasks => { active = tasks; props.reset(); };
+  props.roundMesses=new RoundMesses(props,house);
   return props;
 }

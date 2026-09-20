@@ -12,7 +12,7 @@ export function createStore(app:Application,definition:StoreDefinition){
   const surfaces=new SurfaceTextures(app),art=new HouseArt(app,root,surfaces),shape=primitives(app,root),obstacles:BoundingBox[]=[];
   const [accent,secondary,ivory]=definition.palette;
   const width=definition.layout===1?4.1:3.4,depth=definition.layout===0?7.2:definition.layout===1?9:8.4;
-  const floor=material('Shop maple','#dcc1a1');surfaces.apply(floor,'wood',3);
+  const floor=material(definition.name+' floor',['#c3d1b5','#efd7e2','#b9bfd4'][definition.layout]);surfaces.apply(floor,(['tile','checker','rug'] as const)[definition.layout],definition.layout===2?5:8);
   const wall=material('Shop cream',ivory),trim=material('Shop accent',accent),rug=material('Shop woven rug',secondary);surfaces.apply(rug,'rug',2);
   shape('Maple floor','box',[0,-.12,0],[width*2,.24,depth*2],floor);
   shape('Back wall','box',[0,1.55,-depth-.08],[width*2,3.1,.16],wall);
@@ -42,7 +42,7 @@ export function createStore(app:Application,definition:StoreDefinition){
   for(const [i,site] of sites.entries()){
     const market=['shelf-end','shopping-basket'].includes(site.kind);
     const sizes=[2.05,1.35,1,.46,1.05,1.5];
-    art.add(market?'market':'furniture',site.kind,site.fixture,sizes[i],i===1?90:i===4?-90:0,i===5?'width':'height',{carpet:accent,wood:'#cba77e'});
+    art.add(market?'market':'furniture',site.kind,site.fixture,sizes[i],i===1?90:i===4?-90:0,i===5?'width':'height',{carpet:accent,wood:accent,woodDark:secondary,metal:ivory},false,0,'paint');
     const half=i===0?[.48,.30]:i===1?[.3,.55]:i===2?[.53,.55]:i===3?[.36,.4]:i===4?[.34,.53]:[.76,definition.layout===2?.88:.46];
     obstacles.push(new BoundingBox(new Vec3(site.fixture[0],0,site.fixture[2]),new Vec3(half[0],1,half[1])));
     boxes.push([0,1].map(n=>{

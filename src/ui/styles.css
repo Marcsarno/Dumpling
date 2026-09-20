@@ -510,3 +510,5 @@ footer {
     display:none;
   }
 }
+
+#house-music{pointer-events:auto;border:0;border-radius:18px;background:#eee2f3;color:#725283;font-family:inherit;font-weight:700;font-size:10px;line-height:1.2;padding:8px;min-height:40px;min-width:54px;cursor:pointer}footer{gap:6px}footer .keyboard-hint{display:none}@media(max-width:380px){footer{left:12px;right:12px}#collection-button{font-size:9px!important}}

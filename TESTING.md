@@ -1,5 +1,63 @@
 # Cleanup and collection prototype verification
 
+## Remaining-fixes follow-up — September 20
+
+- TypeScript and production Vite build pass; the existing large engine chunk
+  advisory remains. 29 checks pass across progress, clock, hunts, trading, Pop
+  rules, prize/shop invariants, running wrists, safe trade suggestions and bed
+  path continuity.
+- `scripts/life-followup-browser.mjs` exercises three imported seated classmates,
+  suggestion without a save write followed by explicit successful acceptance,
+  four random layouts per round mode, reachable candidates, a real randomized
+  pickup/placement and crayon cleanup, crib entry and staged bed entry/next day.
+  Uses an isolated 390px touch browser; images/report in `artifacts/life-followup/`.
+- `scripts/house-music-browser.mjs` passes at 320px: actual media decode, quiet
+  fade, ended event, 12-second gap, second track, mute/reload and developer pause.
+  It seeks near the first track's end to test completion. No claim of full-track
+  listening or long-session enjoyment is made.
+- Existing trading browser regression passes again, including protections,
+  negotiation, explicit last-copy confirmation, saved deals and next-day offers.
+  Existing life-polish browser passes cooking/carrying/plating/seated eating,
+  two untimed stores/reload, finite ticket redemption and staged bedtime.
+- All saves are isolated fixtures; the user's profile/storage is untouched.
+  Physical iPhone/Safari and child playtesting remain unverified.
+
+Use Node 24 `--experimental-transform-types` for scripts importing TypeScript
+parameter properties, for example `node --experimental-transform-types
+scripts/life-followup-browser.mjs`. Vite test origin: `127.0.0.1:5178`.
+
+## Family life and collecting — September 20
+
+- TypeScript and production Vite build pass (existing large-engine-chunk advisory).
+- Production DEV regression passes at 320/390/430px: visible launcher/tabs,
+  checkpoint, pause, practice reward isolation and reload; no runtime/asset errors.
+- 27 checks across progress, daily clock, hunts, trading, Pop rules, new prize/shop
+  invariants and running pose pass. Old saves and failed writes remain protected;
+  the wrist test now asserts identical left-hand local rotation over every run key.
+- `scripts/life-polish-browser.mjs`: actual phone joystick/taps cook, carry, serve,
+  sit and eat; two untimed stores plus reload; redeem a finite ticket prize; sleep
+  and next day. No runtime or asset errors.
+- `scripts/life-house-browser.mjs` and `scripts/life-pose-browser.mjs` cover laundry
+  vacuum pickup/holds/return, dog feeding and roaming, music/mute persistence,
+  Lilah reaching the crib, Dad seated with clear feet, and Arianna lying in bed.
+- `scripts/life-pet-browser.mjs` passes scoop/flush/wash, exactly one saved reward,
+  completed poop hidden after reload, and a touch-accessible prize shelf at 320px.
+- `scripts/life-pop-browser.mjs` passes real drag chains of 5 and 8, rainbow
+  activation, greater audio feedback, no super-banner loss to Frenzy, banner expiry,
+  320px layout, mute and reduced-motion behavior.
+- Existing trading browser regression passes: all desks reachable, negotiation,
+  refusal, cancellation, explicit last-copy confirmation, successful saved deal,
+  reload and next-day offers. Existing dog Tornado test passes a full 55-second
+  round: seven cleanups, dog interruption, three-star reward, and return. Lilah
+  traveled across nursery, bedroom/landing, living, kitchen and laundry areas.
+- Evidence: ignored `artifacts/life-polish/`, `artifacts/trading/` and
+  `artifacts/dog-rig/`. Browsers are isolated Edge mobile emulations, not physical
+  iPhone/Safari or child playtests. Source music licensing/playback were verified;
+  whether the loop stays enjoyable over long play needs the family's judgment.
+
+Run the new scripts with Node 24 while Vite serves 127.0.0.1:5178. GAME_URL selects
+another game origin; POP_URL selects the standalone Pop harness origin.
+
 ## Sunny Pup rig — September 18
 
 - `scripts/dog-rig-test.mjs`: source SHA unchanged; 13,756 vertices with UVs; normalized four-influence skin; valid joints; finite unit quaternion keys; Idle/Walk exact loop endpoints and meaningful animated joint motion.

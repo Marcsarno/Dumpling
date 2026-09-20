@@ -4,6 +4,7 @@ import { TRADERS, definition, willing, type TraderId } from '../data/trading';
 import type { ProgressStore } from '../systems/ProgressStore';
 import { dumplingPortrait } from '../game/dumplingVisual';
 import './trading.css';
+import {dailyWish,loves,suggestTrade} from '../data/tradeHelp';
 
 export class TradingUI {
   readonly dialog = document.createElement('dialog');
@@ -42,12 +43,12 @@ export class TradingUI {
     this.revision = npc.revision;
     const series = SERIES.find(s => s.id === day.series)!.name;
     this.dialog.style.setProperty('--trader', trader.color);
-    this.dialog.innerHTML = `<header class="trade-header"><span class="eyebrow">RECESS · DAY ${this.day}</span><h2 id="trade-title">${trader.icon} ${trader.name}</h2><strong>${trader.title}</strong><p>${this.trader === 'series' ? `I’m collecting ${series}. I’ll trade extra for those!` : trader.hint}</p></header>
+    this.dialog.innerHTML = `<header class="trade-header"><span class="eyebrow">CLASSROOM CLUB · DAY ${this.day}</span><h2 id="trade-title">${trader.icon} ${trader.name}</h2><strong>${trader.title}</strong><p>${this.trader === 'series' ? `I’m collecting ${series}. I’ll trade extra for those!` : trader.hint}</p><small>Today’s wish: ${dailyWish(day,this.trader).name} · Other favorites welcome!</small></header>
       <div class="trade-scroll"><section><h3>Their side <small>you receive</small></h3><div id="npc-offer" class="trade-slots"></div></section>
       <p class="trade-speech" role="status" aria-live="polite"></p>
       <section><h3>Your side <small>tap to take back · ${this.give.length}/3</small></h3><div id="player-offer" class="trade-slots"></div></section>
       <div class="trade-bag-heading"><h3>Your trading bag</h3><label><input id="trade-singles" type="checkbox" ${this.includeLast ? 'checked' : ''}> Include last copies</label></div>
-      <p class="trade-safety">Extras first. Keep one of each. ♥ favorites and 🔒 locks cannot be traded.</p><div id="trade-inventory"></div></div>
+      <p class="trade-safety">Extras first. Keep one of each. ♥ favorites and 🔒 locks cannot be traded.</p><button id="trade-suggest">Help me make an offer</button><p class="trade-help">Suggests spare friends only. You decide whether to trade.</p><div id="trade-inventory"></div></div>
       <div class="trade-footer"><p id="trade-readiness"></p><div class="trade-controls"><button id="trade-cancel" aria-label="Walk away">✕<small>Walk away</small></button><button id="trade-add" aria-label="Ask them to add">+<small>Add more?</small></button><button id="trade-accept" aria-label="Accept trade">✓<small>Trade</small></button></div></div>`;
     const q = <T extends HTMLElement = HTMLElement>(selector: string) => this.dialog.querySelector<T>(selector)!;
     q('.trade-speech').textContent = this.notice || npc.message;
@@ -72,6 +73,7 @@ export class TradingUI {
       b.setAttribute('aria-label', `Offer ${d.name}`);
       const text = document.createElement('span'); const name = document.createElement('strong'); name.textContent = d.name;
       const detail = document.createElement('small'); detail.textContent = `${d.rarity} · ×${count} · ${protectedItem ? (p?.favorite ? '♥ Favorite' : '🔒 Locked') : npc.offer.includes(d.id) ? 'On their side' : count === 1 ? 'Last copy' : `${Math.max(0,count - selected - 1)} spare`}`;
+      if(loves(d.id,this.trader,day)){detail.textContent+=' · They love this!';b.classList.add('trade-loved');}
       text.append(name, detail); b.append(this.picture(d.id), text); b.onclick = () => { this.give.push(d.id); this.notice = ''; this.render(); }; q('#trade-inventory').append(b);
     }
     if (!owned.length) q('#trade-inventory').innerHTML = '<p class="trade-empty">Your bag is empty. Open store boxes at home, then bring your extras to recess. Your classmates will be here!</p>';
@@ -80,6 +82,8 @@ export class TradingUI {
     q<HTMLButtonElement>('#trade-add').disabled = npc.done || !this.give.length || npc.asks >= 4;
     q<HTMLButtonElement>('#trade-accept').disabled = !ready;
     q('#trade-cancel').onclick = () => this.close();
+    q<HTMLButtonElement>('#trade-suggest').disabled=npc.done;
+    q('#trade-suggest').onclick=()=>{const offer=suggestTrade(day,this.trader,this.save.data.collection,this.save.data.protections);this.give=offer??[];this.includeLast=false;this.notice=offer?'Try these extras! Review both sides, then tap Trade if you like it.':'No matching deal from your extras yet. Try another classmate or bring more doubles tomorrow.';this.render();this.dialog.querySelector('.trade-scroll')!.scrollTop=0;};
     q<HTMLInputElement>('#trade-singles').onchange = e => { this.includeLast = (e.target as HTMLInputElement).checked; this.give = []; this.notice = ''; this.render(); };
     q('#trade-add').onclick = () => { this.attempt(() => { this.notice = ''; this.save.askTrade(this.day, this.trader, this.revision, this.give, this.includeLast); this.changed(); }); this.dialog.querySelector('.trade-scroll')!.scrollTop=0; };
     q('#trade-accept').onclick = () => { this.attempt(() => {

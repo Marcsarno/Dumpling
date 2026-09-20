@@ -32,7 +32,7 @@ export const seriesById = (id: SeriesId) => SERIES.find(s=>s.id===id)!;
 export const storeById = (id: string) => { const s=STORES.find(s=>s.id===id); if(!s)throw Error('That store is unavailable.');return s; };
 export const boxPrice = (store: StoreDefinition, series: SeriesId) => seriesById(series).price + store.markup;
 export const shoppingMinutes = (minutes: number) => Math.max(0, Math.floor(HUNT_RULES.closingMinute-minutes));
-export const canVisit = (store: StoreDefinition, minutes: number) => shoppingMinutes(minutes)>=store.travelMinutes+HUNT_RULES.minimumSearchMinutes;
+export const canVisit = (_store: StoreDefinition, minutes: number) => minutes>=900;
 function unit(random:()=>number) { const n=random();if(!Number.isFinite(n)||n<0||n>=1)throw Error('Invalid random source.');return n; }
 function weighted<T>(entries: {value:T;weight:number}[],random:()=>number):T {
   let n=unit(random)*entries.reduce((sum,e)=>sum+e.weight,0);

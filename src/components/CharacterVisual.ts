@@ -3,6 +3,7 @@ import { meshyGameplay, type ChoreCapture } from './MeshyGameplayAdapter';
 import { material, primitives } from '../game/primitives';
 import { CharacterAnimator, type CharacterManifest } from './CharacterAnimator';
 import { CharacterGrounding } from './CharacterGrounding';
+import {sleepingTrack,bedEntryTrack} from './RestingPose';
 
 export function createCharacter(app: Application) {
   const player = new Entity('Arianna', app);
@@ -53,6 +54,7 @@ export async function loadArianna(app: Application, character: ReturnType<typeof
     const motion=await fetch(`${import.meta.env.BASE_URL}assets/animations/chores/cmu-trajectories.json`);
     if(!motion.ok)throw new Error('Chore motion library could not load.');
     ({tracks,manifest}=meshyGameplay(model,tracks,await motion.json() as ChoreCapture));
+    const sleep=sleepingTrack(model,tracks.find(t=>t.name==='Idle')!,await(await fetch('/assets/animations/rest/sleep.json')).json());tracks.push(sleep,bedEntryTrack(model,tracks.find(t=>t.name==='Idle')!,sleep));manifest.animations.push({name:'Sleep',duration_seconds:4,loop:true},{name:'SleepEnter',duration_seconds:3.2,loop:false});
   }
   // Normalize the visual only. Root position, movement and collision radius stay untouched.
   const bounds = new BoundingBox();

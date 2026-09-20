@@ -35,7 +35,7 @@ trading.traders.rarity={stock:['orbit','blueberry','aurora','supernova','comet',
 const progress={version:1,balance:17,collection:Object.fromEntries(DUMPLINGS.map(d=>[d.id,d.id==='blueberry'?0:d.id==='minty'?1:3])),boxes:[{id:'duplicate-test',dumplingId:'rosie'}],creditedRounds:[],trip:{active:false,purchases:0},location:'home',reveal:null,trading};
 await context.addInitScript(progress=>{if(!localStorage.getItem('trading-test-started')){localStorage.setItem('arianna.progress.v1',JSON.stringify(progress));localStorage.setItem('trading-test-started','1');}},progress);
 try{
-  await page.goto('http://127.0.0.1:5173',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__roomTest?.snapshot().characterLoaded);
+  await page.goto(process.env.GAME_URL??'http://127.0.0.1:5173',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>window.__roomTest?.snapshot().characterLoaded);
   await page.locator('#action-button').tap();await page.waitForFunction(()=>window.__roomTest.snapshot().loop.phase==='revealed');assert.equal((await snap()).loop.collection.rosie,4);pass('Open a saved sealed box and receive a real duplicate');
   await page.locator('#action-button').tap();await page.locator('#collection-dialog').waitFor({state:'visible'});
   await page.getByRole('button',{name:'Lock Mochi',exact:true}).tap();await page.getByRole('button',{name:'Favorite Custard',exact:true}).tap();

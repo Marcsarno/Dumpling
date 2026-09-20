@@ -4,7 +4,7 @@ import { ADDRESS_REPEAT, FILTER_LINEAR_MIPMAP_LINEAR, Texture, type Application,
 export class SurfaceTextures {
   private readonly maps = new Map<string, Texture>();
   constructor(private app: Application) {}
-  apply(material: StandardMaterial, kind: 'wood' | 'fabric' | 'rug', tiling=kind==='rug'?4:2) {
+  apply(material: StandardMaterial, kind: 'wood' | 'fabric' | 'rug' | 'checker' | 'terrazzo' | 'tile', tiling=kind==='rug'?4:2) {
     if(!this.maps.has(kind)) {
       const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
       const context=canvas.getContext('2d')!, pixels=context.createImageData(256,256);
@@ -12,7 +12,7 @@ export class SurfaceTextures {
         const weave=Math.sin(x*Math.PI/8)*Math.sin(y*Math.PI/8);
         const grain=Math.sin(y*Math.PI/16+Math.sin(x*Math.PI/128)*.7);
         const fiber=Math.sin(x*Math.PI/4+y*Math.PI/8)*2;
-        const value=kind==='wood'?244+grain*7+Math.sin(y*Math.PI/2)*2:
+        const value=kind==='checker'?((Math.floor(x/128)+Math.floor(y/128))%2?218:255):kind==='tile'?(x<4||y<4?210:250):kind==='terrazzo'?(Math.sin(x*12.9898+y*78.233)*43758.5453%1>.87?195:247):kind==='wood'?244+grain*7+Math.sin(y*Math.PI/2)*2:
           kind==='rug'?240+weave*8+Math.sin(y*Math.PI/8)*3+fiber:242+weave*9+fiber;
         const i=(y*256+x)*4;pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=value;pixels.data[i+3]=255;
       }

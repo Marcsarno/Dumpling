@@ -2,6 +2,8 @@ import {Asset,BoundingBox,Entity,Vec3,type AnimTrack,type Application,type Conta
 import {CharacterAnimator,type CharacterManifest} from '../components/CharacterAnimator';
 import {CharacterGrounding} from '../components/CharacterGrounding';
 import {HousePath} from '../components/HousePath';
+import {sleepingTrack,bedEntryTrack} from '../components/RestingPose';
+import {bedEntry,BED_ENTRY_SECONDS} from '../components/BedEntry';
 import {material,primitives} from './primitives';
 import type {Bedroom} from './bedroom';
 import type {DailyLife} from './DailyLife';
@@ -26,6 +28,7 @@ export class Lilah {
   private loaded=false;
   private carrying=false;
   private state='watching';
+  private bedStart:{position:Vec3;yaw:number;elapsed:number}|null=null;
   private speech='Hi, Ari!';
   private speechUntil=0;
   private visited=new Set<string>();
@@ -89,7 +92,8 @@ export class Lilah {
     await new Promise<void>((resolve,reject)=>{asset.once('load',resolve);asset.once('error',reject);this.app.assets.add(asset);this.app.assets.load(asset);});
     const resource=asset.resource as ContainerResource & {animations:Asset[]};
     const model=resource.instantiateRenderEntity({castShadows:true}),tracks=resource.animations.map(a=>a.resource as AnimTrack);
-    const manifest:CharacterManifest={animations:tracks.map(t=>({name:t.name,duration_seconds:t.duration,loop:!['PickUp','PutDown','Celebrate'].includes(t.name)})),
+    const sleep=sleepingTrack(model,tracks.find(t=>t.name==='Idle')!,await(await fetch('/assets/animations/rest/sleep.json')).json());tracks.push(sleep,bedEntryTrack(model,tracks.find(t=>t.name==='Idle')!,sleep));
+    const manifest:CharacterManifest={animations:tracks.map(t=>({name:t.name,duration_seconds:t.duration,loop:!['PickUp','PutDown','Celebrate','SleepEnter'].includes(t.name)})),
       scale:{rest_height_m:1.03},locomotion:{Walk:{travel_speed_mps:.7},CarryWalk:{travel_speed_mps:.7}},
       interaction_events:{PickUp:[{time_seconds:1.1,event:'take-toy'}],PutDown:[{time_seconds:1.3,event:'drop-toy'}]},action_playback:3,walk_playback:1};
     for(const required of ['Idle','Walk','CarryIdle','CarryWalk','PickUp','PutDown','Celebrate'])if(!tracks.some(t=>t.name===required))throw new Error('Missing Lilah clip '+required);
@@ -121,17 +125,19 @@ export class Lilah {
   }
   update(dt:number,elapsed:number,visible:boolean,canMischief:boolean,arianna:Vec3,camera:Entity){
     this.root.enabled=visible&&this.loaded;this.label.hidden=!this.root.enabled;
-    this.daily.lilahAvailable=this.root.enabled&&!this.animator.busy;
+    this.daily.lilahAvailable=this.root.enabled&&!this.animator.busy&&this.state!=='sleeping'&&!this.bedStart;
     const target=this.daily.lilahTarget;target.anchor.copy(this.root.getPosition());target.marker.copy(target.anchor);target.marker.y+=this.height+.08;
     if(!this.root.enabled||document.hidden)return;
-    if(this.day!==this.daily.clock.state.day){this.day=this.daily.clock.state.day;this.time=0;this.nextMess=8;this.nextDecision=3;this.route=[];this.animator.reset();this.carrying=false;this.toy.enabled=false;}
+    if(this.day!==this.daily.clock.state.day){this.day=this.daily.clock.state.day;this.time=0;this.nextMess=8;this.nextDecision=3;this.route=[];this.animator.reset();this.carrying=false;this.toy.enabled=false;if(this.grounding)this.grounding.surfaceHeight=null;if(this.state==='sleeping'||this.bedStart)this.root.setPosition(8.55,.09,-1.3);this.bedStart=null;this.state='watching';}
+    if((this.state==='sleeping'||this.bedStart)&&this.daily.clock.state.phase!=='night'){this.root.setPosition(8.55,.09,-1.3);this.state='watching';this.bedStart=null;this.animator.setWorkClip(null);this.animator.setIdleClip('Idle');if(this.grounding)this.grounding.surfaceHeight=null;}
     if(canMischief)this.time+=dt;
-    if(!this.scripted&&canMischief&&this.daily.clock.state.phase==='night'&&this.state!=='sleepy'){
+    if(!this.scripted&&canMischief&&this.daily.clock.state.phase==='night'&&this.state!=='sleepy'&&this.state!=='sleeping'&&!this.bedStart){
       this.route=[];this.animator.cancelAction();this.decide(arianna);
     }
     const velocity=new Vec3();
     if(this.scripted)this.updateTornado(dt,arianna,velocity);
-    else if(canMischief&&!this.animator.busy){
+    else if(this.bedStart){const entry=this.bedStart;if(canMischief)entry.elapsed+=dt;const t=entry.elapsed/BED_ENTRY_SECONDS,pose=bedEntry(entry.position,entry.yaw,true,t);this.root.setPosition(pose.position);this.visual.setLocalEulerAngles(0,pose.yaw,0);if(this.grounding)this.grounding.surfaceHeight=pose.height;if(t>=1){this.bedStart=null;this.state='sleeping';this.animator.setWorkClip(null);this.animator.setIdleClip('Sleep');this.say('Zzz…');}}
+    else if(canMischief&&!this.animator.busy&&this.state!=='sleeping'){
       if(this.route.length){
         const p=this.root.getPosition(),next=this.route[0],dx=next.x-p.x,dz=next.z-p.z,distance=Math.hypot(dx,dz);
         if(distance<.0001){this.route.shift();if(!this.route.length)this.arrive();}
@@ -158,7 +164,7 @@ export class Lilah {
         this.say(made?['Ta-da! I helping!','Uh-oh. All wet!','Crumbs are confetti!'][this.daily.lilahMesses.count-1]:'I did it!');
         this.nextMess=this.time+50;this.state='proud';
       });
-    }else if(this.destination==='bedtime'){this.state='sleepy';this.say('Zzz…');}
+    }else if(this.destination==='bedtime'){this.state='bedtime-entry';this.bedStart={position:this.root.getPosition().clone(),yaw:this.visual.getLocalEulerAngles().y,elapsed:0};this.animator.setWorkClip('SleepEnter');this.say('Night night!');}
     else{this.state='watching';this.say(this.destination==='follow'?'You’re my favorite, Ari!':'Ooh…');}
   }
   snapshot(){return {loaded:this.loaded,height:this.height,position:this.root.getPosition().toArray(),state:this.state,scripted:this.scripted,job:this.job?{point:this.job.point.toArray(),icon:this.job.icon,wait:this.job.wait}:null,speech:this.speech,carrying:this.carrying,animation:this.animator.snapshot(),visited:[...this.visited],routeLength:this.route.length,time:this.time,nextMess:this.nextMess};}

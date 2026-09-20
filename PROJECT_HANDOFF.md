@@ -1,5 +1,60 @@
 # Dumpling / Arianna game — project handoff
 
+## September 20 release
+
+Marc explicitly requested **commit and deploy** for the completed family-life
+polish and follow-up below. Release target: `Marcsarno/Dumpling` main, connected
+to Vercel at https://dumpling-sandy.vercel.app/. The release commit is titled
+`Complete family life, classroom trading and collecting polish`. Check GitHub
+deployment status for its published state. The 29 automated checks, touch
+playthroughs, TypeScript and production build passed before release. Publishing
+does not reset or migrate away existing version-one player saves.
+
+## Follow-up completion — September 20
+
+Marc asked to continue all the remaining fixes this pass. Classroom placeholders
+are replaced with three seated CC0 Kenney Mini Characters, desk name/wish signs,
+greetings and a safe, reviewable spare-only trade suggestion. Existing negotiation,
+protections and explicit acceptance remain. House ·6 now draws from eleven chores;
+both House ·6 and Bedroom ·5 vary reachable pickup/mess locations each replay.
+Vacuum stays in laundry; vacuum dirt stays in living/kitchen. Daily save rules stay
+unchanged. Bedtime now has a 3.2-second authored reach/tuck/sit/recline sequence
+before the existing lying pose, with continuous bed/crib placement. Sleep completes
+after 6.5 seconds. This is authored adaptation, not sourced bed-entry mocap.
+
+House music now alternates quiet CC0 ukulele and piano by day, piano at night,
+with fades and a 12-second gap between tracks. Mute persists independently.
+See LIFE_POLISH.md and TESTING.md for follow-up verification and asset provenance.
+These changes are included in the authorized release above; real saves are untouched.
+
+## Family life and collecting polish — September 20
+
+Marc explicitly requested this milestone: stable left running wrist, varied nearby
+messes and laundry-room vacuum, clearer standing circles, carried/plated breakfast
+and seated eating, room-to-room Tornado, stronger 5+/8+/rainbow Pop rewards, house
+music, two untimed store visits, redeemable tickets, classroom trading and distinct
+venue finishes, a roaming puppy with feeding/poop chores, bed/crib rest, and removal
+of Dad's chair footrest. This request supersedes older pauses for these changes only.
+
+Implemented in the current working tree. Read **LIFE_POLISH.md** for behavior,
+asset provenance and tests. Existing version-one saves, collections, wallet, sealed
+boxes, Pop levels and credits are preserved; tests use isolated browser profiles.
+Legacy current-day chores stay finishable; varied task lists begin on the next day.
+Tickets now buy a limited daily shelf at 1/3/5/8 tickets, replacing automatic coupons.
+Every finished normal Pop round still awards at least one ticket. Stores pause the
+clock and allow two distinct visits per day, including direct store-to-store travel.
+
+The running fix now tests constant LEFT wrist rotation relative to the forearm,
+because the previous palm-direction limit could miss visible wrist roll. Original
+character GLBs and Dad's seated animation are unchanged. CMU 140_08 supplies resting
+joint flex; placement/breathing are adapted, not a captured climb-into-bed animation.
+School uses existing CC0 Kenney furniture plus attributed CC-BY boards; quiet CC0
+house music has a persistent mute button. DEV remains available in production.
+
+The prior release was 0334f84 (puppy). This milestone and its follow-up are included
+in the authorized September 20 release above. No further game expansion or extra
+Pop levels are part of this request.
+
 ## Sunny Pup replacement — September 18
 
 - Marc requested replacing the dog with his new Meshy GLB, keeping the existing size, rigging it and sourcing an open quadruped walk. Original source is preserved in `public/assets/pets/`; runtime asset is `sunny-pup.glb`, with 49-joint skin and Idle/Walk retargeted from Mesh2Motion's CC0 quadruped animations. See `SUNNY_PUP.md` there for provenance and rebuild instructions.

@@ -15,6 +15,7 @@ import {saveId} from '../systems/saveId';
 import {TORNADO_SECONDS,TornadoScore,chooseInterruption,type Interruption} from '../systems/TornadoRules';
 import '../ui/tornado.css';
 
+const roomOf=(p:Vec3)=>p.x>6.5?(p.z<3.6?'nursery':'dad'):p.z<3.6?'bedroom':p.z<9.5?'living':p.x>2.6?'laundry':'kitchen';
 const TYPES=[{name:'Blocks',icon:'🧱'},{name:'Crayons',icon:'🖍️'},{name:'Laundry',icon:'👕'},{name:'Juice spill',icon:'🧃'},{name:'Toys',icon:'🧸'}];
 type Mess={id:number;root:Entity;point:Vec3;type:number;special:Interruption;label:HTMLDivElement;born:number};
 const get=(id:string)=>document.querySelector<HTMLElement>(id)!;
@@ -32,7 +33,7 @@ export class LilahTornado {
   private readonly colors=['#edabbe','#a5c9e1','#ecc76c','#b3c895'].map((c,i)=>material('Tornado toy '+i,c));
   private readonly juice=material('Tornado juice','#eeb360');private readonly cloth:Entity;
   private spots:Vec3[]=[];private lastSpot=-1;private notice='Follow Lilah’s little trail!';private noticeUntil=0;
-  private recentSpots:number[]=[];
+  private recentSpots:number[]=[];private lastType=-1;
   private dog:{home:Vec3;angles:Vec3;route:Vec3[];point:Vec3;wait:number}|null=null;
   private popups:{element:HTMLElement;point:Vec3;until:number}[]=[];
   get active(){return this.phase!=='idle';}
@@ -68,7 +69,7 @@ export class LilahTornado {
   private begin(){
     this.dialog.close();this.phase='playing';this.elapsed=0;this.nextDrop=.6;this.created=0;this.lastSpot=-1;this.recentSpots=[];this.specialStarted=false;this.score=new TornadoScore();this.round=saveId();this.paid=false;
     this.hud.hidden=false;this.action.enabled=true;this.notice='Follow Lilah’s thought bubbles. Tap Action near a mess!';this.noticeUntil=6;
-    this.spots=[[1.1,2.1],[1.1,4.1],[1.2,6.1],[.7,8.1],[.5,10.3],[2.2,11.3],[3.8,10.7],[1.2,7.3],[3.7,6.4],[3.8,2]].map(([x,z])=>new Vec3(x,0,z)).filter(p=>this.planner.free(p.x,p.z)&&this.planner.route(new Vec3(this.character.player.getPosition().x,0,this.character.player.getPosition().z),p).length>0);
+    this.spots=[[1.1,2.1],[1.1,4.8],[.7,8.1],[.5,10.3],[1.8,11.3],[4.8,11.5],[3.7,6.4],[3.8,2],[8.4,.8],[8.1,7.0]].map(([x,z])=>new Vec3(x,0,z)).filter(p=>this.planner.free(p.x,p.z)&&this.planner.route(new Vec3(this.character.player.getPosition().x,0,this.character.player.getPosition().z),p).length>0);
     this.lilah.beginTornado();void this.audio.unlock();this.audio.pause(false);
     (get('#game-canvas') as HTMLCanvasElement).focus({preventScroll:true});
   }
@@ -87,11 +88,13 @@ export class LilahTornado {
     if(this.elapsed>=TORNADO_SECONDS){this.finish();return;}
     if(!this.lilah.working&&this.elapsed>=this.nextDrop&&this.messes.length<3){
       const position=this.lilah.root.getPosition();
-      const candidates=this.spots.map((p,i)=>({p,i,d:Math.hypot(p.x-position.x,p.z-position.z)})).filter(v=>v.i!==this.lastSpot&&v.d>.8&&v.d<6&&!this.messes.some(m=>m.point.distance(v.p)<1));
-      candidates.sort((a,b)=>Number(this.recentSpots.includes(a.i))-Number(this.recentSpots.includes(b.i))||a.d-b.d);
+      const candidates=this.spots.map((p,i)=>({p,i,d:Math.hypot(p.x-position.x,p.z-position.z)})).filter(v=>v.i!==this.lastSpot&&v.d>.8&&v.d<12&&!this.messes.some(m=>m.point.distance(v.p)<1));
+      const room=roomOf(position);
+      candidates.sort((a,b)=>Number(roomOf(a.p)===room)-Number(roomOf(b.p)===room)||Number(this.recentSpots.includes(a.i))-Number(this.recentSpots.includes(b.i))||a.d-b.d);
+      const otherRooms=candidates.filter(c=>roomOf(c.p)!==room);if(otherRooms.length){const nearby=otherRooms.filter(c=>c.d<otherRooms[0].d+3);const chosen=nearby[Math.floor(Math.random()*nearby.length)];candidates.splice(candidates.indexOf(chosen),1);candidates.unshift(chosen);}
       const spot=candidates[0];
       if(spot){
-        const basket=this.special==='basket'&&!this.specialStarted&&this.elapsed>14,type=this.created%TYPES.length;
+        const basket=this.special==='basket'&&!this.specialStarted&&this.elapsed>14,type=(this.lastType+1+Math.floor(Math.random()*(TYPES.length-1)))%TYPES.length;this.lastType=type;
         if(this.lilah.visitForMess(spot.p,basket?'🧺':TYPES[type].icon,()=>{
           if(!this.playing)return;
           this.spawn(spot.p,type,basket?'basket':'none');this.nextDrop=this.elapsed+1.1;

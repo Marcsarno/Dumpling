@@ -1,9 +1,10 @@
 import { DUMPLINGS, rollDumpling, STORE_INVENTORY } from '../data/collection.ts';
 import { saveId } from './saveId.ts';
+import {ticketPrizes,type PrizeShelf} from '../data/ticketPrizes.ts';
 import { POP_RULES, roundTickets } from '../data/squishyPop.ts';
 import { POP_LEVELS, levelStars, levelUnlocked, type PopLevelRecords, type PopLevelAttempt } from '../data/popLevels.ts';
 import { TRADERS, createTradingDay, negotiate, willing, type Protection, type TraderId, type TradingDay } from '../data/trading.ts';
-import { SERIES, STORES, HUNT_RULES, boxPrice, canVisit, createHuntDay, rollSeries, storeById, type HuntDay, type SeriesId } from '../data/hunt.ts';
+import { SERIES, STORES, HUNT_RULES, boxPrice, createHuntDay, rollSeries, storeById, type HuntDay, type SeriesId } from '../data/hunt.ts';
 
 export const SAVE_KEY = 'arianna.progress.v1';
 export interface SaveRepository { read(): string | null; write(value: string): void }
@@ -18,6 +19,7 @@ export interface ProgressData {
   creditedRounds: string[]; trip: { active: boolean; purchases: number };
   location: 'cleanup' | 'store' | 'home' | 'collection'; reveal: RevealReceipt | null;
   hunt?: HuntDay;
+  prizes?: PrizeShelf;
   trading?: TradingDay;
   protections?: Record<string, Protection>;
   pop?: {tickets:number;bestScore:number;rounds:string[];tutorialSeen:boolean;couponDay:number;levels?:PopLevelRecords};
@@ -43,6 +45,7 @@ function parse(raw: string | null): ProgressData {
       ||STORES.some(store=>{const s=h.stores[store.id];return !s||typeof s.rumor!=='string'||typeof s.visited!=='boolean'||!Array.isArray(s.slots)||s.slots.length>6
         ||new Set(s.slots.map(slot=>slot.site)).size!==s.slots.length||s.slots.some(slot=>!Number.isInteger(slot.site)||slot.site<0||slot.site>5||!SERIES.some(series=>series.id===slot.series)||!Number.isInteger(slot.remaining)||slot.remaining<0||slot.remaining>2||typeof slot.discovered!=='boolean');}))throw Error('Daily store save could not be read.');
   }
+  if(value.prizes&&(!Number.isSafeInteger(value.prizes.day)||value.prizes.day<1||!Array.isArray(value.prizes.sold)||value.prizes.sold.some(s=>!['0','1','2','3'].includes(s))||new Set(value.prizes.sold).size!==value.prizes.sold.length))throw Error('Prize shelf could not be read.');
   if (value.protections && (typeof value.protections !== 'object' || Array.isArray(value.protections) || Object.entries(value.protections).some(([id,p]) => !validId(id) || !p || typeof p.favorite !== 'boolean' || typeof p.locked !== 'boolean'))) throw Error('Collection protections could not be read.');
   if (value.trading) {
     const t = value.trading;
@@ -94,7 +97,20 @@ export class ProgressStore {
       return p.tickets;
     });
   }
-  popDiscount(data=this.data){return data.pop&&data.hunt&&data.pop.tickets>=POP_RULES.couponTickets&&data.pop.couponDay!==data.hunt.day?POP_RULES.couponValue:0;}
+  // Saved tickets are now spent deliberately at the prize shelf, never auto-spent.
+  popDiscount(_data=this.data){return 0;}
+  redeemPrize(day:number,slot:string){
+    return this.commit(data=>{
+      if(data.hunt?.day!==day)throw Error('The prize shelf changed. Open it again.');
+      const prize=ticketPrizes(day).find(p=>p.slot===slot);if(!prize)throw Error('Choose a prize.');
+      const shelf=data.prizes?.day===day?data.prizes:(data.prizes={day,sold:[]});
+      if(shelf.sold.includes(slot))throw Error('This prize is sold out today. More arrive tomorrow!');
+      if(!data.pop||data.pop.tickets<prize.cost)throw Error('Play another round to earn more tickets.');
+      data.pop.tickets-=prize.cost;shelf.sold.push(slot);
+      data.collection[prize.item.id]=(data.collection[prize.item.id]??0)+1;
+      return prize.item.name;
+    });
+  }
   creditRound(id: string, amount: number) {
     if (!Number.isSafeInteger(amount) || amount < 0) throw new Error('Invalid allowance reward.');
     return this.commit(data => {
@@ -156,10 +172,12 @@ export class ProgressStore {
   visitStore(id:string,day:number,minutes:number) {
     return this.commit(data=>{
       if(!data.hunt||data.hunt.day!==day)throw Error('The stores need a fresh daily delivery. Try again.');
-      const store=storeById(id),start=Math.max(minutes,data.hunt.clockFloor);
-      if(start<900||!canVisit(store,start))throw Error('Not enough afternoon time for this trip and a little searching.');
-      data.hunt.clockFloor=start+store.travelMinutes;data.hunt.activeStore=id;data.hunt.stores[id].visited=true;
-      data.trip={active:true,purchases:0};data.location='store';return data.hunt.clockFloor;
+      storeById(id);
+      if(minutes<900)throw Error('Visit after school.');
+      if(data.hunt.stores[id].visited)throw Error('You already visited this store today. Choose another!');
+      if(Object.values(data.hunt.stores).filter(s=>s.visited).length>=2)throw Error('Two lovely stops today. More shopping tomorrow!');
+      data.hunt.activeStore=id;data.hunt.stores[id].visited=true;
+      data.trip={active:true,purchases:0};data.location='store';return minutes;
     });
   }
   discover(site:number) {
