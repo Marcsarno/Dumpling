@@ -1,5 +1,11 @@
 # Dumpling / Arianna game — project handoff
 
+## Sunny Pup replacement — September 18
+
+- Marc requested replacing the dog with his new Meshy GLB, keeping the existing size, rigging it and sourcing an open quadruped walk. Original source is preserved in `public/assets/pets/`; runtime asset is `sunny-pup.glb`, with 49-joint skin and Idle/Walk retargeted from Mesh2Motion's CC0 quadruped animations. See `SUNNY_PUP.md` there for provenance and rebuild instructions.
+- `PetCleanup` uses the same 0.48-unit bind height and original location. `DogAnimator` selects Idle/Walk from actual motion and manually advances only with the world. Developer/Pop pause also pauses the dog. Tornado travel uses a 0.30-unit/second walk in place of the old translation/bounce; return placement, cleanup reward and saves are unchanged.
+- Rig/source checks, Blender and PlayCanvas phase renders, measured height/pause checks and a full touch-driven dog Tornado round pass. Tests use isolated browser profiles. No player saves or character GLBs were replaced. The old pug remains as a backup.
+
 ## Developer studio restored on the live site and phones — September 18
 
 - Marc explicitly requested restoring the DEV control panel on the deployed game, including his phone. This supersedes earlier local-only notes. Keep the visible DEV launcher and dialog launchers available in production; no keyboard, special URL or opt-in flag is required.

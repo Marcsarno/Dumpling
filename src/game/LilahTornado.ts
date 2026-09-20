@@ -152,7 +152,7 @@ export class LilahTornado {
   }
   private updateDog(dt:number){
     const dog=this.dog;if(!dog||dog.wait<0&&!dog.route.length)return;const root=this.props.pet!.dog;
-    if(dog.route.length){const p=root.getPosition(),next=dog.route[0],delta=new Vec3(next.x-p.x,0,next.z-p.z),distance=delta.length();if(distance<.04){dog.route.shift();return;}delta.normalize();root.setPosition(p.x+delta.x*Math.min(distance,dt*.9),.04+Math.abs(Math.sin(this.elapsed*12))*.025,p.z+delta.z*Math.min(distance,dt*.9));root.setEulerAngles(0,Math.atan2(delta.x,delta.z)*180/Math.PI,0);}
+    if(dog.route.length){const p=root.getPosition(),next=dog.route[0],delta=new Vec3(next.x-p.x,0,next.z-p.z),distance=delta.length();if(distance<.04){dog.route.shift();return;}delta.normalize();root.setPosition(p.x+delta.x*Math.min(distance,dt*.30),.04,p.z+delta.z*Math.min(distance,dt*.30));root.setEulerAngles(0,Math.atan2(delta.x,delta.z)*180/Math.PI,0);}
     else {dog.wait+=dt;if(dog.wait>1.2&&this.messes.length<3){root.setPosition(dog.point.x,.04,dog.point.z);this.spawn(dog.point,0,'dog');dog.wait=-1;dog.route=this.planner.route(dog.point,new Vec3(dog.home.x,0,dog.home.z));}}
   }
   private paint(){

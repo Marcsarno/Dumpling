@@ -78,6 +78,7 @@ function start() {
     if (loop.mode !== 'home') camera.follow(character.player.getPosition(), dt);
     loop.update(now);
     tornado.update(document.hidden?0:Math.min(elapsed,.1));
+    props.pet?.dogAnimator?.update(dt);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === 'cleanup', cleanup.mode);
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
@@ -117,6 +118,7 @@ function start() {
         character: character.animator.snapshot(),
         lilah: lilah.snapshot(),
         marc: marc.snapshot(),
+        dog:props.pet?.dogAnimator?.snapshot(),
         lighting: room.lighting!.snapshot(),
         cleanup: cleanup.snapshot(),tornado:tornado.snapshot(),cameraState:camera.state,
         loop: loop.snapshot(),

@@ -1,5 +1,13 @@
 [
   {
+    "file": "sunny-pup.glb",
+    "title": "Sunny Pup with quadruped rig",
+    "author": "User-provided Meshy model; Mesh2Motion rig and source animations",
+    "source": "https://github.com/Mesh2Motion/mesh2motion-app/blob/3ce7f9d97d25e608b4779ce797da343775ded62b/static/animations/fox-animations.glb",
+    "license": "CC0-1.0 for the source rig and animations only; mesh/textures supplied by user",
+    "modifications": "Fitted skeleton, custom skin weights, retargeted Idle/Walk, baked grounding and loop closure. Uniform runtime height 0.48, matching the old pug. See SUNNY_PUP.md."
+  },
+  {
     "file": "pug.glb",
     "title": "Pug",
     "author": "Quaternius",

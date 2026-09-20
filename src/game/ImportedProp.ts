@@ -19,6 +19,8 @@ export async function importProp(app: Application, parent: Entity, name: string,
     const clip = resource.animations.find(a => /idle/i.test((a.resource as AnimTrack).name)) ?? resource.animations[0];
     model.addComponent('anim', { activate: true });
     model.anim!.assignAnimation('Idle', clip.resource as AnimTrack, undefined, 1, true);
+    const walk = resource.animations.find(a => /^walk$/i.test((a.resource as AnimTrack).name));
+    if (walk) model.anim!.assignAnimation('Walk', walk.resource as AnimTrack, undefined, 1, true);
   }
   return model;
 }

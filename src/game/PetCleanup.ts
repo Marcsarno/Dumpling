@@ -2,6 +2,7 @@ import { Entity, Vec3, type Application } from 'playcanvas';
 import type { CleanupItem, CleanupProps, Interaction } from './cleanupProps';
 import { importProp } from './ImportedProp';
 import { material, primitives } from './primitives';
+import { DogAnimator } from './DogAnimator';
 
 export const PET_TASKS = [{ id: 'pet-care', name: 'Scoop · flush · wash', icon: '🐾', room: 'Living room & bathroom' }];
 
@@ -14,6 +15,7 @@ export class PetCleanup {
   readonly tool: CleanupItem;
   readonly poop: Entity;
   readonly dog: Entity;
+  dogAnimator?:DogAnimator;
   private readonly bubbles: Entity;
   private readonly water: Entity;
   private flushStart = 0;
@@ -23,12 +25,12 @@ export class PetCleanup {
     tool.setLocalPosition(...this.tool.home); props.items.push(this.tool);
     this.poop = new Entity('Dog poop', app); props.root.addChild(this.poop);
     this.poop.setLocalPosition(3.7, .04, 5.3);
-    const dog = this.dog = new Entity('Little pug', app); props.root.addChild(dog); dog.setLocalPosition(4.8, .04, 5.85);
+    const dog = this.dog = new Entity('Sunny pup', app); props.root.addChild(dog); dog.setLocalPosition(4.8, .04, 5.85);
     const paper = new Entity('Bathroom toilet paper', app); props.root.addChild(paper); paper.setLocalPosition(6.21, .7, -.8);
     const soap = new Entity('Hand soap', app); props.root.addChild(soap); soap.setLocalPosition(3.83, .96, -3.03);
     void Promise.all([
       importProp(app, tool, 'shovel', .75, false, [180, 0, 0]), importProp(app, this.poop, 'poop', .18),
-      importProp(app, dog, 'pug', .48, true), importProp(app, paper, 'paper', .24), importProp(app, soap, 'soap', .21),
+      importProp(app, dog, 'sunny-pup', .48, true).then(model=>{this.dogAnimator=new DogAnimator(dog,model);}), importProp(app, paper, 'paper', .24), importProp(app, soap, 'soap', .21),
     ]).then(() => { this.loaded = true; dog.setLocalEulerAngles(0, 30, 0); }).catch(error => { this.errors.push(String(error)); console.error('Pet assets failed to load', error); });
     const shape = primitives(app, props.root), mint = material('Clean water', '#9bdae7');
     this.water = shape('Toilet flushing water', 'cylinder', [5.78, .48, -.36], [.33, .015, .28], mint, false);

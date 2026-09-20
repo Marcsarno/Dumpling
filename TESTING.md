@@ -1,5 +1,13 @@
 # Cleanup and collection prototype verification
 
+## Sunny Pup rig — September 18
+
+- `scripts/dog-rig-test.mjs`: source SHA unchanged; 13,756 vertices with UVs; normalized four-influence skin; valid joints; finite unit quaternion keys; Idle/Walk exact loop endpoints and meaningful animated joint motion.
+- Blender phase renders verify side/three-quarter poses. Baked grounding at four phases per clip is within 0.000013 native units of the floor. PlayCanvas viewer (`scripts/dog-viewer.html`) renders both clips at four phases without errors. Evidence: ignored `artifacts/dog-rig/`.
+- `scripts/dog-pause-browser.mjs`: measured bind height 0.48; developer and arcade pauses freeze the actual animation time; resuming advances it.
+- `scripts/dog-browser-test.mjs`: a full real-time dog Tornado round through joystick/touch completed 10 cleanups, the dog interruption and the expected reward. Walk was active during travel; afterward Idle and the exact home position were restored. No browser/runtime/asset errors; normal daily clock preservation remains checked by the report.
+- TypeScript and production build pass. Mobile tests use Edge emulation, not physical iPhone Safari. Tests never clear the user's live save.
+
 ## Live developer panel — September 18
 
 `node scripts/developer-production-browser.mjs` passes against the production build, with no debug globals. Uses an isolated Edge touch context: DEV launcher and all four tabs at 320×568, 390×844 and 430×932; no overlap with the Pop shortcut; world pause; resource/phase/skip/Pop commands; checkpoint before the first change; frozen practice timer and no practice rewards; reload retains the launcher and checkpoint. No console/runtime/asset errors. `TEST_URL` selects local preview or production. Evidence: ignored `artifacts/developer-production/`. TypeScript, production build and developer checkpoint/rollback tests pass. Physical iPhone Safari remains untested.

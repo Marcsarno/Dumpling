@@ -1,0 +1,12 @@
+<!doctype html><html><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sunny Pup rig review</title><style>body{margin:0;background:#eee8f4;font:16px system-ui}canvas{width:100vw;height:100vh;display:block}nav{position:absolute;top:12px;left:12px;display:flex;gap:8px}button{padding:12px;border:1px solid #aaa;border-radius:12px}</style><canvas id="view"></canvas><nav><button id="idle">Idle</button><button id="walk">Walk</button><button id="pause">Pause</button></nav><script type="module">
+import * as pc from 'playcanvas';import {importProp} from '/src/game/ImportedProp.ts';
+const canvas=document.querySelector('canvas'),app=new pc.Application(canvas,{});app.setCanvasFillMode(pc.FILLMODE_FILL_WINDOW);app.setCanvasResolution(pc.RESOLUTION_AUTO);window.addEventListener('resize',()=>app.resizeCanvas());app.scene.ambientLight=new pc.Color(.7,.7,.7);
+const camera=new pc.Entity('camera');camera.addComponent('camera',{clearColor:new pc.Color(.89,.86,.92)});camera.setPosition(1.0,.75,1.5);camera.lookAt(0,.24,0);app.root.addChild(camera);
+const light=new pc.Entity();light.addComponent('light',{type:'directional',intensity:1.4,castShadows:true,shadowResolution:2048});light.setEulerAngles(45,20,0);app.root.addChild(light);
+const floor=new pc.Entity();floor.addComponent('render',{type:'plane'});floor.setLocalScale(200,1,200);const mat=new pc.StandardMaterial();mat.diffuse=new pc.Color(.78,.75,.8);mat.update();floor.render.material=mat;app.root.addChild(floor);
+const dog=new pc.Entity('dog');app.root.addChild(dog);const model=await importProp(app,dog,'sunny-pup',.48,true);model.anim.playing=false;let paused=false;model.anim.baseLayer.transition('Idle',0);model.anim.update(0);
+for(const name of ['Idle','Walk'])document.querySelector('#'+name.toLowerCase()).onclick=()=>model.anim.baseLayer.transition(name,.15);
+document.querySelector('#pause').onclick=()=>paused=!paused;
+app.on('update',dt=>{if(!paused)model.anim.update(Math.min(dt,.05));});
+window.dogReview={sample(name,phase){paused=true;model.anim.baseLayer.transition(name,0);model.anim.update(0);model.anim.baseLayer.activeStateCurrentTime=model.anim.baseLayer.activeStateDuration*phase;model.anim.update(0);},view(x,y,z){camera.setPosition(x,y,z);camera.lookAt(0,.24,0);},model,app};app.start();
+</script></html>

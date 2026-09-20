@@ -1,5 +1,15 @@
 # Game asset sources
 
+## Sunny Pup replacement — September 18
+
+User-supplied `Meshy_AI_Sunny_Pup_0919020946_texture.glb` preserved unchanged.
+Runtime `public/assets/pets/sunny-pup.glb` adds a fitted skeleton, skin weights and
+Idle/Walk retargeted from the [Mesh2Motion quadruped asset](https://github.com/Mesh2Motion/mesh2motion-app/blob/3ce7f9d97d25e608b4779ce797da343775ded62b/static/animations/fox-animations.glb).
+Rig/animations are CC0; that license does not relicense the user-supplied model.
+Source animation and license: `scripts/assets/dog/`. Rebuild script:
+`scripts/rig-meshy-dog.py`. Full provenance: `public/assets/pets/SUNNY_PUP.md`.
+Original pug is retained as a backup. Runtime height stays 0.48 game units.
+
 ## Family-house expansion
 
 Layout revision: six additional models from the same licensed Kenney Furniture
