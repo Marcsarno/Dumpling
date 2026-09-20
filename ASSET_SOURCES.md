@@ -1,5 +1,19 @@
 # Game asset sources
 
+## User-supplied music — September 20
+
+Five scene-music MP3s supplied by Marc, preserved unchanged, replace the previous
+house playlist and add school/store routing. The supplied unlock sound is held
+unused. See `public/assets/audio/SOURCES.md` for exact filenames and assignments.
+No third-party license is inferred for these user-provided tracks.
+
+## Squishy satin and reveal follow-up — September 20
+
+Original deterministic procedural satin color/normal/roughness maps and bounded
+3D reveal effects, with no downloaded assets. All 26 portraits now use the actual
+PlayCanvas material setup. See SQUISHY_POLISH.md and
+public/assets/squishies/SOURCES.md for rebuild instructions and provenance.
+
 ## Sunny Pup replacement — September 18
 
 User-supplied `Meshy_AI_Sunny_Pup_0919020946_texture.glb` preserved unchanged.

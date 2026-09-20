@@ -1,5 +1,37 @@
 # Cleanup and collection prototype verification
 
+## User-supplied music — September 20
+
+- TypeScript and production build pass. All six supplied MP3s have readable
+  stereo 48kHz audio streams; originals remain unchanged.
+- `scripts/house-music-browser.mjs` passes in an isolated 320px touch profile:
+  actual decoding of all five music files, morning/night versus afternoon,
+  school trading, three different stores alternating 1/2/1, Pop pause/resume
+  without changing the selected store song, natural track-end/repeat gap,
+  persistent mute/reload and DEV pause. No page errors or final media errors.
+- The 9.56-second unlock effect is explicitly checked as never loaded. Pop
+  audio files and reveal sound cues are untouched. Physical-phone sound balance
+  still needs listening; browser decoding checks do not assess music preference.
+
+## Squishy material / rarity polish — September 20
+
+- 20 art/motion/contrast/progress/trading checks, TypeScript and Vite build pass.
+- `squishy-polish-browser.mjs`: nine actual touch cases, NEW and duplicate across
+  Common/Rare/Epic/Legendary, 320/390/430px and reduced motion. Checks counts,
+  retained wallet/tickets, reload, squish, UI separation, animation holds,
+  camera restoration and a one-draw-call / under-650-triangle VFX budget.
+- `render-squishy-engine-portraits.mjs` checks original diffuse colors for all
+  26 models and renders matching portraits from the actual runtime materials.
+- Existing three-phone art regression passes, including mid-opening reload,
+  second basket, collection, DEV clearance and return to the house.
+- Before/after materials and burst/settled screenshots were visually inspected.
+  No page/console/asset-load errors. Read SQUISHY_POLISH.md for performance
+  measurements and the cold-start caveat; physical iPhone remains untested.
+- Production-preview smoke passes: actual reveal/squish, exactly-once receipt
+  reload, original wallet/credits, 320px portraits and classroom assets.
+- Evidence: ignored `artifacts/squishy-polish/`. All saves used by tests are
+  isolated fixtures. Actual user saves remain untouched.
+
 ## Reference-led squishy art — September 20
 
 - TypeScript and Vite production build pass (existing engine chunk advisory).

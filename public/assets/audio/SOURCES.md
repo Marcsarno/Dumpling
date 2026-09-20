@@ -1,6 +1,26 @@
-# House music
+# Scene music
 
-Current playlist (both CC0):
+## User-provided replacement tracks — September 20
+
+Marc supplied these MP3s directly, preserved unchanged. No open-source license
+is claimed for them. They replace the previous house playlist:
+
+- `Squishy home clean.mp3` (1:58): home morning and night.
+- `Squishy Home clean v2.mp3` (1:40): home after-school chores.
+- `Squishy school trading.mp3` (1:08): classroom/recess trading.
+- `Squishy shopping.mp3` (2:07) and `Squishy shopping v2.mp3` (1:57): alternate
+  when entering a different store. Pausing or opening Pop does not switch songs.
+- `Squishy unlock.mp3` (9.56 seconds): RESERVED ONLY, not loaded or played.
+  Marc is undecided; consider a shorter Epic/Legendary-only excerpt later.
+
+One runtime audio voice, quiet volume, transition/end fades and a five-second
+gap before repeating the selected song. Pause during Pop/Tornado/DEV/hidden tab;
+existing music mute preference is retained. Reveal sequences gently duck music.
+Squishy Pop's soundtrack and the current reveal cues are unchanged.
+
+## Previous CC0 playlist (retained backups, no longer selected)
+
+Previous playlist (both CC0):
 
 - `sunny-house.mp3`: **Happy Ukelele Island Surfing Theme**, Tarush Singhal.
   https://opengameart.org/content/happy-ukelele-island-surfing-theme

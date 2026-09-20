@@ -1,5 +1,8 @@
 # Reference-led dumpling and reward container
 
+Follow-up: **SQUISHY_POLISH.md** documents the newer satin materials, rarity VFX
+and engine-rendered portrait workflow. The sculpt/steamer source below is unchanged.
+
 Marc requested a substantial improvement to the animated 3D squishies, using the
 first attached image as the dumpling baseline and the second as the opening
 container. The original primitive sphere/capsule body and square gift box have

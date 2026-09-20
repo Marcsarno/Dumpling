@@ -11,11 +11,13 @@ were authored for this project. No downloaded third-party model is included.
 - `bamboo-steamer.glb`: hollow base, inset nest, rolled bindings, actual over-under
   woven lid on both sides, curved handle, clasp and `LidHinge` pivot.
 - `bamboo-steamer-shelf.glb`: static closed LOD for small shop stock displays.
-- `portraits/*.webp`: 26 transparent Blender renders of these same models, using
-  the existing collectible colors/expressions/accessories. Total about 146 KiB.
+- `portraits/*.webp`: 26 transparent PlayCanvas renders of these same models, using
+  the existing collectible colors/expressions/accessories. Total about 122 KiB.
 
-Build: `scripts/build-squishy-assets.py` with Blender 5.2; then
-`scripts/render-squishy-portraits.py` and `node scripts/encode-squishy-portraits.mjs`.
+Build geometry: `scripts/build-squishy-assets.py` with Blender 5.2. For current
+materials and portraits, run `node scripts/build-squishy-satin.mjs` and, with
+local Vite running, `node scripts/render-squishy-engine-portraits.mjs`.
+The previous Blender portrait script remains available for source review.
 Editable `.blend` and full-size review renders are generated under
 `artifacts/squishy-art/` (not served or committed). Sources and conversion scripts
 are retained; original user reference files remain untouched.
@@ -32,3 +34,11 @@ Research, reviewed but **not used**:
 
 The project does not assert that these references or models are an official
 version of any branded toy.
+## September 20 satin / rarity polish
+
+Original project-authored procedural satin color and packed normal/roughness
+maps: `scripts/build-squishy-satin.mjs`. No external image inputs or new licenses.
+The existing models remain intact; material setup is refined at runtime.
+Current portraits are rendered with the actual PlayCanvas materials by
+`scripts/render-squishy-engine-portraits.mjs`, then encoded with the existing WebP
+script. See SQUISHY_POLISH.md. The original Blender build above remains available.

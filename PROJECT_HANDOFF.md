@@ -1,5 +1,58 @@
 # Dumpling / Arianna game — project handoff
 
+## Fresh-chat checkpoint — September 20
+
+Read **FRESH_CHAT.md** first for the compact current state, then the latest
+sections below. Previous production baseline: **f72d074**.
+Both the material/rarity/reveal polish and user-supplied music integration are
+completed and tested. Marc subsequently requested **commit and deploy before
+moving to a fresh chat**. Release title: `Polish squishy reveals and integrate scene music`.
+Target: `Marcsarno/Dumpling` main → https://dumpling-sandy.vercel.app/.
+Use Git HEAD and GitHub/Vercel deployment status to identify this release rather
+than the older baseline. Preserve this release and the user's saves.
+
+PlayCanvas MCP was registered globally and enabled with `codex mcp add`.
+Because npx was absent from PATH, the configured executable is
+`C:/pinokio/bin/miniforge/node.exe`, with arguments
+`C:/pinokio/bin/miniforge/node_modules/npm/bin/npx-cli.js -y @playcanvas/editor-mcp-server`.
+The server-specific PATH contains `C:\pinokio\bin\miniforge;C:\Windows\System32;C:\Windows`.
+Registration was confirmed with `codex mcp get playcanvas`; actual startup,
+tool discovery and Editor connection have NOT been verified. Marc reports closing
+and reopening the app. This old chat still exposes no PlayCanvas tools. A new chat
+should first check its available tools; do not claim connection from config alone.
+This game is a local PlayCanvas Engine + TypeScript + Vite project, not a verified
+linked PlayCanvas Editor project. Do not migrate it or upload it merely to use MCP.
+
+## User-supplied scene music — September 20 (local)
+
+Marc added six MP3s to `public/assets/audio/`. `HouseMusic` now selects the original
+Home track in morning/night, Home v2 for afternoon chores, School trading in
+recess, and alternates Shopping / Shopping v2 when entering a different store.
+Pause/resume within a store does not advance the selection. Alternation is local
+to the current session; reload starts with Shopping 1. One audio voice, gentle
+fades, five-second repeat gaps, existing persistent mute, reveal ducking and
+Pop/DEV/Tornado/hidden-tab pause are retained. Pop music is unchanged.
+
+`Squishy unlock.mp3` is 9.56 seconds and deliberately NOT used or loaded. Marc is
+undecided; any later use should be a shorter Epic/Legendary-only treatment, never
+Common or Rare. Original files are preserved. See audio/SOURCES.md. Included in
+the authorized release above; user saves remain untouched.
+
+## Squishy material and rarity polish — September 20 (local)
+
+Marc requested a contained texture/material and fully in-engine reveal polish
+pass. See **SQUISHY_POLISH.md** for the changes, configuration, rebuild workflow,
+tests and performance limits. The original models, all 26 identities and saved
+receipts are preserved. New shared satin maps, matching engine-rendered portraits,
+four configurable rarity treatments, bounded engine VFX, timed bells, admiration
+holds and explicit NEW/DUPLICATE phone labels are implemented locally. No video
+replacement, economy change, new collectibles or real-save writes were made.
+
+Previous deployed baseline is **f72d074**. This polish pass is included in the
+authorized release above. Marc asked to stop after this scope is complete; do not
+start further game expansion. Physical phone/Safari and subjective sound/art
+feedback are the next review, not established by desktop mobile emulation.
+
 ## Reference-led squishy art release — September 20
 
 Marc requested better 3D dumplings and a hinged bamboo reward container based on

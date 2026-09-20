@@ -66,7 +66,7 @@ async function start() {
   const houseMusic=new HouseMusic();
   const dogRoaming=new DogRoaming(room,props.pet!.dog);
   app.on('update', (elapsed: number) => {
-    houseMusic.update(loop.mode==='cleanup'&&!loop.popUI.isOpen&&!loop.developerPaused&&!tornado.active,props.daily!.clock.state.phase==='night',Math.min(elapsed,.1));
+    houseMusic.update({mode:loop.mode,phase:props.daily!.clock.state.phase,store:loop.mode==='store'?loop.store.definition.id:'',paused:loop.popUI.isOpen||loop.developerPaused||tornado.active,revealing:loop.opening.phase==='opening'},Math.min(elapsed,.1));
     const now = performance.now();
     if(loop.developerPaused){loop.developerTick(now,elapsed);return;}
     loop.beforeMovement(now);
@@ -140,7 +140,7 @@ async function start() {
   let developerPanel:{destroy():void}|undefined;let disposed=false;
   void import('./dev/DeveloperPanel').then(({DeveloperPanel})=>{if(!disposed)developerPanel=new DeveloperPanel(loop,()=>({fps:app.stats.frame.fps,drawCalls:app.stats.drawCalls.total,position:character.player.getPosition().toArray()}));});
   if (import.meta.hot) import.meta.hot.dispose(() => {
-    disposed=true;developerPanel?.destroy();
+    disposed=true;developerPanel?.destroy();houseMusic.destroy();
     observer.disconnect(); tornado.destroy(); marc.destroy(); lilah.destroy(); navigation.destroy(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
     delete (window as unknown as Record<string, unknown>).__roomTest;
   });
