@@ -13,6 +13,16 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
+// src/systems/SaveNamespace.ts
+var SAVE_PREFIX, saveKey;
+var init_SaveNamespace = __esm({
+  "src/systems/SaveNamespace.ts"() {
+    "use strict";
+    SAVE_PREFIX = globalThis.__productionRelease ? "arianna" : "dumpling.editorMigration";
+    saveKey = (suffix) => `${SAVE_PREFIX}.${suffix}`;
+  }
+});
+
 // src/data/collection.ts
 function randomUnit() {
   return crypto.getRandomValues(new Uint32Array(1))[0] / 4294967296;
@@ -198,8 +208,9 @@ var KEYS, CHECKPOINT, DeveloperSaves;
 var init_DeveloperSaves = __esm({
   "src/dev/DeveloperSaves.ts"() {
     "use strict";
-    KEYS = ["dumpling.editorMigration.progress.v1", "dumpling.editorMigration.daily.v1", "dumpling.editorMigration.lilah.v1"];
-    CHECKPOINT = "dumpling.editorMigration.developer.checkpoint.v1";
+    init_SaveNamespace();
+    KEYS = [saveKey("progress.v1"), saveKey("daily.v1"), saveKey("lilah.v1")];
+    CHECKPOINT = saveKey("developer.checkpoint.v1");
     DeveloperSaves = class {
       capture() {
         const checkpoint = { version: 1, created: (/* @__PURE__ */ new Date()).toISOString(), values: Object.fromEntries(KEYS.map((key) => [key, localStorage.getItem(key)])) };
@@ -818,6 +829,9 @@ var DogRoaming = class {
   }
 };
 
+// src/ui/HouseMusic.ts
+init_SaveNamespace();
+
 // src/editor/AssetUrls.ts
 var application;
 function containerOptions(sourcePath) {
@@ -859,7 +873,7 @@ var HouseMusic = class {
   pending = false;
   constructor() {
     try {
-      this.muted = localStorage.getItem("dumpling.editorMigration.house-music.muted") === "true";
+      this.muted = localStorage.getItem(saveKey("house-music.muted")) === "true";
     } catch {
     }
     this.audio.volume = 0;
@@ -876,7 +890,7 @@ var HouseMusic = class {
     this.button.onclick = () => {
       this.muted = !this.muted;
       try {
-        localStorage.setItem("dumpling.editorMigration.house-music.muted", String(this.muted));
+        localStorage.setItem(saveKey("house-music.muted"), String(this.muted));
       } catch {
       }
       this.paint();
@@ -3002,6 +3016,7 @@ var PetCleanup = class {
 };
 
 // src/game/DailyLife.ts
+init_SaveNamespace();
 import { BoundingBox as BoundingBox9, Entity as Entity19, Vec3 as Vec317 } from "playcanvas";
 
 // src/systems/DailyClock.ts
@@ -3095,6 +3110,7 @@ var DailyClock = class {
 };
 
 // src/game/LilahMesses.ts
+init_SaveNamespace();
 import { Entity as Entity18, Vec3 as Vec316 } from "playcanvas";
 var LilahMesses = class {
   constructor(app, parent, props, active) {
@@ -3148,7 +3164,7 @@ var LilahMesses = class {
     this.day = day;
     this.records = [];
     try {
-      const saved = JSON.parse(localStorage.getItem("dumpling.editorMigration.lilah.v1") || "null");
+      const saved = JSON.parse(localStorage.getItem(saveKey("lilah.v1")) || "null");
       if (saved?.day === day && Array.isArray(saved.messes) && saved.messes.length <= 3 && saved.messes.every((m) => Number.isFinite(m.x) && Number.isFinite(m.z) && typeof m.done === "boolean")) this.records = saved.messes;
     } catch {
     }
@@ -3156,7 +3172,7 @@ var LilahMesses = class {
   }
   save(records2) {
     try {
-      localStorage.setItem("dumpling.editorMigration.lilah.v1", JSON.stringify({ day: this.day, messes: records2 }));
+      localStorage.setItem(saveKey("lilah.v1"), JSON.stringify({ day: this.day, messes: records2 }));
       return true;
     } catch {
       return false;
@@ -3213,7 +3229,7 @@ var LilahMesses = class {
 };
 
 // src/game/DailyLife.ts
-var SAVE_KEY = "dumpling.editorMigration.daily.v1";
+var SAVE_KEY = saveKey("daily.v1");
 var DailyLife = class {
   constructor(app, props, house) {
     this.props = props;
@@ -4700,6 +4716,7 @@ init_collection();
 import { Vec3 as Vec327 } from "playcanvas";
 
 // src/systems/ProgressStore.ts
+init_SaveNamespace();
 init_collection();
 
 // src/data/ticketPrizes.ts
@@ -5074,7 +5091,7 @@ function negotiate(day, trader, give) {
 
 // src/systems/ProgressStore.ts
 init_hunt();
-var SAVE_KEY2 = "dumpling.editorMigration.progress.v1";
+var SAVE_KEY2 = saveKey("progress.v1");
 var LocalSaveRepository = class {
   read() {
     return localStorage.getItem(SAVE_KEY2);

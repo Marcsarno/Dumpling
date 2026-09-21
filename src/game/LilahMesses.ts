@@ -1,3 +1,4 @@
+import {saveKey} from '../systems/SaveNamespace';
 import {Entity,Vec3,type Application} from 'playcanvas';
 import {primitives,material} from './primitives';
 import type {CleanupProps} from './cleanupProps';
@@ -31,12 +32,12 @@ export class LilahMesses {
   syncDay(day:number){
     if(this.day===day)return;
     this.day=day;this.records=[];
-    try{const saved=JSON.parse(localStorage.getItem('dumpling.editorMigration.lilah.v1')||'null');
+    try{const saved=JSON.parse(localStorage.getItem(saveKey('lilah.v1'))||'null');
       if(saved?.day===day&&Array.isArray(saved.messes)&&saved.messes.length<=3&&saved.messes.every((m:Mess)=>Number.isFinite(m.x)&&Number.isFinite(m.z)&&typeof m.done==='boolean'))this.records=saved.messes;
     }catch{}
     this.refresh();
   }
-  private save(records:Mess[]){try{localStorage.setItem('dumpling.editorMigration.lilah.v1',JSON.stringify({day:this.day,messes:records}));return true;}catch{return false;}}
+  private save(records:Mess[]){try{localStorage.setItem(saveKey('lilah.v1'),JSON.stringify({day:this.day,messes:records}));return true;}catch{return false;}}
   refresh(){
     this.tasks=this.records.map((_,i)=>({id:'lilah-mess-'+i,name:['Lilah’s toys','Lilah’s spill','Lilah’s crumbs'][i],icon:['🧸','🧻','✦'][i]}));
     this.roots.forEach((root,i)=>{const m=this.records[i];root.enabled=!!m&&!m.done;root.setLocalScale(1,1,1);if(m){root.setLocalPosition(m.x,.035,m.z);const target=this.props.interactions.find(t=>t.id==='lilah-mess-'+i)!;target.anchor.set(m.x,0,m.z);target.marker.set(m.x,.3,m.z);}});

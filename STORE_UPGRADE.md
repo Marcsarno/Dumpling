@@ -1,3 +1,6 @@
+# Production release update
+
+The user subsequently authorized commit, push and deployment. Production now uses the Editor export build path described in EDITOR_RELEASE.md and retains existing arianna.* saves. Verify https://dumpling-sandy.vercel.app/release.json for the deployed SHA. The report below records the isolated verification before promotion.
 # Three-store visual upgrade — completed
 
 The three stores are finished in the separate PlayCanvas Editor project, with distinct reference-led layouts, reusable pastel furniture, signs, display merchandise and leafy planters. The saved-visit entrance correction is now uploaded and included in both the published preview and the untouched Editor export. Production remains separate.

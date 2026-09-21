@@ -5,10 +5,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && node scripts/build-editor-release.mjs",
     "preview": "vite preview --host 0.0.0.0",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "build:engine": "tsc --noEmit && vite build"
   },
-  "dependencies": { "playcanvas": "2.22.1" },
-  "devDependencies": { "typescript": "~5.9.3", "vite": "^7.3.1" }
+  "dependencies": {
+    "playcanvas": "2.22.1"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1"
+  }
 }

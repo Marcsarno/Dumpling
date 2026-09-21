@@ -1,3 +1,4 @@
+import {saveKey} from '../systems/SaveNamespace';
 import { DUMPLINGS, rollDumpling, STORE_INVENTORY } from '../data/collection.ts';
 import { saveId } from './saveId.ts';
 import {ticketPrizes,type PrizeShelf} from '../data/ticketPrizes.ts';
@@ -6,7 +7,7 @@ import { POP_LEVELS, levelStars, levelUnlocked, type PopLevelRecords, type PopLe
 import { TRADERS, createTradingDay, negotiate, willing, type Protection, type TraderId, type TradingDay } from '../data/trading.ts';
 import { SERIES, STORES, HUNT_RULES, boxPrice, createHuntDay, rollSeries, storeById, type HuntDay, type SeriesId } from '../data/hunt.ts';
 
-export const SAVE_KEY = 'dumpling.editorMigration.progress.v1';
+export const SAVE_KEY = saveKey('progress.v1');
 export interface SaveRepository { read(): string | null; write(value: string): void }
 export class LocalSaveRepository implements SaveRepository {
   read() { return localStorage.getItem(SAVE_KEY); }

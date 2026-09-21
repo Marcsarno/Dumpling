@@ -1,0 +1,12 @@
+{
+  "url": "http://127.0.0.1:5186/dist/index.html",
+  "checks": [
+    "Existing production balance and collection loaded",
+    "Nine authored planters present",
+    "Store purchase saved using original keys",
+    "Saved store visit resumes and exits",
+    "Preview saves untouched",
+    "Music mute retained"
+  ],
+  "errors": []
+}

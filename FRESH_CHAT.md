@@ -1,106 +1,22 @@
-## Isolated Editor migration — newer than the notes below
+# Fresh chat — production Editor release
 
-Read FRESH_EDITOR_MIGRATION.md and EDITOR_MIGRATION.md first. Full-game migration is published separately; production remains fe3ae65. This checkout is the isolated migration branch.
+Read PROJECT_HANDOFF.md and EDITOR_RELEASE.md, then inspect Git status and https://dumpling-sandy.vercel.app/release.json before changing anything.
 
-# Fresh-chat handoff — September 20, 2026
-
-## Start here
-
-Workspace: `C:\Users\marc7\Codex Game Projects\Dumpling Game File`.
-Read PROJECT_HANDOFF.md, then inspect the working tree before making changes.
-Previous deployed baseline: **f72d074**. Marc then requested committing and
-deploying all completed polish/music work before moving to a fresh chat.
-Release title: `Polish squishy reveals and integrate scene music`.
-Use `git log -1` and GitHub/Vercel deployment status for the resulting release SHA.
+Workspace: C:/Users/marc7/Codex Game Projects/Dumpling Game File.
+Repository: Marcsarno/Dumpling; local master tracks origin/main.
 Production: https://dumpling-sandy.vercel.app/.
-Local master tracks origin/main; repo is `Marcsarno/Dumpling`.
+Release title: Deploy completed Editor stores with existing save continuity.
+The user explicitly authorized commit, push and production deployment. Verify its exact SHA via release.json and GitHub deployment status.
 
-The user asked for a fresh-chat handoff after registering PlayCanvas MCP and
-closing/reopening Codex. First verify whether PlayCanvas tools are available in
-the NEW chat. Report connection status and the current release; discuss the
-next action. This handoff does not authorize another milestone beyond that release.
+Completed: full game migrated into PlayCanvas Editor; three distinct pastel stores based on supplied mockups; original characters, assets and animation corrections preserved; saved-visit entrance fix; nine reused leafy planters. All18store display routes, purchases, reloads and exits passed. House review checked8room routes,61interaction approaches,bookshelf chore and13night lights. No house rearrangement was needed. See STORE_UPGRADE.md.
 
-## Completed work included in the authorized release
+PlayCanvas MCP connected successfully. Project1604178; scene2600724; runtime307711680. Open https://playcanvas.com/editor/scene/2600724 and read the project/scene before edits. If disconnected, open Editor and use MCP CONNECT. Free plan sufficient; no paid plan authorized.
 
-1. **Squishy material / rarity / reveal polish.** Original 26 identities and GLBs
-   preserved; neutral satin color plus packed surface maps, tuned roughness and
-   face materials, matching engine-rendered portraits. Configurable Common,
-   blue Rare, purple Epic and gold Legendary treatments. Fully in-engine
-   hinge/rise/bounce, bounded stars/ring/rays, short admiration hold, timed bells,
-   explicit NEW/DUPLICATE, rarity/name/series UI, phone-safe controls and reduced
-   motion. See SQUISHY_POLISH.md and TESTING.md. Do not convert to video.
-2. **User-provided music.** Files are in `public/assets/audio/`, preserved intact:
-   - `Squishy home clean.mp3`: morning and night.
-   - `Squishy Home clean v2.mp3`: afternoon chores.
-   - `Squishy school trading.mp3`: school trading.
-   - `Squishy shopping.mp3` / `Squishy shopping v2.mp3`: alternate when entering
-     a different store; no switch merely from pausing or opening Pop. Alternation
-     is session-local; a reload starts with Shopping 1.
-   - `Squishy unlock.mp3`: **HELD UNUSED**, 9.56 seconds. User is unsure. If used
-     later, consider a shorter excerpt for Epic/Legendary ONLY, never Rare/Common.
-   Existing Pop music and current reveal cues are unchanged. One scene-music
-   voice, fades, repeat gap, persistent mute, pause for Pop/DEV/Tornado/hidden tab,
-   and lower background volume during reveal. See audio/SOURCES.md.
+Editor owns layouts/materials/lights and attached collision/interaction nodes. Git TypeScript owns gameplay. editor-release/ is the committed exported scene/assets used by Vercel. Refresh it after scene edits. pnpm run build compiles current gameplay into this export. build:engine is the older code-generated-world build and must not replace production.
 
-All modified/untracked files observed at this checkpoint belong to these passes
-or their docs/tests. Preserve them. Original source music and prior assets remain.
+Production preserves arianna.* saves. Editor previews use dumpling.editorMigration.*. Never clear or rewrite real saves; test in disposable browser contexts. Preserve newer/uncommitted work. Wait for the user's next instructions; no further expansion is requested yet.
 
-## Verification already completed
-
-- 20 art, motion, text contrast, progress and trading checks passed.
-- Nine reveal cases across all four tiers, new/duplicate, 320/390/430px and
-  reduced motion passed with no console/asset errors. All 26 original material
-  colors were checked and matching portraits rendered.
-- Three-phone regression passed: reload mid-opening, no duplicate award,
-  next basket, collection, DEV clearance, return home.
-- Production-preview reward/portrait/reload/classroom smoke passed before the
-  music addition. Latest TypeScript and production build also passed after music.
-- Updated `scripts/house-music-browser.mjs` passed actual decoding of all five
-  tracks, day-phase routing, school, three stores alternating 1/2/1, Pop pause /
-  resume, natural end/repeat, persistent mute/reload and DEV pause. Unlock audio
-  was confirmed never loaded.
-- Physical iPhone/Safari and subjective audio/art approval are still unverified.
-  Desktop emulation settled p95 was ~7ms; a short reduced-motion cold-start
-  sample had a 76ms p95. Do not claim physical-phone performance from this.
-- Ignored screenshots/reports: `artifacts/squishy-polish/`,
-  `artifacts/squishy-art/`. Editable Blender source remains under artifacts.
-- Local Vite/preview previously ran on ports 5178/4179; verify before reusing.
-
-## PlayCanvas MCP status
-
-The user requested `codex mcp add playcanvas -- npx -y @playcanvas/editor-mcp-server`.
-Registered globally as enabled stdio; `codex mcp get playcanvas` succeeded.
-On this computer npx is not on the Codex shell PATH, so the equivalent is:
-
-```
-command: C:/pinokio/bin/miniforge/node.exe
-args: C:/pinokio/bin/miniforge/node_modules/npm/bin/npx-cli.js -y @playcanvas/editor-mcp-server
-env PATH: C:\pinokio\bin\miniforge;C:\Windows\System32;C:\Windows
-```
-
-No handshake or Editor connection was verified. This old chat still had zero
-PlayCanvas tools after the user reported closing/reopening. Check the new chat's
-tool catalog first, then startup/configuration if needed. Never claim registration
-equals connectivity. Avoid printing auth tokens or unrelated config secrets.
-The game is an Engine/TypeScript/Vite repo; no corresponding hosted Editor
-project has been established. Do not migrate/upload the project without direction.
-
-## Preserve
-
-- Actual user saves: `arianna.progress.v1`, `arianna.daily.v1`, `arianna.lilah.v1`.
-  Use new isolated browser profiles for fixtures. Do not clear real localStorage.
-- Supplied character models/animations, current Squishy Pop gameplay, live DEV
-  access on phones, and completed game systems. No unrelated redesigns.
-- Marc explicitly authorized this release after the initial handoff was written.
-  Publish with origin HEAD:main and verify Vercel's exact commit plus live
-  behavior. Do not infer authorization for future releases. Deployment notes are in
-  PROJECT_HANDOFF.md; local gh is under `artifacts/deploy-tools/gh/bin/gh.exe`.
-
-## Suggested first message
-
-Read FRESH_CHAT.md and PROJECT_HANDOFF.md before doing anything. Preserve all
-local changes and my existing saves. First check whether this new chat can access
-the PlayCanvas MCP server; registration was confirmed but connection was not.
-The squishy polish and replacement music were prepared for the authorized release
-`Polish squishy reveals and integrate scene music`. Verify the release status,
-give me a short update, then we will choose the next action.
+Original baseline: fe3ae65. Completed isolated art commit:26d202a.
+Separate preview: https://playcanv.as/b/0bf140c9.
+Isolated worktree: C:/Users/marc7/.codex/visualizations/2026/09/20/01a0bf81-a7a0-7d63-a78f-613b597b3366/dumpling-editor-pilot.
+Physical iPhone/Safari performance and subjective visual approval remain unverified.

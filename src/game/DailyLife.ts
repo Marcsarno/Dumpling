@@ -1,3 +1,4 @@
+import {saveKey} from '../systems/SaveNamespace';
 import {propTuple} from '../editor/PropSpace';
 import { BoundingBox, Entity, Vec3, type Application } from 'playcanvas';
 import { DailyClock, DUST_LOCATIONS, SPILL_LOCATIONS } from '../systems/DailyClock';
@@ -10,7 +11,7 @@ import { material, primitives, type Triple } from './primitives';
 import { LilahMesses } from './LilahMesses';
 import type { TaskDefinition } from '../systems/MissionSystem';
 
-const SAVE_KEY='dumpling.editorMigration.daily.v1';
+const SAVE_KEY=saveKey('daily.v1');
 export class DailyLife {
   readonly clock: DailyClock;
   active=false;

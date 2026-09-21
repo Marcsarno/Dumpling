@@ -1,3 +1,13 @@
+# Current release — completed Editor game
+
+The user authorized commit, push and deploy. Read FRESH_CHAT.md and EDITOR_RELEASE.md for the current build and save protections. Production: https://dumpling-sandy.vercel.app/; verify the exact deployed SHA at /release.json. Release title: Deploy completed Editor stores with existing save continuity.
+
+PlayCanvas MCP is connected and verified; project1604178, scene2600724. Full migration, three distinct stores and store/house checks are complete. The house layout was retained. Production builds the committed Editor export plus current gameplay and preserves original arianna.* saves.
+
+Older sections below are historical. Statements that MCP is unconnected, migration is unauthorized, or stores are local-only are superseded. Wait for the user's next instruction.
+
+---
+
 ## Isolated Editor migration — newer than the notes below
 
 Read FRESH_EDITOR_MIGRATION.md and EDITOR_MIGRATION.md first. Full-game migration is published separately; production remains fe3ae65. This checkout is the isolated migration branch.
