@@ -226,6 +226,7 @@ export class ProgressStore {
       return data.reveal;
     });
   }
+  finishReveal() { this.commit(data => { data.reveal = null; }); }
   showCollection() { this.commit(data => { data.reveal = null; data.location = 'collection'; data.trip.active = false; }); }
   startCleanup() { this.commit(data => { data.location = 'cleanup'; data.trip.active = false; data.reveal = null; if(data.hunt)data.hunt.activeStore=null; }); }
 }

@@ -9,21 +9,21 @@ export class SquishyRevealVfx {
   readonly root:Entity;
   private readonly mesh:Mesh;
   private readonly material=new StandardMaterial();
-  private readonly positions=new Float32Array(1024*3);
-  private readonly colors=new Float32Array(1024*4);
+  private readonly positions=new Float32Array(1536*3);
+  private readonly colors=new Float32Array(1536*4);
   private readonly indices=new Uint16Array(4096);
   private vertices=0;private triangles=0;private previous=-100;
   private style:SquishyPresentation=SQUISHY_PRESENTATION.Common;
   private color=new Color();
   constructor(app:Application,parent:Entity){
     this.root=new Entity('Rarity halo and celebration',app);parent.addChild(this.root);
-    this.root.setLocalPosition(0,1.02,-.79);this.root.setLocalEulerAngles(-14,10,0);
+    this.root.setLocalPosition(0,1.02,-.10);this.root.setLocalEulerAngles(-14,10,0);
     this.material.name='Soft rarity light';this.material.useLighting=false;
     this.material.diffuse.set(0,0,0);this.material.emissive.set(1,1,1);
     this.material.emissiveVertexColor=true;this.material.opacityVertexColor=true;
     this.material.opacityVertexColorChannel='a';this.material.blendType=BLEND_NORMAL;
     this.material.cull=CULLFACE_NONE;this.material.depthWrite=false;this.material.useTonemap=false;this.material.update();
-    this.mesh=new Mesh(app.graphicsDevice);this.mesh.clear(true,false,1024,4096);
+    this.mesh=new Mesh(app.graphicsDevice);this.mesh.clear(true,false,1536,4096);
     // MeshInstance caches available vertex channels at construction.
     this.mesh.setPositions([0,0,0,0,0,0,0,0,0]);this.mesh.setColors([1,1,1,0,1,1,1,0,1,1,1,0]);this.mesh.setIndices([0,1,2]);this.mesh.update(PRIMITIVE_TRIANGLES);
     const instance=new MeshInstance(this.mesh,this.material);instance.mask=16;
@@ -41,6 +41,7 @@ export class SquishyRevealVfx {
     if(time-this.previous<1/30&&time>=this.previous)return;this.previous=time;
     this.vertices=0;this.triangles=0;const s=this.style,t=Math.max(0,time),burst=reduced?0:Math.max(0,1-t/1.6);
     this.color.fromString(s.color);this.disk(1.25,s.halo+burst*s.burst);
+    if(s.rays){this.ring(.84,.042,.28+(reduced?0:Math.sin(t*1.7)*.06));this.ring(1.03,.018,.14);}
     if(s.sparkles&&!reduced){
       this.color.fromString(s.spark);this.ring(.60+Math.min(t,1.5)*.27,s.rays?.035:.025,burst*.60);
       for(let i=0;i<s.sparkles;i++){
@@ -54,17 +55,17 @@ export class SquishyRevealVfx {
         this.vertex(Math.cos(a+.028)*r,Math.sin(a+.028)*r,burst*.40);
         this.triangle(start,start+1,start+2);
       }
-      // A few slow glints after the celebration, never an endless burst.
-      const count=s.rays?4:s.sparkles>10?3:2;
+      // Gentle persistent glitter distinguishes the high tiers after the initial reveal.
+      const count=s.rays?12:s.sparkles>10?8:3;
       for(let i=0;i<count;i++){
         const a=.5+i*2.4,phase=(Math.sin(t*1.3+i*2.3)+1)/2,fade=Math.min(1,Math.max(0,t-1.3));
-        this.star(Math.cos(a)*.94,Math.sin(a)*.83+.14,.022+.012*phase,a,phase**4*.25*fade);
+        this.star(Math.cos(a)*.94,Math.sin(a)*.83+.14,.022+.012*phase,a,phase**3*(s.rays?.9:s.sparkles>10?.65:.38)*fade);
       }
     }
     this.mesh.setPositions(this.positions,3,this.vertices);this.mesh.setColors(this.colors,4,this.vertices);
     this.mesh.setIndices(this.indices,this.triangles);this.mesh.update(PRIMITIVE_TRIANGLES);
   }
   hide(){this.root.enabled=false;this.previous=-100;}
-  snapshot(){return {enabled:this.root.enabled,drawCalls:this.root.enabled?1:0,triangles:this.triangles/3,burstStars:this.style.sparkles,maxIdleGlints:this.style.rays?4:this.style.sparkles>10?3:this.style.sparkles?2:0};}
+  snapshot(){return {enabled:this.root.enabled,drawCalls:this.root.enabled?1:0,triangles:this.triangles/3,burstStars:this.style.sparkles,maxIdleGlints:this.style.rays?12:this.style.sparkles>10?8:this.style.sparkles?3:0};}
   destroy(){this.root.destroy();this.mesh.destroy();this.material.destroy();}
 }

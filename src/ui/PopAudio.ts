@@ -7,7 +7,7 @@ export class PopAudio {
   muted=false;failures:string[]=[];played=0;
   async unlock(){
     this.context??=new AudioContext();if(!this.master){this.master=this.context.createGain();this.master.connect(this.context.destination);}this.master.gain.value=this.muted?0:.5;
-    await this.context.resume();
+    try{await this.context.resume();}catch{return;}
     this.loading??=Promise.all(['click_001','drop_001','drop_002','drop_003','pluck_001','confirmation_001','happy-adventure'].map(async name=>{try{const response=await fetch(assetUrl(`/assets/pop/audio/${name}.${name==='happy-adventure'?'mp3':'wav'}`));if(!response.ok)throw Error(name);this.buffers.set(name,await this.context!.decodeAudioData(await response.arrayBuffer()));}catch{this.failures.push(name);}})).then(()=>{});
     await this.loading;if(this.musicWanted&&!this.suspended)this.startMusic();
   }
@@ -24,7 +24,7 @@ export class PopAudio {
   warning(){this.note(784,0,.08,.085);}
   celebrate(){this.stopMusic();this.sample('confirmation_001',1,.65);[523,659,784,1047,1319].forEach((n,i)=>this.note(n,i*.1,.3,.13));}
   setMusic(enabled:boolean){this.musicWanted=enabled;if(enabled&&!this.suspended)this.startMusic();else this.stopMusic();}
-  private startMusic(){const ctx=this.context,buffer=this.buffers.get('happy-adventure');if(!ctx||!buffer||this.music)return;const node=ctx.createBufferSource(),gain=ctx.createGain();node.buffer=buffer;node.loop=true;node.loopStart=.03;node.loopEnd=buffer.duration-.08;gain.gain.value=.15;node.connect(gain).connect(this.master!);node.onended=()=>{node.disconnect();gain.disconnect();};node.start();this.music=node;}
+  private startMusic(){const ctx=this.context,buffer=this.buffers.get('happy-adventure');if(!ctx||!buffer||this.music)return;const node=ctx.createBufferSource(),gain=ctx.createGain();node.buffer=buffer;node.loop=true;node.loopStart=.03;node.loopEnd=buffer.duration-.08;gain.gain.value=.26;node.connect(gain).connect(this.master!);node.onended=()=>{node.disconnect();gain.disconnect();};node.start();this.music=node;}
   energy(frenzy:boolean,urgent:boolean){if(this.music&&this.context)this.music.playbackRate.setTargetAtTime(frenzy?1.08:urgent?1.035:1,this.context.currentTime,.3);}
   private stopMusic(){this.music?.stop();this.music=undefined;}
   pause(paused:boolean){this.suspended=paused;if(paused){this.stopMusic();for(const node of this.voices)node.stop();}else if(this.musicWanted)this.startMusic();}

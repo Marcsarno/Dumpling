@@ -201,6 +201,12 @@
     animation: none;
   }
 }
+#hunt-routes .dialog-top-action {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  box-shadow: 0 0 0 5px #faf5fb;
+}
 
 /* src/ui/trading.css */
 #trading-dialog {
@@ -1354,6 +1360,27 @@
 .pop-feedback[data-tier=super] {
   text-shadow: 0 2px 2px #65377c;
 }
+.pop-launch {
+  position: absolute;
+  top: 175px;
+  bottom: auto;
+  left: 18px;
+  transform: none;
+  width: auto;
+  max-width: 180px;
+  padding: 9px 13px;
+  font-size: 12px;
+  border-width: 2px;
+  box-shadow: 0 3px 10px #4f3b6220;
+}
+.pop-launch small {
+  display: none;
+}
+@media (max-height: 650px) {
+  .pop-launch {
+    top: 135px;
+  }
+}
 
 /* src/ui/ticket-shop.css */
 #ticket-shop {
@@ -1460,6 +1487,11 @@
     padding: 8px;
     font-size: 12px;
   }
+}
+#ticket-shop [data-close] {
+  top: 0;
+  bottom: auto;
+  z-index: 2;
 }
 
 /* src/ui/tornado.css */
@@ -3055,6 +3087,40 @@ body:has(#game[data-scene=home]) .dev-launch {
     font-size: 10px;
   }
 }
+#collection-actions {
+  position: sticky;
+  top: -1px;
+  z-index: 2;
+  background: #faf5fb;
+  padding: 4px 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+#collection-actions .loop-button {
+  font-size: 12px;
+  padding: 10px 5px;
+  margin: 0;
+  min-height: 44px;
+}
+#collection-actions #open-next {
+  grid-column: 1/-1;
+}
+#reveal-copy {
+  background: #fff9;
+  border-radius: 18px;
+  padding: 8px;
+  left: 8%;
+  width: 84%;
+}
+#home-vignette {
+  background:
+    linear-gradient(
+      #ede6f4a0,
+      transparent 25%,
+      transparent 70%,
+      #ede6f4a0);
+}
 
 /* src/ui/house.css */
 #mission-picker {
@@ -3258,7 +3324,13 @@ body:has(#game[data-scene=home]) .dev-launch {
     bottom: 12px;
   }
   #game[data-scene=cleanup] footer {
-    display: none;
+    display: flex;
+    flex-wrap: wrap;
+    top: 12px;
+    bottom: auto;
+    left: 270px;
+    right: 16px;
+    justify-content: flex-end;
   }
 }
 .asset-credits {
@@ -3375,6 +3447,23 @@ body:has(#game[data-scene=home]) .dev-launch {
   #game[data-scene=store] .room-title {
     width: 210px;
   }
+}
+#bedtime-fade {
+  position: absolute;
+  inset: 0;
+  background: #161325;
+  z-index: 80;
+  pointer-events: none;
+}
+#house-effects {
+  pointer-events: auto;
+  border: 0;
+  background: transparent;
+  color: #78628f;
+  font: 700 10px "Trebuchet MS", sans-serif;
+  min-height: 36px;
+  cursor: pointer;
+  padding: 4px 6px;
 }
 
 /* src/dev/developer-panel.css */

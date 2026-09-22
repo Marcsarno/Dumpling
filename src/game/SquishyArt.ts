@@ -1,9 +1,10 @@
+import {animalModel} from './AnimalSquishy';
 import {assetUrl} from '../editor/AssetUrls';
 import {Asset,Color,type Application,type ContainerResource,type Entity,type RenderComponent,type StandardMaterial,type Texture} from 'playcanvas';
 import type {DumplingDefinition} from '../data/collection';
 import { SQUISHY_PRESENTATION } from '../data/squishyPresentation';
 
-type Art={bao:ContainerResource;steamer:ContainerResource;shelf:ContainerResource;color:Texture;surface:Texture};
+type Art={bao:ContainerResource;steamer:ContainerResource;shelf:ContainerResource;color:Texture;surface:Texture;animals:Record<NonNullable<DumplingDefinition['special']>,ContainerResource>};
 const loaded=new WeakMap<Application,Art>();
 /** Load once before scene factories. All instances share immutable meshes/textures. */
 export async function loadSquishyArt(app:Application){
@@ -12,9 +13,10 @@ export async function loadSquishyArt(app:Application){
   asset.once('load',()=>resolve(asset.resource as ContainerResource));asset.once('error',reject);app.assets.add(asset);app.assets.load(asset);
  });
  const texture=(name:string)=>new Promise<Texture>((resolve,reject)=>{const asset=new Asset(name,'texture',{url:assetUrl(`${import.meta.env.BASE_URL}assets/squishies/materials/${name}.png`)});asset.once('load',()=>resolve(asset.resource as Texture));asset.once('error',reject);app.assets.add(asset);app.assets.load(asset);});
- const [bao,steamer,shelf,color,surface]=await Promise.all([load('bao-squishy'),load('bamboo-steamer'),load('bamboo-steamer-shelf'),texture('satin-color'),texture('satin-surface')]);loaded.set(app,{bao,steamer,shelf,color,surface});
+ const [bao,steamer,shelf,color,surface,panda,frog,bunny,cat]=await Promise.all([load('bao-squishy'),load('bamboo-steamer'),load('bamboo-steamer-shelf'),texture('satin-color'),texture('satin-surface'),load('animal-panda'),load('animal-frog'),load('animal-bunny'),load('animal-cat')]);loaded.set(app,{bao,steamer,shelf,color,surface,animals:{panda,frog,bunny,cat}});
 }
 export function squishyModel(app:Application,data:DumplingDefinition){
+ if(data.special)return animalModel(app,loaded.get(app)!.animals[data.special],data);
  const model=loaded.get(app)!.bao.instantiateRenderEntity({castShadows:true});
  for(const name of ['leaf','bow','star','crown'])model.findByName('Accessory_'+name)!.enabled=data.accessory===name;
  for(const side of ['L','R']){

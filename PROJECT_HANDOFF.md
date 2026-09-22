@@ -1,4 +1,16 @@
-# Current release — completed Editor game
+# September 21 release authorization
+
+Marc explicitly approved commit, push, and production deployment of the quality-of-life work and refined animal squishies. Release: Add daily-life improvements and refined animal squishies. This supersedes the preview-only status in the historical notes below. Verify the deployed commit at https://dumpling-sandy.vercel.app/release.json. Original arianna.* saves remain in use; Squishy Pop ticket competition is still deferred.
+
+# Latest work — quality-of-life preview
+
+Latest follow-up: user approved all four animal shapes; requested surface/color/shading refinement. Completed without changing geometry. See ANIMAL_SCULPTS.md for finishing pipeline and checks. Current Editor checkpoint `c727d56d-4356-46b8-9c40-148608e1c29a`; runtime `7865fc9cd1454e47`. Local and Editor previews updated; production untouched.
+
+Newest: the initially implemented eight special designs were rejected. The user approved the subsequent Dumpling Friends concept and authorized rebuilding in 3D. See ANIMAL_SCULPTS.md for the four dedicated Blender animal models, eight palettes/identities, verification, and Editor checkpoint `e5a76d3c-9d1c-42a8-a434-76a29c872541`. Final 3D art is for review; production remains unchanged.
+
+September 21: See QUALITY_OF_LIFE.md and FRESH_CHAT.md for the completed local/Editor pass. Rarity, eight new special squishies, sequential bedroom reveals, squish variants, bedtime, chores, camera, audio and visible navigation are implemented and tested. PlayCanvas final checkpoint: `198582b7-52f8-4276-acf5-b883b714ec38`. No commit/push/production deployment was performed for this pass. The ticket competition remains deferred. Preserve current uncommitted work; deployment authorization in historical sections applies to earlier releases.
+
+# Previous release — completed Editor game
 
 The user authorized commit, push and deploy. Read FRESH_CHAT.md and EDITOR_RELEASE.md for the current build and save protections. Production: https://dumpling-sandy.vercel.app/; verify the exact deployed SHA at /release.json. Release title: Deploy completed Editor stores with existing save continuity.
 

@@ -85,6 +85,7 @@ export class Lilah {
     this.label.id='lilah-label';this.label.className='lilah-label';this.label.hidden=true;document.querySelector('#game')!.append(this.label);
     this.say('Hi, Ari!');
     this.daily.onPlayLilah=()=>this.playTogether();
+    this.daily.onLilahBed=()=>this.restInCrib();
     this.daily.lilahMesses.onClean=actor=>{if(!this.animator.busy){this.say(actor==='marc'?'Daddy fixed it! I supervised!':'All better! I helped!');this.animator.playAction('Celebrate',1.6);}};
     void this.load().catch(error=>{console.error('Lilah could not load:',error);this.label.textContent='Lilah is still loading';});
   }
@@ -110,9 +111,14 @@ export class Lilah {
     this.route=[];this.carrying=false;this.toy.enabled=false;this.animator.setCarrying(false);this.animator.cancelAction();
     this.state='playing';this.say('Again! Again!');this.nextMess=this.time+75;this.nextDecision=this.time+10;this.animator.playAction('Celebrate',1.6);
   }
+  private restInCrib(){
+    this.route=[];this.bedStart=null;this.animator.cancelAction();this.carrying=false;this.toy.enabled=false;this.animator.setCarrying(false);
+    const pose=bedEntry(this.root.getPosition(),0,true,1);this.root.setPosition(pose.position);this.visual.setLocalEulerAngles(0,pose.yaw,0);
+    if(this.grounding)this.grounding.surfaceHeight=pose.height;this.animator.setWorkClip(null);this.animator.setIdleClip('Sleep');this.state='sleeping';this.say('Night night, Ari…');
+  }
   private decide(arianna:Vec3){
     const clock=this.daily.clock;
-    if(clock.state.phase==='night'){
+    if(clock.state.minutes>=1095){
       this.state='sleepy';this.say('Sleepy…');this.carrying=false;this.toy.enabled=false;this.animator.setCarrying(false);
       this.go(propPoint('crib',new Vec3(8.55,0,-1.3)),'bedtime');this.nextDecision=this.time+30;return;
     }
@@ -127,13 +133,14 @@ export class Lilah {
   }
   update(dt:number,elapsed:number,visible:boolean,canMischief:boolean,arianna:Vec3,camera:Entity){
     this.root.enabled=visible&&this.loaded;this.label.hidden=!this.root.enabled;
-    this.daily.lilahAvailable=this.root.enabled&&!this.animator.busy&&this.state!=='sleeping'&&!this.bedStart;
+    this.daily.lilahAvailable=this.root.enabled&&!this.animator.busy&&this.state!=='sleeping'&&this.state!=='sleepy'&&!this.bedStart;
     const target=this.daily.lilahTarget;target.anchor.copy(this.root.getPosition());target.marker.copy(target.anchor);target.marker.y+=this.height+.08;
     if(!this.root.enabled||document.hidden)return;
     if(this.day!==this.daily.clock.state.day){this.day=this.daily.clock.state.day;this.time=0;this.nextMess=8;this.nextDecision=3;this.route=[];this.animator.reset();this.carrying=false;this.toy.enabled=false;if(this.grounding)this.grounding.surfaceHeight=null;if(this.state==='sleeping'||this.bedStart)this.root.setPosition(propPoint('crib',new Vec3(8.55,.09,-1.3)));this.bedStart=null;this.state='watching';}
-    if((this.state==='sleeping'||this.bedStart)&&this.daily.clock.state.phase!=='night'){this.root.setPosition(propPoint('crib',new Vec3(8.55,.09,-1.3)));this.state='watching';this.bedStart=null;this.animator.setWorkClip(null);this.animator.setIdleClip('Idle');if(this.grounding)this.grounding.surfaceHeight=null;}
+    if((this.state==='sleeping'||this.bedStart)&&!this.daily.clock.state.lilahAsleep&&this.daily.clock.state.minutes<1095){this.root.setPosition(propPoint('crib',new Vec3(8.55,.09,-1.3)));this.state='watching';this.bedStart=null;this.animator.setWorkClip(null);this.animator.setIdleClip('Idle');if(this.grounding)this.grounding.surfaceHeight=null;}
+    if(this.daily.clock.state.lilahAsleep&&this.state!=='sleeping')this.restInCrib();
     if(canMischief)this.time+=dt;
-    if(!this.scripted&&canMischief&&this.daily.clock.state.phase==='night'&&this.state!=='sleepy'&&this.state!=='sleeping'&&!this.bedStart){
+    if(!this.scripted&&canMischief&&this.daily.clock.state.minutes>=1095&&this.state!=='sleepy'&&this.state!=='sleeping'&&!this.bedStart){
       this.route=[];this.animator.cancelAction();this.decide(arianna);
     }
     const velocity=new Vec3();
@@ -166,7 +173,7 @@ export class Lilah {
         this.say(made?['Ta-da! I helping!','Uh-oh. All wet!','Crumbs are confetti!'][this.daily.lilahMesses.count-1]:'I did it!');
         this.nextMess=this.time+50;this.state='proud';
       });
-    }else if(this.destination==='bedtime'){this.state='bedtime-entry';this.bedStart={position:this.root.getPosition().clone(),yaw:this.visual.getLocalEulerAngles().y,elapsed:0};this.animator.setWorkClip('SleepEnter');this.say('Night night!');}
+    }else if(this.destination==='bedtime'){this.state='sleepy';this.nextDecision=this.time+30;this.say('Tuck me in, Ari?');}
     else{this.state='watching';this.say(this.destination==='follow'?'You’re my favorite, Ari!':'Ooh…');}
   }
   snapshot(){return {loaded:this.loaded,height:this.height,position:this.root.getPosition().toArray(),state:this.state,scripted:this.scripted,job:this.job?{point:this.job.point.toArray(),icon:this.job.icon,wait:this.job.wait}:null,speech:this.speech,carrying:this.carrying,animation:this.animator.snapshot(),visited:[...this.visited],routeLength:this.route.length,time:this.time,nextMess:this.nextMess};}

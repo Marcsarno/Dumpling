@@ -47,10 +47,10 @@ var init_collection = __esm({
   "src/data/collection.ts"() {
     "use strict";
     RARITIES = {
-      Common: { weight: 60, color: "#c4b7d1", sparkles: 5, pitch: 1 },
+      Common: { weight: 65, color: "#c4b7d1", sparkles: 5, pitch: 1 },
       Rare: { weight: 25, color: "#78b8ec", sparkles: 10, pitch: 1.12 },
-      Epic: { weight: 12, color: "#be87e6", sparkles: 16, pitch: 1.26 },
-      Legendary: { weight: 3, color: "#f2c661", sparkles: 24, pitch: 1.5 }
+      Epic: { weight: 8, color: "#be87e6", sparkles: 16, pitch: 1.26 },
+      Legendary: { weight: 2, color: "#f2c661", sparkles: 24, pitch: 1.5 }
     };
     DUMPLINGS = [
       { id: "mochi", name: "Mochi", rarity: "Common", color: "#fff0d7", accent: "#edafbd", face: "smile", accessory: "none" },
@@ -58,27 +58,36 @@ var init_collection = __esm({
       { id: "minty", name: "Minty", rarity: "Common", color: "#b6d9bd", accent: "#7da887", face: "sleepy", accessory: "leaf" },
       { id: "blueberry", name: "Blueberry", rarity: "Rare", color: "#b5d5f3", accent: "#829ecd", face: "smile", accessory: "leaf" },
       { id: "sunny", name: "Sunny", rarity: "Rare", color: "#f5dfa1", accent: "#e2ae76", face: "wink", accessory: "bow" },
-      { id: "lavendream", name: "Lavendream", rarity: "Epic", color: "#d5baf1", accent: "#aa80d0", face: "sleepy", accessory: "star" },
-      { id: "peachy", name: "Peachy", rarity: "Epic", color: "#f4c3aa", accent: "#db9c8c", face: "smile", accessory: "star" },
-      { id: "stardrop", name: "Stardrop", rarity: "Legendary", color: "#ffe6a0", accent: "#d6a540", face: "wink", accessory: "crown" },
+      { id: "lavendream", name: "Lavendream", rarity: "Rare", color: "#d5baf1", accent: "#aa80d0", face: "sleepy", accessory: "star" },
+      { id: "peachy", name: "Peachy", rarity: "Rare", color: "#f4c3aa", accent: "#db9c8c", face: "smile", accessory: "star" },
+      { id: "stardrop", name: "Stardrop", rarity: "Rare", color: "#ffe6a0", accent: "#d6a540", face: "wink", accessory: "crown" },
       { id: "shortcake", name: "Shortcake", rarity: "Common", color: "#f5bfd0", accent: "#df729b", face: "smile", accessory: "bow" },
       { id: "custard", name: "Custard", rarity: "Common", color: "#f5dea0", accent: "#d9ae6a", face: "sleepy", accessory: "none" },
       { id: "cocoa", name: "Cocoa Puff", rarity: "Rare", color: "#b88570", accent: "#f3cfb1", face: "wink", accessory: "bow" },
       { id: "macaron", name: "Macaron", rarity: "Rare", color: "#b5d4be", accent: "#f5c2d9", face: "smile", accessory: "leaf" },
-      { id: "sorbet", name: "Sorbet", rarity: "Epic", color: "#e4b9ef", accent: "#fdc5ac", face: "wink", accessory: "star" },
-      { id: "sugarstar", name: "Sugar Star", rarity: "Legendary", color: "#fff1c0", accent: "#e6b867", face: "smile", accessory: "crown" },
+      { id: "sorbet", name: "Sorbet", rarity: "Rare", color: "#e4b9ef", accent: "#fdc5ac", face: "wink", accessory: "star" },
+      { id: "sugarstar", name: "Sugar Star", rarity: "Rare", color: "#fff1c0", accent: "#e6b867", face: "smile", accessory: "crown" },
       { id: "bunny", name: "Bunny Bun", rarity: "Common", color: "#fae8dd", accent: "#e8aec5", face: "smile", accessory: "bow" },
       { id: "kitten", name: "Peaches the Kitten", rarity: "Common", color: "#eec0a1", accent: "#d89594", face: "sleepy", accessory: "none" },
       { id: "panda", name: "Panda Puff", rarity: "Rare", color: "#eee7ec", accent: "#77748a", face: "smile", accessory: "none" },
       { id: "fox", name: "Little Fox", rarity: "Rare", color: "#d99c79", accent: "#fff1df", face: "wink", accessory: "leaf" },
-      { id: "sleepykoala", name: "Sleepy Koala", rarity: "Epic", color: "#bac0da", accent: "#f0c5d6", face: "sleepy", accessory: "star" },
-      { id: "goldenbear", name: "Honey Bear", rarity: "Legendary", color: "#efcf83", accent: "#b59162", face: "smile", accessory: "crown" },
+      { id: "sleepykoala", name: "Sleepy Koala", rarity: "Rare", color: "#bac0da", accent: "#f0c5d6", face: "sleepy", accessory: "star" },
+      { id: "goldenbear", name: "Honey Bear", rarity: "Rare", color: "#efcf83", accent: "#b59162", face: "smile", accessory: "crown" },
       { id: "moonbean", name: "Moonbean", rarity: "Common", color: "#c6c4e4", accent: "#f5e4ad", face: "sleepy", accessory: "star" },
       { id: "comet", name: "Comet", rarity: "Common", color: "#a8c6de", accent: "#c9a8e4", face: "wink", accessory: "star" },
       { id: "nebula", name: "Nebula", rarity: "Rare", color: "#d2a5d9", accent: "#99c9dc", face: "smile", accessory: "bow" },
       { id: "orbit", name: "Orbit", rarity: "Rare", color: "#a5d7d1", accent: "#edcde9", face: "wink", accessory: "star" },
-      { id: "aurora", name: "Aurora", rarity: "Epic", color: "#bbb0f2", accent: "#b0ead7", face: "sleepy", accessory: "crown" },
-      { id: "supernova", name: "Supernova", rarity: "Legendary", color: "#fae3a1", accent: "#b6a4ed", face: "smile", accessory: "crown" }
+      { id: "aurora", name: "Aurora", rarity: "Rare", color: "#bbb0f2", accent: "#b0ead7", face: "sleepy", accessory: "crown" },
+      { id: "supernova", name: "Supernova", rarity: "Rare", color: "#fae3a1", accent: "#b6a4ed", face: "smile", accessory: "crown" },
+      // Stable IDs preserve earlier preview receipts; the rejected designs are replaced.
+      { id: "dewdrop-unicorn", name: "Matcha Frog", rarity: "Epic", color: "#b6d48b", accent: "#8eae67", face: "smile", accessory: "none", special: "frog" },
+      { id: "sunbeam-unicorn", name: "Lotus Frog", rarity: "Legendary", color: "#acd6c5", accent: "#729f91", face: "smile", accessory: "none", special: "frog" },
+      { id: "sugarplum-bunny", name: "Peach Blossom Bunny", rarity: "Epic", color: "#ffdac4", accent: "#eeabb4", face: "smile", accessory: "none", special: "bunny" },
+      { id: "opal-bunny", name: "Lilac Blossom Bunny", rarity: "Legendary", color: "#e9dff5", accent: "#c79fc8", face: "smile", accessory: "none", special: "bunny" },
+      { id: "starlight-panda", name: "Lavender Panda", rarity: "Epic", color: "#ffe2ca", accent: "#8b7891", face: "smile", accessory: "none", special: "panda" },
+      { id: "moonwish-panda", name: "Honey Panda", rarity: "Legendary", color: "#fff0d6", accent: "#b59272", face: "smile", accessory: "none", special: "panda" },
+      { id: "nebula-dragon", name: "Biscuit Kitty", rarity: "Epic", color: "#ffe4c7", accent: "#c49172", face: "smile", accessory: "none", special: "cat" },
+      { id: "solstice-dragon", name: "Lilac Kitty", rarity: "Legendary", color: "#f3eafa", accent: "#aa94c2", face: "smile", accessory: "none", special: "cat" }
     ];
     STORE_INVENTORY = {
       id: "little-surprises",
@@ -143,10 +152,10 @@ var init_hunt = __esm({
     init_collection();
     HUNT_RULES = { closingMinute: 1140, minimumSearchMinutes: 18, bagLimit: 3, inspectMilliseconds: 650 };
     SERIES = [
-      { id: "garden", name: "Garden Friends", price: 4, color: "#bbd8b8", items: ["mochi", "rosie", "minty", "blueberry", "sunny", "lavendream", "peachy", "stardrop"] },
-      { id: "treats", name: "Sweet Treats", price: 5, color: "#f1baca", items: ["shortcake", "custard", "cocoa", "macaron", "sorbet", "sugarstar"] },
-      { id: "animals", name: "Pocket Pals", price: 5, color: "#efd7a0", items: ["bunny", "kitten", "panda", "fox", "sleepykoala", "goldenbear"] },
-      { id: "galaxy", name: "Galaxy Dreams", price: 7, color: "#bab4e9", items: ["moonbean", "comet", "nebula", "orbit", "aurora", "supernova"] }
+      { id: "garden", name: "Garden Friends", price: 4, color: "#bbd8b8", items: ["mochi", "rosie", "minty", "blueberry", "sunny", "lavendream", "peachy", "stardrop", "dewdrop-unicorn", "sunbeam-unicorn"] },
+      { id: "treats", name: "Sweet Treats", price: 5, color: "#f1baca", items: ["shortcake", "custard", "cocoa", "macaron", "sorbet", "sugarstar", "sugarplum-bunny", "opal-bunny"] },
+      { id: "animals", name: "Pocket Pals", price: 5, color: "#efd7a0", items: ["bunny", "kitten", "panda", "fox", "sleepykoala", "goldenbear", "starlight-panda", "moonwish-panda"] },
+      { id: "galaxy", name: "Galaxy Dreams", price: 7, color: "#bab4e9", items: ["moonbean", "comet", "nebula", "orbit", "aurora", "supernova", "nebula-dragon", "solstice-dragon"] }
     ];
     STORES = [
       {
@@ -159,7 +168,7 @@ var init_hunt = __esm({
         stock: [3, 5],
         lowStockChance: 0.22,
         series: [{ id: "garden", weight: 6 }, { id: "treats", weight: 4 }],
-        odds: { Common: 66, Rare: 24, Epic: 8, Legendary: 2 },
+        odds: { Common: 65, Rare: 25, Epic: 8, Legendary: 2 },
         palette: ["#b6d1ba", "#f4dfab", "#f7eedc"],
         layout: 0
       },
@@ -173,7 +182,7 @@ var init_hunt = __esm({
         stock: [5, 8],
         lowStockChance: 0.12,
         series: [{ id: "garden", weight: 2 }, { id: "treats", weight: 3 }, { id: "animals", weight: 5 }, { id: "galaxy", weight: 1 }],
-        odds: { Common: 55, Rare: 28, Epic: 13, Legendary: 4 },
+        odds: { Common: 65, Rare: 25, Epic: 8, Legendary: 2 },
         palette: ["#ecb7cb", "#c4bbe3", "#fff0dc"],
         layout: 1
       },
@@ -187,7 +196,7 @@ var init_hunt = __esm({
         stock: [2, 4],
         lowStockChance: 0.2,
         series: [{ id: "galaxy", weight: 7 }, { id: "animals", weight: 2 }, { id: "treats", weight: 1 }],
-        odds: { Common: 36, Rare: 34, Epic: 23, Legendary: 7 },
+        odds: { Common: 65, Rare: 25, Epic: 8, Legendary: 2 },
         palette: ["#b7b5db", "#a7cfcd", "#eee4f3"],
         layout: 2
       }
@@ -983,15 +992,112 @@ var HouseMusic = class {
   }
 };
 
+// src/game/AnimalSquishy.ts
+import { Color, Texture } from "playcanvas";
+var catMasks = /* @__PURE__ */ new WeakMap();
+function catMask(app, data) {
+  let cache = catMasks.get(app);
+  if (!cache) {
+    cache = /* @__PURE__ */ new Map();
+    catMasks.set(app, cache);
+  }
+  const key = data.color + data.accent;
+  let result = cache.get(key);
+  if (result) return result;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 512;
+  const ctx = canvas.getContext("2d"), pixels = ctx.createImageData(512, 512);
+  const linear = (v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  const srgb = (v) => v <= 31308e-7 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055;
+  const base = new Color().fromString(data.color), accent = new Color().fromString(data.accent);
+  const colors = data.id === "nebula-dragon" ? ["#e7b386", "#cba57f", "#c68777", "#aa8074"] : ["#c9b5dc", "#bba4ce", "#ac91bd", "#9780ac"];
+  const ratios = colors.map((hex) => {
+    const c = new Color().fromString(hex);
+    return [c.r, c.g, c.b].map((v, i) => linear(v) / linear([base.r, base.g, base.b][i]));
+  });
+  for (let row = 0; row < 512; row++) for (let col = 0; col < 512; col++) {
+    const x = col / 512 * 1.5 - 0.75, y = (1 - row / 512) * 1.4;
+    const distance = Math.min(...[-1, 1].map((s) => ((x - s * 0.36) / 0.23) ** 2 + ((y - 0.87) / 0.25) ** 2));
+    const a = Math.max(0, Math.min(1, (1.02 - distance) / 0.04));
+    const t = Math.max(0, Math.min(1, (y - 0.76) / 0.2)), blend = t * t * (3 - 2 * t), side = x < 0 ? 0 : 1;
+    const offset = (row * 512 + col) * 4;
+    for (let c = 0; c < 3; c++) {
+      const ratio = ratios[side][c] * (1 - blend) + ratios[side + 2][c] * blend;
+      pixels.data[offset + c] = Math.round(255 * srgb(1 - a * (1 - ratio)));
+    }
+    pixels.data[offset + 3] = 255;
+  }
+  ctx.putImageData(pixels, 0, 0);
+  result = new Texture(app.graphicsDevice, { name: "Seamless kitten cap mask", width: 512, height: 512, mipmaps: true, flipY: false });
+  result.setSource(canvas);
+  cache.set(key, result);
+  return result;
+}
+function animalModel(app, resource, data) {
+  const model = resource.instantiateRenderEntity({ castShadows: true });
+  const materials = /* @__PURE__ */ new Map();
+  for (const renderer of model.findComponents("render")) for (const mesh of renderer.meshInstances) {
+    const original = mesh.material;
+    if (!materials.has(original)) {
+      const mat = original.clone();
+      mat.diffuseMap = null;
+      mat.normalMap = null;
+      mat.glossMap = null;
+      mat.diffuseVertexColor = false;
+      mat.aoVertexColor = true;
+      mat.aoVertexColorChannel = "r";
+      mat.aoIntensity = 0.78;
+      mat.occludeDirect = false;
+      mat.glossInvert = true;
+      mat.metalness = 0;
+      mat.gloss = 0.48;
+      mat.specularityFactor = 0.4;
+      mat.clearCoat = 0.035;
+      mat.clearCoatGloss = 0.55;
+      if (original.name.startsWith("Dough tint")) {
+        mat.diffuse = new Color().fromString(data.color);
+        if (data.special === "cat") mat.diffuseMap = catMask(app, data);
+      }
+      if (original.name.startsWith("Animal accent")) {
+        mat.diffuse = new Color().fromString(data.accent);
+        mat.gloss = 0.58;
+        mat.specularityFactor = 0.32;
+        mat.clearCoat = 0.015;
+      }
+      if (original.name.startsWith("Animal eyes")) {
+        mat.gloss = 0.18;
+        mat.specularityFactor = 0.75;
+        mat.diffuse = new Color().fromString("#392a2e");
+      }
+      if (original.name.startsWith("Animal ink")) {
+        mat.gloss = 0.45;
+        mat.diffuse = new Color().fromString("#463039");
+      }
+      if (original.name.startsWith("Animal blush")) {
+        mat.gloss = 0.6;
+        mat.clearCoat = 0;
+        mat.diffuse = new Color().fromString("#f2a0ab");
+      }
+      mat.update();
+      materials.set(original, mat);
+    }
+    mesh.material = materials.get(original);
+  }
+  model.on("destroy", () => {
+    for (const mat of materials.values()) mat.destroy();
+  });
+  return model;
+}
+
 // src/game/SquishyArt.ts
-import { Asset, Color } from "playcanvas";
+import { Asset, Color as Color2 } from "playcanvas";
 
 // src/data/squishyPresentation.ts
 var SQUISHY_PRESENTATION = {
   Common: { color: "#dacbdf", spark: "#ab92b7", ink: "#665070", wash: "#f4edf5", symbol: "\u2661", roughness: 0.52, coat: 0.06, accentCoat: 0.12, sparkles: 0, rays: 0, halo: 0.08, burst: 0.16, rim: 0, punch: 0, intensity: 0.85, hold: 0.3, notes: [659.25, 783.99] },
-  Rare: { color: "#81c8ff", spark: "#479fed", ink: "#225784", wash: "#e4f3ff", symbol: "\u2727", roughness: 0.5, coat: 0.1, accentCoat: 0.2, sparkles: 10, rays: 0, halo: 0.13, burst: 0.32, rim: 0.1, punch: 8e-3, intensity: 1, hold: 0.5, notes: [659.25, 830.61, 987.77] },
-  Epic: { color: "#c19af6", spark: "#a36ed6", ink: "#674091", wash: "#f0e6ff", symbol: "\u2726", roughness: 0.49, coat: 0.15, accentCoat: 0.3, sparkles: 18, rays: 0, halo: 0.16, burst: 0.43, rim: 0.17, punch: 0.013, intensity: 1.15, hold: 0.7, notes: [659.25, 830.61, 987.77, 1318.51] },
-  Legendary: { color: "#f6cd68", spark: "#dea52e", ink: "#775215", wash: "#fff3cb", symbol: "\u2739", roughness: 0.48, coat: 0.2, accentCoat: 0.4, sparkles: 28, rays: 12, halo: 0.19, burst: 0.55, rim: 0.24, punch: 0.018, intensity: 1.3, hold: 0.95, notes: [523.25, 659.25, 783.99, 1046.5, 1318.51] }
+  Rare: { color: "#81c8ff", spark: "#479fed", ink: "#225784", wash: "#e4f3ff", symbol: "\u2727", roughness: 0.5, coat: 0.28, accentCoat: 0.2, sparkles: 10, rays: 0, halo: 0.13, burst: 0.32, rim: 0.1, punch: 8e-3, intensity: 1, hold: 0.5, notes: [659.25, 830.61, 987.77] },
+  Epic: { color: "#c19af6", spark: "#a36ed6", ink: "#674091", wash: "#f0e6ff", symbol: "\u2726", roughness: 0.49, coat: 0.65, accentCoat: 0.3, sparkles: 18, rays: 0, halo: 0.32, burst: 0.43, rim: 0.4, punch: 0.013, intensity: 1.15, hold: 0.7, notes: [659.25, 830.61, 987.77, 1318.51] },
+  Legendary: { color: "#f6cd68", spark: "#dea52e", ink: "#775215", wash: "#fff3cb", symbol: "\u2739", roughness: 0.48, coat: 0.9, accentCoat: 0.4, sparkles: 28, rays: 12, halo: 0.48, burst: 0.55, rim: 0.7, punch: 0.018, intensity: 1.3, hold: 0.95, notes: [523.25, 659.25, 783.99, 1046.5, 1318.51] }
 };
 var REVEAL_POP_TIME = 1.58;
 var REVEAL_SETTLE_TIME = 2.85;
@@ -1014,10 +1120,11 @@ async function loadSquishyArt(app) {
     app.assets.add(asset);
     app.assets.load(asset);
   });
-  const [bao, steamer, shelf, color, surface] = await Promise.all([load("bao-squishy"), load("bamboo-steamer"), load("bamboo-steamer-shelf"), texture("satin-color"), texture("satin-surface")]);
-  loaded.set(app, { bao, steamer, shelf, color, surface });
+  const [bao, steamer, shelf, color, surface, panda, frog, bunny, cat] = await Promise.all([load("bao-squishy"), load("bamboo-steamer"), load("bamboo-steamer-shelf"), texture("satin-color"), texture("satin-surface"), load("animal-panda"), load("animal-frog"), load("animal-bunny"), load("animal-cat")]);
+  loaded.set(app, { bao, steamer, shelf, color, surface, animals: { panda, frog, bunny, cat } });
 }
 function squishyModel(app, data) {
+  if (data.special) return animalModel(app, loaded.get(app).animals[data.special], data);
   const model = loaded.get(app).bao.instantiateRenderEntity({ castShadows: true });
   for (const name of ["leaf", "bow", "star", "crown"]) model.findByName("Accessory_" + name).enabled = data.accessory === name;
   for (const side of ["L", "R"]) {
@@ -1034,7 +1141,7 @@ function squishyModel(app, data) {
       mat.glossInvert = true;
       mat.metalness = 0;
       if (original.name === "Dough tint") {
-        mat.diffuse = new Color().fromString(data.color);
+        mat.diffuse = new Color2().fromString(data.color);
         mat.diffuseMap = maps.color;
         mat.opacityMap = null;
         mat.normalMap = maps.surface;
@@ -1046,7 +1153,7 @@ function squishyModel(app, data) {
         mat.clearCoat = finish.coat;
         mat.clearCoatGloss = 0.65;
       } else if (original.name === "Accessory tint") {
-        mat.diffuse = new Color().fromString(data.accent);
+        mat.diffuse = new Color2().fromString(data.accent);
         mat.gloss = 0.38;
         mat.clearCoat = finish.accentCoat;
         mat.clearCoatGloss = 0.72;
@@ -1080,7 +1187,7 @@ function animateSquishy(model, time, strength = 0.012) {
 }
 
 // src/main.ts
-import { Application, Color as Color9, Entity as Entity32, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec332 } from "playcanvas";
+import { Application, Color as Color10, Entity as Entity32, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec332 } from "playcanvas";
 
 // src/game/house.ts
 import { BoundingBox as BoundingBox4, Entity as Entity7, Vec3 as Vec36 } from "playcanvas";
@@ -1128,11 +1235,11 @@ var EXTRA_HOUSE_TASKS = [
 import { BoundingBox as BoundingBox2, Entity as Entity4, Vec3 as Vec35 } from "playcanvas";
 
 // src/game/primitives.ts
-import { Color as Color2, Entity as Entity3, StandardMaterial as StandardMaterial2 } from "playcanvas";
+import { Color as Color3, Entity as Entity3, StandardMaterial as StandardMaterial2 } from "playcanvas";
 function material(name, hex) {
   const mat = new StandardMaterial2();
   mat.name = name;
-  mat.diffuse = new Color2().fromString(hex);
+  mat.diffuse = new Color3().fromString(hex);
   mat.gloss = 0.15;
   mat.specular.set(0.08, 0.07, 0.09);
   mat.update();
@@ -1272,7 +1379,7 @@ function createBedroom(app) {
 }
 
 // src/game/HouseArt.ts
-import { Asset as Asset2, BoundingBox as BoundingBox3, Color as Color3, Entity as Entity5 } from "playcanvas";
+import { Asset as Asset2, BoundingBox as BoundingBox3, Color as Color4, Entity as Entity5 } from "playcanvas";
 var PALETTE = {
   wood: "#c9a078",
   woodDark: "#987453",
@@ -1337,7 +1444,7 @@ var HouseArt = class {
         if (!this.materials.has(paletteKey)) {
           const material2 = original.clone();
           material2.name = `Cottage ${paletteKey}`;
-          if (color) material2.diffuse = new Color3().fromString(color);
+          if (color) material2.diffuse = new Color4().fromString(color);
           material2.metalness = 0;
           material2.gloss = 0.15;
           material2.update();
@@ -1384,7 +1491,7 @@ var HouseArt = class {
 };
 
 // src/game/HouseLighting.ts
-import { Color as Color4, Entity as Entity6 } from "playcanvas";
+import { Color as Color5, Entity as Entity6 } from "playcanvas";
 var HouseLighting = class {
   constructor(app, root, bedside, importedShades) {
     this.importedShades = importedShades;
@@ -1398,7 +1505,7 @@ var HouseLighting = class {
       entity.setLocalPosition(...position);
       entity.addComponent("light", {
         type: "omni",
-        color: new Color4(1, 0.84, 0.67),
+        color: new Color5(1, 0.84, 0.67),
         intensity: 0,
         range,
         castShadows: false
@@ -1429,7 +1536,7 @@ var HouseLighting = class {
     }
     const fill = new Entity6("Warm interior bounce", app);
     root.addChild(fill);
-    fill.addComponent("light", { type: "directional", color: new Color4(1, 0.88, 0.74), intensity: 0, castShadows: false });
+    fill.addComponent("light", { type: "directional", color: new Color5(1, 0.88, 0.74), intensity: 0, castShadows: false });
     fill.light.mask = 1;
     fill.setEulerAngles(45, -30, 0);
     fill.enabled = false;
@@ -1477,7 +1584,7 @@ var HouseLighting = class {
 };
 
 // src/game/SurfaceTextures.ts
-import { ADDRESS_REPEAT, FILTER_LINEAR_MIPMAP_LINEAR, Texture } from "playcanvas";
+import { ADDRESS_REPEAT, FILTER_LINEAR_MIPMAP_LINEAR, Texture as Texture2 } from "playcanvas";
 var SurfaceTextures = class {
   constructor(app) {
     this.app = app;
@@ -1499,7 +1606,7 @@ var SurfaceTextures = class {
         pixels.data[i + 3] = 255;
       }
       context.putImageData(pixels, 0, 0);
-      const texture = new Texture(this.app.graphicsDevice, {
+      const texture = new Texture2(this.app.graphicsDevice, {
         name: `Subtle ${kind} surface`,
         mipmaps: true,
         minFilter: FILTER_LINEAR_MIPMAP_LINEAR,
@@ -1752,8 +1859,8 @@ function createHouse(app) {
 }
 
 // src/game/IsometricCamera.ts
-import { Entity as Entity8, Color as Color5, PROJECTION_ORTHOGRAPHIC, TONEMAP_LINEAR, Vec3 as Vec37 } from "playcanvas";
-var CAMERA_PRESETS = { EXPLORE: { zoom: 1 }, CHORE: { zoom: 0.76 }, REVIEW: { zoom: 0.65 }, BOX_OPENING: { zoom: 0.7 }, TRADE: { zoom: 0.85 } };
+import { Entity as Entity8, Color as Color6, PROJECTION_ORTHOGRAPHIC, TONEMAP_LINEAR, Vec3 as Vec37 } from "playcanvas";
+var CAMERA_PRESETS = { EXPLORE: { zoom: 1 }, CHORE: { zoom: 0.608 }, REVIEW: { zoom: 0.65 }, BOX_OPENING: { zoom: 0.7 }, TRADE: { zoom: 0.85 } };
 var IsometricCamera = class {
   entity;
   offset = new Vec37();
@@ -1794,7 +1901,7 @@ var IsometricCamera = class {
       orthoHeight: 7,
       nearClip: 0.1,
       farClip: 60,
-      clearColor: new Color5().fromString("#ede6f4")
+      clearColor: new Color6().fromString("#ede6f4")
     });
     this.entity.setPosition(this.basePosition);
     this.entity.lookAt(this.baseTarget);
@@ -1819,7 +1926,7 @@ var IsometricCamera = class {
         this.returning = false;
       }
     }
-    this.interactionLift += ((this.state === "CHORE" ? 6 : 0) - this.interactionLift) * (1 - Math.exp(-5 * dt));
+    this.interactionLift += ((this.state === "CHORE" ? -2 : 0) - this.interactionLift) * (1 - Math.exp(-5 * dt));
     this.entity.setPosition(this.basePosition.x + this.offset.x, this.basePosition.y + this.interactionLift, this.basePosition.z + this.offset.z);
     this.entity.lookAt(new Vec37(this.baseTarget.x + this.offset.x, this.baseTarget.y, this.baseTarget.z + this.offset.z));
   }
@@ -3028,6 +3135,20 @@ var DAILY_TASKS = {
   afternoon: [{ id: "dust-0", name: "Vacuum", icon: "\u2726" }, { id: "dust-1", name: "Vacuum", icon: "\u2726" }, { id: "dust-2", name: "Vacuum", icon: "\u2726" }, { id: "spill", name: "Wipe kitchen spill", icon: "\u{1F9FB}" }, { id: "laundry-clothes", name: "Put laundry in washer", icon: "\u{1F455}" }],
   night: [{ id: "teeth", name: "Brush teeth", icon: "\u{1FAA5}" }, { id: "outfit", name: "Put clothes away", icon: "\u{1F455}" }, { id: "read", name: "Bedtime book", icon: "\u{1F4D8}" }]
 };
+var AFTERNOON_EXTRAS = [
+  { id: "laundry-clothes", name: "Put laundry in washer", icon: "\u{1F455}" },
+  { id: "living-toy", name: "Put toys away", icon: "\u{1F9F8}" },
+  { id: "kitchen-dish", name: "Take dish to sink", icon: "\u{1F37D}" },
+  { id: "kitchen-trash", name: "Recycle trash", icon: "\u267B" },
+  { id: "bath-towel", name: "Hang a towel", icon: "\u25A4" },
+  { id: "hall-shoes", name: "Put shoes away", icon: "\u{1F45F}" },
+  { id: "hall-mail", name: "Sort the mail", icon: "\u2709" },
+  { id: "living-cushion", name: "Straighten a cushion", icon: "\u2661" },
+  { id: "laundry-clean", name: "Put folded clothes away", icon: "\u25A4" },
+  { id: "bath-bottle", name: "Put toiletries away", icon: "\u2667" },
+  { id: "book", name: "Put a book away", icon: "\u{1F4D8}" }
+];
+var afternoonCatalog = [...DAILY_TASKS.afternoon, ...AFTERNOON_EXTRAS, { id: "feed-dog", name: "Fill puppy\u2019s bowl", icon: "\u{1F43E}" }, { id: "pet-care", name: "Scoop \xB7 flush \xB7 wash", icon: "\u{1F43E}" }];
 var DailyClock = class {
   constructor(random = Math.random, saved) {
     this.random = random;
@@ -3038,11 +3159,20 @@ var DailyClock = class {
   random;
   state;
   newDay(day) {
+    const random = () => Math.max(0, Math.min(1 - Number.EPSILON, this.random()));
     const pool = DUST_LOCATIONS.map((_, i) => i), dust = [];
-    while (dust.length < 3) dust.push(pool.splice(Math.floor(this.random() * pool.length), 1)[0]);
-    return { version: 1, day, minutes: 420, phase: "morning", done: [], eggDrop: null, breakfast: "eggs", dust, schoolSeconds: 0, petTask: this.random() < 0.5 ? "feed-dog" : "pet-care", spillSite: Math.floor(this.random() * SPILL_LOCATIONS.length), sideTask: ["laundry-clothes", "living-toy", "kitchen-dish"][Math.floor(this.random() * 3)] };
+    while (dust.length < 3) dust.push(pool.splice(Math.floor(random() * pool.length), 1)[0]);
+    const chores = [...AFTERNOON_EXTRAS];
+    for (let i = chores.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [chores[i], chores[j]] = [chores[j], chores[i]];
+    }
+    const petTask = random() < 0.5 ? "feed-dog" : "pet-care";
+    const afternoonTasks = ["dust-0", random() < 0.5 ? "dust-1" : "spill", chores[0].id, chores[1].id, petTask];
+    return { afternoonTasks, version: 1, day, minutes: 420, phase: "morning", done: [], eggDrop: null, breakfast: "eggs", dust, schoolSeconds: 0, petTask, spillSite: Math.floor(random() * SPILL_LOCATIONS.length), sideTask: ["laundry-clothes", "living-toy", "kitchen-dish"][Math.floor(random() * 3)] };
   }
   get tasks() {
+    if (this.state.phase === "afternoon" && Array.isArray(this.state.afternoonTasks) && this.state.afternoonTasks.length === 5 && new Set(this.state.afternoonTasks).size === 5 && this.state.afternoonTasks.every((id) => afternoonCatalog.some((t) => t.id === id))) return this.state.afternoonTasks.map((id) => afternoonCatalog.find((t) => t.id === id));
     const tasks = DAILY_TASKS[this.state.phase];
     if (this.state.phase !== "afternoon" || !this.state.petTask) return tasks;
     return [...tasks.filter((t) => t.id !== "dust-2" && t.id !== "laundry-clothes"), this.state.sideTask === "living-toy" ? { id: "living-toy", name: "Put toys away", icon: "\u{1F9F8}" } : this.state.sideTask === "kitchen-dish" ? { id: "kitchen-dish", name: "Take dish to sink", icon: "\u{1F37D}" } : { id: "laundry-clothes", name: "Put laundry in washer", icon: "\u{1F455}" }, this.state.petTask === "feed-dog" ? { id: "feed-dog", name: "Fill puppy\u2019s bowl", icon: "\u{1F43E}" } : { id: "pet-care", name: "Scoop \xB7 flush \xB7 wash", icon: "\u{1F43E}" }];
@@ -3075,11 +3205,15 @@ var DailyClock = class {
     this.state.schoolSeconds = 3;
     return true;
   }
-  sleep() {
-    if (!this.canSleep) return false;
+  sleep(early = false) {
+    if (!this.canSleep && !(early && this.state.phase === "afternoon" && this.ready)) return false;
     const old = this.state, next = this.newDay(old.day + 1);
     if (next.sideTask === old.sideTask) next.sideTask = old.sideTask === "laundry-clothes" ? "living-toy" : old.sideTask === "living-toy" ? "kitchen-dish" : "laundry-clothes";
     if (next.dust.slice(0, 2).every((i) => old.dust.slice(0, 2).includes(i))) next.dust = next.dust.map((i) => (i + 2) % DUST_LOCATIONS.length);
+    if (next.afternoonTasks?.slice().sort().join() === old.afternoonTasks?.slice().sort().join()) {
+      const choices = AFTERNOON_EXTRAS.filter((t) => !next.afternoonTasks.includes(t.id));
+      next.afternoonTasks[2] = choices[Math.floor(this.random() * choices.length)].id;
+    }
     this.state = next;
     return true;
   }
@@ -3096,11 +3230,12 @@ var DailyClock = class {
     }
     this.state.minutes += seconds * 0.5;
     if (this.state.phase === "morning") this.state.minutes = Math.min(510, this.state.minutes);
-    if (this.state.phase === "afternoon" && this.state.minutes >= 1140) {
+    if (this.state.phase === "afternoon" && this.state.minutes >= 1140 && this.ready) {
       this.state.phase = "night";
       this.state.minutes = 1140;
       this.state.done = [];
     }
+    if (this.state.phase === "afternoon") this.state.minutes = Math.min(1140, this.state.minutes);
     if (this.state.phase === "night") this.state.minutes = Math.min(1260, this.state.minutes);
   }
   get label() {
@@ -3328,7 +3463,7 @@ var DailyLife = class {
     target("take-breakfast", "Carry breakfast", "\u{1F373}", [-1.8, 0, 12.65], [-2.63, 1.15, 12.65], (h) => !h && phase() === "morning" && this.clock.state.breakfast === "serve" && this.clock.state.breakfastAtTable === false, 0);
     target("serve-breakfast", "Put breakfast on table", "\u{1F37D}", [0.55, 0, 11.9], [0.55, 0.9, 13.15], (h) => h === "breakfast-plate", 0);
     target("eat-breakfast", "Eat breakfast", "\u{1F37D}", [0.55, 0, 11.9], [0.55, 0.9, 13.15], (h) => !h && phase() === "morning" && this.clock.state.breakfast === "serve" && this.clock.state.breakfastAtTable !== false, 4200, "breakfast");
-    target("take-towel", "Take paper towel", "\u{1F9FB}", [-1.8, 0, 10.5], [-2.65, 1.15, 10.5], (h) => !h && (this.clock.state.breakfast === "spill" || phase() === "afternoon" && notDone("spill") || this.lilahMesses.needs("spill")), 0);
+    target("take-towel", "Take paper towel", "\u{1F9FB}", [-1.8, 0, 10.5], [-2.65, 1.15, 10.5], (h) => !h && (this.clock.state.breakfast === "spill" || phase() === "afternoon" && this.needsTask("spill") || this.lilahMesses.needs("spill")), 0);
     target("wipe-egg", "Wipe dropped egg", "\u{1F9FB}", [-1.5, 0, 12.55], [-1.5, 0.12, 12.55], (h) => h === "paper-towel" && this.clock.state.breakfast === "spill", 1200, void 0, true, this.eggSpill);
     target("wipe-spill", "Wipe spill", "\u{1F9FB}", [0.1, 0, 11.1], [0.1, 0.12, 11.1], (h) => h === "paper-towel" && phase() === "afternoon" && notDone("spill"), 1200, "spill", true, this.spill);
     const vacuum = props.items.find((i) => i.id === "vacuum");
@@ -3338,13 +3473,23 @@ var DailyLife = class {
     target("bedtime-book", "Read a bedtime book", "\u{1F4D8}", [-0.85, 0, -0.8], [-1.4, 0.9, -0.8], (h) => !h && phase() === "night" && notDone("read"), 1600, "read");
     target("school-door", "Go to school", "\u{1F392}", [-2.35, 0, 8.2], [-3.1, 1.1, 8.2], (h) => !h && this.clock.schoolDue, 0);
     target("shop-door", "Choose a store", "\u{1F6CD}", [-2.35, 0, 8.2], [-3.1, 1.1, 8.2], (h) => !h && this.clock.canShop && (phase() === "night" || this.clock.ready), 0);
-    target("sleep", "Go to bed", "\u{1F319}", [-0.85, 0, -1.6], [-1.4, 0.8, -1.6], (h) => !h && this.clock.canSleep, 6500);
+    target("sleep", "Go to bed", "\u{1F319}", [-0.85, 0, -1.6], [-1.4, 0.8, -1.6], (h) => !h && this.canSleep, 6500);
+    target("lilah-bed", "Put Lilah to bed", "\u{1F319}", [8.55, 0, -1.3], [9.1, 0.9, -1.7], (h) => !h && this.clock.state.minutes >= 1095 && ["afternoon", "night"].includes(phase()) && !this.clock.state.lilahAsleep, 1e3);
     this.refresh();
     void pan;
   }
   props;
   clock;
   active = false;
+  shoppingDone = false;
+  onLilahBed = () => {
+  };
+  get canSleep() {
+    return this.shoppingDone && this.tasks.every((t) => this.completed.includes(t.id)) && (this.clock.state.phase === "afternoon" || this.clock.state.phase === "night");
+  }
+  needsTask(id) {
+    return this.clock.tasks.some((t) => t.id === id) && !this.clock.state.done.includes(id);
+  }
   root;
   outfit;
   towel;
@@ -3421,7 +3566,7 @@ var DailyLife = class {
       t.marker.set(p[0], 0.35, p[1]);
       this.dust[i].enabled = s.phase === "afternoon" && this.clock.tasks.some((t2) => t2.id === "dust-" + i) && !s.done.includes("dust-" + i);
     }
-    this.spill.enabled = s.phase === "afternoon" && !s.done.includes("spill");
+    this.spill.enabled = s.phase === "afternoon" && this.needsTask("spill");
     this.eggSpill.enabled = s.breakfast === "spill" && s.phase === "morning";
     this.cooked.enabled = s.phase === "morning" && s.breakfast === "cook";
     this.cooked.setLocalPosition(-2.63, 1.12, 12.65);
@@ -3486,7 +3631,7 @@ var DailyLife = class {
         this.eggSpill.enabled = true;
       }
     }
-    if (this.last && !document.hidden) this.clock.advance(Math.min(2, (now - this.last) / 1e3));
+    if (this.last && !document.hidden && !busy) this.clock.advance(Math.min(2, (now - this.last) / 1e3));
     this.last = now;
     if (this.phase !== this.clock.state.phase && !busy) {
       this.phase = this.clock.state.phase;
@@ -3606,8 +3751,15 @@ var DailyLife = class {
       case "shop-door":
         this.onStore();
         break;
+      case "lilah-bed":
+        if (!this.clock.state.lilahAsleep) {
+          this.clock.state.lilahAsleep = true;
+          this.onLilahBed();
+          this.onReward(`day-${this.clock.state.day}-lilah-bed`);
+        }
+        break;
       case "sleep":
-        this.clock.sleep();
+        if (this.canSleep) this.clock.sleep(true);
         break;
     }
     if (target.task) this.complete(target.task);
@@ -3635,8 +3787,8 @@ var DailyLife = class {
     if (s.phase === "school") return "At school \xB7 See you after class!";
     if (this.clock.schoolDue) return "\u{1F392} Time for school. Walk to the front door in the living room.";
     if (s.phase === "morning" && s.breakfast === "spill") return "Oops! Get a paper towel and hold Action over the dropped egg.";
+    if (this.canSleep) return "\u{1F319} Chores and shopping done! Walk to your bed whenever you\u2019re ready.";
     if (s.phase === "afternoon") return "After school \xB7 Help a little, then visit two stores. Take your time!";
-    if (this.clock.canSleep) return "\u{1F319} Ready for bed. Walk to the bed to start a fresh day.";
     return s.phase === "morning" ? "A fresh morning \xB7 Brush, choose clothes, and make breakfast." : "Wind down \xB7 Brush teeth, put clothes away, and read.";
   }
   snapshot() {
@@ -3792,6 +3944,130 @@ function createHouseProps(app, house) {
   props.roundMesses = new RoundMesses(props, house);
   return props;
 }
+
+// src/ui/ChoreAudio.ts
+init_SaveNamespace();
+var ChoreAudio = class {
+  context;
+  master;
+  source;
+  hum;
+  envelope;
+  kind = "";
+  next = 0;
+  muted = false;
+  abort = new AbortController();
+  button = document.createElement("button");
+  constructor() {
+    try {
+      this.muted = localStorage.getItem(saveKey("house-effects.muted")) === "true";
+    } catch {
+    }
+    this.button.id = "house-effects";
+    this.button.type = "button";
+    this.paint();
+    document.querySelector("footer").prepend(this.button);
+    this.button.onclick = () => {
+      this.muted = !this.muted;
+      try {
+        localStorage.setItem(saveKey("house-effects.muted"), String(this.muted));
+      } catch {
+      }
+      this.paint();
+      if (this.master) this.master.gain.value = this.muted ? 0 : 0.22;
+    };
+    const unlock = () => {
+      this.context ??= new AudioContext();
+      if (!this.master) {
+        this.master = this.context.createGain();
+        this.master.gain.value = this.muted ? 0 : 0.22;
+        this.master.connect(this.context.destination);
+      }
+      void this.context.resume().catch(() => {
+      });
+    };
+    document.addEventListener("pointerdown", unlock, { signal: this.abort.signal });
+    document.addEventListener("keydown", unlock, { signal: this.abort.signal });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) this.stop();
+    }, { signal: this.abort.signal });
+  }
+  paint() {
+    this.button.textContent = this.muted ? "\u25D6 Off" : "\u25D6 Sounds";
+    this.button.setAttribute("aria-label", this.muted ? "Turn house sounds on" : "Mute house sounds");
+    this.button.setAttribute("aria-pressed", String(!this.muted));
+  }
+  start(id) {
+    this.stop();
+    const ctx = this.context;
+    if (!ctx || !this.master || document.hidden) return;
+    this.kind = /vacuum|dirt|mess-2/.test(id) ? "vacuum" : /eat/.test(id) ? "munch" : /wipe|wash|teeth|mess-1/.test(id) ? "swish" : /sleep|lilah-bed/.test(id) ? "soft" : "touch";
+    const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), data = buffer.getChannelData(0);
+    let smooth2 = 0;
+    for (let i = 0; i < data.length; i++) {
+      smooth2 = (smooth2 + (Math.random() * 2 - 1) * 0.12) / 1.12;
+      data[i] = smooth2;
+    }
+    const source = ctx.createBufferSource(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+    source.buffer = buffer;
+    source.loop = true;
+    filter.type = "bandpass";
+    filter.frequency.value = this.kind === "vacuum" ? 460 : this.kind === "munch" ? 1350 : 2100;
+    filter.Q.value = 0.65;
+    gain.gain.value = 0;
+    source.connect(filter).connect(gain).connect(this.master);
+    source.onended = () => {
+      source.disconnect();
+      filter.disconnect();
+      gain.disconnect();
+    };
+    source.start();
+    this.source = source;
+    this.envelope = gain;
+    this.next = 0;
+    if (this.kind === "vacuum") {
+      gain.gain.setTargetAtTime(0.65, ctx.currentTime, 0.1);
+      const hum = ctx.createOscillator(), g = ctx.createGain();
+      hum.type = "triangle";
+      hum.frequency.value = 115;
+      g.gain.value = 0.08;
+      hum.connect(g).connect(this.master);
+      hum.onended = () => {
+        hum.disconnect();
+        g.disconnect();
+      };
+      hum.start();
+      this.hum = hum;
+    }
+  }
+  update() {
+    const ctx = this.context, gain = this.envelope;
+    if (!ctx || !gain || this.kind === "vacuum" || ctx.currentTime < this.next) return;
+    const t = ctx.currentTime, munch = this.kind === "munch", soft = this.kind === "soft";
+    this.next = t + (munch ? 0.36 : this.kind === "swish" ? 0.42 : 0.65);
+    gain.gain.cancelScheduledValues(t);
+    gain.gain.setValueAtTime(1e-3, t);
+    gain.gain.linearRampToValueAtTime(soft ? 0.12 : munch ? 0.7 : 0.5, t + 0.04);
+    gain.gain.exponentialRampToValueAtTime(1e-3, t + (munch ? 0.17 : 0.3));
+  }
+  stop() {
+    this.source?.stop();
+    this.hum?.stop();
+    this.source = void 0;
+    this.hum = void 0;
+    this.envelope = void 0;
+    this.kind = "";
+  }
+  snapshot() {
+    return { kind: this.kind, playing: !!this.source, muted: this.muted, state: this.context?.state };
+  }
+  destroy() {
+    this.stop();
+    this.abort.abort();
+    this.button.remove();
+    void this.context?.close();
+  }
+};
 
 // src/components/CarrySystem.ts
 import { BoundingBox as BoundingBox10, Entity as Entity21, Mat4 as Mat42, Vec3 as Vec320 } from "playcanvas";
@@ -4124,9 +4400,11 @@ var CleanupFeedback = class {
       marker.label.hidden = true;
     }
   }
-  hideWorkingLabel(id) {
-    const marker = this.markers.find((m) => m.target.id === id);
-    if (marker) marker.label.hidden = true;
+  hideWorkingLabel(_id) {
+    for (const marker of this.markers) {
+      marker.label.hidden = true;
+      marker.ring.enabled = false;
+    }
   }
   destroy() {
     this.reset();
@@ -4317,6 +4595,10 @@ var CleanupGame = class {
     this.hud = new CleanupHUD(button2, this.replay);
     this.feedback = new CleanupFeedback(app, camera, document.querySelector("#cleanup-effects"), props.interactions);
     this.action = new ActionButton(button2, this.press, this.cancelHold);
+    this.bedtimeFade.id = "bedtime-fade";
+    this.bedtimeFade.hidden = true;
+    this.bedtimeFade.setAttribute("aria-hidden", "true");
+    document.querySelector("#game").append(this.bedtimeFade);
     this.configure("day");
   }
   character;
@@ -4344,6 +4626,9 @@ var CleanupGame = class {
   aligning = null;
   seatReturn = null;
   bedYaw = 0;
+  workingId = "";
+  audio = new ChoreAudio();
+  bedtimeFade = document.createElement("div");
   get movementLocked() {
     return this.character.animator.busy || !!this.activity;
   }
@@ -4385,6 +4670,8 @@ var CleanupGame = class {
   };
   perform(target) {
     const now = performance.now();
+    this.workingId = target.id;
+    this.audio.start(target.id);
     const facing = target.placement ? new Vec323(...target.placement) : target.marker;
     if (target.kind === "daily") {
       if (["school-door", "shop-door"].includes(target.id)) {
@@ -4404,6 +4691,10 @@ var CleanupGame = class {
         }, facing);
       } else {
         this.activity = { target, start: now, duration: target.duration ?? 1e3 };
+        if (target.id === "lilah-bed") {
+          this.bedtimeFade.hidden = false;
+          this.bedtimeFade.style.opacity = "0";
+        }
         if (target.id === "sleep") {
           this.seatReturn = this.character.player.getPosition().clone();
           this.bedYaw = this.character.visual.getLocalEulerAngles().y;
@@ -4477,6 +4768,8 @@ var CleanupGame = class {
     this.refreshFocus();
   }
   cancelActivity() {
+    this.audio.stop();
+    this.bedtimeFade.hidden = true;
     this.leaveSeat();
     this.character.animator.setWorkClip(null);
     this.interactionCamera.endChore();
@@ -4511,6 +4804,8 @@ var CleanupGame = class {
   }
   update(now, movementIntent) {
     if (!this.activity && !this.character.animator.busy) {
+      this.audio.stop();
+      this.workingId = "";
       this.character.animator.setWorkClip(null);
       this.interactionCamera.endChore();
     }
@@ -4536,6 +4831,10 @@ var CleanupGame = class {
       } else if (!this.character.animator.busy) this.hud.showResults(this.mission);
     } else if (this.activity) {
       const { target, start, duration } = this.activity;
+      if (target.id === "lilah-bed") {
+        const p = (now - start) / duration;
+        this.bedtimeFade.style.opacity = String(Math.min(1, p * 2.5));
+      }
       if (target.id === "sleep" && this.seatReturn) {
         const t = (now - start) / (BED_ENTRY_SECONDS * 1e3), pose = bedEntry(this.seatReturn, this.bedYaw, false, t);
         this.character.player.setPosition(pose.position);
@@ -4552,11 +4851,16 @@ var CleanupGame = class {
         messy?.setLocalScale(size, size, size);
         if (this.progress >= 1 && target.kind === "daily") {
           this.props.daily.perform(target, this.carry);
+          if (target.id === "lilah-bed") {
+            this.bedtimeFade.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 450, fill: "forwards" }).onfinish = () => {
+              this.bedtimeFade.hidden = true;
+            };
+          }
           this.leaveSeat();
           if (target.task) this.mission.completed.add(target.task);
           this.character.animator.setCarrying(!!this.carry.item);
           this.character.animator.faceTowards(null);
-          this.feedback.reward(target.marker, target.task ? "+$1" : "\u2713", now);
+          this.feedback.reward(target.marker, target.task || target.id === "lilah-bed" ? "+$1" : "\u2713", now);
           this.activity = null;
           this.progress = 0;
         } else if (this.progress >= 1 && this.mission.complete(target.task, now)) {
@@ -4582,7 +4886,8 @@ var CleanupGame = class {
       }
     }
     this.feedback.update(now, this.interactions, this.carry, this.mission);
-    if (this.activity) this.feedback.hideWorkingLabel(this.activity.target.id);
+    if (this.activity || this.character.animator.busy) this.feedback.hideWorkingLabel(this.workingId);
+    this.audio.update();
     this.props.pet?.update(now, this.activity?.target.kind === "pet" ? this.progress : 0, this.carry.socket.getPosition());
     this.props.daily?.effect(this.activity?.target.kind === "daily" ? this.activity.target : null, this.progress, this.carry.socket.getPosition());
     this.hud.update(this.mission, this.carry, this.activity?.target ?? this.interactions.focus, this.activity?.target.kind === "crayons" || this.activity?.target.kind === "pet" || this.activity?.target.kind === "daily" && !this.activity.target.hold, this.progress, this.character.animator.actionName, this.props.pet?.hint);
@@ -4626,6 +4931,7 @@ var CleanupGame = class {
     this.action.enabled = active;
     this.action.reset();
     if (!active) {
+      this.audio.stop();
       this.feedback.hide();
       this.hud.dialog.close();
     }
@@ -4689,6 +4995,7 @@ var CleanupGame = class {
       completed: [...this.mission.completed],
       allowance: this.mission.allowance,
       bonus: this.mission.bonus,
+      audio: this.audio.snapshot(),
       carrying: this.carry.item?.id ?? null,
       carriedParent: this.carry.item?.entity.parent?.name ?? null,
       carriedPosition: this.carry.item?.entity.getPosition().toArray() ?? null,
@@ -4704,6 +5011,8 @@ var CleanupGame = class {
     };
   }
   destroy() {
+    this.audio.destroy();
+    this.bedtimeFade.remove();
     this.action.destroy();
     this.feedback.destroy();
     this.hud.destroy();
@@ -4758,7 +5067,15 @@ var POP_IDENTITY = {
   sleepykoala: { shape: "bear", tone: "blue" },
   goldenbear: { shape: "bear", tone: "yellow" },
   nebula: { shape: "cloud", tone: "pink" },
-  orbit: { shape: "planet", tone: "green" }
+  orbit: { shape: "planet", tone: "green" },
+  "dewdrop-unicorn": { shape: "frog", tone: "green" },
+  "sunbeam-unicorn": { shape: "frog", tone: "green" },
+  "sugarplum-bunny": { shape: "bunny", tone: "cream" },
+  "opal-bunny": { shape: "bunny", tone: "purple" },
+  "starlight-panda": { shape: "bear", tone: "cream" },
+  "moonwish-panda": { shape: "bear", tone: "yellow" },
+  "nebula-dragon": { shape: "cat", tone: "cream" },
+  "solstice-dragon": { shape: "cat", tone: "purple" }
 };
 var visuallyDistinct = (a, b) => POP_IDENTITY[a].shape !== POP_IDENTITY[b].shape && POP_IDENTITY[a].tone !== POP_IDENTITY[b].tone;
 
@@ -5357,6 +5674,11 @@ var ProgressStore = class {
       return data.reveal;
     });
   }
+  finishReveal() {
+    this.commit((data) => {
+      data.reveal = null;
+    });
+  }
   showCollection() {
     this.commit((data) => {
       data.reveal = null;
@@ -5375,7 +5697,7 @@ var ProgressStore = class {
 };
 
 // src/game/store.ts
-import { BoundingBox as BoundingBox11, Color as Color6, Entity as Entity24, Vec3 as Vec324 } from "playcanvas";
+import { BoundingBox as BoundingBox11, Color as Color7, Entity as Entity24, Vec3 as Vec324 } from "playcanvas";
 
 // src/game/dumplingVisual.ts
 import { Entity as Entity23 } from "playcanvas";
@@ -5495,7 +5817,7 @@ function createStore(app, definition2) {
             }
             if (mesh.material.name.includes("Box blush")) {
               const m = mesh.material;
-              m.diffuse = new Color6().fromString(seriesById(slot.series).color);
+              m.diffuse = new Color7().fromString(seriesById(slot.series).color);
               m.update();
             }
           }
@@ -5509,7 +5831,22 @@ function createStore(app, definition2) {
 // src/game/OpeningSequence.ts
 init_collection();
 init_hunt();
-import { Entity as Entity26, Color as Color8, Vec3 as Vec325, TONEMAP_ACES } from "playcanvas";
+import { Entity as Entity26, Color as Color9, Vec3 as Vec325, TONEMAP_ACES } from "playcanvas";
+
+// src/game/SquishPlay.ts
+function squishPose(time, style) {
+  const t = Math.max(0, Math.min(1, time / 0.95)), wave = Math.sin(t * Math.PI), bounce = Math.sin(t * Math.PI * 4) * (1 - t);
+  if (style === 1) {
+    const y2 = 1 + 0.38 * wave;
+    return { scale: [1 / Math.sqrt(y2), y2, 1 / Math.sqrt(y2)], roll: 0 };
+  }
+  if (style === 2) {
+    const x = 1 + 0.2 * bounce;
+    return { scale: [x, 1 / Math.sqrt(x), 1 / Math.sqrt(x)], roll: 12 * bounce || 0 };
+  }
+  const y = 1 - 0.3 * wave;
+  return { scale: [1 / Math.sqrt(y), y, 1 / Math.sqrt(y)], roll: 0 };
+}
 
 // src/game/SquishyMotion.ts
 var clamp = (n) => Math.max(0, Math.min(1, n));
@@ -5529,23 +5866,23 @@ function squishyOpeningPose(seconds, intensity = 1) {
 }
 
 // src/game/SquishyRevealVfx.ts
-import { BLEND_NORMAL, CULLFACE_NONE, Color as Color7, Entity as Entity25, Mesh as Mesh2, MeshInstance as MeshInstance2, PRIMITIVE_TRIANGLES, StandardMaterial as StandardMaterial4 } from "playcanvas";
+import { BLEND_NORMAL, CULLFACE_NONE, Color as Color8, Entity as Entity25, Mesh as Mesh2, MeshInstance as MeshInstance2, PRIMITIVE_TRIANGLES, StandardMaterial as StandardMaterial4 } from "playcanvas";
 var SquishyRevealVfx = class {
   root;
   mesh;
   material = new StandardMaterial4();
-  positions = new Float32Array(1024 * 3);
-  colors = new Float32Array(1024 * 4);
+  positions = new Float32Array(1536 * 3);
+  colors = new Float32Array(1536 * 4);
   indices = new Uint16Array(4096);
   vertices = 0;
   triangles = 0;
   previous = -100;
   style = SQUISHY_PRESENTATION.Common;
-  color = new Color7();
+  color = new Color8();
   constructor(app, parent) {
     this.root = new Entity25("Rarity halo and celebration", app);
     parent.addChild(this.root);
-    this.root.setLocalPosition(0, 1.02, -0.79);
+    this.root.setLocalPosition(0, 1.02, -0.1);
     this.root.setLocalEulerAngles(-14, 10, 0);
     this.material.name = "Soft rarity light";
     this.material.useLighting = false;
@@ -5560,7 +5897,7 @@ var SquishyRevealVfx = class {
     this.material.useTonemap = false;
     this.material.update();
     this.mesh = new Mesh2(app.graphicsDevice);
-    this.mesh.clear(true, false, 1024, 4096);
+    this.mesh.clear(true, false, 1536, 4096);
     this.mesh.setPositions([0, 0, 0, 0, 0, 0, 0, 0, 0]);
     this.mesh.setColors([1, 1, 1, 0, 1, 1, 1, 0, 1, 1, 1, 0]);
     this.mesh.setIndices([0, 1, 2]);
@@ -5629,6 +5966,10 @@ var SquishyRevealVfx = class {
     const s = this.style, t = Math.max(0, time), burst = reduced ? 0 : Math.max(0, 1 - t / 1.6);
     this.color.fromString(s.color);
     this.disk(1.25, s.halo + burst * s.burst);
+    if (s.rays) {
+      this.ring(0.84, 0.042, 0.28 + (reduced ? 0 : Math.sin(t * 1.7) * 0.06));
+      this.ring(1.03, 0.018, 0.14);
+    }
     if (s.sparkles && !reduced) {
       this.color.fromString(s.spark);
       this.ring(0.6 + Math.min(t, 1.5) * 0.27, s.rays ? 0.035 : 0.025, burst * 0.6);
@@ -5643,10 +5984,10 @@ var SquishyRevealVfx = class {
         this.vertex(Math.cos(a + 0.028) * r, Math.sin(a + 0.028) * r, burst * 0.4);
         this.triangle(start, start + 1, start + 2);
       }
-      const count = s.rays ? 4 : s.sparkles > 10 ? 3 : 2;
+      const count = s.rays ? 12 : s.sparkles > 10 ? 8 : 3;
       for (let i = 0; i < count; i++) {
         const a = 0.5 + i * 2.4, phase = (Math.sin(t * 1.3 + i * 2.3) + 1) / 2, fade = Math.min(1, Math.max(0, t - 1.3));
-        this.star(Math.cos(a) * 0.94, Math.sin(a) * 0.83 + 0.14, 0.022 + 0.012 * phase, a, phase ** 4 * 0.25 * fade);
+        this.star(Math.cos(a) * 0.94, Math.sin(a) * 0.83 + 0.14, 0.022 + 0.012 * phase, a, phase ** 3 * (s.rays ? 0.9 : s.sparkles > 10 ? 0.65 : 0.38) * fade);
       }
     }
     this.mesh.setPositions(this.positions, 3, this.vertices);
@@ -5659,7 +6000,7 @@ var SquishyRevealVfx = class {
     this.previous = -100;
   }
   snapshot() {
-    return { enabled: this.root.enabled, drawCalls: this.root.enabled ? 1 : 0, triangles: this.triangles / 3, burstStars: this.style.sparkles, maxIdleGlints: this.style.rays ? 4 : this.style.sparkles > 10 ? 3 : this.style.sparkles ? 2 : 0 };
+    return { enabled: this.root.enabled, drawCalls: this.root.enabled ? 1 : 0, triangles: this.triangles / 3, burstStars: this.style.sparkles, maxIdleGlints: this.style.rays ? 12 : this.style.sparkles > 10 ? 8 : this.style.sparkles ? 3 : 0 };
   }
   destroy() {
     this.root.destroy();
@@ -5733,26 +6074,15 @@ var OpeningSequence = class {
     this.app = app;
     this.root = new Entity26("Home surprise presentation", app);
     app.root.addChild(this.root);
-    this.root.setPosition(0, 0.08, 0);
+    this.root.setPosition(-0.25, 0.6, 1.35);
     this.root.setEulerAngles(0, -10, 0);
     const stage = primitives(app, this.root), ivory = material("Reward porcelain", "#f6e8d7");
     ivory.gloss = 0.35;
     ivory.update();
     stage("Little presentation pedestal", "cylinder", [0, -0.045, 0], [1.68, 0.09, 1.68], ivory);
-    const paper = material("Warm studio backdrop", "#f7eee8");
-    paper.useLighting = false;
-    paper.diffuse.set(0, 0, 0);
-    paper.emissive = new Color8().fromString("#f6f0ec");
-    paper.useTonemap = false;
-    paper.update();
-    const backdrop = new Entity26("Reward backdrop", app);
-    this.root.addChild(backdrop);
-    backdrop.addComponent("render", { type: "plane", material: paper, castShadows: false, receiveShadows: false });
-    backdrop.setLocalPosition(0, -0.095, 0);
-    backdrop.setLocalScale(100, 1, 100);
     for (const [name, power, pitch, yaw] of [["Reward key", 0.88, 38, -35], ["Reward fill", 0.4, 25, 65], ["Reward rim", 0.6, 55, 180]]) {
       const light = new Entity26(name, app);
-      light.addComponent("light", { type: "directional", color: new Color8(1, 0.98, 0.96), intensity: power, mask: 16, castShadows: name === "Reward key", shadowResolution: 1024, shadowDistance: 8, normalOffsetBias: 0.025, shadowBias: 0.12 });
+      light.addComponent("light", { type: "directional", color: new Color9(1, 0.98, 0.96), intensity: power, mask: 16, castShadows: name === "Reward key", shadowResolution: 1024, shadowDistance: 8, normalOffsetBias: 0.025, shadowBias: 0.12 });
       light.setLocalEulerAngles(pitch, yaw, 0);
       this.root.addChild(light);
     }
@@ -5772,6 +6102,8 @@ var OpeningSequence = class {
     document.querySelector("#game").append(this.squishButton);
     this.squishButton.onclick = () => {
       if (this.phase === "revealed") {
+        if (this.idle - this.squish < 0.95) return;
+        this.squishStyle = (this.squishStyle + 1 + Math.floor(Math.random() * 2)) % 3;
         this.squish = this.idle;
         this.audio.squish();
       }
@@ -5785,6 +6117,7 @@ var OpeningSequence = class {
   last = 0;
   idle = 0;
   squish = -10;
+  squishStyle = 0;
   squishButton = document.createElement("button");
   reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   phase = "closed";
@@ -5805,10 +6138,10 @@ var OpeningSequence = class {
     const compact = height <= 650;
     this.camera = camera;
     camera.camera.toneMapping = TONEMAP_ACES;
-    this.cameraHeight = Math.max(1.5, (compact ? 1.32 : 1) / (width / height));
+    this.cameraHeight = Math.max(1.85, (compact ? 1.3 : 1.12) / (width / height));
     camera.camera.orthoHeight = this.cameraHeight;
-    camera.setPosition(0, 2.05, 4.6);
-    camera.lookAt(new Vec325(0, compact ? 0.5 : 0.85, 0));
+    camera.setPosition(-0.25, 2.35, 6.9);
+    camera.lookAt(new Vec325(-0.25, compact ? 1.05 : 1.35, 0.4));
   }
   show(receipt) {
     this.root.enabled = true;
@@ -5873,8 +6206,8 @@ var OpeningSequence = class {
     if (this.camera?.camera) this.camera.camera.orthoHeight = this.cameraHeight;
   }
   light(burst) {
-    const s = SQUISHY_PRESENTATION[this.rarity], color = new Color8().fromString(s.color), amount = this.phase === "closed" ? 0 : s.rim;
-    this.rim.light.color = new Color8(1 + (color.r - 1) * amount, 1 + (color.g - 1) * amount, 1 + (color.b - 1) * amount);
+    const s = SQUISHY_PRESENTATION[this.rarity], color = new Color9().fromString(s.color), amount = this.phase === "closed" ? 0 : s.rim;
+    this.rim.light.color = new Color9(1 + (color.r - 1) * amount, 1 + (color.g - 1) * amount, 1 + (color.b - 1) * amount);
     this.rim.light.intensity = 0.6 + burst * amount;
   }
   reveal(animate) {
@@ -5959,14 +6292,16 @@ var OpeningSequence = class {
       this.model.setLocalPosition(0, 0.34, 0);
       animateSquishy(this.model, this.idle, this.reduced.matches ? 0 : 0.01);
       const t = this.idle - this.squish;
-      if (t < 0.85 && !this.reduced.matches) {
-        const y = 1 - 0.23 * Math.sin(t / 0.85 * Math.PI) * Math.exp(-t * 1.5);
-        this.model.setLocalScale(1 / Math.sqrt(y), y, 1 / Math.sqrt(y));
+      this.model.setLocalEulerAngles(0, 0, 0);
+      if (t < 0.95 && !this.reduced.matches) {
+        const pose = squishPose(t, this.squishStyle);
+        this.model.setLocalScale(...pose.scale);
+        this.model.setLocalEulerAngles(0, 0, pose.roll);
       }
     }
   }
   snapshot() {
-    return { phase: this.phase, elapsed: this.elapsed, rarity: this.rarity, vfx: this.vfx.snapshot(), lidAngle: this.box.lid.getLocalEulerAngles().x, modelPosition: this.model?.getLocalPosition().toArray(), modelScale: this.model?.getLocalScale().toArray() };
+    return { squishStyle: this.squishStyle, phase: this.phase, elapsed: this.elapsed, rarity: this.rarity, vfx: this.vfx.snapshot(), lidAngle: this.box.lid.getLocalEulerAngles().x, modelPosition: this.model?.getLocalPosition().toArray(), modelScale: this.model?.getLocalScale().toArray() };
   }
   hide() {
     this.restoreCamera();
@@ -6022,7 +6357,8 @@ var HuntUI = class {
     back.className = "loop-button";
     back.textContent = "Back to game";
     back.addEventListener("click", () => this.dialog.close());
-    this.dialog.append(back);
+    back.classList.add("dialog-top-action");
+    this.dialog.prepend(back);
     this.time.id = "shopping-time";
     this.time.hidden = true;
     this.panel.id = "hunt-find";
@@ -6307,12 +6643,12 @@ var TradingUI = class {
 import { BoundingBox as BoundingBox13, Entity as Entity28, Vec3 as Vec326 } from "playcanvas";
 
 // src/game/Classmates.ts
-import { Asset as Asset5, BoundingBox as BoundingBox12, Entity as Entity27, Quat as Quat4, Texture as Texture2, StandardMaterial as StandardMaterial5, CULLFACE_NONE as CULLFACE_NONE2 } from "playcanvas";
+import { Asset as Asset5, BoundingBox as BoundingBox12, Entity as Entity27, Quat as Quat4, Texture as Texture3, StandardMaterial as StandardMaterial5, CULLFACE_NONE as CULLFACE_NONE2 } from "playcanvas";
 function classroomSign(app, parent, name, text, position, width = 1, height = 0.26, color = "#5c496e") {
   const canvas = document.createElement("canvas");
   canvas.width = 768;
   canvas.height = 256;
-  const texture = new Texture2(app.graphicsDevice, { mipmaps: false });
+  const texture = new Texture3(app.graphicsDevice, { mipmaps: false });
   texture.setSource(canvas);
   const material2 = new StandardMaterial5();
   material2.diffuseMap = texture;
@@ -6526,7 +6862,11 @@ var PopAudio = class {
       this.master.connect(this.context.destination);
     }
     this.master.gain.value = this.muted ? 0 : 0.5;
-    await this.context.resume();
+    try {
+      await this.context.resume();
+    } catch {
+      return;
+    }
     this.loading ??= Promise.all(["click_001", "drop_001", "drop_002", "drop_003", "pluck_001", "confirmation_001", "happy-adventure"].map(async (name) => {
       try {
         const response = await fetch(assetUrl(`/assets/pop/audio/${name}.${name === "happy-adventure" ? "mp3" : "wav"}`));
@@ -6626,7 +6966,7 @@ var PopAudio = class {
     node.loop = true;
     node.loopStart = 0.03;
     node.loopEnd = buffer.duration - 0.08;
-    gain.gain.value = 0.15;
+    gain.gain.value = 0.26;
     node.connect(gain).connect(this.master);
     node.onended = () => {
       node.disconnect();
@@ -6668,6 +7008,7 @@ var PopAudio = class {
 };
 
 // src/ui/PopArt.ts
+init_collection();
 var PopArt = class {
   friends = /* @__PURE__ */ new Map();
   powers = /* @__PURE__ */ new Map();
@@ -6704,6 +7045,16 @@ var PopArt = class {
       this.atlas("cosmic-cutout", ["moonbean", "comet", "nebula", "orbit", "aurora", "supernova"], 3, this.friends),
       this.atlas("power-atlas", ["bomb", "rainbow", "mega", "ticket", "frenzy", "heart"], 3, this.powers, true)
     ]);
+    await Promise.all(DUMPLINGS.filter((d) => d.special).map(async (d) => {
+      const image = new Image();
+      image.crossOrigin = "anonymous";
+      image.src = dumplingPortrait(d, false);
+      await image.decode();
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 192;
+      canvas.getContext("2d").drawImage(image, 0, 0, 192, 192);
+      this.friends.set(d.id, canvas);
+    }));
   }
 };
 
@@ -6719,10 +7070,10 @@ var SquishyPopUI = class {
     this.launch.className = "pop-launch";
     this.launch.innerHTML = "<span>\u273F</span> PLAY SQUISHY POP <small>Little pops. Big smiles. \xB7 60 sec</small>";
     this.launch.hidden = true;
-    document.body.append(this.launch);
+    document.querySelector("#game").append(this.launch);
     this.dialog.id = "squishy-pop";
     this.dialog.setAttribute("aria-label", "Squishy Pop");
-    this.dialog.innerHTML = `<div class="pop-shell"><header class="pop-title"><div><small>ARIANNA\u2019S LITTLE ARCADE</small><h2>SQUISHY <em>POP</em></h2></div><button class="pop-pause" aria-label="Pause">\u2161</button><button class="pop-sound" aria-label="Mute sound">\u266A</button></header><div class="pop-stats"><div><small>TIME</small><strong data-time>1:00</strong></div><div><small>SCORE</small><strong data-score>0</strong></div><div><small>TICKETS</small><strong data-tickets>\u273F 1</strong><progress data-tickets-bar max="500" value="0"></progress></div></div><div class="pop-tray"><canvas aria-label="Drag through three or more adjacent matching squishies"></canvas><div class="pop-feedback" aria-live="polite"></div><div class="pop-cover"></div></div><div class="pop-frenzy"><span>\u2726 FRENZY</span><progress max="100" value="0"></progress><b>\xD72</b></div><p class="pop-hint">Drag through matching Squishies!</p><div class="pop-friends"></div><div class="pop-footer">Soft friends. Happy little chains.</div></div>`;
+    this.dialog.innerHTML = `<div class="pop-shell"><header class="pop-title"><div><small>ARIANNA\u2019S LITTLE ARCADE</small><h2>SQUISHY <em>POP</em></h2></div><button class="pop-pause" aria-label="Pause">\u2161</button><button class="pop-sound" aria-label="Mute sound">\u266A</button></header><div class="pop-stats"><div><small>TIME</small><strong data-time>1:00</strong></div><div><small>SCORE</small><strong data-score>0</strong></div><div><small>TICKETS</small><strong data-tickets>\u273F 1</strong><progress data-tickets-bar max="500" value="0"></progress></div></div><div class="pop-tray"><canvas aria-label="Drag through three or more adjacent matching squishies"></canvas><div class="pop-feedback" aria-live="polite"></div><div class="pop-cover"></div></div><div class="pop-frenzy"><span>\u2726 FRENZY</span><progress max="100" value="0"></progress><b>\xD72</b></div><p class="pop-hint">Drag through matching Squishies!</p><div class="pop-friends"></div><div class="pop-footer">Your main collection plays here too. More copies earn more stars.</div></div>`;
     document.body.append(this.dialog);
     this.canvas = this.dialog.querySelector("canvas");
     this.ctx = this.canvas.getContext("2d");
@@ -6736,6 +7087,12 @@ var SquishyPopUI = class {
     cue.setAttribute("aria-live", "polite");
     this.q(".pop-tray").append(cue);
     const signal = this.abort.signal;
+    this.dialog.addEventListener("pointerdown", () => {
+      void this.audio.unlock();
+    }, { signal });
+    this.dialog.addEventListener("keydown", () => {
+      void this.audio.unlock();
+    }, { signal });
     const prizes = document.createElement("button");
     prizes.className = "pop-prizes";
     prizes.textContent = "\u{1F39F} Prizes";
@@ -6756,6 +7113,7 @@ var SquishyPopUI = class {
     }, { signal });
     this.dialog.querySelector(".pop-pause").addEventListener("click", () => this.togglePause(), { signal });
     this.dialog.querySelector(".pop-sound").addEventListener("click", () => {
+      void this.audio.unlock();
       const muted = this.audio.mute();
       this.q(".pop-sound").textContent = muted ? "\u266B\u0338" : "\u266A";
       this.q(".pop-sound").setAttribute("aria-label", muted ? "Unmute sound" : "Mute sound");
@@ -7590,6 +7948,7 @@ var TicketShop = class {
   render() {
     const day = this.day(), sold = this.save.data.prizes?.day === day ? this.save.data.prizes.sold : [], tickets = this.save.data.pop?.tickets ?? 0;
     this.dialog.innerHTML = `<small>YOUR POPS BECOME REAL PRIZES</small><h2>Squishy prize shelf</h2><strong>\u{1F39F} ${tickets} tickets</strong><p>Pick the friend you want! One of each today. New friends arrive after sleep.</p><div class="ticket-prizes"></div><p role="status"></p><small>Every finished round earns at least 1 ticket. Your tickets never expire.</small><button data-close>Back to game</button>`;
+    this.dialog.prepend(this.dialog.querySelector("[data-close]"));
     for (const p of ticketPrizes(day)) {
       const card = document.createElement("article"), img = this.art.friends.get(p.item.id), owned = this.save.data.collection[p.item.id] ?? 0;
       card.innerHTML = `${img ? `<img src="${img.toDataURL()}" alt="">` : ""}<strong>${p.item.name}</strong><small>${p.item.rarity} \xB7 ${owned ? "Owned \xD7" + owned : "New friend!"}</small><button data-prize="${p.slot}" ${sold.includes(p.slot) || tickets < p.cost ? "disabled" : ""}>${sold.includes(p.slot) ? "Sold out" : `\u{1F39F} ${p.cost} \xB7 Pick me!`}</button>`;
@@ -7642,7 +8001,7 @@ var GameLoop = class {
       el("#collection-dialog").close();
       void this.ticketShop.open();
     };
-    el("#collection-dialog").prepend(prizes);
+    el("#collection-actions").append(prizes);
     this.nextStore.id = "travel-next-store";
     this.nextStore.textContent = "Travel to next store \u2192";
     this.nextStore.hidden = true;
@@ -7703,7 +8062,7 @@ var GameLoop = class {
     tradeButton.id = "visit-recess";
     tradeButton.className = "loop-button pink-button";
     tradeButton.textContent = "Visit classroom trading club";
-    el("#collection-dialog").insertBefore(tradeButton, el("#collection-grid"));
+    el("#collection-actions").append(tradeButton);
     tradeButton.addEventListener("click", () => this.attempt(() => this.enterRecess(false)), { signal: this.abort.signal });
     for (const mode of ["day", "house", "bedroom", "pet", "practice"]) on(`#mission-${mode}`, () => {
       if (this.mode === "cleanup" && this.creditPending()) this.cleanup.configure(mode);
@@ -7849,7 +8208,7 @@ var GameLoop = class {
     this.joystick.reset();
     this.controller.reset();
     this.opening.hide();
-    this.room.root.enabled = mode === "cleanup";
+    this.room.root.enabled = mode === "cleanup" || mode === "home";
     this.props.root.enabled = mode === "cleanup";
     this.recess.root.enabled = mode === "recess";
     this.tradingUI.leave.hidden = mode !== "recess";
@@ -7860,7 +8219,7 @@ var GameLoop = class {
     this.findCopy = "";
     this.inspecting = null;
     el("#move-tip").hidden = false;
-    this.character.player.enabled = mode !== "home";
+    this.character.player.enabled = true;
     el("#player-label").hidden = mode === "home";
     el("#store-markers").hidden = mode !== "store";
     el("#game").dataset.scene = mode;
@@ -7874,6 +8233,11 @@ var GameLoop = class {
     el("#scene-subtitle").hidden = mode === "cleanup";
     el("#collection-dialog").close();
     this.camera.entity.camera.orthoHeight = this.baseZoom;
+    if (mode === "home") {
+      this.character.player.setPosition(0.48, 0.09, -0.8);
+      this.character.visual.setLocalEulerAngles(0, 15, 0);
+      this.character.animator.reset();
+    }
     if (mode === "home") this.opening.frame(this.camera.entity, el("#game").clientWidth, el("#game").clientHeight);
     el("#action-button").classList.remove("holding");
     this.focus = "";
@@ -7994,6 +8358,7 @@ var GameLoop = class {
     el("#open-next").hidden = !this.save.data.boxes.length;
     el("#open-next").textContent = `Open next box \xB7 ${this.save.data.boxes.length} waiting`;
     el("#collection-dialog").showModal();
+    el("#collection-dialog").scrollTop = 0;
     this.joystick.reset();
     this.controller.reset();
     this.action.enabled = false;
@@ -8038,7 +8403,11 @@ var GameLoop = class {
         this.enterHome();
       }
     } else if (this.mode === "home") {
-      if (this.opening.phase === "closed" && this.save.data.boxes.length) {
+      if (this.opening.phase !== "opening" && this.save.data.boxes.length) {
+        if (this.opening.phase === "revealed") {
+          this.save.finishReveal();
+          this.opening.show(null);
+        }
         const receipt = this.save.openNext();
         this.wallet();
         this.opening.begin(receipt, performance.now());
@@ -8053,6 +8422,8 @@ var GameLoop = class {
     this.focus = nearby ? `hunt-site-${nearby.id}` : Math.hypot(p.x, p.z - this.store.exitAnchor.z) <= 0.9 ? "go-home" : "";
   }
   beforeMovement(now) {
+    const daily = this.props.daily;
+    daily.shoppingDone = this.save.data.hunt?.day === daily.clock.state.day && Object.values(this.save.data.hunt.stores).filter((s) => s.visited).length >= 2;
     if (this.tornado?.active) {
       this.tornado.beforeMovement(now);
       return;
@@ -8063,7 +8434,7 @@ var GameLoop = class {
       return;
     }
     if (this.developerClockFrozen) this.props.daily.pause(now);
-    if (this.mode === "store" || this.travelUntil || this.huntUI.dialog.open || this.ticketShop.dialog.open) this.props.daily.pause(now);
+    if (this.mode === "store" || this.mode === "home" || this.travelUntil || this.huntUI.dialog.open || this.ticketShop.dialog.open) this.props.daily.pause(now);
     else if (this.mode !== "recess") this.props.daily.update(now, this.cleanup.carry.item?.id ?? null, this.cleanup.movementLocked || this.controller.approaching || this.opening.phase === "opening");
     else this.props.daily.pause(now);
     const school = this.cleanup.mode === "day" && this.props.daily.clock.state.phase === "school";
@@ -8192,8 +8563,8 @@ var GameLoop = class {
       exit.classList.toggle("nearby", this.focus === "go-home");
     } else {
       this.opening.update(now);
-      const opening = this.opening.phase === "opening", canOpen = this.opening.phase === "closed" && this.save.data.boxes.length > 0;
-      title = opening ? "A surprise\u2026" : canOpen ? "Open basket" : "Collection";
+      const opening = this.opening.phase === "opening", canOpen = this.opening.phase !== "opening" && this.save.data.boxes.length > 0;
+      title = opening ? "A surprise\u2026" : canOpen ? this.opening.phase === "revealed" ? "Open next" : "Open basket" : "Collection";
       detail = opening ? "Here it comes" : canOpen ? "Meet your squishy" : "Meet your friends";
       icon = canOpen ? "\u{1F381}" : "\u2726";
       enabled = !opening;
@@ -8472,6 +8843,7 @@ var Lilah = class {
     document.querySelector("#game").append(this.label);
     this.say("Hi, Ari!");
     this.daily.onPlayLilah = () => this.playTogether();
+    this.daily.onLilahBed = () => this.restInCrib();
     this.daily.lilahMesses.onClean = (actor) => {
       if (!this.animator.busy) {
         this.say(actor === "marc" ? "Daddy fixed it! I supervised!" : "All better! I helped!");
@@ -8667,9 +9039,25 @@ var Lilah = class {
     this.nextDecision = this.time + 10;
     this.animator.playAction("Celebrate", 1.6);
   }
+  restInCrib() {
+    this.route = [];
+    this.bedStart = null;
+    this.animator.cancelAction();
+    this.carrying = false;
+    this.toy.enabled = false;
+    this.animator.setCarrying(false);
+    const pose = bedEntry(this.root.getPosition(), 0, true, 1);
+    this.root.setPosition(pose.position);
+    this.visual.setLocalEulerAngles(0, pose.yaw, 0);
+    if (this.grounding) this.grounding.surfaceHeight = pose.height;
+    this.animator.setWorkClip(null);
+    this.animator.setIdleClip("Sleep");
+    this.state = "sleeping";
+    this.say("Night night, Ari\u2026");
+  }
   decide(arianna) {
     const clock = this.daily.clock;
-    if (clock.state.phase === "night") {
+    if (clock.state.minutes >= 1095) {
       this.state = "sleepy";
       this.say("Sleepy\u2026");
       this.carrying = false;
@@ -8694,7 +9082,7 @@ var Lilah = class {
   update(dt, elapsed, visible, canMischief, arianna, camera) {
     this.root.enabled = visible && this.loaded;
     this.label.hidden = !this.root.enabled;
-    this.daily.lilahAvailable = this.root.enabled && !this.animator.busy && this.state !== "sleeping" && !this.bedStart;
+    this.daily.lilahAvailable = this.root.enabled && !this.animator.busy && this.state !== "sleeping" && this.state !== "sleepy" && !this.bedStart;
     const target = this.daily.lilahTarget;
     target.anchor.copy(this.root.getPosition());
     target.marker.copy(target.anchor);
@@ -8714,7 +9102,7 @@ var Lilah = class {
       this.bedStart = null;
       this.state = "watching";
     }
-    if ((this.state === "sleeping" || this.bedStart) && this.daily.clock.state.phase !== "night") {
+    if ((this.state === "sleeping" || this.bedStart) && !this.daily.clock.state.lilahAsleep && this.daily.clock.state.minutes < 1095) {
       this.root.setPosition(propPoint("crib", new Vec329(8.55, 0.09, -1.3)));
       this.state = "watching";
       this.bedStart = null;
@@ -8722,8 +9110,9 @@ var Lilah = class {
       this.animator.setIdleClip("Idle");
       if (this.grounding) this.grounding.surfaceHeight = null;
     }
+    if (this.daily.clock.state.lilahAsleep && this.state !== "sleeping") this.restInCrib();
     if (canMischief) this.time += dt;
-    if (!this.scripted && canMischief && this.daily.clock.state.phase === "night" && this.state !== "sleepy" && this.state !== "sleeping" && !this.bedStart) {
+    if (!this.scripted && canMischief && this.daily.clock.state.minutes >= 1095 && this.state !== "sleepy" && this.state !== "sleeping" && !this.bedStart) {
       this.route = [];
       this.animator.cancelAction();
       this.decide(arianna);
@@ -8784,10 +9173,9 @@ var Lilah = class {
         this.state = "proud";
       });
     } else if (this.destination === "bedtime") {
-      this.state = "bedtime-entry";
-      this.bedStart = { position: this.root.getPosition().clone(), yaw: this.visual.getLocalEulerAngles().y, elapsed: 0 };
-      this.animator.setWorkClip("SleepEnter");
-      this.say("Night night!");
+      this.state = "sleepy";
+      this.nextDecision = this.time + 30;
+      this.say("Tuck me in, Ari?");
     } else {
       this.state = "watching";
       this.say(this.destination === "follow" ? "You\u2019re my favorite, Ari!" : "Ooh\u2026");
@@ -9592,12 +9980,12 @@ async function startGame(editorApp) {
   app.setCanvasFillMode(FILLMODE_NONE);
   app.setCanvasResolution(RESOLUTION_AUTO);
   await loadSquishyArt(app);
-  const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color9(0.72, 0.68, 0.77);
+  const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color10(0.72, 0.68, 0.77);
   app.scene.ambientLight = ambientBase.clone();
   const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity32("Soft afternoon sunlight", app);
   if (!sun.light) sun.addComponent("light", {
     type: "directional",
-    color: new Color9(1, 0.92, 0.83),
+    color: new Color10(1, 0.92, 0.83),
     intensity: 1.2,
     castShadows: true,
     shadowResolution: 1024,
@@ -9644,6 +10032,7 @@ async function startGame(editorApp) {
   app.on("update", (elapsed) => {
     houseMusic.update({ mode: loop.mode, phase: props.daily.clock.state.phase, store: loop.mode === "store" ? loop.store.definition.id : "", paused: loop.popUI.isOpen || loop.developerPaused || tornado.active, revealing: loop.opening.phase === "opening" }, Math.min(elapsed, 0.1));
     const now = performance.now();
+    if (loop.developerPaused || loop.popUI.isOpen || document.hidden) cleanup.audio.stop();
     if (loop.developerPaused) {
       loop.developerTick(now, elapsed);
       return;
@@ -9651,7 +10040,7 @@ async function startGame(editorApp) {
     loop.beforeMovement(now);
     if (loop.popUI.isOpen) return;
     const bulky = cleanup.carry.item?.carryPace === "walk";
-    controller.speed = bulky ? WALK_SPEED : RUN_SPEED;
+    controller.speed = bulky ? WALK_SPEED * (["vacuum", "scooper"].includes(cleanup.carry.item?.id ?? "") ? 1.5 : 1) : RUN_SPEED;
     character.animator.setCarryPace(bulky ? "walk" : "run");
     const night = cleanup.mode === "day" && props.daily.clock.state.phase === "night" && loop.mode === "cleanup";
     const dt = document.hidden ? 0 : Math.min(elapsed, 0.04);
@@ -9678,6 +10067,7 @@ async function startGame(editorApp) {
     label.style.transform = `translate(${screenPoint.x - label.offsetWidth / 2}px, ${screenPoint.y - label.offsetHeight - 5}px)`;
   });
   await captureWorld(app, room, props, loop, !!editorApp);
+  props.daily.refresh();
   controller.setRoom(loop.mode === "store" ? loop.store : loop.mode === "recess" ? loop.recess : room);
   if (editorApp && loop.mode === "store") {
     character.player.setPosition(loop.store.exitAnchor.x, 0.09, loop.store.exitAnchor.z - 0.4);

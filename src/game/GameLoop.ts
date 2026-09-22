@@ -67,7 +67,7 @@ export class GameLoop {
     },()=>!this.save.data.pop?.tutorialSeen,()=>({bestScore:this.save.data.pop?.bestScore??0,tickets:this.save.data.pop?.tickets??0,levels:this.save.data.pop?.levels??{}}));
     this.recess=createRecess(app);
     this.popUI.onPrizes=()=>{void this.ticketShop.open();this.controller.reset();};
-    const prizes=document.createElement('button');prizes.className='loop-button';prizes.textContent='🎟 Spend tickets · Squishy prize shelf';prizes.onclick=()=>{el<HTMLDialogElement>('#collection-dialog').close();void this.ticketShop.open();};el('#collection-dialog').prepend(prizes);
+    const prizes=document.createElement('button');prizes.className='loop-button';prizes.textContent='🎟 Spend tickets · Squishy prize shelf';prizes.onclick=()=>{el<HTMLDialogElement>('#collection-dialog').close();void this.ticketShop.open();};el('#collection-actions').append(prizes);
     this.nextStore.id='travel-next-store';this.nextStore.textContent='Travel to next store →';this.nextStore.hidden=true;this.nextStore.onclick=()=>this.attempt(()=>this.chooseStore());el('#game').append(this.nextStore);
     this.tradingUI=new TradingUI(this.save,()=>{this.wallet();this.recess.sync(this.save.data.trading!);},()=>this.attempt(()=>this.leaveRecess()));
     const daily=this.props.daily!;
@@ -104,7 +104,7 @@ export class GameLoop {
     on('#back-cleanup', () => this.attempt(() => this.startCleanup()));
     on('#open-next', () => this.attempt(() => { this.save.goHome(); this.enterHome(); }));
     const tradeButton=document.createElement('button');tradeButton.id='visit-recess';tradeButton.className='loop-button pink-button';tradeButton.textContent='Visit classroom trading club';
-    el('#collection-dialog').insertBefore(tradeButton,el('#collection-grid'));
+    el('#collection-actions').append(tradeButton);
     tradeButton.addEventListener('click',()=>this.attempt(()=>this.enterRecess(false)),{signal:this.abort.signal});
     for (const mode of ['day','house', 'bedroom', 'pet', 'practice'] as const) on(`#mission-${mode}`, () => {
       if (this.mode === 'cleanup' && this.creditPending()) this.cleanup.configure(mode);
@@ -170,12 +170,12 @@ export class GameLoop {
     this.mode = mode; this.cleanup.setActive(mode === 'cleanup'); this.action.enabled = mode !== 'cleanup'; this.action.reset();
     this.camera.reset();
     this.joystick.reset(); this.controller.reset(); this.opening.hide();
-    this.room.root.enabled = mode === 'cleanup'; this.props.root.enabled = mode === 'cleanup';
+    this.room.root.enabled = mode === 'cleanup' || mode === 'home'; this.props.root.enabled = mode === 'cleanup';
     this.recess.root.enabled=mode==='recess';this.tradingUI.leave.hidden=mode!=='recess';this.tradingUI.close();
     for(const store of this.stores)store.root.enabled=mode==='store'&&store.definition.id===this.activeStoreId;
     this.huntUI.panel.hidden=true;this.huntUI.dialog.close();this.findCopy='';this.inspecting=null;
     el('#move-tip').hidden=false;
-    this.character.player.enabled = mode !== 'home'; el('#player-label').hidden = mode === 'home';
+    this.character.player.enabled = true; el('#player-label').hidden = mode === 'home';
     el('#store-markers').hidden = mode !== 'store'; el('#game').dataset.scene = mode;
     el('#task-list').hidden = mode !== 'cleanup'; el('#task-count').hidden = mode !== 'cleanup';
     el('#mission-picker').hidden = mode !== 'cleanup';
@@ -183,6 +183,7 @@ export class GameLoop {
     el('#trip-wallet').hidden = mode === 'cleanup'; el('#home-vignette').hidden = mode !== 'home';
     el('#scene-subtitle').hidden = mode === 'cleanup'; el<HTMLDialogElement>('#collection-dialog').close();
     this.camera.entity.camera!.orthoHeight = this.baseZoom;
+    if(mode==='home'){this.character.player.setPosition(.48,.09,-.8);this.character.visual.setLocalEulerAngles(0,15,0);this.character.animator.reset();}
     if(mode==='home')this.opening.frame(this.camera.entity,el('#game').clientWidth,el('#game').clientHeight);
     el('#action-button').classList.remove('holding'); this.focus = '';
     el('#save-message').hidden = true;
@@ -249,7 +250,7 @@ export class GameLoop {
     el('#collection-summary').textContent = `${discovered} / ${DUMPLINGS.length} discovered · ${total} collected · Wallet $${this.save.data.balance}`;
     el('#open-next').hidden = !this.save.data.boxes.length;
     el('#open-next').textContent = `Open next box · ${this.save.data.boxes.length} waiting`;
-    el<HTMLDialogElement>('#collection-dialog').showModal(); this.joystick.reset(); this.controller.reset();
+    el<HTMLDialogElement>('#collection-dialog').showModal();el('#collection-dialog').scrollTop=0; this.joystick.reset(); this.controller.reset();
     this.action.enabled = false;
   }
   private startCleanup() {
@@ -273,7 +274,8 @@ export class GameLoop {
       }
       else if (this.focus === 'go-home') { this.save.goHome(); this.enterHome(); }
     } else if (this.mode === 'home') {
-      if (this.opening.phase === 'closed' && this.save.data.boxes.length) {
+      if (this.opening.phase !== 'opening' && this.save.data.boxes.length) {
+        if(this.opening.phase==='revealed'){this.save.finishReveal();this.opening.show(null);}
         const receipt = this.save.openNext(); this.wallet(); this.opening.begin(receipt, performance.now());
         el('#scene-subtitle').textContent = `${this.save.data.boxes.length} unopened ${this.save.data.boxes.length === 1 ? 'basket' : 'baskets'} waiting`;
       } else if (this.opening.phase !== 'opening') this.collection();
@@ -287,10 +289,11 @@ export class GameLoop {
     this.focus=nearby?`hunt-site-${nearby.id}`:Math.hypot(p.x,p.z-this.store.exitAnchor.z)<=.9?'go-home':'';
   }
   beforeMovement(now: number) {
+    const daily=this.props.daily!;daily.shoppingDone=this.save.data.hunt?.day===daily.clock.state.day&&Object.values(this.save.data.hunt.stores).filter(s=>s.visited).length>=2;
     if(this.tornado?.active){this.tornado.beforeMovement(now);return;}
     if(this.popUI.isOpen){this.props.daily!.pause(now);this.controller.enabled=false;return;}
     if(this.developerClockFrozen)this.props.daily!.pause(now);
-    if(this.mode==='store'||this.travelUntil||this.huntUI.dialog.open||this.ticketShop.dialog.open)this.props.daily!.pause(now);
+    if(this.mode==='store'||this.mode==='home'||this.travelUntil||this.huntUI.dialog.open||this.ticketShop.dialog.open)this.props.daily!.pause(now);
     else if(this.mode!=='recess')this.props.daily!.update(now,this.cleanup.carry.item?.id??null,this.cleanup.movementLocked||this.controller.approaching||this.opening.phase==='opening');
     else this.props.daily!.pause(now);
     const school=this.cleanup.mode==='day'&&this.props.daily!.clock.state.phase==='school';
@@ -367,8 +370,8 @@ export class GameLoop {
       const exit=el('#shop-exit-marker');exit.style.transform=`translate(${this.screen.x-exit.offsetWidth/2}px,${this.screen.y}px)`;exit.classList.toggle('nearby',this.focus==='go-home');
     } else {
       this.opening.update(now);
-      const opening = this.opening.phase === 'opening', canOpen = this.opening.phase === 'closed' && this.save.data.boxes.length > 0;
-      title = opening ? 'A surprise…' : canOpen ? 'Open basket' : 'Collection'; detail = opening ? 'Here it comes' : canOpen ? 'Meet your squishy' : 'Meet your friends'; icon = canOpen ? '🎁' : '✦'; enabled = !opening;
+      const opening = this.opening.phase === 'opening', canOpen = this.opening.phase !== 'opening' && this.save.data.boxes.length > 0;
+      title = opening ? 'A surprise…' : canOpen ? (this.opening.phase==='revealed'?'Open next':'Open basket') : 'Collection'; detail = opening ? 'Here it comes' : canOpen ? 'Meet your squishy' : 'Meet your friends'; icon = canOpen ? '🎁' : '✦'; enabled = !opening;
       this.focus = canOpen ? 'open-box' : opening ? '' : 'collection';
     }
     const button = el<HTMLButtonElement>('#action-button'); button.disabled = !enabled || this.tradingUI.dialog.open || el<HTMLDialogElement>('#collection-dialog').open; button.dataset.target = enabled ? this.focus : '';

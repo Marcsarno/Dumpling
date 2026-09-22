@@ -28,3 +28,5 @@
 #game[data-scene=store] .room-title .eyebrow { font-size:12px; letter-spacing:.7px; margin-bottom:4px; }
 @media(max-height:740px) { #hunt-find { bottom:190px; padding:8px 12px; } #hunt-routes { padding-top:14px; } .store-choice { padding:9px; } }
 @media(prefers-reduced-motion:reduce) { #hunt-travel span { animation:none; } }
+
+#hunt-routes .dialog-top-action{position:sticky;top:0;z-index:2;box-shadow:0 0 0 5px #faf5fb}

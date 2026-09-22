@@ -1,4 +1,18 @@
-# Fresh chat — production Editor release
+# September 21 release authorization
+
+Marc explicitly approved commit, push, and production deployment of the quality-of-life work and refined animal squishies. Release: Add daily-life improvements and refined animal squishies. This supersedes the preview-only status in the historical notes below. Verify the deployed commit at https://dumpling-sandy.vercel.app/release.json. Original arianna.* saves remain in use; Squishy Pop ticket competition is still deferred.
+
+# Fresh chat — quality-of-life preview
+
+Latest finish: Marc approved the animal shapes, then requested a texture/shading pass. Completed with geometry preserved, baked ambient visibility, warmer pigments, softer satin highlights, and refined kitten markings. See the top of ANIMAL_SCULPTS.md. Current Editor checkpoint `c727d56d-4356-46b8-9c40-148608e1c29a`, runtime `7865fc9cd1454e47`. Review remains `/scripts/animal-review.html` on port 5180. No deployment.
+
+Newest art pass: Marc rejected the first eight special designs, approved a new four-animal concept sheet, and authorized its 3D implementation. See ANIMAL_SCULPTS.md. Four Blender sculpts with two palettes each replace the rejected art while retaining preview ownership IDs. Updated Editor checkpoint `e5a76d3c-9d1c-42a8-a434-76a29c872541`; runtime `859a41722572aae6`. The local concept-to-model review is `/scripts/animal-review.html` on port 5180. Final model appearance awaits user review. No production deployment.
+
+Latest work: September 21 quality-of-life pass, documented in QUALITY_OF_LIFE.md. Changes are local and synchronized to PlayCanvas scene 2600724, final checkpoint `198582b7-52f8-4276-acf5-b883b714ec38`. Typecheck/build, 22 unit checks, and 12 mobile browser scenarios passed; Editor landscape launch was visually checked. No commit, push, or production deployment was performed for this pass. The production authorization below refers to the previous release only. Preserve the current uncommitted changes. Squishy Pop competition/ticket redesign is explicitly deferred.
+
+Preview: https://launch.playcanvas.com/2600724?debug=true&device=webgl2
+
+## Previous production Editor release
 
 Read PROJECT_HANDOFF.md and EDITOR_RELEASE.md, then inspect Git status and https://dumpling-sandy.vercel.app/release.json before changing anything.
 

@@ -1,7 +1,7 @@
 import { Entity, Color, PROJECTION_ORTHOGRAPHIC, TONEMAP_LINEAR, Vec3, type Application } from 'playcanvas';
 
 export type CameraState='EXPLORE'|'CHORE'|'REVIEW'|'BOX_OPENING'|'TRADE';
-export const CAMERA_PRESETS={EXPLORE:{zoom:1},CHORE:{zoom:.76},REVIEW:{zoom:.65},BOX_OPENING:{zoom:.7},TRADE:{zoom:.85}} as const;
+export const CAMERA_PRESETS={EXPLORE:{zoom:1},CHORE:{zoom:.608},REVIEW:{zoom:.65},BOX_OPENING:{zoom:.7},TRADE:{zoom:.85}} as const;
 
 export class IsometricCamera {
   readonly entity: Entity;
@@ -48,7 +48,7 @@ export class IsometricCamera {
     this.desired.set(focus.x, 0, focus.z - .9);
     this.offset.lerp(this.offset, this.desired, 1 - Math.exp(-(this.target||this.returning?5:10) * dt));
     if(this.returnZoom!==null){const wanted=this.returnZoom*(this.state==='CHORE'?CAMERA_PRESETS.CHORE.zoom:1);this.entity.camera!.orthoHeight+=(wanted-this.entity.camera!.orthoHeight)*(1-Math.exp(-5*dt));if(this.returning&&Math.abs(wanted-this.entity.camera!.orthoHeight)<.005){this.entity.camera!.orthoHeight=wanted;this.returnZoom=null;this.returning=false;}}
-    this.interactionLift+=((this.state==='CHORE'?6:0)-this.interactionLift)*(1-Math.exp(-5*dt));
+    this.interactionLift+=((this.state==='CHORE'?-2:0)-this.interactionLift)*(1-Math.exp(-5*dt));
     this.entity.setPosition(this.basePosition.x + this.offset.x, this.basePosition.y+this.interactionLift, this.basePosition.z + this.offset.z);
     this.entity.lookAt(new Vec3(this.baseTarget.x+this.offset.x,this.baseTarget.y,this.baseTarget.z+this.offset.z));
   }

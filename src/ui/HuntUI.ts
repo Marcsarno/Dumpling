@@ -20,7 +20,7 @@ export class HuntUI {
       card.style.setProperty('--shop-color',store.palette[0]);card.addEventListener('click',()=>choose(store.id));this.cards.set(store.id,card);this.dialog.append(card);
     }
     this.notice.className='hunt-explainer';this.notice.textContent='Visit two different stores each day. No shopping timer! Stock refreshes tomorrow.';this.dialog.append(this.notice);
-    const back=document.createElement('button');back.className='loop-button';back.textContent='Back to game';back.addEventListener('click',()=>this.dialog.close());this.dialog.append(back);
+    const back=document.createElement('button');back.className='loop-button';back.textContent='Back to game';back.addEventListener('click',()=>this.dialog.close());back.classList.add('dialog-top-action');this.dialog.prepend(back);
     this.time.id='shopping-time';this.time.hidden=true;
     this.panel.id='hunt-find';this.panel.hidden=true;this.panel.setAttribute('aria-live','polite');
     this.travel.id='hunt-travel';this.travel.hidden=true;this.travel.setAttribute('role','status');

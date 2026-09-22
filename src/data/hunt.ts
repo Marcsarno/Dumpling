@@ -2,10 +2,10 @@ import { DUMPLINGS, randomUnit, type Rarity } from './collection.ts';
 
 export const HUNT_RULES = { closingMinute: 1140, minimumSearchMinutes: 18, bagLimit: 3, inspectMilliseconds: 650 } as const;
 export const SERIES = [
-  { id: 'garden', name: 'Garden Friends', price: 4, color: '#bbd8b8', items: ['mochi','rosie','minty','blueberry','sunny','lavendream','peachy','stardrop'] },
-  { id: 'treats', name: 'Sweet Treats', price: 5, color: '#f1baca', items: ['shortcake','custard','cocoa','macaron','sorbet','sugarstar'] },
-  { id: 'animals', name: 'Pocket Pals', price: 5, color: '#efd7a0', items: ['bunny','kitten','panda','fox','sleepykoala','goldenbear'] },
-  { id: 'galaxy', name: 'Galaxy Dreams', price: 7, color: '#bab4e9', items: ['moonbean','comet','nebula','orbit','aurora','supernova'] },
+  { id: 'garden', name: 'Garden Friends', price: 4, color: '#bbd8b8', items: ['mochi','rosie','minty','blueberry','sunny','lavendream','peachy','stardrop','dewdrop-unicorn','sunbeam-unicorn'] },
+  { id: 'treats', name: 'Sweet Treats', price: 5, color: '#f1baca', items: ['shortcake','custard','cocoa','macaron','sorbet','sugarstar','sugarplum-bunny','opal-bunny'] },
+  { id: 'animals', name: 'Pocket Pals', price: 5, color: '#efd7a0', items: ['bunny','kitten','panda','fox','sleepykoala','goldenbear','starlight-panda','moonwish-panda'] },
+  { id: 'galaxy', name: 'Galaxy Dreams', price: 7, color: '#bab4e9', items: ['moonbean','comet','nebula','orbit','aurora','supernova','nebula-dragon','solstice-dragon'] },
 ] as const;
 export type SeriesId = typeof SERIES[number]['id'];
 export interface StoreDefinition {
@@ -16,13 +16,13 @@ export interface StoreDefinition {
 export const STORES: readonly StoreDefinition[] = [
   { id:'corner', name:'Clover Corner', subtitle:'A tiny neighborhood treasure stop', icon:'☘', travelMinutes:55, markup:0,
     stock:[3,5],lowStockChance:.22,series:[{id:'garden',weight:6},{id:'treats',weight:4}],
-    odds:{Common:66,Rare:24,Epic:8,Legendary:2},palette:['#b6d1ba','#f4dfab','#f7eedc'],layout:0 },
+    odds:{Common:65,Rare:25,Epic:8,Legendary:2},palette:['#b6d1ba','#f4dfab','#f7eedc'],layout:0 },
   { id:'toys', name:'Peachy Playroom', subtitle:'Colorful aisles, more places to peek', icon:'✿', travelMinutes:90, markup:1,
     stock:[5,8],lowStockChance:.12,series:[{id:'garden',weight:2},{id:'treats',weight:3},{id:'animals',weight:5},{id:'galaxy',weight:1}],
-    odds:{Common:55,Rare:28,Epic:13,Legendary:4},palette:['#ecb7cb','#c4bbe3','#fff0dc'],layout:1 },
+    odds:{Common:65,Rare:25,Epic:8,Legendary:2},palette:['#ecb7cb','#c4bbe3','#fff0dc'],layout:1 },
   { id:'collector', name:'Moonbeam Finds', subtitle:'Small batches of unusual little friends', icon:'☾', travelMinutes:165, markup:2,
     stock:[2,4],lowStockChance:.2,series:[{id:'galaxy',weight:7},{id:'animals',weight:2},{id:'treats',weight:1}],
-    odds:{Common:36,Rare:34,Epic:23,Legendary:7},palette:['#b7b5db','#a7cfcd','#eee4f3'],layout:2 },
+    odds:{Common:65,Rare:25,Epic:8,Legendary:2},palette:['#b7b5db','#a7cfcd','#eee4f3'],layout:2 },
 ];
 export const STOCK_SITES = ['Main shelf','Endcap','Checkout display','Basket','Lower shelf','Special display'] as const;
 export interface StockSlot { site: number; series: SeriesId; remaining: number; discovered: boolean }

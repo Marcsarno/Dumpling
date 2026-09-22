@@ -7,13 +7,13 @@ function fixture() {
   const repository = { read: () => raw, write: value => { if (fail) throw Error('blocked'); raw = value; } };
   return { store: new ProgressStore(repository, () => 0, () => String(++serial)), reload: () => new ProgressStore(repository, () => 0, () => String(++serial)), fail: () => { fail = true; } };
 }
-test('Rarity intervals match 60/25/12/3 and every configured dumpling is reachable', () => {
+test('Rarity intervals match 65/25/8/2 and every configured dumpling is reachable', () => {
   const totals = {}, ids = new Set();
   for (let i = 0; i < 10000; i++) {
     let draw = 0; const d = rollDumpling(() => draw++ === 0 ? (i + .5) / 10000 : (i % 31) / 31);
     totals[d.rarity] = (totals[d.rarity] || 0) + 1; ids.add(d.id);
   }
-  assert.deepEqual(totals, { Common: 6000, Rare: 2500, Epic: 1200, Legendary: 300 });
+  assert.deepEqual(totals, { Common: 6500, Rare: 2500, Epic: 800, Legendary: 200 });
   assert.equal(ids.size, DUMPLINGS.length);
 });
 test('Allowance credits once; purchases deduct $4 and enforce a persistent three-box trip cap', () => {

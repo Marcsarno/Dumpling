@@ -37,7 +37,7 @@
  #game[data-scene=cleanup] h1 { display:none; }
  #game[data-scene=cleanup] .task-list { flex-wrap:wrap; }
  #game[data-scene=cleanup] #cleanup-hint { width:40%; left:30%; bottom:12px; }
- #game[data-scene=cleanup] footer { display:none; }
+ #game[data-scene=cleanup] footer { display:flex;flex-wrap:wrap;top:12px;bottom:auto;left:270px;right:16px;justify-content:flex-end; }
 }
 .asset-credits { color:inherit; font-size:9px; text-decoration:none; padding:5px; }
 #day-label { margin:5px 0; font-size:11px; font-weight:700; color:#667b5b; text-transform:capitalize; }
@@ -64,3 +64,5 @@
  #game[data-scene=store] .topbar { width:235px; }
  #game[data-scene=store] .room-title { width:210px; }
 }
+
+#bedtime-fade{position:absolute;inset:0;background:#161325;z-index:80;pointer-events:none}#house-effects{pointer-events:auto;border:0;background:transparent;color:#78628f;font:700 10px "Trebuchet MS",sans-serif;min-height:36px;cursor:pointer;padding:4px 6px}

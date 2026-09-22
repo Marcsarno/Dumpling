@@ -42,3 +42,15 @@ The existing models remain intact; material setup is refined at runtime.
 Current portraits are rendered with the actual PlayCanvas materials by
 `scripts/render-squishy-engine-portraits.mjs`, then encoded with the existing WebP
 script. See SQUISHY_POLISH.md. The original Blender build above remains available.
+
+## Rejected pearl friends — superseded September 21, 2026
+
+Eight original variants add PlayCanvas primitive ears, horns, wings, foil flecks, and procedural glitter/pearl ribbon textures to the existing sculpted bao. Authoring code: `src/game/SpecialSquishies.ts`. No third-party model or texture assets were added. Engine-rendered portraits match the runtime models. Existing IDs and ownership are retained; original higher-tier designs are now Rare.
+
+That implementation was rejected and removed. Its saved IDs now reference the Dumpling Friends models below.
+
+## Dumpling Friends — approved concept, 3D implementation for review
+
+Subsequent user feedback approved the shapes. `scripts/finish-animal-squishies.py` adds project-authored baked local ambient visibility to those unchanged meshes, using 64 ray samples per vertex. Runtime color, satin reflectance, and kitten marking refinements remain authored in `src/game/AnimalSquishy.ts`. No new external texture source is used.
+
+`animal-panda.glb`, `animal-frog.glb`, `animal-bunny.glb`, and `animal-cat.glb` are original Blender sculpts built by `scripts/build-animal-squishies.py`, following Marc's approved generated concept (`concepts/animal-friends-approved.png`) and supplied Animal Friends reference. Bodies, ears, paws, surface markings, and faces are authored geometry. The kitten uses a project-authored continuous color mask. No downloaded models/textures or third-party asset licenses were introduced. Runtime material palettes are in `src/game/AnimalSquishy.ts`. Portraits show the actual PlayCanvas models. See ANIMAL_SCULPTS.md for exact assets, budgets, validation, and reference provenance.

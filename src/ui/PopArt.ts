@@ -1,3 +1,5 @@
+import {DUMPLINGS} from '../data/collection';
+import {dumplingPortrait} from '../game/dumplingVisual';
 import {assetUrl} from '../editor/AssetUrls';
 /** Reference-led 2D art only. No unfinished world models are used in Squishy Pop. */
 export class PopArt {
@@ -20,5 +22,5 @@ export class PopArt {
     this.atlas('animals-cutout',['bunny','kitten','panda','fox','sleepykoala','goldenbear'],3,this.friends),
     this.atlas('cosmic-cutout',['moonbean','comet','nebula','orbit','aurora','supernova'],3,this.friends),
     this.atlas('power-atlas',['bomb','rainbow','mega','ticket','frenzy','heart'],3,this.powers,true)
-  ]);}
+  ]);await Promise.all(DUMPLINGS.filter(d=>d.special).map(async d=>{const image=new Image();image.crossOrigin='anonymous';image.src=dumplingPortrait(d,false);await image.decode();const canvas=document.createElement('canvas');canvas.width=canvas.height=192;canvas.getContext('2d')!.drawImage(image,0,0,192,192);this.friends.set(d.id,canvas);}));}
 }

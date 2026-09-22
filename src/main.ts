@@ -71,11 +71,12 @@ export async function startGame(editorApp?:Application) {
   app.on('update', (elapsed: number) => {
     houseMusic.update({mode:loop.mode,phase:props.daily!.clock.state.phase,store:loop.mode==='store'?loop.store.definition.id:'',paused:loop.popUI.isOpen||loop.developerPaused||tornado.active,revealing:loop.opening.phase==='opening'},Math.min(elapsed,.1));
     const now = performance.now();
+    if(loop.developerPaused||loop.popUI.isOpen||document.hidden)cleanup.audio.stop();
     if(loop.developerPaused){loop.developerTick(now,elapsed);return;}
     loop.beforeMovement(now);
     if(loop.popUI.isOpen)return;
     const bulky = cleanup.carry.item?.carryPace === 'walk';
-    controller.speed = bulky ? WALK_SPEED : RUN_SPEED;
+    controller.speed = bulky ? WALK_SPEED * (['vacuum','scooper'].includes(cleanup.carry.item?.id??'') ? 1.5 : 1) : RUN_SPEED;
     character.animator.setCarryPace(bulky ? 'walk' : 'run');
     const night=cleanup.mode==='day'&&props.daily!.clock.state.phase==='night'&&loop.mode==='cleanup';
     const dt = document.hidden ? 0 : Math.min(elapsed, 0.04);
@@ -103,6 +104,7 @@ export async function startGame(editorApp?:Application) {
     label.style.transform = `translate(${screenPoint.x - label.offsetWidth / 2}px, ${screenPoint.y - label.offsetHeight - 5}px)`;
   });
   await captureWorld(app,room,props,loop,!!editorApp);
+  props.daily!.refresh();
   controller.setRoom(loop.mode==='store'?loop.store:loop.mode==='recess'?loop.recess:room);
   // A saved store visit starts before the authored layout is loaded. Reposition
   // at its edited entrance after binding, rather than the original generated one.

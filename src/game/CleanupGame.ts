@@ -1,3 +1,4 @@
+import {ChoreAudio} from '../ui/ChoreAudio';
 import {propPoint,propYaw} from '../editor/PropSpace';
 import type { Application, Entity } from 'playcanvas';
 import { CarrySystem } from '../components/CarrySystem';
@@ -35,6 +36,9 @@ export class CleanupGame {
   private aligning: Interaction | null = null;
   private seatReturn:Vec3|null=null;
   private bedYaw=0;
+  private workingId='';
+  readonly audio=new ChoreAudio();
+  private readonly bedtimeFade=document.createElement('div');
   get movementLocked() { return this.character.animator.busy || !!this.activity; }
   get activeInteractionId(){return this.activity?.target.id??this.aligning?.id??null;}
   constructor(app: Application, private readonly character: ReturnType<typeof createCharacter>, private readonly props: CleanupProps,
@@ -46,6 +50,7 @@ export class CleanupGame {
     this.hud = new CleanupHUD(button, this.replay);
     this.feedback = new CleanupFeedback(app, camera, document.querySelector('#cleanup-effects')!, props.interactions);
     this.action = new ActionButton(button, this.press, this.cancelHold);
+    this.bedtimeFade.id='bedtime-fade';this.bedtimeFade.hidden=true;this.bedtimeFade.setAttribute('aria-hidden','true');document.querySelector('#game')!.append(this.bedtimeFade);
     this.configure('day');
   }
   configure(mode: typeof this.mode) {
@@ -74,6 +79,7 @@ export class CleanupGame {
   };
   private perform(target: Interaction) {
     const now = performance.now();
+    this.workingId=target.id;this.audio.start(target.id);
     const facing = target.placement ? new Vec3(...target.placement) : target.marker;
     if(target.kind==='daily') {
       if(['school-door','shop-door'].includes(target.id)) { this.props.daily!.perform(target,this.carry); return; }
@@ -86,6 +92,7 @@ export class CleanupGame {
         },facing);
       } else {
         this.activity={target,start:now,duration:target.duration??1000};
+        if(target.id==='lilah-bed'){this.bedtimeFade.hidden=false;this.bedtimeFade.style.opacity='0';}
         if(target.id==='sleep'){
           this.seatReturn=this.character.player.getPosition().clone();this.bedYaw=this.character.visual.getLocalEulerAngles().y;this.controller.reset();this.character.animator.setCarrying(false);this.character.animator.setWorkClip('SleepEnter');return;
         }
@@ -141,6 +148,7 @@ export class CleanupGame {
     this.refreshFocus();
   }
   private cancelActivity() {
+    this.audio.stop();this.bedtimeFade.hidden=true;
     this.leaveSeat();
     this.character.animator.setWorkClip(null);this.interactionCamera.endChore();
     if (this.activity?.target.kind === 'pet' || this.activity?.target.kind==='daily') { this.character.animator.setCarrying(!!this.carry.item); this.character.animator.faceTowards(null); }
@@ -158,7 +166,7 @@ export class CleanupGame {
     this.hud.announce(`${target.name} cleaned up. ${this.mission.timed ? 'Earned $1. ' : ''}${this.mission.completed.size} of ${this.mission.tasks.length} tasks complete.`);
   }
   update(now: number, movementIntent: boolean) {
-    if(!this.activity&&!this.character.animator.busy){this.character.animator.setWorkClip(null);this.interactionCamera.endChore();}
+    if(!this.activity&&!this.character.animator.busy){this.audio.stop();this.workingId='';this.character.animator.setWorkClip(null);this.interactionCamera.endChore();}
     if(this.mode==='day'){this.mission.tasks=this.props.daily!.tasks;for(const id of this.props.daily!.completed)this.mission.completed.add(id);}
     if (movementIntent) this.mission.start(now);
     this.mission.tick(now); this.refreshFocus();
@@ -174,6 +182,7 @@ export class CleanupGame {
       } else if (!this.character.animator.busy) this.hud.showResults(this.mission);
     } else if (this.activity) {
       const { target, start, duration } = this.activity;
+      if(target.id==='lilah-bed'){const p=(now-start)/duration;this.bedtimeFade.style.opacity=String(Math.min(1,p*2.5));}
       if(target.id==='sleep'&&this.seatReturn){const t=(now-start)/(BED_ENTRY_SECONDS*1000),pose=bedEntry(this.seatReturn,this.bedYaw,false,t);this.character.player.setPosition(pose.position);this.character.visual.setLocalEulerAngles(0,pose.yaw,0);if(this.character.grounding)this.character.grounding.surfaceHeight=pose.height;if(t>=1)this.character.animator.setWorkClip('Sleep');}
       const inRange = !!this.seatReturn||this.interactions.distance(target, this.character.player.getPosition()) <= target.range + 0.1;
       if (!inRange || document.hidden || ((target.kind === 'vacuum'||target.hold) && !this.action.held)) this.cancelActivity();
@@ -184,10 +193,13 @@ export class CleanupGame {
         messy?.setLocalScale(size, size, size);
         if(this.progress>=1 && target.kind==='daily'){
           this.props.daily!.perform(target,this.carry);
+          if(target.id==='lilah-bed'){
+            this.bedtimeFade.animate([{opacity:1},{opacity:0}],{duration:450,fill:'forwards'}).onfinish=()=>{this.bedtimeFade.hidden=true;};
+          }
           this.leaveSeat();
           if(target.task)this.mission.completed.add(target.task);
           this.character.animator.setCarrying(!!this.carry.item);this.character.animator.faceTowards(null);
-          this.feedback.reward(target.marker,target.task?'+$1':'✓',now);this.activity=null;this.progress=0;
+          this.feedback.reward(target.marker,target.task||target.id==='lilah-bed'?'+$1':'✓',now);this.activity=null;this.progress=0;
         } else if (this.progress >= 1 && this.mission.complete(target.task!, now)) {
           if (messy) messy.enabled = false;
           if (target.kind === 'pet') { this.props.pet!.finish();if(this.mode==='day')this.props.daily!.complete('pet-care'); this.character.animator.setCarrying(false); this.character.animator.faceTowards(null); }
@@ -205,7 +217,8 @@ export class CleanupGame {
       }
     }
     this.feedback.update(now, this.interactions, this.carry, this.mission);
-    if(this.activity)this.feedback.hideWorkingLabel(this.activity.target.id);
+    if(this.activity||this.character.animator.busy)this.feedback.hideWorkingLabel(this.workingId);
+    this.audio.update();
     this.props.pet?.update(now, this.activity?.target.kind === 'pet' ? this.progress : 0, this.carry.socket.getPosition());
     this.props.daily?.effect(this.activity?.target.kind==='daily'?this.activity.target:null,this.progress,this.carry.socket.getPosition());
     this.hud.update(this.mission, this.carry, this.activity?.target??this.interactions.focus, this.activity?.target.kind === 'crayons' || this.activity?.target.kind === 'pet'||(this.activity?.target.kind==='daily'&&!this.activity.target.hold), this.progress, this.character.animator.actionName, this.props.pet?.hint);
@@ -227,7 +240,7 @@ export class CleanupGame {
   };
   setActive(active: boolean) {
     this.action.enabled = active; this.action.reset();
-    if (!active) { this.feedback.hide(); this.hud.dialog.close(); }
+    if (!active) { this.audio.stop();this.feedback.hide(); this.hud.dialog.close(); }
   }
   developerCancel(){
     this.action.reset();this.cancelActivity();this.aligning=null;this.resetMovement();this.character.animator.cancelAction();
@@ -252,6 +265,7 @@ export class CleanupGame {
       pet: this.props.pet?.snapshot(),
       daily: this.props.daily?.snapshot(),
       completed: [...this.mission.completed], allowance: this.mission.allowance, bonus: this.mission.bonus,
+      audio:this.audio.snapshot(),
       carrying: this.carry.item?.id ?? null, carriedParent: this.carry.item?.entity.parent?.name ?? null,
       carriedPosition: this.carry.item?.entity.getPosition().toArray() ?? null,
       focus: this.interactions.focus?.id ?? null, holding: this.action.held, progress: this.progress,
@@ -261,5 +275,5 @@ export class CleanupGame {
       targets: this.props.interactions.map(target => ({ id: target.id, position: target.anchor.toArray(), range: target.range })),
     };
   }
-  destroy() { this.action.destroy(); this.feedback.destroy(); this.hud.destroy(); }
+  destroy() { this.audio.destroy();this.bedtimeFade.remove();this.action.destroy(); this.feedback.destroy(); this.hud.destroy(); }
 }

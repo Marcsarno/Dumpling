@@ -44,3 +44,7 @@ Download: https://opengameart.org/sites/default/files/relax_background1_0.ogg
 License: https://creativecommons.org/publicdomain/zero/1.0/
 
 Original OGG retained; MP3 derivative created with FFmpeg for browser compatibility.
+
+## Household action sounds — September 21, 2026
+
+`src/ui/ChoreAudio.ts` synthesizes original vacuum hum, munching, wiping/washing swishes, and soft handling sounds with Web Audio. No external recordings or additional licenses. A separate persistent Sounds toggle controls these effects.
