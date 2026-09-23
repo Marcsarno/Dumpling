@@ -1,3 +1,15 @@
+## Approved school and opening release
+User authorized commit, push and deployment of the approved classroom/cafeteria and bedroom-backed squishy reveal. PlayCanvas checkpoint 53c1a828-db27-4f44-a792-3c358d615449. Verify deployed SHA via /release.json. Preview-only notes below are historical.
+
+## Latest opening presentation pass (September 22)
+User approved school art, then supplied bedroom backdrop for openings. Copied actual artwork, added basket wind-up/quick release/reward arc/landing, rarity launch light and delayed caption. Separate four-rarity review: http://127.0.0.1:5191/scripts/opening-review.html . See OPENING_PRESENTATION.md. Public deploy/commit not requested for this pass. House SFX and Dad dining chair remain queued.
+
+# Current work: reference-led classroom and cafeteria
+
+See SCHOOL_UPGRADE.md. Complete in isolated local preview and PlayCanvas; not yet committed or deployed. Public release remains e25bcb6. User prioritized this school pass; revised reward sounds and Dad’s dining chair remain queued. Squishy opening now hides Ariana and the bedroom pending new background art. Review links and validation are in SCHOOL_UPGRADE.md. Preserve all current changes.
+
+---
+
 > September 22: user explicitly authorized commit, push, and public deployment of this audio, furniture, performance, bedtime, and family-routine release. Verify the resulting SHA at https://dumpling-sandy.vercel.app/release.json. Preview-only statements below are historical.
 
 # Latest follow-up: bedtime, quiet audio, and family routines

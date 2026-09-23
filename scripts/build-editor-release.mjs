@@ -12,7 +12,7 @@ await cp('editor-release',output,{recursive:true});
 const config=JSON.parse(await readFile('dist/config.json','utf8'));
 // Updated source assets override the historical scene-export copies.
 let updatedId=900002000;
-const overlays=['food/pizza.glb','food/taco.glb','food/turkey.glb','characters/arianna/arianna.glb','characters/marc/marc.glb','characters/lilah/lilah.glb','pets/sunny-pup.glb','environment/kenney/furniture/loungeChairUpright.glb',...(await readdir('public/assets/audio/foley')).filter(f=>f.endsWith('.mp3')).map(f=>'audio/foley/'+f)];
+const overlays=['backgrounds/squishy-bedroom.png','school-kit/classroom.glb','school-kit/cafeteria.glb','food/pizza.glb','food/taco.glb','food/turkey.glb','characters/arianna/arianna.glb','characters/marc/marc.glb','characters/lilah/lilah.glb','pets/sunny-pup.glb','environment/kenney/furniture/loungeChairUpright.glb',...(await readdir('public/assets/audio/foley')).filter(f=>f.endsWith('.mp3')).map(f=>'audio/foley/'+f)];
 for(const path of overlays){
  const url='assets/'+path,name='game__'+path.replaceAll('/','__')+(path.endsWith('.glb')?'.bin':'');
  await mkdir(dirname(resolve(output,url)),{recursive:true});await copyFile('public/'+url,resolve(output,url));

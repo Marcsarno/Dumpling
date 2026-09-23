@@ -9,6 +9,6 @@ export const SQUISHY_PRESENTATION = {
 } as const satisfies Record<Rarity, object>;
 
 export type SquishyPresentation = typeof SQUISHY_PRESENTATION[Rarity];
-export const REVEAL_POP_TIME = 1.58;
+export const REVEAL_POP_TIME = .98;
 export const REVEAL_SETTLE_TIME = 2.85;
 export const revealDuration = (rarity:Rarity) => REVEAL_SETTLE_TIME + SQUISHY_PRESENTATION[rarity].hold;

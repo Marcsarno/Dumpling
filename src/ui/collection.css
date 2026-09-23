@@ -61,3 +61,12 @@ body:has(#game[data-scene=home]) .dev-launch { top:77px;right:18px;left:auto;bot
 
 #collection-actions{position:sticky;top:-1px;z-index:2;background:#faf5fb;padding:4px 0;display:grid;grid-template-columns:1fr 1fr;gap:5px}#collection-actions .loop-button{font-size:12px;padding:10px 5px;margin:0;min-height:44px}#collection-actions #open-next{grid-column:1/-1}
 #reveal-copy{background:#fff9;border-radius:18px;padding:8px;left:8%;width:84%}#home-vignette{background:linear-gradient(#ede6f4a0,transparent 25%,transparent 70%,#ede6f4a0)}
+/* The supplied bedroom artwork supplies the setting; retain its warm colors. */
+#game[data-scene=home] #home-vignette {background:linear-gradient(180deg,#21112465,transparent 27%,transparent 65%,#21112450);}
+#game[data-scene=home] .room-title,#game[data-scene=home] .topbar,#game[data-scene=home] footer {color:#fff7ee;text-shadow:0 2px 5px #341c40;}
+#game[data-scene=home] #reveal-copy {background:#fff8f0ed;box-shadow:0 5px 24px #49254920;}
+
+#game[data-scene=home] #reveal-copy {top:auto;bottom:140px;}
+@media(max-height:650px){#game[data-scene=home] #reveal-copy{top:auto;bottom:132px;padding:6px;}#game[data-scene=home] #reveal-copy h2{font-size:20px;margin:5px 0 3px;}}
+#game[data-scene=home] #reveal-copy {width:min(84%,380px);left:50%;translate:-50% 0;}
+@media(min-height:651px){#game[data-scene=home] #reveal-copy {bottom:125px;}}

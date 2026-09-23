@@ -14,11 +14,13 @@ var __export = (target, all) => {
 };
 
 // src/systems/SaveNamespace.ts
-var SAVE_PREFIX, saveKey;
+var SCHOOL_REVIEW, OPENING_REVIEW, SAVE_PREFIX, saveKey;
 var init_SaveNamespace = __esm({
   "src/systems/SaveNamespace.ts"() {
     "use strict";
-    SAVE_PREFIX = globalThis.__productionRelease ? "arianna" : "dumpling.editorMigration";
+    SCHOOL_REVIEW = new URLSearchParams(globalThis.location?.search ?? "").get("preview") === "school";
+    OPENING_REVIEW = new URLSearchParams(globalThis.location?.search ?? "").get("preview") === "opening";
+    SAVE_PREFIX = OPENING_REVIEW ? "dumpling.openingReview" : SCHOOL_REVIEW ? "dumpling.schoolReview" : globalThis.__productionRelease ? "arianna" : "dumpling.editorMigration";
     saveKey = (suffix) => `${SAVE_PREFIX}.${suffix}`;
   }
 });
@@ -546,6 +548,9 @@ function performanceSettings(app, blocked) {
   };
 }
 
+// src/main.ts
+init_SaveNamespace();
+
 // src/ui/AudioSettings.ts
 init_SaveNamespace();
 var listeners = /* @__PURE__ */ new Set();
@@ -644,7 +649,7 @@ var artTasks = [];
 function trackArt(task) {
   artTasks.push(task);
 }
-var scopes = /* @__PURE__ */ new Set(["Bedroom", "Maple cottage", "Cleanup props", "Daily routines", "Classroom trading club"]);
+var scopes = /* @__PURE__ */ new Set(["Bedroom", "Maple cottage", "Cleanup props", "Daily routines"]);
 function recordLayout(entity, parent, model) {
   if (!scopes.has(parent.name) && !parent.tags.has("migration.store")) return;
   if (/Nearby display aura|Trading spot|Paper wiping|Puppy kibble/.test(entity.name)) return;
@@ -722,6 +727,10 @@ async function captureWorld(app, house, props, loop, editor) {
     }
     for (const env of authored) {
       const name = env.tags.list().find((t) => t.startsWith("scope:")).slice(6);
+      if (name === "Classroom trading club" && loop.recess.usesReferenceLayout) {
+        env.enabled = false;
+        continue;
+      }
       const runtime = rooms.find((r) => r.root.name === name)?.root ?? (name === "Bedroom" ? house.root.findByName("Bedroom") : name === "Cleanup props" ? props.root : props.daily.root);
       if (!runtime) throw Error("Unknown layout scope " + name);
       env.reparent(runtime);
@@ -748,6 +757,7 @@ async function captureWorld(app, house, props, loop, editor) {
     }
     const bounds = new BoundingBox(new Vec32(), new Vec32(0.5, 0.5, 0.5));
     for (const r of rooms) {
+      if (r === loop.recess && loop.recess.usesReferenceLayout) continue;
       const enabled = r.root.enabled;
       r.root.enabled = true;
       const nodes = app.root.findByTag("collision:" + r.root.name).filter((n) => n.enabled);
@@ -758,7 +768,7 @@ async function captureWorld(app, house, props, loop, editor) {
       }));
       r.root.enabled = enabled;
     }
-    for (const r of rooms) for (const n of app.root.findByTag("walkable:" + r.root.name)) {
+    for (const r of rooms.filter((r2) => r2 !== loop.recess || !loop.recess.usesReferenceLayout)) for (const n of app.root.findByTag("walkable:" + r.root.name)) {
       const index = Number(n.tags.list().find((t) => t.startsWith("index:")).slice(6)), b = new BoundingBox();
       b.setFromTransformedAabb(bounds, n.getWorldTransform());
       if (r.walkable?.[index]) Object.assign(r.walkable[index], { minX: b.center.x - b.halfExtents.x, maxX: b.center.x + b.halfExtents.x, minZ: b.center.z - b.halfExtents.z, maxZ: b.center.z + b.halfExtents.z });
@@ -1248,7 +1258,7 @@ var SQUISHY_PRESENTATION = {
   Epic: { color: "#c19af6", spark: "#a36ed6", ink: "#674091", wash: "#f0e6ff", symbol: "\u2726", roughness: 0.49, coat: 0.65, accentCoat: 0.3, sparkles: 18, rays: 0, halo: 0.32, burst: 0.43, rim: 0.4, punch: 0.013, intensity: 1.15, hold: 0.7, notes: [659.25, 830.61, 987.77, 1318.51] },
   Legendary: { color: "#f6cd68", spark: "#dea52e", ink: "#775215", wash: "#fff3cb", symbol: "\u2739", roughness: 0.48, coat: 0.9, accentCoat: 0.4, sparkles: 28, rays: 12, halo: 0.48, burst: 0.55, rim: 0.7, punch: 0.018, intensity: 1.3, hold: 0.95, notes: [523.25, 659.25, 783.99, 1046.5, 1318.51] }
 };
-var REVEAL_POP_TIME = 1.58;
+var REVEAL_POP_TIME = 0.98;
 var REVEAL_SETTLE_TIME = 2.85;
 var revealDuration = (rarity) => REVEAL_SETTLE_TIME + SQUISHY_PRESENTATION[rarity].hold;
 
@@ -1336,7 +1346,7 @@ function animateSquishy(model, time, strength = 0.012) {
 }
 
 // src/main.ts
-import { Application, Color as Color10, Entity as Entity33, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec333 } from "playcanvas";
+import { Application, Color as Color10, Entity as Entity34, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec333 } from "playcanvas";
 
 // src/game/house.ts
 import { BoundingBox as BoundingBox4, Entity as Entity7, Vec3 as Vec36 } from "playcanvas";
@@ -6001,7 +6011,7 @@ function createStore(app, definition2) {
 // src/game/OpeningSequence.ts
 init_collection();
 init_hunt();
-import { Entity as Entity26, Color as Color9, Vec3 as Vec325, TONEMAP_ACES } from "playcanvas";
+import { Entity as Entity26, Color as Color9, Vec3 as Vec325, StandardMaterial as StandardMaterial5, CULLFACE_NONE as CULLFACE_NONE2, TONEMAP_ACES } from "playcanvas";
 
 // src/game/SquishPlay.ts
 function squishPose(time, style) {
@@ -6027,12 +6037,13 @@ var smooth = (n) => {
 var SQUISHY_REVEAL_SECONDS = 2.85;
 function squishyOpeningPose(seconds, intensity = 1) {
   if (seconds >= SQUISHY_REVEAL_SECONDS) return { lid: -112, height: 0.34, scale: [1, 1, 1], wiggle: 0 };
-  const lift = smooth((seconds - 0.9) / 1.05), settle = Math.max(0, seconds - 1.95);
-  const bounce = seconds > 1.95 ? Math.sin(settle * 12) * Math.exp(-settle * 6) * 0.048 * intensity : 0;
-  const height = 0.11 + 0.39 * lift - 0.16 * smooth((seconds - 1.95) / 0.75) + bounce;
-  const size = 0.51 + 0.49 * lift, stretch = 1 + Math.sin(lift * Math.PI) * 0.14 * intensity + (seconds > 1.95 ? Math.sin(settle * 12) * Math.exp(-settle * 7) * 0.075 * intensity : 0);
-  const lid = smooth((seconds - 0.4) / 0.92);
-  return { lid: -112 * lid, height, scale: [size / Math.sqrt(stretch), size * stretch, size / Math.sqrt(stretch)], wiggle: seconds < 0.55 ? Math.sin(seconds * 31) * Math.sin(seconds / 0.55 * Math.PI) * 2 : 0 };
+  const launch = smooth((seconds - 0.92) / 0.62), fall = smooth((seconds - 1.54) / 0.67);
+  const height = 0.11 + 1.02 * launch - 0.79 * fall;
+  const size = 0.51 + 0.49 * launch;
+  const stretch = 1 + 0.17 * intensity * Math.sin(launch * Math.PI) - 0.16 * intensity * Math.sin(smooth((seconds - 2.12) / 0.5) * Math.PI);
+  const lid = -112 * smooth((seconds - 0.76) / 0.4) - 9 * Math.sin(smooth((seconds - 1.16) / 0.35) * Math.PI);
+  const tension = clamp(seconds / 0.76);
+  return { lid, height: height + 0.02 * Math.sin(smooth((seconds - 2.21) / 0.64) * Math.PI), scale: [size / Math.sqrt(stretch), size * stretch, size / Math.sqrt(stretch)], wiggle: seconds < 0.76 ? Math.sin(seconds * 42) * tension * tension * 4 : 0 };
 }
 
 // src/game/SquishyRevealVfx.ts
@@ -6108,11 +6119,11 @@ var SquishyRevealVfx = class {
   }
   ring(radius, width, alpha) {
     const start = this.vertices;
-    for (let i = 0; i <= 64; i++) {
-      const a = i * Math.PI / 32;
+    for (let i = 0; i <= 48; i++) {
+      const a = i * Math.PI / 24;
       for (const r of [radius - width, radius, radius + width]) this.vertex(Math.cos(a) * r, Math.sin(a) * r, r === radius ? alpha : 0, 0.35);
     }
-    for (let i = 0; i < 64; i++) for (let j = 0; j < 2; j++) {
+    for (let i = 0; i < 48; i++) for (let j = 0; j < 2; j++) {
       const a = start + i * 3 + j;
       this.triangle(a, a + 3, a + 1);
       this.triangle(a + 1, a + 3, a + 4);
@@ -6135,6 +6146,15 @@ var SquishyRevealVfx = class {
     this.triangles = 0;
     const s = this.style, t = Math.max(0, time), burst = reduced ? 0 : Math.max(0, 1 - t / 1.6);
     this.color.fromString(s.color);
+    if (!reduced && t < 1.05) {
+      const fade = Math.sin(Math.min(1, t / 1.05) * Math.PI), start = this.vertices;
+      this.vertex(-0.18, -0.55, fade * 0.42, 0.6);
+      this.vertex(0.18, -0.55, fade * 0.42, 0.6);
+      this.vertex(0.4, 1.3, 0, 0.8);
+      this.vertex(-0.4, 1.3, 0, 0.8);
+      this.triangle(start, start + 1, start + 2);
+      this.triangle(start, start + 2, start + 3);
+    }
     this.disk(1.25, s.halo + burst * s.burst);
     if (s.rays) {
       this.ring(0.84, 0.042, 0.28 + (reduced ? 0 : Math.sin(t * 1.7) * 0.06));
@@ -6142,17 +6162,19 @@ var SquishyRevealVfx = class {
     }
     if (s.sparkles && !reduced) {
       this.color.fromString(s.spark);
-      this.ring(0.6 + Math.min(t, 1.5) * 0.27, s.rays ? 0.035 : 0.025, burst * 0.6);
-      for (let i = 0; i < s.sparkles; i++) {
-        const a = i * 2.39996, r = 0.65 + (1 - Math.exp(-t * 2.4)) * (0.2 + i % 5 * 0.035);
-        this.star(Math.cos(a) * r, Math.sin(a) * r + 0.1 + t * 0.02, (0.029 + i % 3 * 0.014) * s.intensity, a + t * 0.35, burst * burst);
-      }
-      for (let i = 0; i < s.rays; i++) {
-        const a = i * Math.PI * 2 / s.rays + 0.13, start = this.vertices, r = 0.8 + Math.min(t, 1.6) * 0.04, len = 0.2 * burst;
-        this.vertex(Math.cos(a - 0.028) * r, Math.sin(a - 0.028) * r, burst * 0.4);
-        this.vertex(Math.cos(a) * (r + len), Math.sin(a) * (r + len), 0, 0.5);
-        this.vertex(Math.cos(a + 0.028) * r, Math.sin(a + 0.028) * r, burst * 0.4);
-        this.triangle(start, start + 1, start + 2);
+      if (burst > 0) {
+        this.ring(0.6 + Math.min(t, 1.5) * 0.27, s.rays ? 0.035 : 0.025, burst * 0.6);
+        for (let i = 0; i < s.sparkles; i++) {
+          const a = i * 2.39996, r = 0.65 + (1 - Math.exp(-t * 2.4)) * (0.2 + i % 5 * 0.035);
+          this.star(Math.cos(a) * r, Math.sin(a) * r + 0.1 + t * 0.02, (0.029 + i % 3 * 0.014) * s.intensity, a + t * 0.35, burst * burst);
+        }
+        for (let i = 0; i < s.rays; i++) {
+          const a = i * Math.PI * 2 / s.rays + 0.13, start = this.vertices, r = 0.8 + Math.min(t, 1.6) * 0.04, len = 0.2 * burst;
+          this.vertex(Math.cos(a - 0.028) * r, Math.sin(a - 0.028) * r, burst * 0.4);
+          this.vertex(Math.cos(a) * (r + len), Math.sin(a) * (r + len), 0, 0.5);
+          this.vertex(Math.cos(a + 0.028) * r, Math.sin(a + 0.028) * r, burst * 0.4);
+          this.triangle(start, start + 1, start + 2);
+        }
       }
       const count = s.rays ? 12 : s.sparkles > 10 ? 8 : 3;
       for (let i = 0; i < count; i++) {
@@ -6242,6 +6264,24 @@ var SquishyRevealAudio = class {
 var OpeningSequence = class {
   constructor(app) {
     this.app = app;
+    this.backdrop = new Entity26("Cozy bedroom opening artwork", app);
+    const bg = this.backdropMaterial;
+    bg.useLighting = false;
+    bg.diffuse.set(0, 0, 0);
+    bg.emissive.set(1, 1, 1);
+    bg.useTonemap = false;
+    bg.cull = CULLFACE_NONE2;
+    bg.update();
+    this.backdrop.addComponent("render", { type: "plane", material: bg, castShadows: false, receiveShadows: false });
+    this.backdrop.enabled = false;
+    app.assets.loadFromUrl(assetUrl("assets/backgrounds/squishy-bedroom.png"), "texture", (err, asset) => {
+      if (err || !asset) return;
+      const texture = asset.resource;
+      bg.emissiveMap = texture;
+      bg.update();
+      this.backdropAspect = texture.width / texture.height;
+      this.sizeBackdrop();
+    });
     this.root = new Entity26("Home surprise presentation", app);
     app.root.addChild(this.root);
     this.root.setPosition(-0.25, 0.6, 1.35);
@@ -6298,11 +6338,20 @@ var OpeningSequence = class {
   rarity = "Common";
   camera = null;
   cameraHeight = 1.5;
+  backdrop;
+  backdropMaterial = new StandardMaterial5();
+  backdropAspect = 941 / 1672;
   lidSounded = false;
   sounded = false;
   panel = document.querySelector("#reveal-copy");
   studioMask(root) {
     for (const r of root.findComponents("render")) for (const mesh of r.meshInstances) mesh.mask = 16;
+  }
+  sizeBackdrop() {
+    if (!this.camera?.camera) return;
+    const h = this.cameraHeight * 2, w = h * this.camera.camera.aspectRatio;
+    const imageH = Math.max(h, w / this.backdropAspect);
+    this.backdrop.setLocalScale(imageH * this.backdropAspect, 1, imageH);
   }
   frame(camera, width, height) {
     const compact = height <= 650;
@@ -6311,10 +6360,17 @@ var OpeningSequence = class {
     this.cameraHeight = Math.max(1.85, (compact ? 1.3 : 1.12) / (width / height));
     camera.camera.orthoHeight = this.cameraHeight;
     camera.setPosition(-0.25, 2.35, 6.9);
-    camera.lookAt(new Vec325(-0.25, compact ? 1.05 : 1.35, 0.4));
+    camera.lookAt(new Vec325(-0.25, compact ? 1.05 : width > height ? 1.1 : 1.35, 0.4));
+    if (this.backdrop.parent !== camera) {
+      this.backdrop.reparent(camera);
+      this.backdrop.setLocalPosition(0, 0, -35);
+      this.backdrop.setLocalEulerAngles(90, 0, 0);
+    }
+    this.sizeBackdrop();
   }
   show(receipt) {
     this.root.enabled = true;
+    this.backdrop.enabled = true;
     this.panel.hidden = false;
     this.model?.destroy();
     this.model = null;
@@ -6432,12 +6488,14 @@ var OpeningSequence = class {
       }
       this.elapsed += dt;
       const t = this.elapsed, s = SQUISHY_PRESENTATION[this.rarity], p = squishyOpeningPose(t, s.intensity);
-      this.box.root.setLocalEulerAngles(0, p.wiggle, 0);
+      this.box.root.setLocalEulerAngles(0, p.wiggle, p.wiggle * 0.35);
+      const tension = Math.sin(Math.min(1, t / 0.82) * Math.PI) * 0.055;
+      this.box.root.setLocalScale(1 + tension, 1 - tension, 1 + tension);
       this.box.lid.setLocalEulerAngles(p.lid, 0, 0);
-      if (t > 0.8) this.model.enabled = true;
+      if (t > 0.92) this.model.enabled = true;
       this.model.setLocalPosition(0, p.height, 0);
       this.model.setLocalScale(...p.scale);
-      if (t > 0.45 && !this.lidSounded) {
+      if (t > 0.82 && !this.lidSounded) {
         this.lidSounded = true;
         this.audio.lid();
       }
@@ -6447,10 +6505,12 @@ var OpeningSequence = class {
       if (this.camera?.camera) this.camera.camera.orthoHeight = this.cameraHeight * (1 - s.punch * emphasis);
       if (t > REVEAL_POP_TIME && !this.sounded) {
         this.sounded = true;
-        this.reveal(true);
+        this.audio.celebrate(s.notes);
       }
       if (t > revealDuration(this.rarity)) {
         this.phase = "revealed";
+        this.reveal(false);
+        this.box.root.setLocalScale(1, 1, 1);
         this.box.root.setLocalEulerAngles(0, 0, 0);
         this.restoreCamera();
         this.squishButton.hidden = false;
@@ -6478,10 +6538,13 @@ var OpeningSequence = class {
     this.vfx.hide();
     this.audio.stop();
     this.root.enabled = false;
+    this.backdrop.enabled = false;
     this.panel.hidden = true;
     this.squishButton.hidden = true;
   }
   destroy() {
+    this.backdrop.destroy();
+    this.backdropMaterial.destroy();
     this.squishButton.remove();
     this.vfx.destroy();
     this.root.destroy();
@@ -6810,23 +6873,61 @@ var TradingUI = class {
 };
 
 // src/game/recess.ts
-import { BoundingBox as BoundingBox13, Entity as Entity28, Vec3 as Vec326 } from "playcanvas";
+import { Asset as Asset7, BoundingBox as BoundingBox14, Entity as Entity29, Vec3 as Vec326 } from "playcanvas";
+
+// src/game/SchoolCook.ts
+import { Asset as Asset5, BoundingBox as BoundingBox12, Entity as Entity27 } from "playcanvas";
+async function schoolCook(app, parent) {
+  const path = "/assets/characters/classmates/character-male-a.glb";
+  const asset = new Asset5("School lunch attendant", "container", { url: assetUrl(path) }, {}, containerOptions(path));
+  app.assets.add(asset);
+  await new Promise((resolve, reject) => {
+    asset.once("load", resolve);
+    asset.once("error", reject);
+    app.assets.load(asset);
+  });
+  const resource = asset.resource, model = resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox12();
+  let first = true;
+  for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
+    if (first) {
+      bounds.copy(m.aabb);
+      first = false;
+    } else bounds.add(m.aabb);
+  }
+  const scale = 1.9 / (2 * bounds.halfExtents.y), idle = resource.animations.map((a) => a.resource).find((a) => a.name === "idle");
+  for (const curve of idle.curves) for (const path2 of curve.paths) {
+    const n = model.findByName(path2.entityPath.at(-1)), v = idle.outputs[curve.output].data;
+    if (path2.propertyPath[0] === "localRotation") n.setLocalRotation(v[0], v[1], v[2], v[3]);
+    else if (path2.propertyPath[0] === "localPosition") n.setLocalPosition(v[0], v[1], v[2]);
+  }
+  const root = new Entity27("Friendly lunch cook", app);
+  parent.addChild(root);
+  root.setLocalPosition(0.3, 0.37, -6.18);
+  root.addChild(model);
+  model.setLocalScale(scale, scale, scale);
+  const shape = primitives(app, root), white = material("Chef cotton", "#fff8e9");
+  shape("Chef hat band", "cylinder", [0, 2, 0], [0.72, 0.17, 0.65], white);
+  for (const x of [-0.2, 0, 0.2]) shape("Soft chef cap", "sphere", [x, 2.16, 0], [0.38, 0.3, 0.55], white);
+  shape("Chef apron bib", "box", [0, 1.1, 0.22], [0.35, 0.48, 0.025], white, false);
+  primitives(app, parent)("Kitchen standing platform", "box", [0.3, 0.175, -6.18], [1.1, 0.35, 0.8], material("Kitchen platform", "#b6bac2"));
+  return root;
+}
 
 // src/game/Classmates.ts
-import { Asset as Asset5, BoundingBox as BoundingBox12, Entity as Entity27, Quat as Quat4, Texture as Texture3, StandardMaterial as StandardMaterial5, CULLFACE_NONE as CULLFACE_NONE2 } from "playcanvas";
+import { Asset as Asset6, BoundingBox as BoundingBox13, Entity as Entity28, Quat as Quat4, Texture as Texture3, StandardMaterial as StandardMaterial6, CULLFACE_NONE as CULLFACE_NONE3 } from "playcanvas";
 function classroomSign(app, parent, name, text, position, width = 1, height = 0.26, color = "#5c496e") {
   const canvas = document.createElement("canvas");
   canvas.width = 768;
   canvas.height = 256;
   const texture = new Texture3(app.graphicsDevice, { mipmaps: false });
   texture.setSource(canvas);
-  const material2 = new StandardMaterial5();
+  const material2 = new StandardMaterial6();
   material2.diffuseMap = texture;
   material2.emissiveMap = texture;
   material2.emissive.set(0.45, 0.45, 0.45);
-  material2.cull = CULLFACE_NONE2;
+  material2.cull = CULLFACE_NONE3;
   material2.update();
-  const sign = new Entity27(name, app);
+  const sign = new Entity28(name, app);
   parent.addChild(sign);
   sign.addComponent("render", { type: "plane", material: material2, castShadows: false });
   sign.setLocalPosition(...position);
@@ -6850,15 +6951,15 @@ function classroomSign(app, parent, name, text, position, width = 1, height = 0.
   return paint;
 }
 var Classmates = class {
-  constructor(app, parent) {
+  constructor(app, parent, placements, showNames = true) {
     this.app = app;
     const names = ["character-male-a", "character-female-b", "character-female-f"];
     this.ready = Promise.all(TRADERS.map(async (t, i) => {
-      const x = (i - 1) * 1.75;
-      this.signs[i] = classroomSign(app, parent, t.name + " nameplate", t.name + "\n" + t.title, [x, 0.87, 0.47], 1.35, 0.3, t.color);
+      const x = placements?.[i].x ?? (i - 1) * 1.75, z = placements?.[i].z ?? -0.74;
+      if (showNames) this.signs[i] = classroomSign(app, parent, t.name + " nameplate", t.name + "\n" + t.title, [x, 0.92, z + 1.12], 1, 0.24, t.color);
       try {
         const path = "/assets/characters/classmates/" + names[i] + ".glb";
-        const asset = new Asset5(t.name + " classmate", "container", { url: assetUrl(path) }, {}, containerOptions(path));
+        const asset = new Asset6(t.name + " classmate", "container", { url: assetUrl(path) }, {}, containerOptions(path));
         await new Promise((resolve, reject) => {
           asset.once("load", resolve);
           asset.once("error", reject);
@@ -6866,7 +6967,7 @@ var Classmates = class {
           app.assets.load(asset);
         });
         const resource = asset.resource, model = resource.instantiateRenderEntity({ castShadows: true });
-        const bounds = new BoundingBox12();
+        const bounds = new BoundingBox13();
         let first = true;
         for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
           if (first) {
@@ -6882,7 +6983,7 @@ var Classmates = class {
         }
         parent.addChild(model);
         model.setLocalScale(scale, scale, scale);
-        model.setLocalPosition(x, 0.45 - 0.02625 * scale, -0.74);
+        model.setLocalPosition(x, 0.45 - 0.02625 * scale, z);
         const head = model.findByName("head"), arm = model.findByName("arm-right");
         this.actors.push({ model, head, arm, headRest: head.getLocalRotation().clone(), armRest: arm.getLocalRotation().clone(), id: t.id, hello: -10, near: false });
         this.loaded++;
@@ -6929,84 +7030,92 @@ var Classmates = class {
   }
 };
 
+// public/assets/school-kit/classroom-collision.json
+var classroom_collision_default = [{ center: [-6.05, 0, 0], half: [0.05, 1, 7] }, { center: [6.05, 0, 0], half: [0.05, 1, 7] }, { center: [-1.12, 0, -7], half: [4.88, 1, 0.1] }, { center: [5.74, 0, -7], half: [0.26, 1, 0.1] }, { center: [-4.9, 0, -6.3], half: [0.665, 1, 0.3] }, { center: [-0.3, 0, -5.12], half: [1.55, 1, 0.9] }, { center: [3.1, 0, -6.28], half: [0.36, 1, 0.36] }, { center: [-3.1, 0, -1.75], half: [1.075, 1, 1.075] }, { center: [2.65, 0, -1.75], half: [1.075, 1, 1.075] }, { center: [0, 0, 1.5], half: [1.075, 1, 1.075] }, { center: [-3.2, 0, 2.5], half: [1.075, 1, 1.075] }, { center: [-5.42, 0, -3.5], half: [0.38999999999999996, 1, 0.3] }, { center: [-5.42, 0, 0], half: [0.38999999999999996, 1, 0.3] }, { center: [-5.42, 0, 3.7], half: [0.38999999999999996, 1, 0.3] }, { center: [-2.75, 0, 5.2], half: [0.525, 1, 0.5] }, { center: [3.02, 0, 4.4], half: [1.675, 1, 0.515] }, { center: [5.28, 0, 6.18], half: [0.35, 1, 0.35] }, { center: [-5.3, 0, 6.18], half: [0.35, 1, 0.35] }, { center: [5.37, 0, 0.78], half: [0.38999999999999996, 1, 0.3] }, { center: [-3.77, 0, -5.26], half: [0.375, 1, 0.285] }];
+
+// public/assets/school-kit/cafeteria-collision.json
+var cafeteria_collision_default = [{ center: [-6.05, 0, 0], half: [0.05, 1, 7] }, { center: [6.05, 0, 0], half: [0.05, 1, 7] }, { center: [-1.12, 0, -7], half: [4.88, 1, 0.1] }, { center: [5.74, 0, -7], half: [0.26, 1, 0.1] }, { center: [4.6, 0, -7], half: [0.825, 1, 0.1] }, { center: [0, 0, -5.6], half: [3.825, 1, 0.9] }, { center: [-4.82, 0, -6.2], half: [0.6, 1, 0.475] }, { center: [-5.35, 0, -4.15], half: [0.34, 1, 0.34] }, { center: [-5.35, 0, 5.8], half: [0.34, 1, 0.34] }, { center: [5.2, 0, 5.02], half: [0.34, 1, 0.34] }, { center: [-3, 0, -1.5], half: [1.675, 1, 1.4] }, { center: [2.55, 0, -1.5], half: [1.675, 1, 1.4] }, { center: [-3, 0, 3.1], half: [1.675, 1, 1.4] }, { center: [2.55, 0, 3.1], half: [1.675, 1, 1.4] }, { center: [5.1, 0, 6], half: [0.75, 1, 0.375] }, { center: [-5.46, 0, -1.5], half: [0.35, 1, 0.7] }, { center: [-5.46, 0, 0.5], half: [0.35, 1, 0.7] }, { center: [-5.46, 0, 2.5], half: [0.35, 1, 0.7] }];
+
 // src/game/recess.ts
 function createRecess(app) {
-  const root = new Entity28("Classroom trading club", app);
+  const root = new Entity29("Classroom trading club", app);
   app.root.addChild(root);
-  const surfaces = new SurfaceTextures(app), art = new HouseArt(app, root, surfaces), shape = primitives(app, root);
-  const floor = material("Classroom pale blue terrazzo", "#cbdfe0");
-  surfaces.apply(floor, "terrazzo", 10);
-  shape("Classroom floor", "box", [0, -0.06, 0], [8, 0.12, 11], floor);
-  const wall = material("Classroom warm ivory", "#f4ebce"), rail = material("Classroom teal", "#70a9a5");
-  shape("Classroom back wall", "box", [0, 1.55, -5.2], [8, 3.1, 0.16], wall);
-  shape("Classroom side wall", "box", [-4, 1.55, 0], [0.16, 3.1, 10.5], wall);
-  shape("Classroom wall rail", "box", [0, 0.6, -5.08], [8, 0.12, 0.08], rail);
-  art.add("school", "blackboard", [0.1, 1.05, -4.95], 3.2, 0, "width");
-  art.add("school", "bulletin-board", [-3.85, 1.25, -2.8], 1.5, 90, "width");
-  const schoolColors = { wood: "#89b8b2", woodDark: "#49797e", carpet: "#e5b45f", metal: "#556c79" };
-  art.add("furniture", "desk", [1.5, 0.02, -3.9], 0.88, 180, "height", schoolColors, false, 0, "paint");
-  art.add("furniture", "chairDesk", [1.5, 0, -4.65], 0.95, 0, "height", schoolColors, false, 0, "paint");
-  art.add("furniture", "books", [1.5, 0.91, -3.9], 0.22);
-  art.add("furniture", "bookcaseOpen", [-3.35, 0.02, -4.2], 1.7, 90, "height", schoolColors, false, 0, "paint");
-  art.add("furniture", "books", [-3.25, 0.8, -4.2], 0.25);
-  art.add("furniture", "coatRackStanding", [-3.3, 0, 2.6], 1.5, 0, "height", schoolColors, false, 0, "paint");
-  art.add("furniture", "trashcan", [3.3, 0, -4.6], 0.55, 0, "height", { metal: "#679899" });
-  art.add("furniture", "pottedPlant", [3.3, 0, -2.8], 0.9);
-  const offers = new Entity28("Squishies on the table", app);
-  root.addChild(offers);
-  const seats = TRADERS.map((trader, i) => {
-    const x = (i - 1) * 1.75;
-    art.add("furniture", "desk", [x, 0, 0], 0.78, 0, "height", schoolColors, false, 0, "paint");
-    art.add("furniture", "chairDesk", [x, 0, -0.75], 0.78, 180, "height", { ...schoolColors, carpet: trader.color }, false, 0, "paint");
-    art.add("furniture", "books", [x - 0.35, 0.8, -0.1], 0.14);
-    const glow = shape("Trading spot", "cylinder", [x, 0.012, 1.5], [0.85, 0.025, 0.85], material(trader.name + " cue", trader.color), false);
-    return { id: trader.id, anchor: new Vec326(x, 0, 1.5), glow };
-  });
-  const classmates = new Classmates(app, root);
-  classroomSign(app, root, "Class kindness poster", "BE KIND\nSHARE A SMILE", [-2.35, 2.15, -5.05], 1.55, 0.65, "#518d89");
-  classroomSign(app, root, "Trading club board", "TRADING CLUB\nBring extras. Make friends.", [0.2, 2.25, -4.91], 2.75, 0.7, "#496d61");
-  const clock = shape("Classroom clock", "cylinder", [2.8, 2.5, -5.02], [0.52, 0.035, 0.52], wall);
-  clock.setLocalEulerAngles(90, 0, 0);
-  shape("Clock minute hand", "box", [2.8, 2.58, -4.99], [0.025, 0.2, 0.025], rail);
-  shape("Clock hour hand", "box", [2.86, 2.5, -4.98], [0.15, 0.025, 0.025], rail);
-  art.add("furniture", "benchCushion", [-3, 0, 3.6], 0.7, 90, "height", schoolColors, false, 0, "paint");
-  const room = {
-    root,
-    halfWidth: 3.6,
-    halfDepth: 4.7,
-    walkable: [{ minX: -3.6, maxX: 3.6, minZ: -2.3, maxZ: 5 }],
-    obstacles: [new BoundingBox13(new Vec326(0, 0, -0.3), new Vec326(2.6, 1, 1.25)), new BoundingBox13(new Vec326(-3, 0, 3.6), new Vec326(0.45, 1, 0.8))],
-    ready: Promise.all([art.finish(), classmates.ready]).then(() => {
-    }),
-    artStats: () => ({ ...art.snapshot(), classmates: classmates.snapshot() })
+  const classroom = new Entity29("Reference classroom", app), cafeteria = new Entity29("Reference cafeteria", app);
+  root.addChild(classroom);
+  root.addChild(cafeteria);
+  cafeteria.setLocalPosition(4.6, 0, -16);
+  const errors = [];
+  const cream = material("School corridor plaster", "#f6ebd4"), floor = material("School corridor tile", "#e8dfce");
+  const corridor = new Entity29("School connecting doorway", app);
+  root.addChild(corridor);
+  const hall = primitives(app, corridor);
+  hall("Walkable door threshold", "box", [4.6, -0.055, -8], [1.8, 0.11, 2.1], floor, false);
+  for (const x of [3.65, 5.55]) hall("Corridor side", "box", [x, 1.3, -8], [0.1, 2.6, 2.1], cream);
+  let loaded2 = 0;
+  const load = async (name, parent) => {
+    try {
+      const a = new Asset7("School " + name, "container", { url: assetUrl(`/assets/school-kit/${name}.glb`) });
+      app.assets.add(a);
+      await new Promise((resolve, reject) => {
+        a.once("load", resolve);
+        a.once("error", reject);
+        app.assets.load(a);
+      });
+      const model = a.resource.instantiateRenderEntity({ castShadows: true });
+      parent.addChild(model);
+      loaded2++;
+    } catch (e) {
+      errors.push(name);
+      console.error("School art failed", name, e);
+    }
   };
+  const desks = [{ x: -3.1, z: -1.75 }, { x: 2.65, z: -1.75 }, { x: 0, z: 1.5 }];
+  const classmates = new Classmates(app, classroom, desks.map((p) => ({ x: p.x - 0.51, z: p.z - 0.8 })));
+  const lunchFriends = new Classmates(app, cafeteria, [{ x: -4.15, z: -2.58 }, { x: -1.85, z: -2.58 }, { x: 2.55, z: -2.58 }], false);
+  const offers = new Entity29("Today\u2019s trading squishies", app);
+  classroom.addChild(offers);
+  const display = new Entity29("Squishy friends display", app);
+  classroom.addChild(display);
+  for (const [i, id] of ["bunny", "rosie", "mochi", "panda", "lavendream"].entries()) {
+    const model = createDumpling(app, display, definition(id));
+    model.setLocalScale(0.27, 0.27, 0.27);
+    model.setLocalPosition(1.82 + i * 0.49, 0.855, 4.55);
+  }
+  const seats = TRADERS.map((trader, i) => {
+    const d = desks[i], anchor = new Vec326(d.x, 0, d.z + 1.55);
+    const glow = primitives(app, classroom)("Trading spot", "cylinder", [anchor.x, 0.016, anchor.z], [0.82, 0.022, 0.82], material(trader.name + " cue", trader.color), false);
+    return { id: trader.id, anchor, glow };
+  });
+  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox14(new Vec326(...b.center), new Vec326(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox14(new Vec326(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec326(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox14(new Vec326(x, 0, -8), new Vec326(0.05, 1, 1.05)))];
+  const room = { root, halfWidth: 12, halfDepth: 24, walkable: [{ minX: -5.9, maxX: 5.9, minZ: -6.96, maxZ: 6.9 }, { minX: 3.7, maxX: 5.5, minZ: -9.2, maxZ: -6.7 }, { minX: -1.3, maxX: 10.5, minZ: -22.9, maxZ: -9 }], obstacles, ready: Promise.all([load("classroom", classroom), load("cafeteria", cafeteria), classmates.ready, lunchFriends.ready, schoolCook(app, cafeteria).catch((e) => {
+    errors.push("School cook");
+    console.error(e);
+  })]).then(() => {
+  }), artStats: () => ({ loaded: loaded2, models: 2, errors: [...errors, ...classmates.errors, ...lunchFriends.errors], classmates: classmates.snapshot(), cafeteria: lunchFriends.snapshot() }) };
+  let area = "Classroom";
   root.enabled = false;
   const sync = (day) => {
     classmates.sync(day);
     for (const child of [...offers.children]) child.destroy();
-    TRADERS.forEach((trader, i) => {
-      if (day.traders[trader.id].done) return;
-      day.traders[trader.id].offer.forEach((id, j) => {
+    TRADERS.forEach((t, i) => {
+      if (day.traders[t.id].done) return;
+      day.traders[t.id].offer.forEach((id, j) => {
         const model = createDumpling(app, offers, definition(id));
-        model.setLocalScale(0.3, 0.3, 0.3);
-        model.setLocalPosition((i - 1) * 1.75 + (j - 1) * 0.36, 0.8, 0.15);
+        model.setLocalScale(0.22, 0.22, 0.22);
+        model.setLocalPosition(desks[i].x + (j - 1) * 0.4, 0.875, desks[i].z + 0.12);
       });
     });
   };
-  const bindLayout = (group) => {
-    classmates.attachLayout(group);
-    offers.reparent(group);
-    offers.setLocalPosition(0, 0, 0.3);
-    for (const seat of seats) {
-      const p = seat.glow.getLocalPosition().clone();
-      seat.glow.reparent(group);
-      seat.glow.setLocalPosition(p.x, p.y, p.z + 0.3);
-      const anchor = app.root.findByTag("trading-anchor:" + seat.id)[0];
-      if (anchor) seat.anchor.copy(anchor.getPosition());
-      else group.getWorldTransform().transformPoint(seat.anchor.clone().add(new Vec326(0, 0, 0.3)), seat.anchor);
-    }
-  };
-  return { ...room, seats, sync, bindLayout, update: (dt, focus) => classmates.update(dt, focus) };
+  return { ...room, usesReferenceLayout: true, seats, sync, bindLayout: (_group) => {
+  }, get area() {
+    return area;
+  }, update: (now, focus, p) => {
+    area = p.z < -8 ? "Cafeteria" : "Classroom";
+    classroom.enabled = p.z > -9.2;
+    cafeteria.enabled = p.z < -5.8;
+    classmates.update(now, focus);
+    lunchFriends.update(now, "");
+  }, door: new Vec326(4.6, 0, -8), cafeteriaCenter: new Vec326(4.6, 0, -15) };
 }
 
 // src/ui/SquishyPopUI.ts
@@ -8392,7 +8501,7 @@ var GameLoop = class {
     this.joystick.reset();
     this.controller.reset();
     this.opening.hide();
-    this.room.root.enabled = mode === "cleanup" || mode === "home";
+    this.room.root.enabled = mode === "cleanup";
     this.props.root.enabled = mode === "cleanup";
     this.recess.root.enabled = mode === "recess";
     this.tradingUI.leave.hidden = mode !== "recess";
@@ -8403,7 +8512,7 @@ var GameLoop = class {
     this.findCopy = "";
     this.inspecting = null;
     el("#move-tip").hidden = false;
-    this.character.player.enabled = true;
+    this.character.player.enabled = mode !== "home";
     el("#player-label").hidden = mode === "home";
     el("#store-markers").hidden = mode !== "store";
     el("#game").dataset.scene = mode;
@@ -8467,7 +8576,7 @@ var GameLoop = class {
   }
   enterHome() {
     this.transition("home");
-    el("#scene-kicker").textContent = "BACK IN YOUR COZY ROOM";
+    el("#scene-kicker").textContent = "A LITTLE SURPRISE";
     el("h1").textContent = "Hello, little surprise.";
     el("#scene-subtitle").textContent = `${this.save.data.boxes.length} unopened ${this.save.data.boxes.length === 1 ? "basket" : "baskets"}`;
     this.opening.show(this.save.data.reveal);
@@ -8650,7 +8759,7 @@ var GameLoop = class {
       el("#mission-clock").hidden = this.mode === "store";
       el("#mission-clock").textContent = clock.label;
     }
-    if (this.mode === "recess") el("#day-label").textContent = `Day ${clock.state.day} \xB7 Classroom`;
+    if (this.mode === "recess") el("#day-label").textContent = `Day ${clock.state.day} \xB7 ${this.recess.area}`;
     const running = this.mode === "cleanup" && this.cleanup.mission.state === "running" && this.cleanup.mission.timed;
     for (const mode of ["day", "house", "bedroom", "pet", "practice"]) {
       const button3 = el(`#mission-${mode}`);
@@ -8675,10 +8784,12 @@ var GameLoop = class {
       const p = this.character.player.getPosition();
       const seat = this.recess.seats.filter((s) => p.distance(s.anchor) < 1.05).sort((a, b) => p.distance(a.anchor) - p.distance(b.anchor))[0];
       this.focus = seat?.id ?? "";
-      this.recess.update(now, this.focus);
+      this.recess.update(now, this.focus, p);
+      el("h1").textContent = this.recess.area;
+      el("#scene-kicker").textContent = this.recess.area === "Cafeteria" ? "GOOD FOOD \xB7 BRIGHT DAYS" : "CLASSROOM \xB7 TRADING CLUB";
       this.recess.seats.forEach((s) => s.glow.enabled = s === seat);
       const trader = TRADERS.find((t) => t.id === seat?.id);
-      el("#cleanup-hint").textContent = "Walk to a classmate\u2019s desk. Bring extras and find a new friend.";
+      el("#cleanup-hint").textContent = this.recess.area === "Cafeteria" ? "Good food, bright days. Walk through the front doorway to return to class." : "Trade at a classmate\u2019s desk, or walk through the back door to the cafeteria.";
       if (trader) {
         title = "Trade with " + trader.name;
         detail = trader.title;
@@ -8944,7 +9055,7 @@ var GameLoop = class {
       pop: this.popUI.snapshot(),
       popSave: this.save.data.pop,
       trading: this.save.data.trading,
-      recess: this.mode === "recess" ? { seats: this.recess.seats.map((s) => ({ id: s.id, position: s.anchor.toArray() })), art: this.recess.artStats?.() } : null,
+      recess: this.mode === "recess" ? { area: this.recess.area, door: this.recess.door.toArray(), cafeteriaCenter: this.recess.cafeteriaCenter.toArray(), walkable: this.recess.walkable, obstacles: this.recess.obstacles.map((b) => ({ center: b.center.toArray(), halfExtents: b.halfExtents.toArray() })), seats: this.recess.seats.map((s) => ({ id: s.id, position: s.anchor.toArray() })), art: this.recess.artStats?.() } : null,
       hunt: this.save.data.hunt,
       store: this.mode === "store" ? { id: this.activeStoreId, sites: this.store.sites.map((s) => ({ id: s.id, position: s.anchor.toArray() })), exit: this.store.exitAnchor.toArray(), walkable: this.store.walkable, obstacles: this.store.obstacles.map((b) => ({ center: b.center.toArray(), halfExtents: b.halfExtents.toArray() })), art: this.store.artStats?.() } : null
     };
@@ -9001,22 +9112,22 @@ var HouseNavigation = class {
 };
 
 // src/game/Lilah.ts
-import { Asset as Asset6, BoundingBox as BoundingBox14, Entity as Entity29, Vec3 as Vec329 } from "playcanvas";
+import { Asset as Asset8, BoundingBox as BoundingBox15, Entity as Entity30, Vec3 as Vec329 } from "playcanvas";
 var Lilah = class {
   constructor(app, house, daily) {
     this.app = app;
     this.house = house;
     this.daily = daily;
-    this.root = new Entity29("Lilah \xB7 age 2", app);
+    this.root = new Entity30("Lilah \xB7 age 2", app);
     app.root.addChild(this.root);
     this.root.setPosition(1, 0.09, 0.7);
-    this.visual = new Entity29("Lilah visual", app);
+    this.visual = new Entity30("Lilah visual", app);
     this.root.addChild(this.visual);
-    const placeholder = new Entity29("Lilah loading", app);
+    const placeholder = new Entity30("Lilah loading", app);
     this.visual.addChild(placeholder);
     this.animator = new CharacterAnimator(this.visual, placeholder);
     this.planner = new HousePath(house);
-    this.socket = new Entity29("Lilah toy grip", app);
+    this.socket = new Entity30("Lilah toy grip", app);
     this.visual.addChild(this.socket);
     this.animator.bindCarrySocket(this.socket);
     this.toy = primitives(app, this.socket)("Favorite block", "box", [0, 0, 0], [0.13, 0.13, 0.13], material("Lilah favorite block", "#edb867"));
@@ -9124,7 +9235,7 @@ var Lilah = class {
       if (separation < 0.43 && separation <= previousSeparation) {
         job.blocked += dt;
         if (job.blocked > 0.45) {
-          const obstacle = new BoundingBox14(new Vec329(arianna.x, 0, arianna.z), new Vec329(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec329(p.x, 0, p.z);
+          const obstacle = new BoundingBox15(new Vec329(arianna.x, 0, arianna.z), new Vec329(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec329(p.x, 0, p.z);
           let path = planner.route(start, job.point);
           if (!path.length) {
             for (let i = 0; i < 16; i++) {
@@ -9170,7 +9281,7 @@ var Lilah = class {
   async load() {
     const config = await (await fetch(assetUrl(`${"/"}assets/characters/arianna/character.json`))).json();
     this.height = config.height * 0.625;
-    const asset = new Asset6("Lilah Meshy review", "container", { url: assetUrl(`${"/"}assets/characters/lilah/lilah.glb`) });
+    const asset = new Asset8("Lilah Meshy review", "container", { url: assetUrl(`${"/"}assets/characters/lilah/lilah.glb`) });
     await new Promise((resolve, reject) => {
       asset.once("load", resolve);
       asset.once("error", reject);
@@ -9190,7 +9301,7 @@ var Lilah = class {
       walk_playback: 1
     };
     for (const required of ["Idle", "Walk", "CarryIdle", "CarryWalk", "PickUp", "PutDown", "Celebrate"]) if (!tracks2.some((t) => t.name === required)) throw new Error("Missing Lilah clip " + required);
-    const alignment = new Entity29("Lilah ground alignment", this.app);
+    const alignment = new Entity30("Lilah ground alignment", this.app);
     this.visual.addChild(alignment);
     alignment.addChild(model);
     model.setLocalScale(this.height / 1.03, this.height / 1.03, this.height / 1.03);
@@ -9378,7 +9489,7 @@ var Lilah = class {
 };
 
 // src/game/LilahTornado.ts
-import { Entity as Entity30, Vec3 as Vec330 } from "playcanvas";
+import { Entity as Entity31, Vec3 as Vec330 } from "playcanvas";
 
 // src/systems/TornadoRules.ts
 var TORNADO_SECONDS = 55;
@@ -9625,7 +9736,7 @@ var LilahTornado = class {
   }
   spawn(point, type, special) {
     if (this.messes.length >= 3) return;
-    const root = new Entity30("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
+    const root = new Entity31("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
     this.props.root.addChild(root);
     root.setPosition(point.x, 0.06, point.z);
     const shape = primitives(this.app, root), n = special === "basket" ? 12 : type === 3 ? 5 : 6;
@@ -9847,7 +9958,7 @@ var LilahTornado = class {
 };
 
 // src/game/FamilyDinner.ts
-import { Asset as Asset7, BoundingBox as BoundingBox15, Entity as Entity31, Vec3 as Vec331 } from "playcanvas";
+import { Asset as Asset9, BoundingBox as BoundingBox16, Entity as Entity32, Vec3 as Vec331 } from "playcanvas";
 var FamilyDinner = class {
   constructor(app, house, daily, root, visual, animator, say) {
     this.app = app;
@@ -9858,22 +9969,22 @@ var FamilyDinner = class {
     this.animator = animator;
     this.say = say;
     this.planner = new HousePath(house, 0.25);
-    this.socket = new Entity31("Dad serving hands", app);
+    this.socket = new Entity32("Dad serving hands", app);
     visual.addChild(this.socket);
     animator.bindCarrySocket(this.socket);
-    this.tray = new Entity31("Family dinner", app);
+    this.tray = new Entity32("Family dinner", app);
     house.root.addChild(this.tray);
     this.tray.enabled = false;
     primitives(app, this.tray)("Dinner platter", "cylinder", [0, 0, 0], [0.72, 0.025, 0.58], material("Dinner china", "#fff2d9"), false);
     void Promise.all(["pizza", "taco", "turkey"].map(async (name) => {
-      const a = new Asset7("Family " + name, "container", { url: assetUrl(`/assets/food/${name}.glb`) });
+      const a = new Asset9("Family " + name, "container", { url: assetUrl(`/assets/food/${name}.glb`) });
       app.assets.add(a);
       await new Promise((resolve, reject) => {
         a.once("load", resolve);
         a.once("error", reject);
         app.assets.load(a);
       });
-      const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox15();
+      const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox16();
       let first = true;
       for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
         if (first) {
@@ -10064,7 +10175,7 @@ var FamilyDinner = class {
 };
 
 // src/game/Marc.ts
-import { Asset as Asset8, AnimData as AnimData4, AnimTrack as AnimTrack4, Entity as Entity32, Quat as Quat5, Vec3 as Vec332 } from "playcanvas";
+import { Asset as Asset10, AnimData as AnimData4, AnimTrack as AnimTrack4, Entity as Entity33, Quat as Quat5, Vec3 as Vec332 } from "playcanvas";
 var SEAT = new Vec332(4.5, 0, 7.35);
 var YAW = -35;
 var FORWARD = new Vec332(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
@@ -10077,12 +10188,12 @@ var Marc = class {
     this.app = app;
     this.house = house;
     this.daily = daily;
-    this.root = new Entity32("Marc", app);
+    this.root = new Entity33("Marc", app);
     app.root.addChild(this.root);
     this.root.setPosition(3.5, 0.09, 6.2);
-    this.visual = new Entity32("Marc visual", app);
+    this.visual = new Entity33("Marc visual", app);
     this.root.addChild(this.visual);
-    const placeholder = new Entity32("Marc loading", app);
+    const placeholder = new Entity33("Marc loading", app);
     this.visual.addChild(placeholder);
     this.animator = new CharacterAnimator(this.visual, placeholder);
     this.planner = new HousePath(house, 0.25);
@@ -10093,7 +10204,7 @@ var Marc = class {
     document.querySelector("#game").append(this.label);
     const colors = ["#cda678", "#c5d9dd", "#b8c39d"];
     for (let i = 0; i < 3; i++) {
-      const tool = new Entity32(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
+      const tool = new Entity33(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
       this.root.addChild(tool);
       const shape = primitives(app, tool);
       shape("Dad cleanup tool", "box", [0, 0, 0], i === 0 ? [0.25, 0.16, 0.23] : i === 1 ? [0.3, 0.025, 0.23] : [0.3, 0.07, 0.13], material("Dad tool " + i, colors[i]));
@@ -10140,7 +10251,7 @@ var Marc = class {
   async load() {
     const config = await (await fetch(assetUrl(`${"/"}assets/characters/arianna/character.json`))).json();
     this.height = config.height * 1.3;
-    const asset = new Asset8("Marc animation v2", "container", { url: assetUrl(`${"/"}assets/characters/marc/marc.glb`) });
+    const asset = new Asset10("Marc animation v2", "container", { url: assetUrl(`${"/"}assets/characters/marc/marc.glb`) });
     await new Promise((resolve, reject) => {
       asset.once("load", resolve);
       asset.once("error", reject);
@@ -10175,7 +10286,7 @@ var Marc = class {
     }
     tracks2.push(new AnimTrack4("Cleaning", idle.duration, idle.inputs, outputs, idle.curves));
     const manifest = { animations: tracks2.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: !["SitDown", "StandUp"].includes(t.name) })), locomotion: { Walk: { travel_speed_mps: 1.2 }, CarryWalk: { travel_speed_mps: 1.05 } }, interaction_events: {}, scale: { rest_height_m: 1.8 }, hand_joints: ["LeftHand", "RightHand"], walk_playback: 1 };
-    const alignment = new Entity32("Marc ground alignment", this.app);
+    const alignment = new Entity33("Marc ground alignment", this.app);
     this.visual.addChild(alignment);
     alignment.addChild(model);
     model.setLocalScale(this.height / 1.8, this.height / 1.8, this.height / 1.8);
@@ -10398,7 +10509,7 @@ async function startGame(editorApp) {
   await loadSquishyArt(app);
   const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color10(0.72, 0.68, 0.77);
   app.scene.ambientLight = ambientBase.clone();
-  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity33("Soft afternoon sunlight", app);
+  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity34("Soft afternoon sunlight", app);
   if (!sun.light) sun.addComponent("light", {
     type: "directional",
     color: new Color10(1, 0.92, 0.83),
@@ -10490,6 +10601,10 @@ async function startGame(editorApp) {
   if (editorApp && loop.mode === "store") {
     character.player.setPosition(loop.store.exitAnchor.x, 0.09, loop.store.exitAnchor.z - 0.4);
     camera.reset();
+  }
+  if (SCHOOL_REVIEW) {
+    loop.developerCommand("recess");
+    if (new URLSearchParams(location.search).get("room") === "cafeteria") character.player.setPosition(4.6, 0.09, -14.8);
   }
   if (!editorApp) app.start();
   document.querySelector("#loading").remove();

@@ -1,4 +1,4 @@
-import { Entity,Color,Vec3,TONEMAP_ACES, type Application, type RenderComponent } from 'playcanvas';
+import { Entity,Color,Vec3,StandardMaterial,CULLFACE_NONE,TONEMAP_ACES, type Application, type Texture, type RenderComponent } from 'playcanvas';
 import { DUMPLINGS, type Rarity } from '../data/collection';
 import { SERIES } from '../data/hunt';
 import { SQUISHY_PRESENTATION, REVEAL_POP_TIME, revealDuration } from '../data/squishyPresentation';
@@ -9,6 +9,7 @@ import {material,primitives} from './primitives';
 import {animateSquishy} from './SquishyArt';
 import {squishyOpeningPose} from './SquishyMotion';
 import { SquishyRevealVfx } from './SquishyRevealVfx';
+import { assetUrl } from '../editor/AssetUrls';
 import { SquishyRevealAudio } from './SquishyRevealAudio';
 
 /** Presentation only: the receipt is committed before this animation starts. */
@@ -31,10 +32,21 @@ export class OpeningSequence {
   private rarity:Rarity='Common';
   private camera:Entity|null=null;
   private cameraHeight=1.5;
+  private readonly backdrop:Entity;
+  private readonly backdropMaterial=new StandardMaterial();
+  private backdropAspect=941/1672;
   private lidSounded=false;
   private sounded = false;
   readonly panel = document.querySelector<HTMLElement>('#reveal-copy')!;
   constructor(private readonly app: Application) {
+    this.backdrop=new Entity('Cozy bedroom opening artwork',app);
+    const bg=this.backdropMaterial;bg.useLighting=false;bg.diffuse.set(0,0,0);bg.emissive.set(1,1,1);bg.useTonemap=false;bg.cull=CULLFACE_NONE;bg.update();
+    this.backdrop.addComponent('render',{type:'plane',material:bg,castShadows:false,receiveShadows:false});
+    this.backdrop.enabled=false;
+    app.assets.loadFromUrl(assetUrl('assets/backgrounds/squishy-bedroom.png'),'texture',(err,asset)=>{
+      if(err||!asset)return;const texture=asset.resource as Texture;bg.emissiveMap=texture;bg.update();
+      this.backdropAspect=texture.width/texture.height;this.sizeBackdrop();
+    });
     this.root = new Entity('Home surprise presentation', app); app.root.addChild(this.root);
     this.root.setPosition(-.25, .60, 1.35); this.root.setEulerAngles(0, -10, 0);
     const stage=primitives(app,this.root),ivory=material('Reward porcelain','#f6e8d7');ivory.gloss=.35;ivory.update();
@@ -47,9 +59,10 @@ export class OpeningSequence {
     this.squishButton.onclick=()=>{if(this.phase==='revealed'){if(this.idle-this.squish<.95)return;this.squishStyle=((this.squishStyle+1+Math.floor(Math.random()*2))%3) as SquishStyle;this.squish=this.idle;this.audio.squish();}};
   }
   private studioMask(root:Entity){for(const r of root.findComponents('render') as RenderComponent[])for(const mesh of r.meshInstances)mesh.mask=16;}
-  frame(camera:Entity,width:number,height:number){const compact=height<=650;this.camera=camera;camera.camera!.toneMapping=TONEMAP_ACES;this.cameraHeight=Math.max(1.85,(compact?1.30:1.12)/(width/height));camera.camera!.orthoHeight=this.cameraHeight;camera.setPosition(-.25,2.35,6.9);camera.lookAt(new Vec3(-.25,compact?1.05:1.35,.4));}
+  private sizeBackdrop(){if(!this.camera?.camera)return;const h=this.cameraHeight*2,w=h*this.camera.camera.aspectRatio;const imageH=Math.max(h,w/this.backdropAspect);this.backdrop.setLocalScale(imageH*this.backdropAspect,1,imageH);}
+  frame(camera:Entity,width:number,height:number){const compact=height<=650;this.camera=camera;camera.camera!.toneMapping=TONEMAP_ACES;this.cameraHeight=Math.max(1.85,(compact?1.30:1.12)/(width/height));camera.camera!.orthoHeight=this.cameraHeight;camera.setPosition(-.25,2.35,6.9);camera.lookAt(new Vec3(-.25,compact?1.05:width>height?1.10:1.35,.4));if(this.backdrop.parent!==camera){this.backdrop.reparent(camera);this.backdrop.setLocalPosition(0,0,-35);this.backdrop.setLocalEulerAngles(90,0,0);}this.sizeBackdrop();}
   show(receipt: RevealReceipt | null) {
-    this.root.enabled = true; this.panel.hidden = false; this.model?.destroy(); this.model = null;
+    this.root.enabled = true;this.backdrop.enabled=true; this.panel.hidden = false; this.model?.destroy(); this.model = null;
     this.box.root.enabled = true; this.box.root.setLocalEulerAngles(0, 0, 0);
     this.box.root.setLocalScale(1, 1, 1); this.box.lid.setLocalEulerAngles(0, 0, 0);this.last=0;this.elapsed=0;this.idle=0;this.squish=-10;this.squishButton.hidden=true;
     this.phase = 'closed'; this.receipt = null; this.panel.replaceChildren(); this.panel.classList.remove('has-reveal');delete this.panel.dataset.rarity;this.vfx.hide();this.audio.stop();this.restoreCamera();this.light(0);
@@ -90,19 +103,19 @@ export class OpeningSequence {
     if (this.phase === 'opening') {
       if(this.reduced.matches){this.phase='revealed';this.reveal(false);this.vfx.update(4,true);this.restoreCamera();this.squishButton.hidden=false;return;}
       this.elapsed+=dt;const t=this.elapsed,s=SQUISHY_PRESENTATION[this.rarity],p=squishyOpeningPose(t,s.intensity);
-      this.box.root.setLocalEulerAngles(0,p.wiggle,0);this.box.lid.setLocalEulerAngles(p.lid,0,0);
-      if(t>.80)this.model!.enabled=true;
+      this.box.root.setLocalEulerAngles(0,p.wiggle,p.wiggle*.35);const tension=Math.sin(Math.min(1,t/.82)*Math.PI)*.055;this.box.root.setLocalScale(1+tension,1-tension,1+tension);this.box.lid.setLocalEulerAngles(p.lid,0,0);
+      if(t>.92)this.model!.enabled=true;
       this.model!.setLocalPosition(0,p.height,0);this.model!.setLocalScale(...p.scale);
-      if(t>.45&&!this.lidSounded){this.lidSounded=true;this.audio.lid();}
+      if(t>.82&&!this.lidSounded){this.lidSounded=true;this.audio.lid();}
       const sincePop=t-REVEAL_POP_TIME,emphasis=sincePop>=0?Math.sin(Math.min(1,sincePop/.65)*Math.PI):0;
       this.vfx.update(sincePop,false);this.light(emphasis);
       if(this.camera?.camera)this.camera.camera.orthoHeight=this.cameraHeight*(1-s.punch*emphasis);
-      if (t > REVEAL_POP_TIME && !this.sounded) { this.sounded = true; this.reveal(true); }
-      if (t > revealDuration(this.rarity)){this.phase = 'revealed';this.box.root.setLocalEulerAngles(0,0,0);this.restoreCamera();this.squishButton.hidden=false;}
+      if (t > REVEAL_POP_TIME && !this.sounded) { this.sounded = true;this.audio.celebrate(s.notes); }
+      if (t > revealDuration(this.rarity)){this.phase = 'revealed';this.reveal(false);this.box.root.setLocalScale(1,1,1);this.box.root.setLocalEulerAngles(0,0,0);this.restoreCamera();this.squishButton.hidden=false;}
     }
     if(this.phase==='revealed'&&this.model){this.idle+=dt;this.vfx.update(Math.max(4,this.elapsed-REVEAL_POP_TIME)+this.idle,this.reduced.matches);this.model.setLocalPosition(0,.34,0);animateSquishy(this.model,this.idle,this.reduced.matches?0:.010);const t=this.idle-this.squish;this.model.setLocalEulerAngles(0,0,0);if(t<.95&&!this.reduced.matches){const pose=squishPose(t,this.squishStyle);this.model.setLocalScale(...pose.scale);this.model.setLocalEulerAngles(0,0,pose.roll);}}
   }
   snapshot(){return {squishStyle:this.squishStyle,phase:this.phase,elapsed:this.elapsed,rarity:this.rarity,vfx:this.vfx.snapshot(),lidAngle:this.box.lid.getLocalEulerAngles().x,modelPosition:this.model?.getLocalPosition().toArray(),modelScale:this.model?.getLocalScale().toArray()};}
-  hide() { this.restoreCamera();this.vfx.hide();this.audio.stop();this.root.enabled = false; this.panel.hidden = true;this.squishButton.hidden=true; }
-  destroy() { this.squishButton.remove();this.vfx.destroy();this.root.destroy();this.audio.destroy(); }
+  hide() { this.restoreCamera();this.vfx.hide();this.audio.stop();this.root.enabled = false;this.backdrop.enabled=false; this.panel.hidden = true;this.squishButton.hidden=true; }
+  destroy() { this.backdrop.destroy();this.backdropMaterial.destroy();this.squishButton.remove();this.vfx.destroy();this.root.destroy();this.audio.destroy(); }
 }

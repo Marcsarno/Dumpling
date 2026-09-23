@@ -1,4 +1,5 @@
 import {performanceSettings} from './ui/PerformanceSettings';
+import {SCHOOL_REVIEW} from './systems/SaveNamespace';
 import {createAudioSettings} from './ui/AudioSettings';
 import {captureWorld} from './editor/LayoutBridge';
 import {DogRoaming} from './game/DogRoaming';
@@ -114,6 +115,10 @@ export async function startGame(editorApp?:Application) {
   if(editorApp&&loop.mode==='store'){
     character.player.setPosition(loop.store.exitAnchor.x,.09,loop.store.exitAnchor.z-.4);
     camera.reset();
+  }
+  if(SCHOOL_REVIEW){
+    loop.developerCommand('recess');
+    if(new URLSearchParams(location.search).get('room')==='cafeteria')character.player.setPosition(4.6,.09,-14.8);
   }
   if(!editorApp)app.start();
   document.querySelector('#loading')!.remove();

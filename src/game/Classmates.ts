@@ -16,10 +16,11 @@ export class Classmates {
  readonly ready:Promise<void>;readonly errors:string[]=[];loaded=0;private time=0;private last=0;
  private actors:{model:Entity;head:Entity;arm:Entity;headRest:Quat;armRest:Quat;id:string;hello:number;near:boolean}[]=[];
  private signs:((s:string)=>void)[]=[];
- constructor(private app:Application,parent:Entity){
+ constructor(private app:Application,parent:Entity,placements?:{x:number;z:number}[],showNames=true){
   const names=['character-male-a','character-female-b','character-female-f'];
   this.ready=Promise.all(TRADERS.map(async(t,i)=>{
-   const x=(i-1)*1.75;this.signs[i]=classroomSign(app,parent,t.name+' nameplate',t.name+'\n'+t.title,[x,.87,.47],1.35,.30,t.color);
+   const x=placements?.[i].x??(i-1)*1.75,z=placements?.[i].z??-.74;
+   if(showNames)this.signs[i]=classroomSign(app,parent,t.name+' nameplate',t.name+'\n'+t.title,[x,.92,z+1.12],1.0,.24,t.color);
    try{
     const path='/assets/characters/classmates/'+names[i]+'.glb';
     const asset=new Asset(t.name+' classmate','container',{url:assetUrl(path)},{},containerOptions(path));
@@ -28,7 +29,7 @@ export class Classmates {
     const bounds=new BoundingBox();let first=true;for(const r of model.findComponents('render'))for(const m of (r as RenderComponent).meshInstances){if(first){bounds.copy(m.aabb);first=false;}else bounds.add(m.aabb);}
     const scale=1.15/(2*bounds.halfExtents.y),sit=resource.animations.map(a=>a.resource as AnimTrack).find(a=>a.name==='sit')!;
     for(const curve of sit.curves)for(const path of curve.paths as unknown as {entityPath:string[];propertyPath:string[]}[]){const n=model.findByName(path.entityPath.at(-1)!)!,v=sit.outputs[curve.output].data;if(path.propertyPath[0]==='localRotation')n.setLocalRotation(v[0],v[1],v[2],v[3]);else if(path.propertyPath[0]==='localPosition')n.setLocalPosition(v[0],v[1],v[2]);}
-    parent.addChild(model);model.setLocalScale(scale,scale,scale);model.setLocalPosition(x,.45-.02625*scale,-.74);
+    parent.addChild(model);model.setLocalScale(scale,scale,scale);model.setLocalPosition(x,.45-.02625*scale,z);
     const head=model.findByName('head') as Entity,arm=model.findByName('arm-right') as Entity;
     this.actors.push({model,head,arm,headRest:head.getLocalRotation().clone(),armRest:arm.getLocalRotation().clone(),id:t.id,hello:-10,near:false});this.loaded++;
    }catch(e){this.errors.push(t.name);console.error('Classmate failed to load',e);}
