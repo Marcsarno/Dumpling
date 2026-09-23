@@ -1,3 +1,24 @@
+> September 22: user explicitly authorized commit, push, and public deployment of this audio, furniture, performance, bedtime, and family-routine release. Verify the resulting SHA at https://dumpling-sandy.vercel.app/release.json. Preview-only statements below are historical.
+
+# Latest follow-up: bedtime, quiet audio, and family routines
+
+Implemented in the local production preview at http://127.0.0.1:5191/dist/index.html and PlayCanvas. Not committed or deployed to Vercel. Preserve the existing uncommitted audio/furniture/texture work as well as this pass.
+
+- Footsteps removed from playback/loading. Five action recordings remain. Music mix reduced another 10%; new saves default to 50%, existing explicit slider choices retained.
+- Battery saver removed (UI, frame cap, lower shadow map and resolution). Texture reductions remain. Occluded/hidden scenes still stop rendering.
+- Sleep at night requires finished chores, not store visits. Stores close at 7 PM, including an afternoon held at 7 by incomplete chores. Early afternoon bedtime still requires chores and shopping.
+- Duplicate bookshelf was a stale PlayCanvas batch, not two intended shelves. LayoutBridge now regenerates explicit numeric batch IDs; cold load/reload checks count one shelf batch.
+- Dad fetches a CC0 Kenney dinner once/day after school, carries it to the table, sits briefly, and resumes his routine. Pizza/taco/roast turkey vary by day; saved dinner survives reload without another serving. Food assets total ~193 kB. Dog occasionally visits visible food; food disappears and remains empty until refill/new day. Eating does not complete the player's pet chore.
+- Opening redesign remains deferred.
+
+See FAMILY_POLISH.md for validation, current checkpoint, and asset IDs.
+
+---
+
+# Latest follow-up: audio, house details, mobile performance
+
+See AUDIO_MOBILE_POLISH.md. User authorized implementation. Local production preview (port 5191/dist/index.html) and PlayCanvas updated. Opening redesign remains deferred. Texture memory measured 439 → 88 MiB; battery saver was subsequently removed at the user’s request (see FAMILY_POLISH.md). New music/effects sliders, recorded foley, mirror/soap/chair/shelf fixes. This follow-up is not yet committed or deployed to Vercel; prior release below is historical. Preserve current changes.
+
 # September 21 release authorization
 
 Marc explicitly approved commit, push, and production deployment of the quality-of-life work and refined animal squishies. Release: Add daily-life improvements and refined animal squishies. This supersedes the preview-only status in the historical notes below. Verify the deployed commit at https://dumpling-sandy.vercel.app/release.json. Original arianna.* saves remain in use; Squishy Pop ticket competition is still deferred.

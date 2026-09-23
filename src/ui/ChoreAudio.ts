@@ -1,34 +1,44 @@
 import {saveKey} from '../systems/SaveNamespace';
+import {assetUrl} from '../editor/AssetUrls';
+import {audioLevel,onAudioChange} from './AudioSettings';
 
-/** Original synthesized household foley: no downloads, loops stop with the action. */
+/** Recorded CC0 foley. One action loop with cached decoded buffers. */
 export class ChoreAudio {
- private context?:AudioContext;private master?:GainNode;private source?:AudioBufferSourceNode;private hum?:OscillatorNode;
- private envelope?:GainNode;private kind='';private next=0;private muted=false;private abort=new AbortController();
- private button=document.createElement('button');
+ private context?:AudioContext;private master?:GainNode;private source?:AudioBufferSourceNode;
+ private kind='';private muted=false;private abort=new AbortController();private button=document.createElement('button');
+ private buffers=new Map<string,AudioBuffer>();private loading?:Promise<void>;private generation=0;
+ private voices=new Set<AudioBufferSourceNode>();private failures:string[]=[];
+ private unsubscribe=onAudioChange(()=>this.volume());
  constructor(){
   try{this.muted=localStorage.getItem(saveKey('house-effects.muted'))==='true';}catch{}
   this.button.id='house-effects';this.button.type='button';this.paint();document.querySelector('footer')!.prepend(this.button);
-  this.button.onclick=()=>{this.muted=!this.muted;try{localStorage.setItem(saveKey('house-effects.muted'),String(this.muted));}catch{}this.paint();if(this.master)this.master.gain.value=this.muted?0:.22;};
-  const unlock=()=>{this.context??=new AudioContext();if(!this.master){this.master=this.context.createGain();this.master.gain.value=this.muted?0:.22;this.master.connect(this.context.destination);}void this.context.resume().catch(()=>{});};
-  document.addEventListener('pointerdown',unlock,{signal:this.abort.signal});document.addEventListener('keydown',unlock,{signal:this.abort.signal});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)this.stop();},{signal:this.abort.signal});
+  this.button.onclick=()=>{this.muted=!this.muted;try{localStorage.setItem(saveKey('house-effects.muted'),String(this.muted));}catch{}this.paint();this.volume();};
+  const unlock=()=>{void this.unlock();};document.addEventListener('pointerdown',unlock,{signal:this.abort.signal});document.addEventListener('keydown',unlock,{signal:this.abort.signal});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)this.silence();},{signal:this.abort.signal});
+ }
+ private volume(){if(this.master)this.master.gain.value=this.muted?0:audioLevel('effects');}
+ private async unlock(){
+  this.context??=new AudioContext();if(!this.master){this.master=this.context.createGain();this.master.connect(this.context.destination);this.volume();}
+  await this.context.resume().catch(()=>{});
+  const names=['vacuum','munch','wipe','water','handle'];
+  this.loading??=Promise.all(names.map(async name=>{try{const response=await fetch(assetUrl(`/assets/audio/foley/${name}.mp3`));if(!response.ok)throw Error(name);this.buffers.set(name,await this.context!.decodeAudioData(await response.arrayBuffer()));}catch{this.failures.push(name);}})).then(()=>{});
+  await this.loading;
  }
  private paint(){this.button.textContent=this.muted?'◖ Off':'◖ Sounds';this.button.setAttribute('aria-label',this.muted?'Turn house sounds on':'Mute house sounds');this.button.setAttribute('aria-pressed',String(!this.muted));}
+ private play(name:string,volume:number,loop=false){
+  const ctx=this.context,buffer=this.buffers.get(name);if(!ctx||!buffer||!this.master||document.hidden||this.voices.size>=5)return;
+  const source=ctx.createBufferSource(),gain=ctx.createGain();source.buffer=buffer;source.loop=loop;gain.gain.value=volume;
+  source.connect(gain).connect(this.master);this.voices.add(source);source.onended=()=>{source.disconnect();gain.disconnect();this.voices.delete(source);};source.start();return source;
+ }
  start(id:string){
-  this.stop();const ctx=this.context;if(!ctx||!this.master||document.hidden)return;
-  this.kind=/vacuum|dirt|mess-2/.test(id)?'vacuum':/eat/.test(id)?'munch':/wipe|wash|teeth|mess-1/.test(id)?'swish':/sleep|lilah-bed/.test(id)?'soft':'touch';
-  const buffer=ctx.createBuffer(1,ctx.sampleRate,ctx.sampleRate),data=buffer.getChannelData(0);let smooth=0;
-  for(let i=0;i<data.length;i++){smooth=(smooth+(Math.random()*2-1)*.12)/1.12;data[i]=smooth;}
-  const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();source.buffer=buffer;source.loop=true;
-  filter.type='bandpass';filter.frequency.value=this.kind==='vacuum'?460:this.kind==='munch'?1350:2100;filter.Q.value=.65;
-  gain.gain.value=0;source.connect(filter).connect(gain).connect(this.master);source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start();this.source=source;this.envelope=gain;this.next=0;
-  if(this.kind==='vacuum'){gain.gain.setTargetAtTime(.65,ctx.currentTime,.1);const hum=ctx.createOscillator(),g=ctx.createGain();hum.type='triangle';hum.frequency.value=115;g.gain.value=.08;hum.connect(g).connect(this.master);hum.onended=()=>{hum.disconnect();g.disconnect();};hum.start();this.hum=hum;}
+  this.stop();const token=this.generation;
+  const kind=/vacuum|dirt|mess-2/.test(id)?'vacuum':/eat/.test(id)?'munch':/wipe|mess-1/.test(id)?'wipe':/wash|teeth/.test(id)?'water':/sleep|lilah-bed/.test(id)?'':'handle';
+  if(!kind)return;this.kind=kind;
+  void this.unlock().then(()=>{if(token!==this.generation||document.hidden)return;this.source=this.play(kind,kind==='vacuum'?.23:kind==='water'?.3:kind==='munch'?.5:.4,kind!=='handle');});
  }
- update(){const ctx=this.context,gain=this.envelope;if(!ctx||!gain||this.kind==='vacuum'||ctx.currentTime<this.next)return;
-  const t=ctx.currentTime,munch=this.kind==='munch',soft=this.kind==='soft';this.next=t+(munch?.36:this.kind==='swish'?.42:.65);
-  gain.gain.cancelScheduledValues(t);gain.gain.setValueAtTime(.001,t);gain.gain.linearRampToValueAtTime(soft?.12:munch?.7:.5,t+.04);gain.gain.exponentialRampToValueAtTime(.001,t+(munch?.17:.3));
- }
- stop(){this.source?.stop();this.hum?.stop();this.source=undefined;this.hum=undefined;this.envelope=undefined;this.kind='';}
- snapshot(){return{kind:this.kind,playing:!!this.source,muted:this.muted,state:this.context?.state};}
- destroy(){this.stop();this.abort.abort();this.button.remove();void this.context?.close();}
+ update(){}
+ stop(){this.generation++;this.source?.stop();this.source=undefined;this.kind='';}
+ silence(){this.stop();for(const voice of this.voices){try{voice.stop();}catch{}}}
+ snapshot(){return{kind:this.kind,playing:!!this.source,muted:this.muted,state:this.context?.state,decoded:this.buffers.size,failures:this.failures,steps:0};}
+ destroy(){this.silence();this.unsubscribe();this.abort.abort();this.button.remove();void this.context?.close();}
 }

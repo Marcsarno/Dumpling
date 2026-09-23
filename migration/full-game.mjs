@@ -39,6 +39,129 @@ var init_AssetUrls = __esm({
   }
 });
 
+// src/ui/PerformanceSettings.ts
+function performanceSettings(app, blocked) {
+  const details = document.createElement("details"), summary = document.createElement("summary"), readout = document.createElement("p");
+  summary.textContent = "Performance information";
+  details.append(summary, readout);
+  document.querySelector(".audio-settings").append(details);
+  let frames = 0, fps = 0, start = performance.now();
+  const counted = () => {
+    frames++;
+    const now = performance.now();
+    if (now - start >= 1e3) {
+      fps = Math.round(frames * 1e3 / (now - start));
+      frames = 0;
+      start = now;
+    }
+  };
+  app.on("postrender", counted);
+  const timer = setInterval(() => {
+    if (details.open) readout.textContent = `Last active render rate: ${fps} FPS \xB7 Textures: ${Math.round(app.stats.vram.tex / 1048576)} MiB. Rendering pauses behind menus.`;
+  }, 500);
+  const render = () => {
+    const paused = document.hidden || blocked() || !!document.querySelector("dialog[open]");
+    app.autoRender = !paused;
+    app.renderNextFrame = !paused;
+  };
+  app.on("framerender", render);
+  return () => {
+    clearInterval(timer);
+    app.off("postrender", counted);
+    app.off("framerender", render);
+    details.remove();
+    app.autoRender = true;
+  };
+}
+var init_PerformanceSettings = __esm({
+  "src/ui/PerformanceSettings.ts"() {
+    "use strict";
+  }
+});
+
+// src/systems/SaveNamespace.ts
+var SAVE_PREFIX, saveKey;
+var init_SaveNamespace = __esm({
+  "src/systems/SaveNamespace.ts"() {
+    "use strict";
+    SAVE_PREFIX = globalThis.__productionRelease ? "arianna" : "dumpling.editorMigration";
+    saveKey = (suffix) => `${SAVE_PREFIX}.${suffix}`;
+  }
+});
+
+// src/ui/AudioSettings.ts
+function audioLevel(channel) {
+  if (values[channel] === void 0) {
+    let value = channel === "music" ? 0.5 : 1;
+    try {
+      const saved = localStorage.getItem(saveKey("audio." + channel));
+      if (saved !== null && Number.isFinite(Number(saved))) value = Math.max(0, Math.min(1, Number(saved)));
+    } catch {
+    }
+    values[channel] = value;
+  }
+  return values[channel];
+}
+function onAudioChange(listener) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+function createAudioSettings() {
+  const button2 = document.createElement("button");
+  button2.id = "audio-settings";
+  button2.textContent = "\u266B Volume";
+  button2.type = "button";
+  const dialog = document.createElement("dialog");
+  dialog.className = "audio-settings";
+  dialog.setAttribute("aria-label", "Sound settings");
+  dialog.innerHTML = "<h2>Sound & performance</h2>" + ["music", "effects"].map((channel) => `<label>${channel === "music" ? "Music" : "Sound effects"} <output id="${channel}-level"></output><input type="range" min="0" max="100" step="1" data-channel="${channel}" aria-label="${channel === "music" ? "Music volume" : "Sound effects volume"}"></label>`).join("") + '<p>0 is silent. Your volume is saved.</p><button type="button">Done</button>';
+  for (const slider of dialog.querySelectorAll("input")) {
+    const channel = slider.dataset.channel, output = dialog.querySelector("#" + channel + "-level");
+    slider.value = String(Math.round(audioLevel(channel) * 100));
+    output.value = slider.value + "%";
+    slider.oninput = () => {
+      values[channel] = Number(slider.value) / 100;
+      output.value = slider.value + "%";
+      try {
+        localStorage.setItem(saveKey("audio." + channel), String(values[channel]));
+      } catch {
+      }
+      listeners.forEach((fn) => fn());
+    };
+  }
+  button2.onclick = () => dialog.showModal();
+  dialog.querySelector("button").onclick = () => dialog.close();
+  document.querySelector("footer").prepend(button2);
+  document.body.append(dialog);
+  const muteRow = document.createElement("div");
+  muteRow.className = "audio-mutes";
+  for (const id of ["house-music", "house-effects"]) {
+    const mute = document.getElementById(id);
+    if (mute) muteRow.append(mute);
+  }
+  dialog.insertBefore(muteRow, dialog.querySelector("p"));
+  const popButton = button2.cloneNode(true);
+  popButton.id = "pop-volume";
+  popButton.onclick = () => dialog.showModal();
+  document.querySelector("#squishy-pop .pop-title")?.append(popButton);
+  return () => {
+    dialog.remove();
+    button2.remove();
+    popButton.remove();
+  };
+}
+var listeners, values;
+var init_AudioSettings = __esm({
+  "src/ui/AudioSettings.ts"() {
+    "use strict";
+    init_SaveNamespace();
+    listeners = /* @__PURE__ */ new Set();
+    values = {};
+  }
+});
+
 // src/editor/PropSpace.ts
 import { Vec3 } from "playcanvas";
 function registerPropSpace(key, entity, origin) {
@@ -231,7 +354,8 @@ async function captureWorld(app, house, props, loop, editor) {
     }
     const classroom = app.root.findByTag("prop:Classroom trading club:0")[0];
     if (classroom) loop.recess.bindLayout(classroom);
-    app.batcher.generate();
+    const batchIds = [...new Set(app.root.findComponents("render").map((r) => r.batchGroupId).filter((id) => id >= 0))];
+    app.batcher.generate(batchIds);
     app.on("update", () => {
       for (const { source, target } of emission) if (target.emissiveIntensity !== source.emissiveIntensity || !target.emissive.equals(source.emissive)) {
         target.emissive.copy(source.emissive);
@@ -331,21 +455,39 @@ var init_DogRoaming = __esm({
     "use strict";
     init_HousePath();
     DogRoaming = class {
-      constructor(house, root) {
+      constructor(house, root, daily) {
         this.root = root;
+        this.daily = daily;
         this.path = new HousePath(house, 0.19);
       }
       root;
+      daily;
       path;
       route = [];
       wait = 4;
       blocked = 0;
       last = -1;
       spots = [[4.7, 6], [3.3, 5.8], [1.2, 7.8], [0.6, 10.8], [1.6, 11.8], [4.7, 11.6], [1.1, 4.6]];
+      state = "roaming";
+      bowlWait = 20 + Math.random() * 20;
+      meals = 0;
       update(dt, active, people) {
         if (!active) {
           this.route = [];
           this.wait = 3;
+          this.state = "roaming";
+          return;
+        }
+        this.bowlWait -= dt;
+        if (this.state === "eating") {
+          this.wait -= dt;
+          if (this.wait <= 0) {
+            this.daily.consumeDogFood();
+            this.meals++;
+            this.state = "roaming";
+            this.wait = 5;
+            this.bowlWait = 40 + Math.random() * 30;
+          }
           return;
         }
         if (this.wait > 0) {
@@ -353,6 +495,30 @@ var init_DogRoaming = __esm({
           return;
         }
         const p = this.root.getPosition();
+        if (this.state === "roaming" && this.bowlWait <= 0 && this.daily.hasDogFood) {
+          const bowl = this.daily.bowlPosition;
+          for (const [dx, dz] of [[0, 0.5], [-0.5, 0], [0, -0.5], [0.5, 0]]) {
+            const goal = new Vec34(bowl.x + dx, 0, bowl.z + dz);
+            if (!this.path.free(goal.x, goal.z)) continue;
+            const route = this.path.route(new Vec34(p.x, 0, p.z), goal);
+            if (route.length) {
+              this.route = route;
+              this.state = "to-bowl";
+              break;
+            }
+          }
+          this.bowlWait = 20;
+        }
+        if (!this.route.length && this.state === "to-bowl") {
+          const bowl = this.daily.bowlPosition;
+          if (Math.hypot(p.x - bowl.x, p.z - bowl.z) < 0.75) {
+            this.state = "eating";
+            this.wait = 3 + Math.random() * 2;
+            this.root.setEulerAngles(0, Math.atan2(bowl.x - p.x, bowl.z - p.z) * 180 / Math.PI, 0);
+            return;
+          }
+          this.state = "roaming";
+        }
         if (!this.route.length) {
           const candidates = this.spots.map((s, i) => ({ i, p: new Vec34(s[0], 0, s[1]) })).filter((s) => s.i !== this.last && this.path.free(s.p.x, s.p.z) && s.p.distance(p) > 1);
           const choice = candidates[Math.floor(Math.random() * candidates.length)];
@@ -366,7 +532,7 @@ var init_DogRoaming = __esm({
         const next = this.route[0], delta = new Vec34(next.x - p.x, 0, next.z - p.z), distance = delta.length();
         if (distance < 0.015) {
           this.route.shift();
-          if (!this.route.length) this.wait = 4 + Math.random() * 6;
+          if (!this.route.length && this.state === "roaming") this.wait = 4 + Math.random() * 6;
           return;
         }
         delta.normalize();
@@ -375,6 +541,7 @@ var init_DogRoaming = __esm({
           this.blocked += dt;
           if (this.blocked > 2) {
             this.route = [];
+            this.state = "roaming";
             this.wait = 2;
             this.blocked = 0;
           }
@@ -384,17 +551,10 @@ var init_DogRoaming = __esm({
         this.root.setPosition(q.x, 0.04, q.z);
         this.root.setEulerAngles(0, Math.atan2(delta.x, delta.z) * 180 / Math.PI, 0);
       }
+      snapshot() {
+        return { state: this.state, meals: this.meals, food: this.daily.hasDogFood, route: this.route.map((p) => p.toArray()) };
+      }
     };
-  }
-});
-
-// src/systems/SaveNamespace.ts
-var SAVE_PREFIX, saveKey;
-var init_SaveNamespace = __esm({
-  "src/systems/SaveNamespace.ts"() {
-    "use strict";
-    SAVE_PREFIX = globalThis.__productionRelease ? "arianna" : "dumpling.editorMigration";
-    saveKey = (suffix) => `${SAVE_PREFIX}.${suffix}`;
   }
 });
 
@@ -403,6 +563,7 @@ var tracks, HouseMusic;
 var init_HouseMusic = __esm({
   "src/ui/HouseMusic.ts"() {
     "use strict";
+    init_AudioSettings();
     init_SaveNamespace();
     init_AssetUrls();
     tracks = {
@@ -520,7 +681,7 @@ var init_HouseMusic = __esm({
         }
         this.sync();
         if (!this.audio.paused) {
-          const left = this.audio.duration - this.audio.currentTime, level = scene.revealing ? 0.09 : 0.28;
+          const left = this.audio.duration - this.audio.currentTime, level = (scene.revealing ? 0.081 : 0.252) * audioLevel("music");
           const target = Number.isFinite(left) ? Math.min(level, Math.max(0, left / 3) * level) : level;
           this.audio.volume = Math.max(0, Math.min(1, this.audio.volume + Math.max(-step * 0.45, Math.min(step * 0.14, target - this.audio.volume))));
         }
@@ -1048,6 +1209,7 @@ var init_HouseArt = __esm({
           normalization.setLocalPosition(-bounds.center.x * scale, -(bounds.center.y - bounds.halfExtents.y) * scale, -bounds.center.z * scale);
           anchor.setLocalPosition(...position);
           anchor.setLocalEulerAngles(pitch, yaw, 0);
+          if (this.root.name === "Maple cottage" && position[0] === 5.95 && position[2] === 4.9 && ["bookcaseOpenLow", "books"].includes(name)) anchor.enabled = false;
           recordArt(anchor, this.root, `environment/${pack === "nursery" || pack === "school" ? "" : "kenney/"}${key}.glb`);
           for (const render of renderers) render.batchGroupId = this.group.id;
           this.loaded++;
@@ -1358,7 +1520,7 @@ function createHouse(app) {
   furniture("kitchenCoffeeMachine", -2.63, 10.1, 0.36, 90, "height", void 0, 1.05);
   furniture("toaster", -2.65, 10.55, 0.23, 90, "height", void 0, 1.05);
   furniture("tableRound", 0.55, 13.85, 1.75, 0, "width", [1.65, 1.65]);
-  for (const [x, z, yaw] of [[0.55, 12.55, 0], [0.55, 15.05, 180], [1.78, 13.85, -90], [-0.7, 13.85, 90]]) furniture("chairCushion", x, z, 0.82, yaw, "height", [0.55, 0.55]);
+  for (const [x, z, yaw] of [[0.55, 12.55, 0], [0.55, 15.05, 180], [1.78, 13.85, -90], [-0.7, 13.85, 90]]) furniture("chairCushion", x, z, window.__editorMode ? 0.82 : 0.943, yaw, "height", [0.55, 0.55]);
   furniture("plantSmall1", 0.55, 13.85, 0.28, 0, "height", void 0, 0.95);
   furniture("trashcan", 1.95, 10.3, 0.6, 0, "height", [0.4, 0.4]);
   box("Kitchen woven runner", -1.65, 0.05, 11.35, 0.65, 0.025, 2.7, m.mint);
@@ -1373,7 +1535,7 @@ function createHouse(app) {
   furniture("plantSmall2", 6.1, 12.65, 0.3, 0, "height", void 0, 0.95);
   furniture("lampRoundFloor", 6.1, 11.45, 1.8, 0, "height", [0.35, 0.35]);
   furniture("bathroomSink", 4.12, -3.08, 0.9, 0, "height", [1, 0.7]);
-  furniture("bathroomMirror", 4.12, -3.49, 0.9, 0, "height", void 0, 1.35, { metal: "#a5c6cc" });
+  furniture("bathroomMirror", 4.12, -3.15, 0.9, 0, "height", void 0, 1.35, { metal: "#a5c6cc" });
   furniture("bathtub", 5.75, -2.12, 2.15, 90, "width", [0.94, 2.15]);
   furniture("toilet", 5.98, -0.32, 0.8, -90, "height", [0.8, 0.58]);
   box("Bath mat", 4.6, 0.054, -1.55, 1.1, 0.025, 1.4, m.rug);
@@ -2707,7 +2869,7 @@ var init_PetCleanup = __esm({
         paper.setLocalPosition(6.21, 0.7, -0.8);
         const soap = new Entity17("Hand soap", app);
         props.root.addChild(soap);
-        soap.setLocalPosition(3.83, 0.96, -3.03);
+        soap.setLocalPosition(3.96, 0.9, -3.24);
         void Promise.all([
           importProp(app, tool, "shovel", 0.75, false, [180, 0, 0]),
           importProp(app, this.poop, "poop", 0.18),
@@ -2874,7 +3036,7 @@ var init_DailyClock = __esm({
         return this.tasks.every((t) => this.state.done.includes(t.id));
       }
       get canShop() {
-        return this.state.phase === "afternoon" || this.state.phase === "night";
+        return this.state.phase === "afternoon" && this.state.minutes < 1140;
       }
       get schoolDue() {
         return this.state.phase === "morning" && (this.ready || this.state.minutes >= 510);
@@ -3186,7 +3348,7 @@ var init_DailyLife = __esm({
         target("put-tool-away", "Put tool away", "\u21A9", [0, 0, 0], [0, 0.8, 0], (h) => h === "vacuum" || h === "paper-towel", 0);
         target("bedtime-book", "Read a bedtime book", "\u{1F4D8}", [-0.85, 0, -0.8], [-1.4, 0.9, -0.8], (h) => !h && phase() === "night" && notDone("read"), 1600, "read");
         target("school-door", "Go to school", "\u{1F392}", [-2.35, 0, 8.2], [-3.1, 1.1, 8.2], (h) => !h && this.clock.schoolDue, 0);
-        target("shop-door", "Choose a store", "\u{1F6CD}", [-2.35, 0, 8.2], [-3.1, 1.1, 8.2], (h) => !h && this.clock.canShop && (phase() === "night" || this.clock.ready), 0);
+        target("shop-door", "Choose a store", "\u{1F6CD}", [-2.35, 0, 8.2], [-3.1, 1.1, 8.2], (h) => !h && this.clock.canShop && this.clock.ready, 0);
         target("sleep", "Go to bed", "\u{1F319}", [-0.85, 0, -1.6], [-1.4, 0.8, -1.6], (h) => !h && this.canSleep, 6500);
         target("lilah-bed", "Put Lilah to bed", "\u{1F319}", [8.55, 0, -1.3], [9.1, 0.9, -1.7], (h) => !h && this.clock.state.minutes >= 1095 && ["afternoon", "night"].includes(phase()) && !this.clock.state.lilahAsleep, 1e3);
         this.refresh();
@@ -3199,7 +3361,7 @@ var init_DailyLife = __esm({
       onLilahBed = () => {
       };
       get canSleep() {
-        return this.shoppingDone && this.tasks.every((t) => this.completed.includes(t.id)) && (this.clock.state.phase === "afternoon" || this.clock.state.phase === "night");
+        return this.tasks.every((t) => this.completed.includes(t.id)) && (this.clock.state.phase === "night" || this.clock.state.phase === "afternoon" && this.shoppingDone);
       }
       needsTask(id) {
         return this.clock.tasks.some((t) => t.id === id) && !this.clock.state.done.includes(id);
@@ -3245,6 +3407,18 @@ var init_DailyLife = __esm({
       get completed() {
         return [...this.clock.state.done, ...this.lilahMesses.completed];
       }
+      get bowlPosition() {
+        return this.dogFood.getPosition().clone();
+      }
+      get hasDogFood() {
+        return this.dogFood.enabled;
+      }
+      consumeDogFood() {
+        if (!this.hasDogFood) return;
+        this.clock.state.dogFoodEmpty = true;
+        this.dogFood.enabled = false;
+        this.save();
+      }
       save() {
         try {
           localStorage.setItem(SAVE_KEY, JSON.stringify(this.clock.state));
@@ -3265,7 +3439,7 @@ var init_DailyLife = __esm({
         const spillTarget = this.props.interactions.find((t) => t.id === "wipe-spill");
         spillTarget.anchor.set(spill[0], 0, spill[1]);
         spillTarget.marker.set(spill[0], 0.12, spill[1]);
-        this.dogFood.enabled = s.done.includes("feed-dog") || s.phase !== "afternoon" || s.petTask !== "feed-dog";
+        this.dogFood.enabled = !s.dogFoodEmpty && (s.done.includes("feed-dog") || s.phase !== "afternoon" || s.petTask !== "feed-dog");
         this.lilahMesses.syncDay(s.day);
         this.lilahMesses.refresh();
         if (s.done.includes("pet-care")) {
@@ -3392,6 +3566,7 @@ var init_DailyLife = __esm({
         }
         switch (target.id) {
           case "feed-dog":
+            this.clock.state.dogFoodEmpty = false;
             this.dogFood.enabled = true;
             break;
           case "play-lilah":
@@ -3501,7 +3676,7 @@ var init_DailyLife = __esm({
         if (s.phase === "school") return "At school \xB7 See you after class!";
         if (this.clock.schoolDue) return "\u{1F392} Time for school. Walk to the front door in the living room.";
         if (s.phase === "morning" && s.breakfast === "spill") return "Oops! Get a paper towel and hold Action over the dropped egg.";
-        if (this.canSleep) return "\u{1F319} Chores and shopping done! Walk to your bed whenever you\u2019re ready.";
+        if (this.canSleep) return "\u{1F319} All done! Walk to your bed whenever you\u2019re ready.";
         if (s.phase === "afternoon") return "After school \xB7 Help a little, then visit two stores. Take your time!";
         return s.phase === "morning" ? "A fresh morning \xB7 Brush, choose clothes, and make breakfast." : "Wind down \xB7 Brush teeth, put clothes away, and read.";
       }
@@ -3686,17 +3861,22 @@ var init_ChoreAudio = __esm({
   "src/ui/ChoreAudio.ts"() {
     "use strict";
     init_SaveNamespace();
+    init_AssetUrls();
+    init_AudioSettings();
     ChoreAudio = class {
       context;
       master;
       source;
-      hum;
-      envelope;
       kind = "";
-      next = 0;
       muted = false;
       abort = new AbortController();
       button = document.createElement("button");
+      buffers = /* @__PURE__ */ new Map();
+      loading;
+      generation = 0;
+      voices = /* @__PURE__ */ new Set();
+      failures = [];
+      unsubscribe = onAudioChange(() => this.volume());
       constructor() {
         try {
           this.muted = localStorage.getItem(saveKey("house-effects.muted")) === "true";
@@ -3713,95 +3893,98 @@ var init_ChoreAudio = __esm({
           } catch {
           }
           this.paint();
-          if (this.master) this.master.gain.value = this.muted ? 0 : 0.22;
+          this.volume();
         };
         const unlock = () => {
-          this.context ??= new AudioContext();
-          if (!this.master) {
-            this.master = this.context.createGain();
-            this.master.gain.value = this.muted ? 0 : 0.22;
-            this.master.connect(this.context.destination);
-          }
-          void this.context.resume().catch(() => {
-          });
+          void this.unlock();
         };
         document.addEventListener("pointerdown", unlock, { signal: this.abort.signal });
         document.addEventListener("keydown", unlock, { signal: this.abort.signal });
         document.addEventListener("visibilitychange", () => {
-          if (document.hidden) this.stop();
+          if (document.hidden) this.silence();
         }, { signal: this.abort.signal });
+      }
+      volume() {
+        if (this.master) this.master.gain.value = this.muted ? 0 : audioLevel("effects");
+      }
+      async unlock() {
+        this.context ??= new AudioContext();
+        if (!this.master) {
+          this.master = this.context.createGain();
+          this.master.connect(this.context.destination);
+          this.volume();
+        }
+        await this.context.resume().catch(() => {
+        });
+        const names = ["vacuum", "munch", "wipe", "water", "handle"];
+        this.loading ??= Promise.all(names.map(async (name) => {
+          try {
+            const response = await fetch(assetUrl(`/assets/audio/foley/${name}.mp3`));
+            if (!response.ok) throw Error(name);
+            this.buffers.set(name, await this.context.decodeAudioData(await response.arrayBuffer()));
+          } catch {
+            this.failures.push(name);
+          }
+        })).then(() => {
+        });
+        await this.loading;
       }
       paint() {
         this.button.textContent = this.muted ? "\u25D6 Off" : "\u25D6 Sounds";
         this.button.setAttribute("aria-label", this.muted ? "Turn house sounds on" : "Mute house sounds");
         this.button.setAttribute("aria-pressed", String(!this.muted));
       }
-      start(id) {
-        this.stop();
-        const ctx = this.context;
-        if (!ctx || !this.master || document.hidden) return;
-        this.kind = /vacuum|dirt|mess-2/.test(id) ? "vacuum" : /eat/.test(id) ? "munch" : /wipe|wash|teeth|mess-1/.test(id) ? "swish" : /sleep|lilah-bed/.test(id) ? "soft" : "touch";
-        const buffer = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), data = buffer.getChannelData(0);
-        let smooth2 = 0;
-        for (let i = 0; i < data.length; i++) {
-          smooth2 = (smooth2 + (Math.random() * 2 - 1) * 0.12) / 1.12;
-          data[i] = smooth2;
-        }
-        const source = ctx.createBufferSource(), filter = ctx.createBiquadFilter(), gain = ctx.createGain();
+      play(name, volume, loop = false) {
+        const ctx = this.context, buffer = this.buffers.get(name);
+        if (!ctx || !buffer || !this.master || document.hidden || this.voices.size >= 5) return;
+        const source = ctx.createBufferSource(), gain = ctx.createGain();
         source.buffer = buffer;
-        source.loop = true;
-        filter.type = "bandpass";
-        filter.frequency.value = this.kind === "vacuum" ? 460 : this.kind === "munch" ? 1350 : 2100;
-        filter.Q.value = 0.65;
-        gain.gain.value = 0;
-        source.connect(filter).connect(gain).connect(this.master);
+        source.loop = loop;
+        gain.gain.value = volume;
+        source.connect(gain).connect(this.master);
+        this.voices.add(source);
         source.onended = () => {
           source.disconnect();
-          filter.disconnect();
           gain.disconnect();
+          this.voices.delete(source);
         };
         source.start();
-        this.source = source;
-        this.envelope = gain;
-        this.next = 0;
-        if (this.kind === "vacuum") {
-          gain.gain.setTargetAtTime(0.65, ctx.currentTime, 0.1);
-          const hum = ctx.createOscillator(), g = ctx.createGain();
-          hum.type = "triangle";
-          hum.frequency.value = 115;
-          g.gain.value = 0.08;
-          hum.connect(g).connect(this.master);
-          hum.onended = () => {
-            hum.disconnect();
-            g.disconnect();
-          };
-          hum.start();
-          this.hum = hum;
-        }
+        return source;
+      }
+      start(id) {
+        this.stop();
+        const token = this.generation;
+        const kind = /vacuum|dirt|mess-2/.test(id) ? "vacuum" : /eat/.test(id) ? "munch" : /wipe|mess-1/.test(id) ? "wipe" : /wash|teeth/.test(id) ? "water" : /sleep|lilah-bed/.test(id) ? "" : "handle";
+        if (!kind) return;
+        this.kind = kind;
+        void this.unlock().then(() => {
+          if (token !== this.generation || document.hidden) return;
+          this.source = this.play(kind, kind === "vacuum" ? 0.23 : kind === "water" ? 0.3 : kind === "munch" ? 0.5 : 0.4, kind !== "handle");
+        });
       }
       update() {
-        const ctx = this.context, gain = this.envelope;
-        if (!ctx || !gain || this.kind === "vacuum" || ctx.currentTime < this.next) return;
-        const t = ctx.currentTime, munch = this.kind === "munch", soft = this.kind === "soft";
-        this.next = t + (munch ? 0.36 : this.kind === "swish" ? 0.42 : 0.65);
-        gain.gain.cancelScheduledValues(t);
-        gain.gain.setValueAtTime(1e-3, t);
-        gain.gain.linearRampToValueAtTime(soft ? 0.12 : munch ? 0.7 : 0.5, t + 0.04);
-        gain.gain.exponentialRampToValueAtTime(1e-3, t + (munch ? 0.17 : 0.3));
       }
       stop() {
+        this.generation++;
         this.source?.stop();
-        this.hum?.stop();
         this.source = void 0;
-        this.hum = void 0;
-        this.envelope = void 0;
         this.kind = "";
       }
+      silence() {
+        this.stop();
+        for (const voice of this.voices) {
+          try {
+            voice.stop();
+          } catch {
+          }
+        }
+      }
       snapshot() {
-        return { kind: this.kind, playing: !!this.source, muted: this.muted, state: this.context?.state };
+        return { kind: this.kind, playing: !!this.source, muted: this.muted, state: this.context?.state, decoded: this.buffers.size, failures: this.failures, steps: 0 };
       }
       destroy() {
-        this.stop();
+        this.silence();
+        this.unsubscribe();
         this.abort.abort();
         this.button.remove();
         void this.context?.close();
@@ -4517,6 +4700,7 @@ var init_CleanupGame = __esm({
               this.character.player.setPosition(propPoint("dining", new Vec323(0.55, 0.09, 12.49)));
               this.character.visual.setLocalEulerAngles(0, propYaw("dining", 0), 0);
               this.character.animator.setCarrying(false);
+              if (this.character.grounding) this.character.grounding.surfaceHeight = 0.07;
               this.character.animator.setWorkClip("EatSit", propPoint("dining", new Vec323(0.55, 1, 13.85)));
               return;
             }
@@ -5171,8 +5355,8 @@ function createLevelBoard(level, collection, random = Math.random) {
   for (const p of level.board.powers) board.pieces[p.index].power = p.power;
   return board;
 }
-function levelStars(level, values, score) {
-  return level.objectives.every((o, i) => values[i] >= o.target) ? 1 + Number(score >= level.stars[0]) + Number(score >= level.stars[1]) : 0;
+function levelStars(level, values2, score) {
+  return level.objectives.every((o, i) => values2[i] >= o.target) ? 1 + Number(score >= level.stars[0]) + Number(score >= level.stars[1]) : 0;
 }
 var POP_LEVELS, PopLevelRun;
 var init_popLevels = __esm({
@@ -6073,6 +6257,7 @@ var SquishyRevealAudio;
 var init_SquishyRevealAudio = __esm({
   "src/game/SquishyRevealAudio.ts"() {
     "use strict";
+    init_AudioSettings();
     SquishyRevealAudio = class {
       context = null;
       voices = /* @__PURE__ */ new Set();
@@ -6086,7 +6271,7 @@ var init_SquishyRevealAudio = __esm({
           osc.type = "sine";
           osc.frequency.setValueAtTime(frequency, t);
           gain.gain.setValueAtTime(0, t);
-          gain.gain.linearRampToValueAtTime(volume, t + 0.012);
+          gain.gain.linearRampToValueAtTime(volume * audioLevel("effects"), t + 0.012);
           gain.gain.exponentialRampToValueAtTime(1e-4, t + duration);
           osc.connect(gain);
           gain.connect(c.destination);
@@ -6960,8 +7145,15 @@ var PopAudio;
 var init_PopAudio = __esm({
   "src/ui/PopAudio.ts"() {
     "use strict";
+    init_AudioSettings();
     init_AssetUrls();
     PopAudio = class {
+      musicGain;
+      unsubscribe = onAudioChange(() => this.applyVolumes());
+      applyVolumes() {
+        if (this.master) this.master.gain.value = this.muted ? 0 : 0.5 * audioLevel("effects");
+        if (this.musicGain) this.musicGain.gain.value = this.muted ? 0 : 0.117 * audioLevel("music");
+      }
       context;
       master;
       music;
@@ -6979,7 +7171,7 @@ var init_PopAudio = __esm({
           this.master = this.context.createGain();
           this.master.connect(this.context.destination);
         }
-        this.master.gain.value = this.muted ? 0 : 0.5;
+        this.applyVolumes();
         try {
           await this.context.resume();
         } catch {
@@ -7084,8 +7276,9 @@ var init_PopAudio = __esm({
         node.loop = true;
         node.loopStart = 0.03;
         node.loopEnd = buffer.duration - 0.08;
-        gain.gain.value = 0.26;
-        node.connect(gain).connect(this.master);
+        this.musicGain = gain;
+        gain.gain.value = this.muted ? 0 : 0.117 * audioLevel("music");
+        node.connect(gain).connect(ctx.destination);
         node.onended = () => {
           node.disconnect();
           gain.disconnect();
@@ -7099,6 +7292,7 @@ var init_PopAudio = __esm({
       stopMusic() {
         this.music?.stop();
         this.music = void 0;
+        this.musicGain = void 0;
       }
       pause(paused) {
         this.suspended = paused;
@@ -7109,7 +7303,7 @@ var init_PopAudio = __esm({
       }
       mute() {
         this.muted = !this.muted;
-        if (this.master) this.master.gain.value = this.muted ? 0 : 0.5;
+        this.applyVolumes();
         return this.muted;
       }
       snapshot() {
@@ -7120,6 +7314,7 @@ var init_PopAudio = __esm({
         this.pause(true);
       }
       destroy() {
+        this.unsubscribe();
         this.stop();
         void this.context?.close();
       }
@@ -7680,6 +7875,11 @@ var init_SquishyPopUI = __esm({
         cue.style.top = `${Math.max(0, (Math.floor(last / 6) - 0.55) / 6 * 100)}%`;
       }
       tick = (now) => {
+        if (document.hidden || document.querySelector(".audio-settings[open]")) {
+          this.last = now;
+          if (this.isOpen) this.frame = requestAnimationFrame(this.tick);
+          return;
+        }
         const dt = Math.max(0, (now - this.last) / 1e3);
         this.last = now;
         this.q(".pop-footer").textContent = this.developerPractice ? `DEV PRACTICE \xB7 no rewards saved${this.developerFreeze ? " \xB7 timer frozen" : ""}` : "Soft friends. Happy little chains.";
@@ -9868,12 +10068,240 @@ var init_LilahTornado = __esm({
   }
 });
 
+// src/game/FamilyDinner.ts
+import { Asset as Asset7, BoundingBox as BoundingBox15, Entity as Entity31, Vec3 as Vec331 } from "playcanvas";
+var FamilyDinner;
+var init_FamilyDinner = __esm({
+  "src/game/FamilyDinner.ts"() {
+    "use strict";
+    init_AssetUrls();
+    init_PropSpace();
+    init_HousePath();
+    init_primitives();
+    FamilyDinner = class {
+      constructor(app, house, daily, root, visual, animator, say) {
+        this.app = app;
+        this.house = house;
+        this.daily = daily;
+        this.root = root;
+        this.visual = visual;
+        this.animator = animator;
+        this.say = say;
+        this.planner = new HousePath(house, 0.25);
+        this.socket = new Entity31("Dad serving hands", app);
+        visual.addChild(this.socket);
+        animator.bindCarrySocket(this.socket);
+        this.tray = new Entity31("Family dinner", app);
+        house.root.addChild(this.tray);
+        this.tray.enabled = false;
+        primitives(app, this.tray)("Dinner platter", "cylinder", [0, 0, 0], [0.72, 0.025, 0.58], material("Dinner china", "#fff2d9"), false);
+        void Promise.all(["pizza", "taco", "turkey"].map(async (name) => {
+          const a = new Asset7("Family " + name, "container", { url: assetUrl(`/assets/food/${name}.glb`) });
+          app.assets.add(a);
+          await new Promise((resolve, reject) => {
+            a.once("load", resolve);
+            a.once("error", reject);
+            app.assets.load(a);
+          });
+          const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox15();
+          let first = true;
+          for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
+            if (first) {
+              bounds.copy(m.aabb);
+              first = false;
+            } else bounds.add(m.aabb);
+          }
+          const scale = 0.57 / (bounds.halfExtents.x * 2);
+          model.setLocalScale(scale, scale, scale);
+          model.setLocalPosition(-bounds.center.x * scale, 0.02 - (bounds.center.y - bounds.halfExtents.y) * scale, -bounds.center.z * scale);
+          model.name = name;
+          this.tray.addChild(model);
+          model.enabled = false;
+          return model;
+        })).then((models) => {
+          this.models = models;
+          this.ready = true;
+        }).catch((e) => console.error("Dinner models failed", e));
+      }
+      app;
+      house;
+      daily;
+      root;
+      visual;
+      animator;
+      say;
+      tray;
+      socket;
+      models = [];
+      ready = false;
+      day = 0;
+      stage = "idle";
+      route = [];
+      goal = new Vec331();
+      timer = 0;
+      blocked = 0;
+      retry = 0;
+      planner;
+      serving = "pizza";
+      table() {
+        this.tray.reparent(this.house.root);
+        this.tray.setPosition(propPoint("dining", new Vec331(0.55, 0.99, 14.35)));
+        this.tray.setEulerAngles(0, propYaw("dining", 0), 0);
+        this.tray.enabled = true;
+      }
+      go(p, stage) {
+        const at = this.root.getPosition();
+        this.goal.copy(p);
+        this.route = this.planner.route(new Vec331(at.x, 0, at.z), p);
+        this.stage = stage;
+        this.blocked = 0;
+        return this.route.length > 0;
+      }
+      finish() {
+        this.stage = "idle";
+        this.route = [];
+        this.animator.setCarrying(false);
+        this.animator.setIdleClip("Idle");
+        this.animator.cancelAction();
+        this.animator.faceTowards(null);
+        this.retry = 15;
+      }
+      get active() {
+        return this.stage !== "idle";
+      }
+      due() {
+        const s = this.daily.clock.state;
+        return this.ready && !s.dinnerServed && s.phase === "afternoon" && s.minutes >= 930 + s.day * 37 % 90 && s.minutes < 1140 && this.retry <= 0;
+      }
+      update(dt, canStart, people, velocity) {
+        const s = this.daily.clock.state;
+        this.retry = Math.max(0, this.retry - dt);
+        if (this.day !== s.day) {
+          this.day = s.day;
+          this.finish();
+          this.retry = 0;
+          this.tray.enabled = false;
+          this.serving = ["pizza", "taco", "turkey"][(s.day - 1) % 3];
+          this.models.forEach((m) => m.enabled = m.name === this.serving);
+          if (s.dinnerServed) this.table();
+        }
+        if (!this.ready) return false;
+        this.models.forEach((m) => m.enabled = m.name === this.serving);
+        if (this.stage === "idle") {
+          if (s.dinnerServed && !this.tray.enabled) this.table();
+          if (!canStart || !this.due()) return false;
+          if (!this.go(propPoint("fridge", new Vec331(-1.65, 0, 14.55)), "fetch")) {
+            this.finish();
+            return false;
+          }
+          this.say(["I\u2019ll put some pizza out for us.", "Taco night! I\u2019ll set the table.", "Something warm for dinner today."][(s.day - 1) % 3]);
+        }
+        if (["fetch", "carry", "seat"].includes(this.stage)) {
+          const p = this.root.getPosition(), next = this.route[0];
+          if (next) {
+            const delta = new Vec331(next.x - p.x, 0, next.z - p.z), distance = delta.length(), step = Math.min(distance, dt * 1.05);
+            delta.normalize();
+            const q = p.clone().add(delta.clone().mulScalar(step));
+            if (people.some((v) => Math.hypot(v.x - q.x, v.z - q.z) < 0.6) || !this.planner.free(q.x, q.z)) {
+              this.blocked += dt;
+              if (this.blocked > 3) {
+                this.route = this.planner.route(new Vec331(p.x, 0, p.z), this.goal);
+                this.blocked = 0;
+              }
+              return true;
+            }
+            this.root.setPosition(q.x, 0.09, q.z);
+            if (dt > 0) velocity.copy(delta).mulScalar(step / dt);
+            if (distance <= step + 0.01) this.route.shift();
+            return true;
+          }
+          if (Math.hypot(p.x - this.goal.x, p.z - this.goal.z) > 0.5) {
+            this.tray.enabled = !!s.dinnerServed;
+            this.finish();
+            return false;
+          }
+          if (this.stage === "fetch") {
+            this.stage = "pickup";
+            this.timer = 1.4;
+            this.animator.setIdleClip("Cleaning");
+            this.animator.faceTowards(propPoint("fridge", new Vec331(-2.65, 1, 14.55)));
+          } else if (this.stage === "carry") {
+            this.stage = "place";
+            this.timer = 1.1;
+            this.animator.faceTowards(propPoint("dining", new Vec331(0.55, 1, 13.85)));
+          } else {
+            this.stage = "sitting";
+            this.timer = 1.3;
+            this.visual.setLocalEulerAngles(0, propYaw("dining", 180), 0);
+            this.animator.setIdleClip("SitIdle");
+            this.animator.playAction("SitDown", 1.3);
+          }
+        } else {
+          this.timer -= dt;
+          if (this.stage === "sitting" || this.stage === "standing") {
+            const down = this.stage === "sitting", t = Math.max(0, Math.min(1, 1 - this.timer / (down ? 1.3 : 1.2))), z = down ? 15.65 - 0.55 * t : 15.1 + 0.55 * t;
+            this.root.setPosition(propPoint("dining", new Vec331(0.55, 0.09, z)));
+          }
+          if (this.timer > 0) return true;
+          if (this.stage === "pickup") {
+            this.animator.faceTowards(null);
+            this.animator.setIdleClip("Idle");
+            this.animator.setCarrying(true);
+            this.tray.reparent(this.socket);
+            this.tray.setLocalPosition(0, 0.035, 0.06);
+            this.tray.setLocalEulerAngles(0, 0, 0);
+            this.tray.enabled = true;
+            if (!this.go(propPoint("dining", new Vec331(0.55, 0, 15.65)), "carry")) {
+              this.tray.enabled = false;
+              this.finish();
+            }
+          } else if (this.stage === "place") {
+            this.animator.setCarrying(false);
+            this.animator.faceTowards(null);
+            this.table();
+            s.dinnerServed = true;
+            this.daily.save();
+            this.say("Dinner is ready whenever you are, sweetie.");
+            this.stage = "sitting";
+            this.timer = 1.3;
+            this.visual.setLocalEulerAngles(0, propYaw("dining", 180), 0);
+            this.animator.setIdleClip("SitIdle");
+            this.animator.playAction("SitDown", 1.3);
+          } else if (this.stage === "sitting") {
+            this.stage = "seated";
+            this.timer = 12 + s.day % 4 * 2;
+            this.root.setPosition(propPoint("dining", new Vec331(0.55, 0.09, 15.1)));
+          } else if (this.stage === "seated") {
+            this.stage = "standing";
+            this.timer = 1.2;
+            this.animator.setIdleClip("Idle");
+            this.animator.playAction("StandUp", 1.2);
+          } else if (this.stage === "standing") {
+            this.root.setPosition(propPoint("dining", new Vec331(0.55, 0.09, 15.65)));
+            this.finish();
+            return false;
+          }
+        }
+        return true;
+      }
+      snapshot() {
+        return { ready: this.ready, stage: this.stage, food: this.serving, served: !!this.daily.clock.state.dinnerServed, position: this.tray.getPosition().toArray(), visible: this.tray.enabled, route: this.route.map((p) => p.toArray()) };
+      }
+      destroy() {
+        this.tray.destroy();
+        this.socket.destroy();
+      }
+    };
+  }
+});
+
 // src/game/Marc.ts
-import { Asset as Asset7, AnimData as AnimData4, AnimTrack as AnimTrack4, Entity as Entity31, Quat as Quat5, Vec3 as Vec331 } from "playcanvas";
+import { Asset as Asset8, AnimData as AnimData4, AnimTrack as AnimTrack4, Entity as Entity32, Quat as Quat5, Vec3 as Vec332 } from "playcanvas";
 var SEAT, YAW, FORWARD, ENTRY, SEATED, PATROL, REMARKS, Marc;
 var init_Marc = __esm({
   "src/game/Marc.ts"() {
     "use strict";
+    init_FamilyDinner();
     init_PropSpace();
     init_AssetUrls();
     init_CharacterAnimator();
@@ -9881,9 +10309,9 @@ var init_Marc = __esm({
     init_HousePath();
     init_house();
     init_primitives();
-    SEAT = new Vec331(4.5, 0, 7.35);
+    SEAT = new Vec332(4.5, 0, 7.35);
     YAW = -35;
-    FORWARD = new Vec331(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
+    FORWARD = new Vec332(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
     ENTRY = SEAT.clone().add(FORWARD.clone().mulScalar(1.02));
     SEATED = SEAT.clone().add(FORWARD.clone().mulScalar(0.28));
     PATROL = [[8.4, 0.5], [8.1, 9.6], [0.4, 11.2], [3.8, 2], [1.25, 5.6]];
@@ -9893,22 +10321,23 @@ var init_Marc = __esm({
         this.app = app;
         this.house = house;
         this.daily = daily;
-        this.root = new Entity31("Marc", app);
+        this.root = new Entity32("Marc", app);
         app.root.addChild(this.root);
         this.root.setPosition(3.5, 0.09, 6.2);
-        this.visual = new Entity31("Marc visual", app);
+        this.visual = new Entity32("Marc visual", app);
         this.root.addChild(this.visual);
-        const placeholder = new Entity31("Marc loading", app);
+        const placeholder = new Entity32("Marc loading", app);
         this.visual.addChild(placeholder);
         this.animator = new CharacterAnimator(this.visual, placeholder);
         this.planner = new HousePath(house, 0.25);
+        this.dinner = new FamilyDinner(app, house, daily, this.root, this.visual, this.animator, (text) => this.say(text));
         this.label.id = "marc-label";
         this.label.className = "lilah-label marc-label";
         this.label.hidden = true;
         document.querySelector("#game").append(this.label);
         const colors = ["#cda678", "#c5d9dd", "#b8c39d"];
         for (let i = 0; i < 3; i++) {
-          const tool = new Entity31(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
+          const tool = new Entity32(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
           this.root.addChild(tool);
           const shape = primitives(app, tool);
           shape("Dad cleanup tool", "box", [0, 0, 0], i === 0 ? [0.25, 0.16, 0.23] : i === 1 ? [0.3, 0.025, 0.23] : [0.3, 0.07, 0.13], material("Dad tool " + i, colors[i]));
@@ -9926,6 +10355,7 @@ var init_Marc = __esm({
       animator;
       grounding = null;
       planner;
+      dinner;
       label = document.createElement("div");
       tools = [];
       route = [];
@@ -9948,13 +10378,13 @@ var init_Marc = __esm({
       standCount = 0;
       sitCount = 0;
       visited = /* @__PURE__ */ new Set();
-      velocity = new Vec331();
+      velocity = new Vec332();
       blockedFor = 0;
       nextScan = 0;
       async load() {
         const config = await (await fetch(assetUrl(`${"/"}assets/characters/arianna/character.json`))).json();
         this.height = config.height * 1.3;
-        const asset = new Asset7("Marc animation v2", "container", { url: assetUrl(`${"/"}assets/characters/marc/marc.glb`) });
+        const asset = new Asset8("Marc animation v2", "container", { url: assetUrl(`${"/"}assets/characters/marc/marc.glb`) });
         await new Promise((resolve, reject) => {
           asset.once("load", resolve);
           asset.once("error", reject);
@@ -9971,6 +10401,8 @@ var init_Marc = __esm({
         for (const name of ["SitDown", "SitIdle", "StandUp", "Idle", "Walk_Basic"]) required(name);
         const walk = required("Walk_Basic"), idle = required("Idle");
         const tracks2 = [...source, new AnimTrack4("Walk", walk.duration, walk.inputs, walk.outputs, walk.curves)];
+        const carry = required("CarryWalk"), carryOutputs = carry.outputs.map((o) => new AnimData4(o.components, Array.from(o.data, (v, i) => o.data[i % o.components])));
+        tracks2.push(new AnimTrack4("CarryIdle", carry.duration, carry.inputs, carryOutputs, carry.curves));
         const outputs = idle.outputs.map((o) => new AnimData4(o.components, Array.from(o.data)));
         for (const curve of idle.curves) {
           const paths = curve.paths;
@@ -9986,8 +10418,8 @@ var init_Marc = __esm({
           }
         }
         tracks2.push(new AnimTrack4("Cleaning", idle.duration, idle.inputs, outputs, idle.curves));
-        const manifest = { animations: tracks2.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: !["SitDown", "StandUp"].includes(t.name) })), locomotion: { Walk: { travel_speed_mps: 1.2 } }, interaction_events: {}, scale: { rest_height_m: 1.8 }, hand_joints: ["LeftHand", "RightHand"], walk_playback: 1 };
-        const alignment = new Entity31("Marc ground alignment", this.app);
+        const manifest = { animations: tracks2.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: !["SitDown", "StandUp"].includes(t.name) })), locomotion: { Walk: { travel_speed_mps: 1.2 }, CarryWalk: { travel_speed_mps: 1.05 } }, interaction_events: {}, scale: { rest_height_m: 1.8 }, hand_joints: ["LeftHand", "RightHand"], walk_playback: 1 };
+        const alignment = new Entity32("Marc ground alignment", this.app);
         this.visual.addChild(alignment);
         alignment.addChild(model);
         model.setLocalScale(this.height / 1.8, this.height / 1.8, this.height / 1.8);
@@ -10021,7 +10453,7 @@ var init_Marc = __esm({
         if (!m) return false;
         const p = this.root.getPosition(), candidates = [];
         for (const radius of [0.65, 0.85]) for (let i = 0; i < 12; i++) {
-          const a = i * Math.PI / 6, v = new Vec331(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
+          const a = i * Math.PI / 6, v = new Vec332(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
           if (this.planner.free(v.x, v.z)) candidates.push(v);
         }
         candidates.sort((a, b) => a.distance(p) - b.distance(p));
@@ -10049,7 +10481,7 @@ var init_Marc = __esm({
         this.label.hidden = true;
         if (!this.root.enabled || document.hidden) return;
         if (!active) {
-          this.animator.update(0, new Vec331(), Math.max(elapsed, 1e-3));
+          this.animator.update(0, new Vec332(), Math.max(elapsed, 1e-3));
           return;
         }
         this.time += dt;
@@ -10060,130 +10492,141 @@ var init_Marc = __esm({
           this.target = null;
           if (this.state === "cleaning") this.settle();
         }
-        const messes = this.daily.lilahMesses.snapshot().messes;
-        for (const m2 of messes) if (!this.seen.has(m2.id)) this.seen.set(m2.id, this.time);
-        const eligible = () => messes.find((m2) => !m2.done && m2.id !== playerTarget && Math.hypot(m2.x - arianna.x, m2.z - arianna.z) > 1.65 && this.time - (this.seen.get(m2.id) ?? this.time) > 8);
-        if (!this.target && this.time >= this.nextScan && this.state !== "sitting-down" && this.state !== "standing-up") {
-          this.nextScan = this.time + 1;
-          const m2 = eligible();
-          if (m2) {
-            this.target = m2.id;
-            if (this.state === "seated") {
-              this.say("Just sat down. The tiny boss has other plans!");
-              this.stand();
-            } else if (!this.approachMess()) this.target = null;
-          }
-        }
-        const m = this.mess();
-        if (this.target && this.state !== "standing-up" && (!m || playerTarget === this.target || Math.hypot(m.x - arianna.x, m.z - arianna.z) < 1.35)) {
+        if (this.dinner.due() && !this.target && this.state === "seated") this.stand();
+        const dining = this.dinner.update(dt, !this.target && ["idle", "walking"].includes(this.state) && !this.animator.busy, [arianna, lilah], this.velocity);
+        if (dining) {
           this.route = [];
-          if (m && playerTarget === this.target) this.say("You\u2019ve got this, sweetie. I\u2019ll be over here.");
-          this.settle();
-        }
-        if (this.state === "walking") {
-          const p2 = this.root.getPosition(), next = this.route[0];
-          if (!next) {
-            this.state = "idle";
-            this.until = this.time;
-          } else {
-            const dx = next.x - p2.x, dz = next.z - p2.z, distance = Math.hypot(dx, dz), step = Math.min(distance, 1.2 * dt);
-            const x = p2.x + dx / Math.max(distance, 1e-3) * step, z = p2.z + dz / Math.max(distance, 1e-3) * step;
-            if (Math.hypot(x - arianna.x, z - arianna.z) > 0.6 && Math.hypot(x - lilah.x, z - lilah.z) > 0.48 && this.planner.free(x, z)) {
-              this.blockedFor = 0;
-              if (dt > 0) this.velocity.set((x - p2.x) / dt, 0, (z - p2.z) / dt);
-              this.root.setPosition(x, p2.y, z);
-              if (distance <= step + 1e-5) {
-                this.route.shift();
-                if (!this.route.length) {
-                  if (this.purpose === "seat") {
-                    this.state = "sitting-down";
-                    this.transitionStart = this.time;
-                    this.until = this.time + 1.3;
-                    this.visual.setLocalEulerAngles(0, propYaw("marc-seat", YAW), 0);
-                    this.animator.setIdleClip("SitIdle");
-                    this.animator.playAction("SitDown", 1.3);
-                    this.sitCount++;
-                  } else if (this.purpose === "mess" && this.mess()) {
-                    this.state = "cleaning";
-                    this.transitionStart = this.time;
-                    this.until = this.time + 3;
-                    this.animator.setIdleClip("Cleaning");
-                    const mess = this.mess();
-                    this.animator.faceTowards(new Vec331(mess.x, 0, mess.z));
-                    this.say(["These blocks are plotting against my feet.", "Ah, floor juice. My least favorite flavor.", "Crumbs: the glitter of snack time."][Number(mess.id.at(-1))]);
-                  } else {
-                    this.state = "idle";
-                    this.until = this.time + 6;
+          this.state = "idle";
+          this.target = null;
+          this.until = this.time + 4;
+          this.tools.forEach((t) => t.enabled = false);
+        } else {
+          const messes = this.daily.lilahMesses.snapshot().messes;
+          for (const m2 of messes) if (!this.seen.has(m2.id)) this.seen.set(m2.id, this.time);
+          const eligible = () => messes.find((m2) => !m2.done && m2.id !== playerTarget && Math.hypot(m2.x - arianna.x, m2.z - arianna.z) > 1.65 && this.time - (this.seen.get(m2.id) ?? this.time) > 8);
+          if (!this.target && this.time >= this.nextScan && this.state !== "sitting-down" && this.state !== "standing-up") {
+            this.nextScan = this.time + 1;
+            const m2 = eligible();
+            if (m2) {
+              this.target = m2.id;
+              if (this.state === "seated") {
+                this.say("Just sat down. The tiny boss has other plans!");
+                this.stand();
+              } else if (!this.approachMess()) this.target = null;
+            }
+          }
+          const m = this.mess();
+          if (this.target && this.state !== "standing-up" && (!m || playerTarget === this.target || Math.hypot(m.x - arianna.x, m.z - arianna.z) < 1.35)) {
+            this.route = [];
+            if (m && playerTarget === this.target) this.say("You\u2019ve got this, sweetie. I\u2019ll be over here.");
+            this.settle();
+          }
+          if (this.state === "walking") {
+            const p2 = this.root.getPosition(), next = this.route[0];
+            if (!next) {
+              this.state = "idle";
+              this.until = this.time;
+            } else {
+              const dx = next.x - p2.x, dz = next.z - p2.z, distance = Math.hypot(dx, dz), step = Math.min(distance, 1.2 * dt);
+              const x = p2.x + dx / Math.max(distance, 1e-3) * step, z = p2.z + dz / Math.max(distance, 1e-3) * step;
+              if (Math.hypot(x - arianna.x, z - arianna.z) > 0.6 && Math.hypot(x - lilah.x, z - lilah.z) > 0.48 && this.planner.free(x, z)) {
+                this.blockedFor = 0;
+                if (dt > 0) this.velocity.set((x - p2.x) / dt, 0, (z - p2.z) / dt);
+                this.root.setPosition(x, p2.y, z);
+                if (distance <= step + 1e-5) {
+                  this.route.shift();
+                  if (!this.route.length) {
+                    if (this.purpose === "seat") {
+                      this.state = "sitting-down";
+                      this.transitionStart = this.time;
+                      this.until = this.time + 1.3;
+                      this.visual.setLocalEulerAngles(0, propYaw("marc-seat", YAW), 0);
+                      this.animator.setIdleClip("SitIdle");
+                      this.animator.playAction("SitDown", 1.3);
+                      this.sitCount++;
+                    } else if (this.purpose === "mess" && this.mess()) {
+                      this.state = "cleaning";
+                      this.transitionStart = this.time;
+                      this.until = this.time + 3;
+                      this.animator.setIdleClip("Cleaning");
+                      const mess = this.mess();
+                      this.animator.faceTowards(new Vec332(mess.x, 0, mess.z));
+                      this.say(["These blocks are plotting against my feet.", "Ah, floor juice. My least favorite flavor.", "Crumbs: the glitter of snack time."][Number(mess.id.at(-1))]);
+                    } else {
+                      this.state = "idle";
+                      this.until = this.time + 6;
+                    }
                   }
                 }
+              } else {
+                this.blockedFor += dt;
+                if (this.blockedFor > 2) {
+                  this.route = [];
+                  this.target = null;
+                  this.state = "idle";
+                  this.until = this.time + 3;
+                  this.blockedFor = 0;
+                }
               }
-            } else {
-              this.blockedFor += dt;
-              if (this.blockedFor > 2) {
-                this.route = [];
-                this.target = null;
+            }
+          } else if (this.state === "sitting-down" || this.state === "standing-up") {
+            const down = this.state === "sitting-down", t = Math.min(1, (this.time - this.transitionStart) / (down ? 1.3 : 1)), smooth2 = t * t * (3 - 2 * t);
+            const p2 = new Vec332().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
+            this.root.setPosition(p2.x, 0.09, p2.z);
+            this.visual.setLocalEulerAngles(0, propYaw("marc-seat", YAW), 0);
+            if (this.time >= this.until && !this.animator.busy) {
+              if (down) {
+                this.state = "seated";
+                this.until = this.time + 18;
+              } else {
                 this.state = "idle";
-                this.until = this.time + 3;
-                this.blockedFor = 0;
+                this.until = this.time + 1;
+                if (this.target && !this.approachMess()) this.target = null;
               }
             }
-          }
-        } else if (this.state === "sitting-down" || this.state === "standing-up") {
-          const down = this.state === "sitting-down", t = Math.min(1, (this.time - this.transitionStart) / (down ? 1.3 : 1)), smooth2 = t * t * (3 - 2 * t);
-          const p2 = new Vec331().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
-          this.root.setPosition(p2.x, 0.09, p2.z);
-          this.visual.setLocalEulerAngles(0, propYaw("marc-seat", YAW), 0);
-          if (this.time >= this.until && !this.animator.busy) {
-            if (down) {
-              this.state = "seated";
-              this.until = this.time + 18;
-            } else {
-              this.state = "idle";
-              this.until = this.time + 1;
-              if (this.target && !this.approachMess()) this.target = null;
-            }
-          }
-        } else if (this.state === "cleaning") {
-          const mess = this.mess();
-          if (mess) {
-            const i = Number(mess.id.at(-1)), tool = this.tools[i];
-            tool.enabled = true;
-            tool.setPosition(mess.x + Math.sin(this.time * 8) * 0.16, 0.1 + (i === 0 ? 0.05 : 0), mess.z + Math.cos(this.time * 5) * 0.12);
-            if (this.time >= this.until) {
-              if (this.daily.lilahMesses.complete(mess.id, "marc")) {
-                this.cleaned++;
-                this.say("All tidy, sweetie. Until the sequel.");
+          } else if (this.state === "cleaning") {
+            const mess = this.mess();
+            if (mess) {
+              const i = Number(mess.id.at(-1)), tool = this.tools[i];
+              tool.enabled = true;
+              tool.setPosition(mess.x + Math.sin(this.time * 8) * 0.16, 0.1 + (i === 0 ? 0.05 : 0), mess.z + Math.cos(this.time * 5) * 0.12);
+              if (this.time >= this.until) {
+                if (this.daily.lilahMesses.complete(mess.id, "marc")) {
+                  this.cleaned++;
+                  this.say("All tidy, sweetie. Until the sequel.");
+                }
+                this.settle();
               }
-              this.settle();
             }
+          } else if (this.state === "seated") {
+            if (this.time >= this.until) this.stand();
+          } else if (this.time >= this.until) {
+            if (this.purpose === "seat" || this.purpose === "mess") {
+              const point = PATROL[this.patrolIndex++ % PATROL.length];
+              if (!this.go(new Vec332(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
+            } else if (!this.go(propPoint("marc-seat", ENTRY), "seat")) this.until = this.time + 3;
           }
-        } else if (this.state === "seated") {
-          if (this.time >= this.until) this.stand();
-        } else if (this.time >= this.until) {
-          if (this.purpose === "seat" || this.purpose === "mess") {
-            const point = PATROL[this.patrolIndex++ % PATROL.length];
-            if (!this.go(new Vec331(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
-          } else if (!this.go(propPoint("marc-seat", ENTRY), "seat")) this.until = this.time + 3;
+          if (this.time < 2 && this.state === "idle") {
+            this.go(propPoint("marc-seat", ENTRY), "seat");
+          }
+          if (this.time >= this.nextSpeech && arianna.distance(this.root.getPosition()) < 5 && this.state !== "cleaning") this.say(REMARKS[this.lineIndex++ % REMARKS.length]);
         }
-        if (this.time < 2 && this.state === "idle") {
-          this.go(propPoint("marc-seat", ENTRY), "seat");
-        }
-        if (this.time >= this.nextSpeech && arianna.distance(this.root.getPosition()) < 5 && this.state !== "cleaning") this.say(REMARKS[this.lineIndex++ % REMARKS.length]);
         this.grounding?.update();
         this.animator.update(dt, this.velocity, elapsed);
         const p = this.root.getPosition(), room = HOUSE_ROOMS.find((r) => p.x >= r.minX && p.x <= r.maxX && p.z >= r.minZ && p.z <= r.maxZ);
         if (room) this.visited.add(room.id);
-        const screen = camera.camera.worldToScreen(new Vec331(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
+        const screen = camera.camera.worldToScreen(new Vec332(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
         this.label.hidden = performance.now() > this.speechUntil || screen.x < 0 || screen.x > viewport.width || screen.y < 135 || screen.y > viewport.height - 145;
         this.label.style.transform = `translate(${Math.max(6, Math.min(viewport.width - this.label.offsetWidth - 6, screen.x - this.label.offsetWidth / 2))}px,${screen.y - this.label.offsetHeight}px)`;
       }
       snapshot() {
-        return { loaded: this.loaded, height: this.height, position: this.root.getPosition().toArray(), state: this.state, target: this.target, route: this.route.map((p) => p.toArray()), speech: this.speech, cleaned: this.cleaned, sitCount: this.sitCount, standCount: this.standCount, visited: [...this.visited], animation: this.animator.snapshot(), seat: { center: SEAT.toArray(), entry: ENTRY.toArray(), anchor: SEATED.toArray() } };
+        return { dinner: this.dinner.snapshot(), loaded: this.loaded, height: this.height, position: this.root.getPosition().toArray(), state: this.state, target: this.target, route: this.route.map((p) => p.toArray()), speech: this.speech, cleaned: this.cleaned, sitCount: this.sitCount, standCount: this.standCount, visited: [...this.visited], animation: this.animator.snapshot(), seat: { center: SEAT.toArray(), entry: ENTRY.toArray(), anchor: SEATED.toArray() } };
       }
       geometry() {
         return this.animator.geometrySnapshot();
       }
       destroy() {
+        this.dinner.destroy();
         this.label.remove();
         this.root.destroy();
       }
@@ -10227,10 +10670,10 @@ var init_DeveloperSaves = __esm({
       current() {
         return { version: 1, created: (/* @__PURE__ */ new Date()).toISOString(), values: Object.fromEntries(KEYS.map((k) => [k, localStorage.getItem(k)])) };
       }
-      write(values) {
+      write(values2) {
         const old = this.current().values;
         try {
-          for (const k of KEYS) values[k] === null ? localStorage.removeItem(k) : localStorage.setItem(k, values[k]);
+          for (const k of KEYS) values2[k] === null ? localStorage.removeItem(k) : localStorage.setItem(k, values2[k]);
         } catch (error) {
           for (const k of KEYS) {
             try {
@@ -10488,7 +10931,7 @@ var main_exports = {};
 __export(main_exports, {
   startGame: () => startGame
 });
-import { Application, Color as Color10, Entity as Entity32, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec332 } from "playcanvas";
+import { Application, Color as Color10, Entity as Entity33, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec333 } from "playcanvas";
 async function startGame(editorApp) {
   const canvas = document.querySelector("#game-canvas");
   const app = editorApp ?? new Application(canvas, { graphicsDeviceOptions: { alpha: false, antialias: true, powerPreference: "low-power" } });
@@ -10498,7 +10941,7 @@ async function startGame(editorApp) {
   await loadSquishyArt(app);
   const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color10(0.72, 0.68, 0.77);
   app.scene.ambientLight = ambientBase.clone();
-  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity32("Soft afternoon sunlight", app);
+  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity33("Soft afternoon sunlight", app);
   if (!sun.light) sun.addComponent("light", {
     type: "directional",
     color: new Color10(1, 0.92, 0.83),
@@ -10531,8 +10974,8 @@ async function startGame(editorApp) {
   const tornado = new LilahTornado(app, room, props, cleanup, loop, character, controller, camera, lilah);
   loop.tornado = tornado;
   const label = document.querySelector("#player-label");
-  const screenPoint = new Vec332();
-  const headPoint = new Vec332();
+  const screenPoint = new Vec333();
+  const headPoint = new Vec333();
   const viewport = document.querySelector("#game");
   const resize = () => {
     const { width, height } = viewport.getBoundingClientRect();
@@ -10544,11 +10987,13 @@ async function startGame(editorApp) {
   observer.observe(viewport);
   resize();
   const houseMusic = new HouseMusic();
-  const dogRoaming = new DogRoaming(room, props.pet.dog);
+  const destroyAudioSettings = createAudioSettings();
+  const destroyPerformance = performanceSettings(app, () => loop.popUI.isOpen || loop.developerPaused);
+  const dogRoaming = new DogRoaming(room, props.pet.dog, props.daily);
   app.on("update", (elapsed) => {
     houseMusic.update({ mode: loop.mode, phase: props.daily.clock.state.phase, store: loop.mode === "store" ? loop.store.definition.id : "", paused: loop.popUI.isOpen || loop.developerPaused || tornado.active, revealing: loop.opening.phase === "opening" }, Math.min(elapsed, 0.1));
     const now = performance.now();
-    if (loop.developerPaused || loop.popUI.isOpen || document.hidden) cleanup.audio.stop();
+    if (loop.developerPaused || loop.popUI.isOpen || document.hidden) cleanup.audio.silence();
     if (loop.developerPaused) {
       loop.developerTick(now, elapsed);
       return;
@@ -10626,6 +11071,7 @@ async function startGame(editorApp) {
         lilah: lilah.snapshot(),
         marc: marc.snapshot(),
         dog: props.pet?.dogAnimator?.snapshot(),
+        dogRoaming: dogRoaming.snapshot(),
         houseMusic: houseMusic.snapshot(),
         lighting: room.lighting.snapshot(),
         cleanup: cleanup.snapshot(),
@@ -10645,6 +11091,8 @@ async function startGame(editorApp) {
     disposed = true;
     developerPanel?.destroy();
     houseMusic.destroy();
+    destroyPerformance();
+    destroyAudioSettings();
     observer.disconnect();
     tornado.destroy();
     marc.destroy();
@@ -10661,6 +11109,8 @@ async function startGame(editorApp) {
 var init_main = __esm({
   "src/main.ts"() {
     "use strict";
+    init_PerformanceSettings();
+    init_AudioSettings();
     init_LayoutBridge();
     init_DogRoaming();
     init_HouseMusic();
@@ -10763,7 +11213,7 @@ var index_default = `<!doctype html>
 `;
 
 // migration/local.css
-var local_default = '/* src/ui/hunt.css */\n#hunt-routes {\n  width: min(420px, calc(100% - 24px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  border: 2px solid white;\n  border-radius: 26px;\n  padding: 23px 16px 14px;\n  color: #57496b;\n  background: #faf5ef;\n}\n#hunt-routes::backdrop {\n  background: #46395480;\n  backdrop-filter: blur(4px);\n}\n#hunt-routes h2 {\n  font-size: 25px;\n  letter-spacing: -.8px;\n  margin: 12px 0 7px;\n}\n.hunt-budget {\n  font-size: 13px;\n  color: #59765e;\n  font-weight: 800;\n  margin: 0 0 15px;\n}\n.store-choice {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  width: 100%;\n  padding: 13px 10px;\n  margin: 9px 0;\n  text-align: left;\n  border: 1px solid #fff;\n  border-radius: 18px;\n  background:\n    linear-gradient(\n      110deg,\n      var(--shop-color),\n      #fff7ee);\n  color: #514863;\n  box-shadow: 0 3px 8px #69546710;\n  cursor: pointer;\n}\n.store-choice:disabled {\n  opacity: .5;\n  cursor: default;\n}\n.store-icon {\n  display: grid;\n  place-items: center;\n  width: 43px;\n  min-width: 43px;\n  height: 43px;\n  border-radius: 50%;\n  background: #fff8;\n  font-size: 28px;\n}\n.store-choice strong {\n  display: block;\n  font-size: 17px;\n  margin-bottom: 4px;\n}\n.store-choice small {\n  display: block;\n  font-size: 10px;\n  line-height: 1.5;\n}\n.store-choice em {\n  display: block;\n  font-size: 11px;\n  line-height: 1.35;\n  margin: 7px 0 4px;\n  font-style: normal;\n  font-weight: 700;\n}\n.route-status {\n  color: #5e795b;\n}\n.hunt-explainer {\n  font-size: 10px;\n  line-height: 1.5;\n  color: #8d7b8b;\n  margin: 12px 4px;\n}\n#shopping-time {\n  display: inline-block;\n  padding: 6px 10px;\n  margin: 3px 0;\n  background: #fffaeeed;\n  color: #66795b;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 700;\n  pointer-events: none;\n}\n#hunt-find {\n  position: absolute;\n  left: 16px;\n  right: 16px;\n  bottom: 220px;\n  max-width: 360px;\n  margin: auto;\n  padding: 12px 14px;\n  border: 1px solid white;\n  border-radius: 18px;\n  background: #fff8eff2;\n  color: #655371;\n  box-shadow: 0 4px 18px #56466320;\n  pointer-events: none;\n}\n#hunt-find strong {\n  font-size: 17px;\n}\n#hunt-find p {\n  font-size: 12px;\n  margin: 5px 0;\n  color: #59816b;\n  font-weight: 700;\n}\n#hunt-find small {\n  font-size: 10px;\n}\n#game[data-scene=store] #save-message {\n  bottom: auto;\n  top: 190px;\n  left: 16px;\n  width: calc(100% - 32px);\n  padding: 9px 12px;\n}\n#game[data-scene=store] #cleanup-hint {\n  background: #fff9efdf;\n  border-radius: 12px;\n  padding: 7px 9px;\n}\n#game[data-scene=store] #shop-display-marker {\n  background: transparent;\n  color: #ffe6a0;\n  border: 0;\n  padding: 0;\n  box-shadow: none;\n  font-size: 23px;\n  text-shadow: 0 0 4px white, 0 0 9px #e6b761;\n}\n#hunt-travel {\n  position: absolute;\n  inset: 0;\n  z-index: 45;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  background: #f5edf7f5;\n  color: #705b83;\n}\n#hunt-travel span {\n  font-size: 65px;\n  animation: hunt-bob .6s ease-in-out infinite alternate;\n}\n#hunt-travel h2 {\n  font-size: 27px;\n}\n@keyframes hunt-bob {\n  to {\n    transform: translateY(-10px) rotate(6deg);\n  }\n}\n.series-heading {\n  grid-column: 1/-1;\n  text-align: left;\n  padding: 10px 3px 4px;\n  font-size: 14px;\n}\n#game[data-scene=store] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] #day-label,\n#game[data-scene=store] #scene-subtitle {\n  display: none;\n}\n#game[data-scene=store] .room-title .eyebrow {\n  font-size: 12px;\n  letter-spacing: .7px;\n  margin-bottom: 4px;\n}\n@media (max-height: 740px) {\n  #hunt-find {\n    bottom: 190px;\n    padding: 8px 12px;\n  }\n  #hunt-routes {\n    padding-top: 14px;\n  }\n  .store-choice {\n    padding: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #hunt-travel span {\n    animation: none;\n  }\n}\n#hunt-routes .dialog-top-action {\n  position: sticky;\n  top: 0;\n  z-index: 2;\n  box-shadow: 0 0 0 5px #faf5fb;\n}\n\n/* src/ui/trading.css */\n#trading-dialog {\n  box-sizing: border-box;\n  width: min(460px, calc(100% - 16px));\n  max-height: calc(100dvh - 16px);\n  padding: 0;\n  border: 2px solid white;\n  border-radius: 24px;\n  background: #fcf7ef;\n  color: #514365;\n  overflow: hidden;\n}\n#trading-dialog[open] {\n  display: flex;\n  flex-direction: column;\n}\n#trading-dialog::backdrop {\n  background: #44355288;\n  backdrop-filter: blur(3px);\n}\n#trading-dialog button {\n  font: inherit;\n  color: inherit;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#trading-dialog button:disabled {\n  opacity: .48;\n  cursor: default;\n}\n.trade-header {\n  padding: 14px 18px 10px;\n  background:\n    linear-gradient(\n      120deg,\n      #fff,\n      var(--trader));\n  flex-shrink: 0;\n}\n.trade-header h2 {\n  margin: 4px 0;\n  font-size: 27px;\n}\n.trade-header strong {\n  font-size: 12px;\n}\n.trade-header p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  line-height: 1.4;\n}\n.trade-scroll {\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  padding: 0 14px 12px;\n  min-height: 0;\n}\n#trading-dialog h3 {\n  font-size: 13px;\n  margin: 12px 0 7px;\n  display: flex;\n  justify-content: space-between;\n  gap: 4px;\n}\n#trading-dialog h3 small {\n  font-size: 10px;\n  font-weight: normal;\n}\n.trade-slots {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n  gap: 6px;\n  min-height: 65px;\n  background: #e9dfef;\n  padding: 7px;\n  border-radius: 15px;\n}\n.trade-item {\n  border: 1px solid #fff;\n  background: #fffbf8;\n  border-radius: 12px;\n  padding: 4px;\n  text-align: center;\n  min-width: 0;\n}\n.trade-item img {\n  width: 100%;\n  height: 52px;\n  object-fit: contain;\n}\n.trade-item strong,\n.trade-item small {\n  display: block;\n  font-size: 10px;\n}\n.trade-item small {\n  font-size: 9px;\n  margin-top: 3px;\n}\n.trade-speech {\n  font-size: 12px;\n  line-height: 1.45;\n  background: #fff1cd;\n  border-radius: 13px;\n  padding: 10px;\n  margin: 10px 0;\n}\n.trade-empty {\n  grid-column: 1/-1;\n  margin: 10px;\n  font-size: 12px;\n  line-height: 1.5;\n}\n.trade-bag-heading label {\n  display: flex;\n  gap: 6px;\n  align-items: center;\n  font-size: 12px;\n  min-height: 32px;\n}\n.trade-bag-heading input {\n  width: 20px;\n  height: 20px;\n  accent-color: #8573a2;\n}\n.trade-safety {\n  font-size: 10px;\n  line-height: 1.4;\n  margin: 5px 0 10px;\n  color: #796b87;\n}\n#trade-inventory {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 6px;\n}\n.trade-bag-item {\n  display: flex;\n  align-items: center;\n  min-height: 62px;\n  padding: 4px;\n  border: 1px solid #ded2e6;\n  background: white;\n  border-radius: 12px;\n  text-align: left;\n  min-width: 0;\n}\n.trade-bag-item img {\n  width: 38px;\n  flex-shrink: 0;\n}\n.trade-bag-item strong {\n  font-size: 11px;\n  display: block;\n}\n.trade-bag-item small {\n  font-size: 9px;\n  display: block;\n  margin-top: 3px;\n}\n.trade-footer {\n  flex-shrink: 0;\n  padding: 8px 12px 12px;\n  background: #fcf7ef;\n  border-top: 1px solid #e8ddea;\n}\n.trade-footer p {\n  margin: 0 0 8px;\n  text-align: center;\n  font-size: 12px;\n  font-weight: bold;\n}\n.trade-controls {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  gap: 9px;\n}\n.trade-controls button {\n  border: 2px solid white;\n  border-radius: 18px;\n  font-size: 32px !important;\n  font-weight: bold !important;\n  min-height: 68px;\n  background: #f0c6cc;\n}\n.trade-controls button small {\n  display: block;\n  font-size: 10px;\n}\n.trade-controls #trade-add {\n  background: #f6dfa1;\n}\n.trade-controls #trade-accept {\n  background: #bad6b9;\n}\n#leave-recess {\n  position: absolute;\n  top: 76px;\n  right: 14px;\n  width: auto;\n  font-size: 12px;\n  padding: 9px 13px;\n  z-index: 5;\n}\n.collection-protection {\n  border: 0;\n  background: #fff9;\n  border-radius: 8px;\n  margin: 4px 1px 0;\n  min-width: 30px;\n  min-height: 32px;\n  font-size: 14px;\n  cursor: pointer;\n}\n.collection-protection[aria-pressed=true] {\n  background: #e5c6e9;\n  outline: 1px solid #b68ec0;\n}\n#game[data-scene=recess] #trip-wallet,\n#game[data-scene=recess] #mission-clock {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  .trade-header {\n    padding: 8px 12px;\n  }\n  .trade-header h2 {\n    font-size: 21px;\n  }\n  .trade-header p {\n    font-size: 11px;\n  }\n  .trade-item img {\n    height: 42px;\n  }\n  .trade-controls button {\n    min-height: 60px;\n  }\n  .trade-footer {\n    padding: 6px 10px;\n  }\n}\n#trade-suggest {\n  width: 100%;\n  min-height: 44px;\n  border: 2px solid #b4d4bd;\n  border-radius: 16px;\n  background: #edf8ed;\n  font-weight: 800;\n}\n.trade-help {\n  font-size: 11px;\n  color: #6d6477;\n}\n.trade-loved {\n  border-color: #bad8bb !important;\n}\n.trade-header > small {\n  display: block;\n  margin-top: 7px;\n  font-size: 11px;\n}\n\n/* src/ui/squishy-pop.css */\n.pop-launch {\n  position: fixed;\n  z-index: 20;\n  bottom: max(160px, 22vh);\n  left: 50%;\n  transform: translateX(-50%);\n  width: min(310px, 85vw);\n  border: 3px solid #fff9;\n  border-radius: 30px;\n  padding: 13px 16px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe7ee,\n      #efa6d4);\n  color: #655082;\n  box-shadow: 0 6px 22px #4f3b6240;\n  font-weight: 900;\n  font-size: 17px;\n  cursor: pointer;\n}\n.pop-launch span {\n  margin-right: 8px;\n}\n.pop-launch small {\n  display: block;\n  font-size: 11px;\n  letter-spacing: .5px;\n  margin-top: 5px;\n  font-weight: 600;\n}\n#squishy-pop {\n  padding: 0;\n  border: 0;\n  background: transparent;\n  color: #5d497d;\n  max-width: none;\n  max-height: none;\n  width: 100%;\n  height: 100dvh;\n  inset: 0;\n  margin: 0;\n  overflow: auto;\n  font-family: inherit;\n}\n#squishy-pop::backdrop {\n  background: #46345495;\n  backdrop-filter: blur(9px);\n}\n#squishy-pop * {\n  box-sizing: border-box;\n}\n#squishy-pop button {\n  font: inherit;\n  cursor: pointer;\n  min-height: 44px;\n  color: #654e83;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: linear-gradient(#ffe1ef, #f9aed5);\n  font-weight: 800;\n  padding: 9px 17px;\n  box-shadow: 0 3px 0 #c997c136;\n}\n#squishy-pop button:active {\n  transform: scale(.96);\n}\n#squishy-pop button:focus-visible {\n  outline: 3px solid #8a5fb4;\n  outline-offset: 2px;\n}\n.pop-shell {\n  width: min(100%, 480px);\n  min-height: 100%;\n  margin: auto;\n  padding: max(16px, env(safe-area-inset-top)) 18px max(14px, env(safe-area-inset-bottom));\n  background:\n    radial-gradient(\n      ellipse at 10% 45%,\n      #fff5d2aa,\n      transparent 60%),\n    linear-gradient(\n      155deg,\n      #fff8f1f5,\n      #f1e5fff5 60%,\n      #ffe9f1f5);\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 14px;\n}\n.pop-title {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.pop-title > div {\n  flex: 1;\n}\n.pop-title small {\n  font-size: 9px;\n  letter-spacing: 2px;\n}\n.pop-title h2 {\n  font-size: 30px;\n  letter-spacing: -1px;\n  line-height: 1.1;\n  margin: 6px 0;\n  font-weight: 1000;\n  color: #9878b9;\n  text-shadow: 0 2px 0 white;\n}\n.pop-title em {\n  font-style: normal;\n  color: #ed83b0;\n}\n.pop-title button {\n  width: 44px;\n  padding: 5px !important;\n  background: #ffffffad !important;\n}\n.pop-stats {\n  display: grid;\n  grid-template-columns: 1fr 1.1fr 1.1fr;\n  gap: 8px;\n}\n.pop-stats > div {\n  border-radius: 22px;\n  padding: 11px 5px;\n  background: #ffffffc7;\n  border: 2px solid #fff;\n  text-align: center;\n  box-shadow: 0 4px 0 #cbb4e227;\n}\n.pop-stats small {\n  display: block;\n  font-size: 10px;\n  letter-spacing: 1.6px;\n  color: #957bad;\n  font-weight: 800;\n}\n.pop-stats strong {\n  display: block;\n  font-size: 27px;\n  line-height: 1.3;\n}\n.pop-stats progress {\n  height: 6px;\n  width: 65%;\n  display: block;\n  margin: 4px auto 0;\n}\n.pop-tray {\n  position: relative;\n  border: 6px solid #f6eeff;\n  border-radius: 35px;\n  background:\n    linear-gradient(\n      135deg,\n      #d1b9ee,\n      #c4a6df);\n  padding: 9px;\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #bca1d8,\n    0 14px 25px #76609330;\n  isolation: isolate;\n}\n.pop-tray canvas {\n  width: 100%;\n  aspect-ratio: 1;\n  display: block;\n  touch-action: none;\n  border-radius: 21px;\n  background:\n    radial-gradient(\n      ellipse,\n      #fff2 40%,\n      transparent 70%);\n  user-select: none;\n}\n.pop-feedback {\n  position: absolute;\n  pointer-events: none;\n  inset: 40% 0 auto;\n  text-align: center;\n  font-size: 29px;\n  font-weight: 1000;\n  color: #ec65a9;\n  text-shadow:\n    2px 3px white,\n    -2px -2px white,\n    0 4px 6px #8a5fad;\n  transform: rotate(-6deg);\n  z-index: 2;\n}\n.pop-cover {\n  position: absolute;\n  inset: 0;\n  z-index: 3;\n  border-radius: 28px;\n  background: #fff5f2ef;\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  align-items: center;\n  text-align: center;\n  gap: 10px;\n  padding: 20px;\n  backdrop-filter: blur(4px);\n}\n.pop-cover[hidden] {\n  display: none;\n}\n.pop-cover h3 {\n  font-size: 23px;\n  line-height: 1.2;\n  margin: 0;\n}\n.pop-cover p {\n  font-size: 12px;\n  margin: 0;\n  max-width: 260px;\n}\n.pop-cover button {\n  width: 85%;\n  font-size: 14px !important;\n}\n.pop-cover .pop-link {\n  border: 0;\n  background: none;\n  box-shadow: none;\n  font-size: 12px !important;\n}\n.pop-count {\n  font-size: 80px;\n  color: #e778af;\n  animation: pop-count .8s infinite;\n}\n.pop-demo {\n  position: relative;\n  display: flex;\n  gap: 15px;\n  padding: 8px 10px 25px;\n  font-size: 40px;\n  color: #ec87b6;\n}\n.pop-demo b {\n  position: absolute;\n  left: 10%;\n  bottom: 0;\n  font-size: 32px;\n  animation: pop-finger 2s infinite;\n}\n.pop-frenzy {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 10px;\n  letter-spacing: 1px;\n  font-weight: 900;\n  margin-top: 3px;\n}\n.pop-frenzy progress {\n  flex: 1;\n  min-width: 0;\n}\n.pop-frenzy b {\n  color: #e788b5;\n}\n.pop-hint {\n  text-align: center;\n  font-size: 14px;\n  font-weight: 700;\n  margin: 0;\n}\n.pop-friends {\n  display: flex;\n  justify-content: center;\n  gap: 7px;\n}\n.pop-friends span {\n  width: 40px;\n  text-align: center;\n}\n.pop-friends img {\n  width: 40px;\n  height: 35px;\n  object-fit: contain;\n  display: block;\n}\n.pop-friends small {\n  font-size: 9px;\n  color: #b18a52;\n  display: block;\n}\n.pop-footer {\n  text-align: center;\n  font-size: 10px;\n  color: #a58fb0;\n  letter-spacing: 1px;\n}\n.pop-result-star {\n  font-size: 35px;\n  color: #f5c960;\n}\n.pop-result-numbers {\n  display: flex;\n  justify-content: space-around;\n  width: 100%;\n  font-size: 11px;\n}\n.pop-result-numbers b {\n  display: block;\n  font-size: 24px;\n}\n.pop-ticket-prize {\n  font-size: 15px;\n  color: #d26f9f;\n}\n.pop-cover progress {\n  width: 70%;\n  height: 9px;\n}\n#squishy-pop progress {\n  appearance: none;\n  border: 0;\n  border-radius: 20px;\n  background: #e1d4ed;\n  height: 9px;\n  overflow: hidden;\n}\n#squishy-pop progress::-webkit-progress-bar {\n  background: #e1d4ed;\n  border-radius: 20px;\n}\n#squishy-pop progress::-webkit-progress-value {\n  background:\n    linear-gradient(\n      90deg,\n      #bd95e0,\n      #f49abe);\n  border-radius: 20px;\n  transition: width .2s;\n}\n.urgent {\n  color: #df608a;\n  animation: pop-count 1s infinite;\n}\n@keyframes pop-finger {\n  0%, 15% {\n    left: 10%;\n  }\n  70%, 100% {\n    left: 75%;\n  }\n}\n@keyframes pop-count {\n  0% {\n    transform: scale(1.08);\n  }\n  70% {\n    transform: scale(1);\n  }\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 9px;\n    padding: 10px 15px;\n  }\n  .pop-title h2 {\n    font-size: 25px;\n  }\n  .pop-stats > div {\n    padding: 7px 3px;\n  }\n  .pop-stats strong {\n    font-size: 23px;\n  }\n  .pop-friends {\n    display: none;\n  }\n  .pop-footer {\n    display: none;\n  }\n  .pop-tray {\n    border-width: 5px;\n    padding: 6px;\n  }\n  .pop-cover {\n    gap: 7px;\n    padding: 10px;\n  }\n  .pop-cover h3 {\n    font-size: 20px;\n  }\n  .pop-result-star {\n    display: none;\n  }\n}\n@media (min-width: 500px) {\n  .pop-shell {\n    max-width: min(480px, 70dvh);\n    border-radius: 32px;\n    min-height: 0;\n    margin: 20px auto;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #squishy-pop * {\n    animation: none !important;\n  }\n}\n.pop-demo img {\n  width: 58px;\n  height: 58px;\n  object-fit: contain;\n}\n.pop-demo:before {\n  content: "";\n  position: absolute;\n  height: 5px;\n  background: #ffaad4;\n  left: 25px;\n  right: 25px;\n  top: 45%;\n  z-index: -1;\n  border-radius: 10px;\n}\n.pop-demo {\n  isolation: isolate;\n}\n.is-frenzy .pop-tray {\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #e7afd5,\n    0 0 30px #ffb8d5;\n}\n.is-frenzy .pop-frenzy {\n  color: #cf639e;\n}\n.pop-launch[hidden] {\n  display: none;\n}\n.pop-cover .pop-result-star {\n  animation: pop-count .8s 2;\n}\n#squishy-pop {\n  font-family:\n    "Trebuchet MS",\n    "Arial Rounded MT Bold",\n    Arial,\n    sans-serif;\n}\n[data-tickets] {\n  background-repeat: no-repeat;\n  background-position: calc(50% - 15px) center;\n  background-size: 35px;\n  padding-left: 26px;\n}\n.pop-launch {\n  animation: pop-entrance .3s ease-out;\n}\n@keyframes pop-entrance {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n.pop-frenzy span {\n  padding: 7px 0 7px 24px;\n  background-repeat: no-repeat;\n  background-position: left center;\n  background-size: 25px;\n}\n#squishy-pop[open] .pop-shell {\n  animation: pop-entrance .2s ease-out;\n}\n.pop-chain-cue {\n  position: absolute;\n  z-index: 4;\n  transform: translate(-50%, -100%);\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 5px 10px 5px 5px;\n  border: 2px solid white;\n  border-radius: 22px;\n  background: #fff6fc;\n  color: #6c4487;\n  box-shadow: 0 3px 12px #855a9955;\n  pointer-events: none;\n  white-space: nowrap;\n  font-size: 11px;\n  font-weight: 800;\n}\n.pop-chain-cue[hidden] {\n  display: none;\n}\n.pop-chain-cue > b {\n  display: grid;\n  place-items: center;\n  background: #e88bbb;\n  color: white;\n  border-radius: 50%;\n  width: 30px;\n  height: 30px;\n  font-size: 20px;\n}\n.pop-chain-cue span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-chain-cue img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n}\n.pop-chain-cue.pulse > b {\n  animation: pop-count .22s ease-out;\n}\n.pop-feedback {\n  inset: 3px 0 auto;\n  font-size: 22px;\n  transform: none;\n  line-height: 1.2;\n}\n.is-frenzy .pop-tray {\n  border-color: #fff0b5;\n  box-shadow:\n    inset 0 4px 10px #9973bb40,\n    0 7px 0 #e6a6d6,\n    0 0 24px #ffc8d7;\n}\n.is-frenzy .pop-frenzy {\n  background: #fff6d4;\n  border-radius: 18px;\n  padding: 3px 8px;\n}\n.pop-frenzy b {\n  min-width: 46px;\n  text-align: right;\n}\n.pop-hint {\n  font-size: 13px;\n  min-height: 18px;\n}\n.pop-previous-best {\n  font-size: 11px;\n  color: #957aac;\n}\n.pop-ticket-flight {\n  height: 34px;\n  width: 100%;\n  position: relative;\n  overflow: hidden;\n}\n.pop-ticket-flight img {\n  position: absolute;\n  left: calc(18% + var(--i)*8%);\n  width: 35px;\n  height: 28px;\n  object-fit: contain;\n  animation: pop-ticket-bank .95s calc(var(--i)*.07s) both;\n}\n.pop-ticket-prize {\n  font-size: 17px;\n}\n@keyframes pop-ticket-bank {\n  0% {\n    transform: translateY(23px) rotate(-18deg);\n    opacity: 0;\n  }\n  30% {\n    opacity: 1;\n  }\n  70% {\n    transform: translateY(-4px) rotate(8deg);\n    opacity: 1;\n  }\n  100% {\n    transform: translateY(8px) scale(.65);\n    opacity: 0;\n  }\n}\n.showing-results .pop-stats,\n.showing-results .pop-frenzy,\n.showing-results .pop-hint,\n.showing-results .pop-friends {\n  display: none;\n}\n.showing-results .pop-tray {\n  height: min(480px, calc(100dvh - 140px));\n  flex-shrink: 0;\n}\n.showing-results .pop-tray canvas {\n  position: absolute;\n  visibility: hidden;\n}\n.showing-results .pop-cover {\n  gap: 12px;\n  padding: 18px;\n  overflow: auto;\n}\n.showing-results .pop-cover h3 {\n  font-size: 24px;\n}\n.showing-results .pop-result-star {\n  display: block;\n  line-height: 1;\n  font-size: 32px;\n}\n.showing-results .pop-cover button {\n  flex-shrink: 0;\n  min-height: 44px;\n}\n.showing-results .pop-cover p {\n  line-height: 1.4;\n}\n@media (max-height: 700px) {\n  .showing-results .pop-cover {\n    gap: 8px;\n    padding: 12px;\n  }\n  .showing-results .pop-cover h3 {\n    font-size: 21px;\n  }\n  .showing-results .pop-result-star {\n    font-size: 24px;\n  }\n  .pop-chain-cue {\n    font-size: 10px;\n  }\n  .pop-feedback {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .pop-ticket-flight img {\n    animation: none;\n    opacity: 1;\n  }\n  .pop-chain-cue.pulse > b {\n    animation: none;\n  }\n}\n@media (max-width: 360px) {\n  .pop-title {\n    gap: 5px;\n  }\n  .pop-title > div {\n    min-width: 0;\n  }\n  .pop-title small {\n    font-size: 7px;\n    letter-spacing: .6px;\n  }\n  .pop-title h2 {\n    font-size: 20px;\n  }\n  .showing-results .pop-tray {\n    height: calc(100dvh - 145px);\n  }\n}\n#squishy-pop-shortcut {\n  pointer-events: auto;\n  border: 2px solid #fff;\n  border-radius: 22px;\n  padding: 9px 14px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe6f0,\n      #efb5dd);\n  color: #604c80;\n  font: 800 13px "Trebuchet MS", sans-serif;\n  box-shadow: 0 3px 10px #72538b26;\n  cursor: pointer;\n}\n#squishy-pop-shortcut:hover {\n  background: #f6c7e5;\n}\n#squishy-pop-shortcut:focus-visible {\n  outline: 3px solid #7855ae;\n  outline-offset: 3px;\n}\n@media (max-width: 600px) {\n  footer .asset-credits {\n    display: none;\n  }\n  #squishy-pop-shortcut {\n    font-size: 11px;\n    padding: 8px 10px;\n  }\n}\n#squishy-pop-shortcut {\n  min-height: 44px;\n}\n.pop-result-actions {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 8px;\n  width: 100%;\n}\n.pop-cover .pop-result-actions button {\n  width: 100%;\n  font-size: 12px !important;\n  padding: 8px;\n  line-height: 1.2;\n}\n.pop-result-actions button:first-child:last-child {\n  grid-column: 1/-1;\n}\n.pop-goals {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  padding: 7px 9px;\n  border: 2px solid white;\n  border-radius: 18px;\n  background: #fff6dc;\n  font-size: 12px;\n  font-weight: 800;\n  flex-wrap: wrap;\n}\n.pop-goals[hidden],\n.showing-results .pop-goals {\n  display: none;\n}\n.pop-goals small {\n  font-size: 9px;\n  color: #9878b9;\n}\n.pop-goals span,\n.pop-objectives span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-goals img,\n.pop-objectives img,\n.pop-previous-best img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n  vertical-align: middle;\n}\n.pop-goals .done {\n  color: #487865;\n}\n.pop-level-list {\n  display: flex;\n  flex-direction: column;\n  gap: 9px;\n  width: 100%;\n}\n.pop-level-list button {\n  width: 100%;\n  text-align: left;\n}\n.pop-level-list small {\n  display: block;\n  margin-top: 4px;\n  font-size: 11px;\n  font-weight: 600;\n}\n#squishy-pop button:disabled {\n  opacity: .55;\n  cursor: default;\n  transform: none;\n  background: #e5dfeb;\n}\n.pop-objectives {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 12px;\n  padding: 12px;\n  font-size: 18px;\n  font-weight: 800;\n}\n.showing-results .pop-cover {\n  justify-content: flex-start;\n}\n.showing-results .pop-cover > h3:first-child {\n  margin-top: 8px;\n}\n.pop-previous-best {\n  line-height: 1.5;\n}\n.showing-results .pop-cover > * {\n  flex-shrink: 0;\n}\n.showing-results .pop-cover .pop-link {\n  min-height: 44px;\n  padding: 7px;\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 7px;\n  }\n  .pop-goals {\n    font-size: 11px;\n    padding: 4px 6px;\n    gap: 5px;\n  }\n  .pop-goals img {\n    width: 24px;\n    height: 24px;\n  }\n  .showing-results .pop-cover {\n    gap: 7px;\n  }\n  .pop-level-list {\n    gap: 6px;\n  }\n}\n.pop-prizes {\n  min-height: 44px !important;\n  width: auto !important;\n  padding: 5px 10px !important;\n  font-size: 12px !important;\n}\n.pop-feedback[data-tier=great] {\n  font-size: clamp(22px, 6vw, 32px);\n  color: #fff6a0;\n  text-shadow: 0 3px 0 #7d4690, 0 0 18px #fff;\n}\n.pop-feedback[data-tier=super] {\n  font-size: clamp(26px, 7vw, 38px);\n  color: #fff;\n  border: 3px solid #ffdf65;\n  border-radius: 20px;\n  background: #9554bde8;\n  padding: 12px;\n  box-shadow: 0 0 24px #ffda6a;\n}\n.pop-feedback[data-tier=rainbow] {\n  font-size: clamp(24px, 6.5vw, 36px);\n  color: #fff;\n  background:\n    linear-gradient(\n      110deg,\n      #ea76a7,\n      #d0a554,\n      #61bca4,\n      #618ddb,\n      #a278c8);\n  border: 3px solid white;\n  border-radius: 20px;\n  padding: 12px;\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-tray[data-celebration=super] {\n  box-shadow: 0 0 0 5px #ffe393, 0 0 35px #f1abde;\n}\n.pop-tray[data-celebration=rainbow] {\n  box-shadow:\n    -10px 0 24px #ff9cad,\n    0 -8px 24px #fff09e,\n    10px 0 24px #98daff,\n    0 8px 24px #b5a1ff;\n}\n.pop-feedback[hidden] {\n  display: none;\n}\n.pop-feedback[data-tier=great],\n.pop-feedback[data-tier=super],\n.pop-feedback[data-tier=rainbow] {\n  animation: pop-reward .32s ease-out;\n}\n@keyframes pop-reward {\n  from {\n    transform: translateY(8px) scale(.88);\n    opacity: .5;\n  }\n  to {\n    transform: none;\n    opacity: 1;\n  }\n}\n.pop-feedback[data-tier=super] {\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-launch {\n  position: absolute;\n  top: 175px;\n  bottom: auto;\n  left: 18px;\n  transform: none;\n  width: auto;\n  max-width: 180px;\n  padding: 9px 13px;\n  font-size: 12px;\n  border-width: 2px;\n  box-shadow: 0 3px 10px #4f3b6220;\n}\n.pop-launch small {\n  display: none;\n}\n@media (max-height: 650px) {\n  .pop-launch {\n    top: 135px;\n  }\n}\n\n/* src/ui/ticket-shop.css */\n#ticket-shop {\n  width: min(92vw, 520px);\n  max-height: 88dvh;\n  overflow: auto;\n  border: 3px solid #efb6d2;\n  border-radius: 26px;\n  background: #fff8ed;\n  color: #604861;\n  padding: 22px;\n  text-align: center;\n}\n#ticket-shop::backdrop {\n  background: #403347a8;\n}\n.ticket-prizes {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px;\n  margin: 16px 0;\n}\n.ticket-prizes article {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 10px;\n  border-radius: 18px;\n  background: #f1e7fa;\n}\n.ticket-prizes img {\n  width: 96px;\n  height: 96px;\n  object-fit: contain;\n}\n#ticket-shop button {\n  min-height: 44px;\n  border: 0;\n  border-radius: 16px;\n  padding: 10px 14px;\n  background: #805ba6;\n  color: white;\n  font-weight: 700;\n  cursor: pointer;\n}\n#ticket-shop button:disabled {\n  background: #d3c4d5;\n  color: #665b69;\n  cursor: default;\n}\n#ticket-shop [data-close] {\n  display: block;\n  width: 100%;\n  margin-top: 16px;\n}\n#ticket-shop [role=status] {\n  font-weight: 700;\n  color: #566b40;\n}\n#travel-next-store {\n  position: absolute;\n  right: 12px;\n  top: 175px;\n  z-index: 12;\n  max-width: 170px;\n  min-height: 44px;\n  border: 2px solid #d9c5ec;\n  border-radius: 15px;\n  padding: 8px 12px;\n  background: #fff4e6;\n  color: #604861;\n  font-weight: 700;\n}\n#ticket-shop {\n  box-sizing: border-box;\n}\n#ticket-shop [data-close] {\n  position: sticky;\n  bottom: 0;\n  box-shadow: 0 0 0 5px #fff8ed;\n}\n.ticket-prizes article {\n  min-width: 0;\n}\n.ticket-prizes button {\n  width: 100%;\n}\n@media (max-width: 360px) {\n  #ticket-shop {\n    padding: 14px;\n  }\n  .ticket-prizes {\n    gap: 8px;\n  }\n  .ticket-prizes img {\n    width: 76px;\n    height: 76px;\n  }\n  .ticket-prizes article {\n    padding: 8px;\n  }\n  .ticket-prizes button {\n    padding: 8px;\n    font-size: 12px;\n  }\n}\n#ticket-shop [data-close] {\n  top: 0;\n  bottom: auto;\n  z-index: 2;\n}\n\n/* src/ui/tornado.css */\n#game[data-tornado] .room-title,\n#game[data-tornado] #cleanup-effects,\n#game[data-tornado] #house-doors,\n#game[data-tornado] #move-tip,\n#game[data-tornado] .mission-stats {\n  visibility: hidden;\n}\n#tornado-hud {\n  position: absolute;\n  z-index: 8;\n  top: 110px;\n  left: 22px;\n  width: min(340px, calc(100% - 44px));\n  padding: 15px 18px;\n  border: 2px solid #fff9;\n  border-radius: 23px;\n  background: #fff9f1ef;\n  color: #59476e;\n  box-shadow: 0 8px 25px #52416620;\n  pointer-events: none;\n  box-sizing: border-box;\n}\n#tornado-hud[hidden] {\n  display: none;\n}\n#tornado-hud header {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n#tornado-hud small {\n  font-size: 8px;\n  letter-spacing: 1.6px;\n  color: #907ca6;\n}\n#tornado-hud h2 {\n  font-size: 23px;\n  margin: 3px 0 10px;\n}\n#tornado-hud [data-time] {\n  font-size: 28px;\n  font-variant-numeric: tabular-nums;\n  margin-left: auto;\n}\n#tornado-hud [data-sound] {\n  pointer-events: auto;\n  border: 0;\n  background: #ece0f3;\n  color: #69517e;\n  border-radius: 50%;\n  width: 32px;\n  height: 32px;\n  cursor: pointer;\n}\n.tornado-meter-row,\n.tornado-score {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  font-size: 11px;\n}\n.tornado-score {\n  margin-top: 7px;\n  color: #71865c;\n}\n.tornado-score [data-streak] {\n  color: #a65585;\n  font-size: 10px;\n}\n#tornado-hud meter {\n  display: block;\n  width: 100%;\n  height: 17px;\n  margin-top: 4px;\n}\n#tornado-hud meter::-webkit-meter-bar {\n  background: #eee5f3;\n  border: 0;\n  border-radius: 10px;\n}\n#tornado-hud meter::-webkit-meter-optimum-value {\n  background:\n    linear-gradient(\n      90deg,\n      #c3cde8,\n      #e8adbe);\n  border-radius: 10px;\n}\n#tornado-hud p {\n  font-size: 11px;\n  line-height: 1.4;\n  min-height: 30px;\n  margin: 9px 0 0;\n}\n#tornado-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n  z-index: 7;\n}\n.tornado-marker {\n  position: absolute;\n  font-size: 24px;\n  border: 2px solid #fff;\n  background: #fff4d9ed;\n  box-shadow: 0 4px 12px #71603c30;\n  border-radius: 14px;\n  padding: 3px 7px;\n}\n.tornado-marker.near {\n  background: #dcf3c8;\n  box-shadow: 0 0 20px #fff3a1;\n}\n.tornado-marker.edge::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #9c729d;\n  transform: translate(-50%, -50%) rotate(var(--angle)) translateX(32px);\n}\n.tornado-sparkles {\n  position: absolute;\n  color: #8a599f;\n  text-shadow: 0 2px #fff;\n  font-weight: bold;\n  font-size: 26px;\n  animation: tornado-pop 1s ease-out forwards;\n  white-space: nowrap;\n}\n@keyframes tornado-pop {\n  from {\n    transform: translate(-50%, 0) scale(.6);\n  }\n  50% {\n    opacity: 1;\n  }\n  to {\n    transform: translate(-50%, -80px) scale(1.2);\n    opacity: 0;\n  }\n}\n#tornado-dialog {\n  box-sizing: border-box;\n  width: min(430px, calc(100% - 28px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  padding: 28px;\n  border: 2px solid white;\n  border-radius: 28px;\n  background: #fff8f1;\n  color: #5c4773;\n  text-align: center;\n  box-shadow: 0 20px 80px #51416650;\n}\n#tornado-dialog::backdrop {\n  background: #594d7666;\n  backdrop-filter: blur(3px);\n}\n#tornado-dialog small {\n  font-size: 9px;\n  letter-spacing: 1.4px;\n}\n#tornado-dialog h2 {\n  font-size: 29px;\n  line-height: 1.1;\n  margin: 12px 0;\n}\n#tornado-dialog p {\n  font-size: 14px;\n  line-height: 1.6;\n  color: #8b7094;\n}\n.tornado-emblem {\n  font-size: 60px;\n}\n.tornado-stars {\n  font-size: 48px;\n  color: #e4ae4e;\n  letter-spacing: 7px;\n}\n.tornado-instructions {\n  display: grid;\n  gap: 10px;\n  background: #efe6f4;\n  padding: 16px;\n  border-radius: 18px;\n  text-align: left;\n}\n.tornado-totals {\n  display: flex;\n  justify-content: space-around;\n  background: #efe6f4;\n  padding: 16px 4px;\n  border-radius: 18px;\n  font-size: 11px;\n}\n.tornado-totals b {\n  display: block;\n  font-size: 25px;\n  margin-bottom: 5px;\n}\n#tornado-dialog button {\n  display: block;\n  width: 100%;\n  padding: 14px;\n  border: 2px solid white;\n  border-radius: 16px;\n  margin-top: 10px;\n  background: #b8cfae;\n  color: #466240;\n  font: 700 16px system-ui;\n  cursor: pointer;\n}\n#tornado-dialog button.secondary {\n  background: #eee3f1;\n  color: #705285;\n}\n#tornado-dialog .tornado-earned {\n  color: #5b824e;\n  font-weight: bold;\n}\n@media (max-width: 500px) {\n  #tornado-hud {\n    top: 87px;\n    left: 12px;\n    width: calc(100% - 24px);\n    padding: 10px 13px;\n  }\n  #tornado-hud h2 {\n    font-size: 20px;\n    margin-bottom: 5px;\n  }\n  #tornado-hud p {\n    min-height: 16px;\n    margin-top: 5px;\n  }\n  #tornado-hud [data-time] {\n    font-size: 25px;\n  }\n  .tornado-marker {\n    font-size: 20px;\n  }\n}\n@media (max-height: 600px) and (orientation: landscape) {\n  #tornado-hud {\n    top: 80px;\n    width: 275px;\n    padding: 9px 12px;\n  }\n  #tornado-hud p {\n    min-height: 0;\n  }\n  #tornado-hud h2 {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .tornado-sparkles {\n    animation: none;\n  }\n}\n\n/* src/ui/styles.css */\n:root {\n  font-family:\n    "Trebuchet MS",\n    ui-rounded,\n    system-ui,\n    sans-serif;\n  color: #51466a;\n  background: #ede6f4;\n  font-synthesis: none;\n  -webkit-tap-highlight-color: transparent;\n}\n* {\n  box-sizing: border-box;\n}\nhtml,\nbody,\n#game {\n  margin: 0;\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  overscroll-behavior: none;\n}\nbody {\n  position: fixed;\n  inset: 0;\n}\n#game {\n  height: 100dvh;\n  position: relative;\n  isolation: isolate;\n  user-select: none;\n  -webkit-user-select: none;\n}\n#game-canvas {\n  display: block;\n  width: 100%;\n  height: 100%;\n  outline: none;\n  touch-action: none;\n}\n#game-canvas:focus-visible {\n  outline: 3px solid #9b86bd;\n  outline-offset: -3px;\n}\n.topbar {\n  position: absolute;\n  top: max(22px, env(safe-area-inset-top));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.wordmark {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  font-size: 26px;\n  font-weight: 800;\n  letter-spacing: -1px;\n}\n.wordmark small {\n  display: block;\n  font-size: 7px;\n  letter-spacing: 1.8px;\n  margin-top: 2px;\n  font-weight: 700;\n}\n.flower {\n  color: #a18abd;\n  font-size: 43px;\n  line-height: 1;\n}\n.chapter {\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: 2px;\n}\n.chapter span {\n  color: #b8a8c9;\n  margin: 0 5px;\n}\n.room-title {\n  position: absolute;\n  top: 14%;\n  width: 100%;\n  text-align: center;\n  pointer-events: none;\n}\n.eyebrow {\n  font-size: 9px;\n  letter-spacing: 2.3px;\n  font-weight: 700;\n  color: #8c7a9f;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 7px;\n}\n.eyebrow i {\n  width: 5px;\n  height: 5px;\n  border-radius: 50%;\n  background: #90ac95;\n}\nh1 {\n  font-size: clamp(26px, 4vw, 37px);\n  letter-spacing: -1.2px;\n  margin: 10px 0 7px;\n  font-weight: 800;\n}\n.room-title p {\n  font-size: 12px;\n  color: #8c7a9f;\n  margin: 0;\n}\n.player-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  padding: 5px 10px;\n  background: #fffaf4ee;\n  border: 1px solid #fff;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 800;\n  pointer-events: none;\n  box-shadow: 0 3px 10px #71608518;\n  will-change: transform;\n}\n.player-label span {\n  color: #d592ad;\n  margin-left: 4px;\n}\n.room-caption {\n  position: absolute;\n  bottom: 26%;\n  width: 100%;\n  text-align: center;\n  font-size: 10px;\n  letter-spacing: .5px;\n  color: #9e8db0;\n  pointer-events: none;\n}\n.room-caption span {\n  margin: 0 12px;\n  color: #b9a3cc;\n}\n.move-tip {\n  position: absolute;\n  bottom: 19%;\n  left: 50%;\n  transform: translateX(-50%);\n  display: flex;\n  gap: 10px;\n  align-items: center;\n  width: max-content;\n  max-width: calc(100% - 36px);\n  transition: opacity .6s;\n  pointer-events: none;\n}\n.tip-icon {\n  display: grid;\n  place-items: center;\n  width: 34px;\n  height: 34px;\n  background: #fbf7fcbb;\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  font-size: 22px;\n  color: #a389bb;\n}\n.move-tip strong,\n.move-tip div > span {\n  display: block;\n}\n.move-tip strong {\n  font-size: 12px;\n  margin-bottom: 3px;\n}\n.move-tip div > span {\n  font-size: 10px;\n  color: #9686a7;\n}\n.move-tip.explored {\n  opacity: 0;\n}\n.controls {\n  position: absolute;\n  left: max(27px, env(safe-area-inset-left));\n  right: max(27px, env(safe-area-inset-right));\n  bottom: max(42px, calc(env(safe-area-inset-bottom) + 24px));\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.joystick-group {\n  text-align: center;\n  pointer-events: auto;\n}\n#joystick {\n  position: relative;\n  width: 120px;\n  height: 120px;\n  border: 2px solid #fff9;\n  background:\n    linear-gradient(\n      140deg,\n      #fffc,\n      #ded1ec99);\n  border-radius: 50%;\n  box-shadow: 0 7px 22px #82709516, inset 0 1px 8px #fff8;\n  touch-action: none;\n  cursor: grab;\n}\n#joystick.dragging {\n  cursor: grabbing;\n}\n#joystick-knob {\n  position: absolute;\n  left: 34px;\n  top: 34px;\n  width: 48px;\n  height: 48px;\n  border-radius: 50%;\n  border: 2px solid #fff;\n  background:\n    linear-gradient(\n      145deg,\n      #cdbce5,\n      #aa93c9);\n  box-shadow: 0 5px 8px #6c51813b;\n  pointer-events: none;\n  display: grid;\n  place-items: center;\n  will-change: transform;\n}\n#joystick-knob svg {\n  width: 22px;\n  height: 22px;\n  fill: none;\n  stroke: #fff;\n  stroke-width: 2;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n  opacity: .8;\n}\n.direction {\n  position: absolute;\n  color: #ae9abd;\n  font-size: 22px;\n  line-height: 20px;\n}\n.up {\n  top: 5px;\n  left: 51px;\n}\n.down {\n  bottom: 7px;\n  left: 51px;\n}\n.left {\n  top: 47px;\n  left: 9px;\n}\n.right {\n  top: 47px;\n  right: 9px;\n}\n.control-label {\n  display: block;\n  font-size: 8px;\n  letter-spacing: 1.5px;\n  font-weight: 800;\n  color: #9581a8;\n  margin-top: 11px;\n}\n.explore-note {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  margin-top: 30px;\n  color: #8f7ba3;\n}\n.tiny-house {\n  font-size: 31px;\n  color: #ad98bd;\n}\n.explore-note > span:last-child {\n  font-size: 12px;\n  font-weight: 700;\n}\n.explore-note small {\n  display: block;\n  font-size: 9px;\n  font-weight: 400;\n  margin-top: 5px;\n}\nfooter {\n  position: absolute;\n  bottom: max(12px, env(safe-area-inset-bottom));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  font-size: 8px;\n  color: #a591b7;\n  letter-spacing: .6px;\n  pointer-events: none;\n}\n.build-badge {\n  font-size: 7px;\n  letter-spacing: 1.4px;\n}\n.keyboard-hint {\n  font-size: 8px;\n}\n#loading,\n#error {\n  position: absolute;\n  inset: 0;\n  background: #ede6f4;\n  display: grid;\n  place-content: center;\n  text-align: center;\n  padding: 32px;\n  z-index: 9;\n}\n#loading .loading-flower {\n  font-size: 60px;\n  color: #a18abd;\n  animation: breathe 1.2s infinite alternate;\n}\n#loading p {\n  font-size: 14px;\n}\n#error[hidden] {\n  display: none;\n}\n#error h2 {\n  font-size: 22px;\n}\n#error p {\n  font-size: 14px;\n  max-width: 320px;\n  line-height: 1.6;\n}\n@keyframes breathe {\n  to {\n    transform: scale(.85);\n    opacity: .5;\n  }\n}\n@media (min-width: 700px) {\n  .topbar {\n    left: 40px;\n    right: 40px;\n    top: 28px;\n  }\n  .room-title {\n    top: 12%;\n  }\n  .controls {\n    left: 45px;\n    right: 45px;\n    bottom: 50px;\n  }\n  .room-caption {\n    bottom: 15%;\n  }\n  .move-tip {\n    bottom: 7%;\n  }\n  .explore-note {\n    margin-top: 0;\n  }\n  footer {\n    left: 40px;\n    right: 40px;\n  }\n  .keyboard-hint {\n    font-size: 10px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .topbar {\n    top: 14px;\n  }\n  .room-title {\n    top: 13%;\n  }\n  h1 {\n    font-size: 25px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: 23%;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n  .keyboard-hint {\n    display: none;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .room-title {\n    top: 24%;\n    text-align: left;\n    padding-left: 28px;\n    width: 220px;\n  }\n  .eyebrow {\n    justify-content: flex-start;\n    font-size: 7px;\n    letter-spacing: 1px;\n  }\n  h1 {\n    font-size: 24px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .topbar {\n    top: 14px;\n  }\n  .room-caption,\n  .move-tip,\n  .explore-note {\n    display: none;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  .wordmark {\n    font-size: 21px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #loading .loading-flower {\n    animation: none;\n  }\n  .move-tip {\n    transition: none;\n  }\n}\n@media (max-width: 699px) {\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: calc(max(42px, env(safe-area-inset-bottom)) + 156px);\n  }\n}\n@media (max-width: 380px) {\n  .topbar {\n    left: 18px;\n    right: 18px;\n  }\n  .wordmark {\n    font-size: 24px;\n  }\n  .wordmark small {\n    font-size: 6px;\n    letter-spacing: 1.2px;\n    white-space: nowrap;\n  }\n  .chapter {\n    font-size: 8px;\n    letter-spacing: 1px;\n    white-space: nowrap;\n  }\n  .eyebrow {\n    font-size: 7px;\n    letter-spacing: 1.6px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n  .explore-note {\n    max-width: 125px;\n  }\n  .room-title {\n    top: 15%;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n}\n#house-music {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 10px;\n  line-height: 1.2;\n  padding: 8px;\n  min-height: 40px;\n  min-width: 54px;\n  cursor: pointer;\n}\nfooter {\n  gap: 6px;\n}\nfooter .keyboard-hint {\n  display: none;\n}\n@media (max-width: 380px) {\n  footer {\n    left: 12px;\n    right: 12px;\n  }\n  #collection-button {\n    font-size: 9px !important;\n  }\n}\n\n/* src/ui/cleanup.css */\n.mission-stats {\n  display: flex;\n  flex-direction: column;\n  align-items: flex-end;\n  gap: 2px;\n}\n#mission-clock {\n  font-size: 23px;\n  font-weight: 800;\n  font-variant-numeric: tabular-nums;\n  letter-spacing: -1px;\n}\n#mission-clock.soon {\n  color: #b77795;\n}\n.allowance-label {\n  font-size: 7px;\n  letter-spacing: 1px;\n  color: #9581a8;\n}\n#allowance {\n  font-size: 13px;\n  color: #6e856c;\n  margin-left: 3px;\n}\n#task-count {\n  letter-spacing: 1px;\n  color: #6e856c;\n}\n.task-list {\n  display: flex;\n  list-style: none;\n  justify-content: center;\n  gap: 9px;\n  padding: 0;\n  margin: 6px 0 0;\n  height: 22px;\n}\n.task-list li {\n  display: flex;\n  align-items: center;\n  gap: 3px;\n  font-size: 9px;\n  color: #9784a6;\n  border-bottom: 2px solid transparent;\n}\n.task-list li > span:first-child {\n  font-size: 13px;\n}\n.task-list li.done {\n  color: #69866f;\n  border-color: #a6c5a6;\n}\n.task-list li.done > span:first-child {\n  color: #69866f;\n}\n.action-group {\n  pointer-events: auto;\n  text-align: center;\n}\n#action-button {\n  --hold-progress: 0deg;\n  width: 120px;\n  height: 120px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  gap: 3px;\n  border: 3px solid #fff9;\n  border-radius: 50%;\n  background:\n    linear-gradient(\n      145deg,\n      #f6b5d0,\n      #d888b6);\n  box-shadow: 0 6px 0 #ad739441, 0 8px 22px #82709522;\n  color: #663f6a;\n  cursor: pointer;\n  touch-action: none;\n  padding: 8px;\n  font-family: inherit;\n  position: relative;\n  -webkit-user-select: none;\n  user-select: none;\n}\n#action-button:disabled {\n  background:\n    linear-gradient(\n      145deg,\n      #f7f1f9,\n      #ddd0e8);\n  color: #a38caf;\n  box-shadow: 0 4px 0 #a58db222;\n  cursor: default;\n}\n#action-button:not(:disabled):active {\n  box-shadow: 0 2px 0 #ad739441;\n}\n#action-button:focus-visible,\n#replay:focus-visible {\n  outline: 3px solid #7960a5;\n  outline-offset: 4px;\n}\n#action-button.holding {\n  background: conic-gradient(#97c6a0 var(--hold-progress), #ecc0dd 0deg);\n}\n#action-icon {\n  font-size: 26px;\n  line-height: 29px;\n}\n#action-title {\n  font-size: 15px;\n  line-height: 18px;\n}\n#action-detail {\n  font-size: 10px;\n  max-width: 100%;\n  line-height: 13px;\n}\n.cleanup-tip {\n  text-align: center;\n  width: calc(100% - 36px);\n  max-width: 460px;\n  justify-content: center;\n  font-size: 11px;\n  line-height: 16px;\n  color: #887298;\n  min-height: 32px;\n}\n#cleanup-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n}\n.cleanup-marker {\n  position: absolute;\n  left: 0;\n  top: 0;\n  border-radius: 9px;\n  min-width: 22px;\n  padding: 3px 5px;\n  background: #fffaf2db;\n  border: 1px solid #fffc;\n  box-shadow: 0 2px 5px #62507722;\n  font-size: 13px;\n  line-height: 16px;\n  color: #775672;\n  will-change: transform;\n  white-space: nowrap;\n}\n.cleanup-marker[hidden] {\n  display: none;\n}\n.cleanup-marker.destination {\n  font-size: 16px !important;\n  border-radius: 50%;\n  padding: 7px !important;\n  box-shadow: 0 0 14px #fff2a8a0;\n}\n.cleanup-marker.offscreen::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #fff1aa;\n  font-size: 17px;\n  text-shadow: 0 1px 3px #504760;\n  transform: translate(-50%, -50%) rotate(var(--guide-angle)) translateX(26px);\n}\n.cleanup-marker.tool {\n  font-size: 10px;\n}\n.cleanup-marker.nearby {\n  background: #fff0b9;\n  border-color: #fff;\n  box-shadow: 0 0 10px #fff3a4bb;\n}\n.cleanup-marker.destination {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n.coin-popup {\n  position: absolute;\n  color: #63845d;\n  font-size: 22px;\n  font-weight: 800;\n  z-index: 2;\n  transform: translate(-50%, -100%);\n  animation: reward-rise .95s ease-out forwards;\n  text-shadow: 0 2px 0 #fff;\n}\n.coin-popup strong {\n  display: block;\n  padding: 3px 8px;\n  background: #fff9e4ed;\n  border-radius: 12px;\n}\n.coin-popup > span {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #e9bd61;\n  font-size: 17px;\n  animation: sparkle .75s ease-out forwards;\n}\n@keyframes reward-rise {\n  0% {\n    opacity: 0;\n    margin-top: 0;\n  }\n  20% {\n    opacity: 1;\n  }\n  75% {\n    opacity: 1;\n  }\n  100% {\n    opacity: 0;\n    margin-top: -40px;\n  }\n}\n@keyframes sparkle {\n  from {\n    transform: translate(-50%, -50%) scale(.3);\n    opacity: 1;\n  }\n  to {\n    transform: translate(var(--spark-x), var(--spark-y)) scale(.7);\n    opacity: 0;\n  }\n}\n.sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  clip-path: inset(50%);\n  overflow: hidden;\n  white-space: nowrap;\n}\n#results {\n  border: 2px solid #fff;\n  border-radius: 28px;\n  padding: 26px 22px 22px;\n  width: min(350px, calc(100% - 32px));\n  max-height: calc(100dvh - 32px);\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n  box-shadow: 0 16px 60px #55436140;\n}\n#results::backdrop {\n  background: #52416666;\n  backdrop-filter: blur(4px);\n}\n.results-flower {\n  font-size: 43px;\n  line-height: 1;\n  color: #af94cb;\n  margin-bottom: 16px;\n}\n#results .eyebrow {\n  font-size: 7px;\n  letter-spacing: 1.6px;\n}\n#results h2 {\n  margin: 12px 0 8px;\n  font-size: 30px;\n  letter-spacing: -1px;\n}\n#results-summary {\n  font-size: 12px;\n  line-height: 1.6;\n  color: #927d9e;\n}\n.results-totals {\n  display: flex;\n  justify-content: space-evenly;\n  padding: 14px 0;\n  margin: 12px 0 0;\n  background: #eee5f5;\n  border-radius: 17px;\n}\n.results-totals strong {\n  display: block;\n  font-size: 28px;\n}\n.results-totals span {\n  font-size: 10px;\n  color: #8e789f;\n}\n#results-money {\n  color: #708b6b;\n}\n#results-bonus {\n  font-size: 11px;\n  color: #788f6c;\n}\n#results-list {\n  list-style: none;\n  padding: 0;\n  display: flex;\n  justify-content: center;\n  flex-wrap: wrap;\n  gap: 6px 12px;\n  margin: 18px 0;\n  font-size: 10px;\n  color: #a58eb1;\n}\n#results-list .done {\n  color: #638269;\n}\n#replay {\n  width: 100%;\n  border: 2px solid #fff8;\n  border-radius: 17px;\n  padding: 15px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 16px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  box-shadow: 0 4px 0 #8caa8555;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#replay span {\n  margin-left: 7px;\n  font-size: 21px;\n}\n@media (max-width: 380px) {\n  .task-list {\n    gap: 6px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  #mission-clock {\n    font-size: 21px;\n  }\n  .allowance-label {\n    font-size: 6px;\n    letter-spacing: .5px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait), (orientation: landscape) and (max-height: 600px) {\n  #action-button {\n    width: 102px;\n    height: 102px;\n  }\n  #action-title {\n    font-size: 13px;\n  }\n  #action-icon {\n    font-size: 22px;\n    line-height: 24px;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .task-list {\n    height: 18px;\n    margin-top: 2px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  .task-list li > span:first-child {\n    font-size: 11px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .task-list {\n    flex-wrap: wrap;\n    height: auto;\n    justify-content: flex-start;\n    max-width: 175px;\n    gap: 5px 10px;\n  }\n  #results {\n    padding: 12px 18px;\n  }\n  .results-flower {\n    display: none;\n  }\n  #results h2 {\n    font-size: 24px;\n    margin: 7px 0;\n  }\n  .results-totals {\n    padding: 7px 0;\n  }\n  #results-list {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .coin-popup {\n    animation: none;\n  }\n  .coin-popup > span {\n    display: none;\n  }\n}\n\n/* src/ui/collection.css */\n[hidden] {\n  display: none !important;\n}\n#collection-button {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  padding: 8px 0 8px 10px;\n}\n#collection-button:disabled {\n  opacity: .45;\n}\n#wallet {\n  margin-left: 4px;\n  color: #638269;\n}\n.loop-button {\n  width: 100%;\n  border: 2px solid #fff9;\n  border-radius: 16px;\n  padding: 13px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 15px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  margin: 5px 0;\n  touch-action: manipulation;\n}\n.pink-button {\n  background: #e8b5d2;\n  color: #704b75;\n}\n.loop-button:disabled {\n  opacity: .55;\n  cursor: default;\n}\n#results-wallet {\n  font-size: 12px;\n  color: #6f8869;\n}\n#go-shopping {\n  margin-bottom: 10px;\n}\n#collection-dialog {\n  border: 2px solid #fff;\n  border-radius: 26px;\n  width: min(410px, calc(100% - 24px));\n  max-height: calc(100dvh - 24px);\n  padding: 22px 17px 17px;\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n}\n#collection-dialog::backdrop {\n  background: #52416688;\n  backdrop-filter: blur(4px);\n}\n#collection-dialog h2 {\n  margin: 10px 0 6px;\n  font-size: 28px;\n  letter-spacing: -1px;\n}\n#collection-summary {\n  font-size: 11px;\n  color: #947c9e;\n}\n#collection-grid {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 7px;\n  margin: 17px 0;\n}\n.dumpling-card {\n  background: #efe7f4;\n  border: 1px solid #fff;\n  border-radius: 14px;\n  padding: 6px 2px 9px;\n  min-width: 0;\n}\n.dumpling-card.owned {\n  background: linear-gradient(#fff9, var(--rarity));\n}\n.dumpling-card img {\n  width: 100%;\n  height: auto;\n  display: block;\n}\n.dumpling-card strong {\n  font-size: 10px;\n  display: block;\n}\n.dumpling-card small {\n  display: block;\n  font-size: 8px;\n  margin-top: 3px;\n}\n.dumpling-card .copies {\n  font-size: 10px;\n  font-weight: 800;\n  margin-top: 5px;\n}\n#store-markers {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n#shop-display-marker {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n#reveal-copy {\n  position: absolute;\n  top: 71%;\n  left: 6%;\n  width: 88%;\n  text-align: center;\n  color: var(--rarity-ink,#775887);\n  font-size: 13px;\n  pointer-events: none;\n}\n.reveal-badges {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n}\n#reveal-copy small {\n  color: var(--rarity-ink,#665070);\n  padding: 5px 10px;\n  border: 1px solid var(--rarity,#dacbdf);\n  border-radius: 20px;\n  background: var(--rarity-wash,#f4edf5);\n  font-size: 11px;\n  line-height: 1.2;\n  font-weight: 800;\n  letter-spacing: .4px;\n}\n#reveal-copy .reveal-status {\n  background: #fffc;\n  border-color: #fff;\n  color: #64556c;\n}\n#reveal-copy h2 {\n  margin: 7px 0 4px;\n  font-size: 32px;\n  line-height: 1.1;\n  letter-spacing: -.8px;\n}\n#reveal-copy p {\n  font-size: 11px;\n  margin: 0;\n  color: #74647e;\n}\n#reveal-copy[data-rarity=Legendary] .reveal-rarity {\n  box-shadow: 0 0 0 2px #fff8, 0 2px 10px #dbb14b30;\n}\n#reveal-copy.has-reveal {\n  animation: reveal-caption .4s ease-out;\n}\n@keyframes reveal-caption {\n  from {\n    transform: translateY(6px);\n    opacity: 0;\n  }\n  to {\n    transform: translateY(0);\n    opacity: 1;\n  }\n}\n#save-message {\n  position: absolute;\n  bottom: 26%;\n  left: 8%;\n  width: 84%;\n  padding: 12px;\n  border-radius: 14px;\n  background: #fff5de;\n  color: #796143;\n  font-size: 12px;\n  text-align: center;\n  z-index: 8;\n  pointer-events: none;\n}\n#game[data-scene=home] .joystick-group {\n  visibility: hidden;\n}\n#game[data-scene=home] .cleanup-tip {\n  display: none;\n}\n#squish-friend {\n  position: absolute;\n  left: 8%;\n  bottom: 12%;\n  min-width: 100px;\n  min-height: 48px;\n  padding: 12px 20px;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: #f1d6dd;\n  color: #795268;\n  font: 800 16px "Trebuchet MS", sans-serif;\n  box-shadow: 0 4px 12px #75534a15;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#home-vignette {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  background:\n    linear-gradient(\n      #ede6f4ed,\n      transparent 29%,\n      transparent 75%,\n      #ede6f4dd);\n}\n#trip-wallet {\n  font-size: 8px;\n  letter-spacing: 1px;\n  color: #887298;\n  text-align: right;\n}\n#trip-balance {\n  display: block;\n  font-size: 24px;\n  letter-spacing: -1px;\n  color: #638269;\n}\n#reveal-copy {\n  isolation: isolate;\n}\n#game[data-scene=home] .topbar,\n#game[data-scene=home] .room-title,\n#game[data-scene=home] footer {\n  text-shadow: 0 1px 8px #fff;\n}\n@media (max-height: 740px) {\n  #reveal-copy {\n    top: 68%;\n  }\n  #reveal-copy h2 {\n    font-size: 27px;\n  }\n  #collection-dialog {\n    padding-top: 15px;\n  }\n  #collection-grid {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #reveal-copy.has-reveal {\n    animation: none;\n  }\n}\n#game[data-scene=home] .controls {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  right: 18px;\n  justify-content: flex-end;\n}\n#game[data-scene=home] .joystick-group,\n#game[data-scene=home] .control-label {\n  display: none;\n}\n#game[data-scene=home] #action-button {\n  width: 136px;\n  height: 48px;\n  border-radius: 25px;\n  display: flex;\n  flex-direction: row;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n}\n#game[data-scene=home] #action-icon {\n  font-size: 20px;\n  margin: 0;\n}\n#game[data-scene=home] #action-title {\n  font-size: 13px;\n  margin: 0;\n}\n#game[data-scene=home] #action-detail {\n  display: none;\n}\n#game[data-scene=home] #squish-friend {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  left: 18px;\n  min-width: 130px;\n  font-size: 14px;\n}\nbody:has(#game[data-scene=home]) .dev-launch {\n  top: 77px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] .room-title {\n    top: 83px;\n    left: 20px;\n    right: 88px;\n    text-align: left;\n  }\n  #game[data-scene=home] .room-title .eyebrow,\n  #game[data-scene=home] #day-label {\n    display: none;\n  }\n  #game[data-scene=home] .room-title h1 {\n    font-size: 20px;\n    margin: 2px 0 4px;\n  }\n  #game[data-scene=home] .room-title p {\n    margin: 0;\n    font-size: 10px;\n  }\n  #game[data-scene=home] #reveal-copy {\n    top: 64%;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    margin: 7px 0 3px;\n    font-size: 24px;\n  }\n  #game[data-scene=home] #reveal-copy small {\n    font-size: 10px;\n    padding: 4px 8px;\n  }\n  #game[data-scene=home] #reveal-copy p {\n    font-size: 10px;\n  }\n}\n#collection-actions {\n  position: sticky;\n  top: -1px;\n  z-index: 2;\n  background: #faf5fb;\n  padding: 4px 0;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 5px;\n}\n#collection-actions .loop-button {\n  font-size: 12px;\n  padding: 10px 5px;\n  margin: 0;\n  min-height: 44px;\n}\n#collection-actions #open-next {\n  grid-column: 1/-1;\n}\n#reveal-copy {\n  background: #fff9;\n  border-radius: 18px;\n  padding: 8px;\n  left: 8%;\n  width: 84%;\n}\n#home-vignette {\n  background:\n    linear-gradient(\n      #ede6f4a0,\n      transparent 25%,\n      transparent 70%,\n      #ede6f4a0);\n}\n\n/* src/ui/house.css */\n#mission-picker {\n  display: flex;\n  gap: 5px;\n  justify-content: center;\n  margin: 9px auto 0;\n  pointer-events: auto;\n}\n#mission-picker button {\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  background: #f6f0f9db;\n  padding: 5px 10px;\n  color: #8c739d;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#mission-picker button[aria-pressed=true] {\n  color: #614d7c;\n  background: #d6c4e8;\n}\n#mission-picker button:disabled {\n  opacity: .65;\n  cursor: default;\n}\n#room-connections {\n  margin: 7px 12px 0;\n  font-size: 10px;\n  color: #816b90;\n}\n#house-doors {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n.door-label {\n  position: absolute;\n  left: 0;\n  top: 0;\n  white-space: nowrap;\n  padding: 3px 6px;\n  font-size: 9px;\n  font-weight: 700;\n  color: #756085;\n  background: #fff6e7dc;\n  border: 1px solid #fff8;\n  border-radius: 7px;\n}\n.room-title {\n  text-shadow: 0 1px 6px #ede6f4;\n}\n#game[data-mission=practice] #task-count {\n  font-size: 9px;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #mission-picker {\n    margin-top: 5px;\n  }\n  #mission-picker button {\n    padding: 4px 8px;\n    font-size: 9px;\n  }\n  #room-connections {\n    margin-top: 4px;\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #mission-picker {\n    justify-content: flex-start;\n    flex-wrap: wrap;\n    width: 180px;\n    margin-left: 0;\n  }\n  #room-connections {\n    max-width: 165px;\n    margin-left: 0;\n  }\n}\n#game[data-scene=cleanup] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border: 1px solid #fff9;\n  border-radius: 20px;\n  background: #fff9efed;\n  box-shadow: 0 4px 20px #66564412;\n}\n#game[data-scene=cleanup] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=cleanup] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=cleanup] .flower {\n  font-size: 34px;\n}\n#game[data-scene=cleanup] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=cleanup] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1.1px;\n  color: #5c6e52;\n}\n#game[data-scene=cleanup] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n  letter-spacing: -.6px;\n}\n#game[data-scene=cleanup] .task-list {\n  justify-content: flex-start;\n  background: #fff8efdc;\n  border-radius: 9px;\n  padding: 4px 7px;\n  width: max-content;\n  max-width: 100%;\n  height: auto;\n}\n#game[data-scene=cleanup] #mission-picker {\n  justify-content: flex-start;\n  margin: 7px 0 0;\n}\n#game[data-scene=cleanup] #room-connections {\n  display: none;\n}\n#game[data-scene=cleanup] .player-label {\n  font-size: 9px;\n  padding: 3px 7px;\n}\n#game[data-scene=cleanup] .controls {\n  bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px));\n  left: 20px;\n  right: 20px;\n}\n#game[data-scene=cleanup] .control-label {\n  color: #50624c;\n  text-shadow: 0 1px 3px #ffff;\n}\n#game[data-scene=cleanup] #cleanup-hint {\n  background: #fff9efed;\n  width: calc(100% - 32px);\n  left: 16px;\n  padding: 7px 10px;\n  border-radius: 12px;\n  color: #596651;\n  bottom: calc(max(40px, env(safe-area-inset-bottom)) + 150px);\n  font-size: 10px;\n}\n#game[data-scene=cleanup] footer {\n  left: 16px;\n  right: 16px;\n  background: #fff9efed;\n  padding: 5px 9px;\n  border-radius: 12px;\n  bottom: 8px;\n  color: #6c795e;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #game[data-scene=cleanup] .room-title {\n    top: 85px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] #mission-picker {\n    margin-top: 5px;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    bottom: calc(max(36px, env(safe-area-inset-bottom)) + 144px);\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=cleanup] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=cleanup] .room-title {\n    top: 95px;\n    width: 210px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] .task-list {\n    flex-wrap: wrap;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    width: 40%;\n    left: 30%;\n    bottom: 12px;\n  }\n  #game[data-scene=cleanup] footer {\n    display: flex;\n    flex-wrap: wrap;\n    top: 12px;\n    bottom: auto;\n    left: 270px;\n    right: 16px;\n    justify-content: flex-end;\n  }\n}\n.asset-credits {\n  color: inherit;\n  font-size: 9px;\n  text-decoration: none;\n  padding: 5px;\n}\n#day-label {\n  margin: 5px 0;\n  font-size: 11px;\n  font-weight: 700;\n  color: #667b5b;\n  text-transform: capitalize;\n}\n#mission-picker {\n  flex-wrap: wrap;\n}\n#game[data-mission=day] .task-list {\n  flex-wrap: wrap;\n  font-size: 9px;\n}\n#game[data-mission=day] #mission-clock {\n  font-size: 19px;\n  white-space: nowrap;\n}\n#school-transition {\n  position: absolute;\n  z-index: 30;\n  inset: 0;\n  background: #f6eafaed;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  color: #65517b;\n}\n#school-transition[hidden] {\n  display: none;\n}\n#school-transition span {\n  font-size: 64px;\n}\n.lilah-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  max-width: 165px;\n  padding: 7px 10px;\n  border-radius: 15px 15px 15px 3px;\n  background: #fff2ceeF;\n  color: #735978;\n  font-size: 12px;\n  font-weight: 700;\n  pointer-events: none;\n  box-shadow: 0 3px 12px #7c627525;\n  z-index: 5;\n  text-align: center;\n}\n.lilah-label[hidden] {\n  display: none;\n}\n.marc-label {\n  background: #e7f0e4ef;\n  color: #4f655c;\n}\n#player-label,\n#house-doors,\n#room-connections {\n  display: none !important;\n}\n#game[data-scene=cleanup] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border-radius: 20px;\n  background: #fff9efed;\n}\n#game[data-scene=store] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=store] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=store] .flower {\n  font-size: 34px;\n}\n#game[data-scene=store] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=store] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1px;\n}\n#game[data-scene=store] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n}\n#game[data-scene=store] #scene-subtitle {\n  font-size: 11px;\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=store] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=store] .room-title {\n    width: 210px;\n  }\n}\n#bedtime-fade {\n  position: absolute;\n  inset: 0;\n  background: #161325;\n  z-index: 80;\n  pointer-events: none;\n}\n#house-effects {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font: 700 10px "Trebuchet MS", sans-serif;\n  min-height: 36px;\n  cursor: pointer;\n  padding: 4px 6px;\n}\n\n/* src/dev/developer-panel.css */\n.dev-launch,\n.dev-inline {\n  font: 800 11px/1.2 system-ui, sans-serif !important;\n  letter-spacing: .08em;\n  background: #27263c !important;\n  color: #e6dcff !important;\n  border: 1px solid #b9a4e8 !important;\n  border-radius: 12px !important;\n  min-height: 44px;\n  min-width: 44px;\n  padding: 10px !important;\n  cursor: pointer;\n}\n.dev-launch {\n  position: fixed;\n  z-index: 90;\n  bottom: 64px;\n  left: 50%;\n  transform: translateX(-50%);\n  box-shadow: 0 4px 18px #29223a40;\n}\n.dev-launch {\n  bottom: calc(64px + env(safe-area-inset-bottom, 0px));\n}\n#developer-panel {\n  height: min(850px, calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));\n}\n.dev-inline {\n  margin: 6px;\n  flex-shrink: 0;\n}\n.pop-title .dev-inline {\n  font-size: 9px !important;\n  letter-spacing: 0;\n  margin: 0;\n  min-width: 38px;\n  padding: 5px !important;\n}\n#developer-panel {\n  width: min(720px, calc(100vw - 24px));\n  max-width: none;\n  max-height: none;\n  height: min(850px, calc(100dvh - 24px));\n  margin: auto;\n  padding: 0;\n  overflow: hidden;\n  border: 1px solid #b6a4d764;\n  border-radius: 24px;\n  background: #181926;\n  color: #eeeaf8;\n  box-shadow: 0 28px 100px #100c23a6;\n  font: 14px/1.45 system-ui, sans-serif;\n  text-align: left;\n}\n#developer-panel::backdrop {\n  background: #121020a6;\n  backdrop-filter: blur(5px);\n}\n#developer-panel * {\n  box-sizing: border-box;\n}\n#developer-panel [hidden] {\n  display: none !important;\n}\n#developer-panel .dev-shell {\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n}\n#developer-panel button {\n  font: 650 13px/1.35 system-ui, sans-serif;\n  cursor: pointer;\n  min-height: 44px;\n  border: 1px solid #494458;\n  background: #303043;\n  color: #f3efff;\n  border-radius: 12px;\n  padding: 11px 13px;\n  box-shadow: none;\n  text-transform: none;\n  letter-spacing: 0;\n  transition: background .12s;\n}\n#developer-panel button:hover {\n  background: #414057;\n}\n#developer-panel button:focus-visible,\n#developer-panel select:focus-visible {\n  outline: 3px solid #d1bcff;\n  outline-offset: 2px;\n}\n#developer-panel button:disabled {\n  opacity: .4;\n  cursor: not-allowed;\n}\n#developer-panel button[aria-pressed=true] {\n  background: #b5dccc;\n  color: #1d3830;\n  border-color: #b5dccc;\n}\n#developer-panel .dev-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n  padding: 24px 26px 16px;\n  background:\n    radial-gradient(\n      ellipse at 90% 10%,\n      #76588b45,\n      transparent 60%);\n}\n#developer-panel .dev-eyebrow {\n  color: #c0b7d5;\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: .16em;\n  display: flex;\n  align-items: center;\n  gap: 7px;\n}\n#developer-panel .dev-eyebrow i {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: #aaddc4;\n  box-shadow: 0 0 12px #aaddc440;\n}\n#developer-panel h2 {\n  color: #f5f0ff;\n  font-size: 29px;\n  letter-spacing: -1px;\n  margin: 5px 0 2px;\n  font-weight: 750;\n}\n#developer-panel h2 span {\n  color: #d9baf5;\n  margin-left: 10px;\n}\n#developer-panel .dev-header p {\n  color: #b7afc8;\n  margin: 0;\n  font-size: 12px;\n}\n#developer-panel .dev-close {\n  font-size: 25px;\n  padding: 2px;\n  width: 44px;\n  background: #ffffff08;\n  border-color: #ffffff20;\n}\n#developer-panel .dev-live {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 0 26px 16px;\n  color: #d2cddd;\n  font-size: 11px;\n}\n#developer-panel .dev-live span {\n  padding: 5px 9px;\n  border: 1px solid #ffffff15;\n  border-radius: 7px;\n  background: #ffffff05;\n}\n#developer-panel .dev-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 4px;\n  border-block: 1px solid #ffffff12;\n  padding: 6px 20px;\n  background: #20202e;\n}\n#developer-panel .dev-tabs button {\n  background: transparent;\n  border-color: transparent;\n  color: #aaa2bc;\n  border-radius: 9px;\n  padding: 10px 4px;\n  font-size: 12px;\n}\n#developer-panel .dev-tabs button[aria-selected=true] {\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-content {\n  overflow-y: auto;\n  min-height: 0;\n  padding: 20px 26px;\n  flex: 1;\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  scrollbar-color: #6b597f transparent;\n}\n#developer-panel .dev-hero {\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  width: 100%;\n  padding: 22px 18px;\n  text-align: left;\n  background:\n    linear-gradient(\n      120deg,\n      #d7c6f2,\n      #efc8da);\n  border: 0;\n  color: #392e4b;\n  margin-bottom: 16px;\n}\n#developer-panel .dev-hero:hover {\n  background:\n    linear-gradient(\n      120deg,\n      #e2d5f8,\n      #f6d8e5);\n}\n#developer-panel .dev-hero-icon {\n  font-size: 38px;\n  line-height: 1;\n}\n#developer-panel .dev-hero small {\n  display: block;\n  letter-spacing: .13em;\n  font-size: 9px;\n  font-weight: 800;\n  opacity: .75;\n}\n#developer-panel .dev-hero strong {\n  display: block;\n  font-size: 22px;\n  letter-spacing: -.6px;\n  margin: 3px 0;\n}\n#developer-panel .dev-hero span span {\n  display: block;\n  font-size: 11px;\n  font-weight: 500;\n}\n#developer-panel .dev-hero b {\n  font-size: 25px;\n  margin-left: auto;\n}\n#developer-panel .dev-card {\n  background: #232333;\n  border: 1px solid #ffffff10;\n  border-radius: 16px;\n  padding: 18px;\n  margin-bottom: 14px;\n}\n#developer-panel h3 {\n  font-size: 15px;\n  margin: 0 0 8px;\n  color: #f0eafa;\n  font-weight: 700;\n}\n#developer-panel p {\n  color: #b8b0c9;\n  font-size: 12px;\n  margin: 0 0 13px;\n  line-height: 1.55;\n}\n#developer-panel .dev-card > p:last-child {\n  margin: 12px 0 0;\n}\n#developer-panel .dev-grid {\n  display: grid;\n  grid-template-columns: repeat(2, minmax(0, 1fr));\n  gap: 8px;\n}\n#developer-panel .dev-grid button {\n  text-align: left;\n}\n#developer-panel .dev-select-label {\n  display: block;\n  font-size: 11px;\n  color: #b9b1ca;\n  margin: 15px 0 6px;\n}\n#developer-panel select {\n  display: block;\n  width: 100%;\n  border: 1px solid #58506b;\n  background: #181926;\n  color: #eeeaf8;\n  border-radius: 10px;\n  min-height: 44px;\n  padding: 10px;\n  margin-bottom: 8px;\n  font: 13px system-ui, sans-serif;\n}\n#developer-panel .dev-notice {\n  padding: 16px;\n  border-radius: 14px;\n  background: #30342f;\n  border: 1px solid #b8d4bb30;\n  margin-bottom: 14px;\n  color: #c8e5d1;\n}\n#developer-panel .dev-notice strong {\n  font-size: 12px;\n}\n#developer-panel .dev-notice p {\n  margin: 6px 0 0;\n  color: #b4c2b6;\n}\n#developer-panel .dev-resume {\n  width: 100%;\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-danger {\n  color: #ffc4bf;\n  border-color: #965e6455;\n}\n#developer-panel pre {\n  white-space: pre-wrap;\n  font: 11px/1.8 ui-monospace, monospace;\n  color: #bbb4cd;\n  margin: 16px 0 0;\n  overflow-wrap: anywhere;\n}\n#developer-panel .dev-bottom {\n  padding: 13px 26px 15px;\n  border-top: 1px solid #ffffff12;\n  background: #20202e;\n}\n#developer-panel .dev-bottom > span {\n  display: block;\n  font-size: 11px;\n  color: #bce1cd;\n}\n#developer-panel .dev-bottom small {\n  display: block;\n  font-size: 10px;\n  color: #aaa1bc;\n  margin-top: 3px;\n}\n#developer-panel [data-status] {\n  font-size: 11px;\n  color: #d6c4f3;\n  margin-top: 8px;\n}\n#developer-panel [data-status][data-error=true] {\n  color: #ffc1b7;\n}\n@media (max-width: 480px) {\n  #developer-panel {\n    width: calc(100vw - 12px);\n    height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));\n    border-radius: 18px;\n  }\n  #developer-panel .dev-header {\n    padding: 17px 16px 12px;\n  }\n  #developer-panel h2 {\n    font-size: 25px;\n  }\n  #developer-panel .dev-live {\n    padding: 0 16px 12px;\n    gap: 5px;\n  }\n  #developer-panel .dev-tabs {\n    padding: 5px 10px;\n  }\n  #developer-panel .dev-content {\n    padding: 14px;\n  }\n  #developer-panel .dev-card {\n    padding: 14px;\n  }\n  #developer-panel .dev-bottom {\n    padding: 11px 16px;\n  }\n  #developer-panel .dev-hero {\n    padding: 16px 13px;\n    gap: 10px;\n  }\n  #developer-panel .dev-hero strong {\n    font-size: 20px;\n  }\n  #developer-panel .dev-hero-icon {\n    font-size: 28px;\n  }\n  #developer-panel .dev-grid button {\n    font-size: 12px;\n    padding: 10px;\n  }\n  #developer-panel .dev-bottom small {\n    font-size: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #developer-panel button {\n    transition: none;\n  }\n}\n#developer-panel .dev-bottom {\n  position: static;\n  display: block;\n  flex-shrink: 0;\n  letter-spacing: 0;\n  pointer-events: auto;\n}\n#squishy-pop:has(.dev-inline) .pop-footer {\n  display: block;\n}\n#squishy-pop .pop-title .dev-inline {\n  background: #27263c !important;\n  color: #e6dcff !important;\n}\n';
+var local_default = '/* src/ui/hunt.css */\n#hunt-routes {\n  width: min(420px, calc(100% - 24px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  border: 2px solid white;\n  border-radius: 26px;\n  padding: 23px 16px 14px;\n  color: #57496b;\n  background: #faf5ef;\n}\n#hunt-routes::backdrop {\n  background: #46395480;\n  backdrop-filter: blur(4px);\n}\n#hunt-routes h2 {\n  font-size: 25px;\n  letter-spacing: -.8px;\n  margin: 12px 0 7px;\n}\n.hunt-budget {\n  font-size: 13px;\n  color: #59765e;\n  font-weight: 800;\n  margin: 0 0 15px;\n}\n.store-choice {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  width: 100%;\n  padding: 13px 10px;\n  margin: 9px 0;\n  text-align: left;\n  border: 1px solid #fff;\n  border-radius: 18px;\n  background:\n    linear-gradient(\n      110deg,\n      var(--shop-color),\n      #fff7ee);\n  color: #514863;\n  box-shadow: 0 3px 8px #69546710;\n  cursor: pointer;\n}\n.store-choice:disabled {\n  opacity: .5;\n  cursor: default;\n}\n.store-icon {\n  display: grid;\n  place-items: center;\n  width: 43px;\n  min-width: 43px;\n  height: 43px;\n  border-radius: 50%;\n  background: #fff8;\n  font-size: 28px;\n}\n.store-choice strong {\n  display: block;\n  font-size: 17px;\n  margin-bottom: 4px;\n}\n.store-choice small {\n  display: block;\n  font-size: 10px;\n  line-height: 1.5;\n}\n.store-choice em {\n  display: block;\n  font-size: 11px;\n  line-height: 1.35;\n  margin: 7px 0 4px;\n  font-style: normal;\n  font-weight: 700;\n}\n.route-status {\n  color: #5e795b;\n}\n.hunt-explainer {\n  font-size: 10px;\n  line-height: 1.5;\n  color: #8d7b8b;\n  margin: 12px 4px;\n}\n#shopping-time {\n  display: inline-block;\n  padding: 6px 10px;\n  margin: 3px 0;\n  background: #fffaeeed;\n  color: #66795b;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 700;\n  pointer-events: none;\n}\n#hunt-find {\n  position: absolute;\n  left: 16px;\n  right: 16px;\n  bottom: 220px;\n  max-width: 360px;\n  margin: auto;\n  padding: 12px 14px;\n  border: 1px solid white;\n  border-radius: 18px;\n  background: #fff8eff2;\n  color: #655371;\n  box-shadow: 0 4px 18px #56466320;\n  pointer-events: none;\n}\n#hunt-find strong {\n  font-size: 17px;\n}\n#hunt-find p {\n  font-size: 12px;\n  margin: 5px 0;\n  color: #59816b;\n  font-weight: 700;\n}\n#hunt-find small {\n  font-size: 10px;\n}\n#game[data-scene=store] #save-message {\n  bottom: auto;\n  top: 190px;\n  left: 16px;\n  width: calc(100% - 32px);\n  padding: 9px 12px;\n}\n#game[data-scene=store] #cleanup-hint {\n  background: #fff9efdf;\n  border-radius: 12px;\n  padding: 7px 9px;\n}\n#game[data-scene=store] #shop-display-marker {\n  background: transparent;\n  color: #ffe6a0;\n  border: 0;\n  padding: 0;\n  box-shadow: none;\n  font-size: 23px;\n  text-shadow: 0 0 4px white, 0 0 9px #e6b761;\n}\n#hunt-travel {\n  position: absolute;\n  inset: 0;\n  z-index: 45;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  background: #f5edf7f5;\n  color: #705b83;\n}\n#hunt-travel span {\n  font-size: 65px;\n  animation: hunt-bob .6s ease-in-out infinite alternate;\n}\n#hunt-travel h2 {\n  font-size: 27px;\n}\n@keyframes hunt-bob {\n  to {\n    transform: translateY(-10px) rotate(6deg);\n  }\n}\n.series-heading {\n  grid-column: 1/-1;\n  text-align: left;\n  padding: 10px 3px 4px;\n  font-size: 14px;\n}\n#game[data-scene=store] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] #day-label,\n#game[data-scene=store] #scene-subtitle {\n  display: none;\n}\n#game[data-scene=store] .room-title .eyebrow {\n  font-size: 12px;\n  letter-spacing: .7px;\n  margin-bottom: 4px;\n}\n@media (max-height: 740px) {\n  #hunt-find {\n    bottom: 190px;\n    padding: 8px 12px;\n  }\n  #hunt-routes {\n    padding-top: 14px;\n  }\n  .store-choice {\n    padding: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #hunt-travel span {\n    animation: none;\n  }\n}\n#hunt-routes .dialog-top-action {\n  position: sticky;\n  top: 0;\n  z-index: 2;\n  box-shadow: 0 0 0 5px #faf5fb;\n}\n\n/* src/ui/trading.css */\n#trading-dialog {\n  box-sizing: border-box;\n  width: min(460px, calc(100% - 16px));\n  max-height: calc(100dvh - 16px);\n  padding: 0;\n  border: 2px solid white;\n  border-radius: 24px;\n  background: #fcf7ef;\n  color: #514365;\n  overflow: hidden;\n}\n#trading-dialog[open] {\n  display: flex;\n  flex-direction: column;\n}\n#trading-dialog::backdrop {\n  background: #44355288;\n  backdrop-filter: blur(3px);\n}\n#trading-dialog button {\n  font: inherit;\n  color: inherit;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#trading-dialog button:disabled {\n  opacity: .48;\n  cursor: default;\n}\n.trade-header {\n  padding: 14px 18px 10px;\n  background:\n    linear-gradient(\n      120deg,\n      #fff,\n      var(--trader));\n  flex-shrink: 0;\n}\n.trade-header h2 {\n  margin: 4px 0;\n  font-size: 27px;\n}\n.trade-header strong {\n  font-size: 12px;\n}\n.trade-header p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  line-height: 1.4;\n}\n.trade-scroll {\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  padding: 0 14px 12px;\n  min-height: 0;\n}\n#trading-dialog h3 {\n  font-size: 13px;\n  margin: 12px 0 7px;\n  display: flex;\n  justify-content: space-between;\n  gap: 4px;\n}\n#trading-dialog h3 small {\n  font-size: 10px;\n  font-weight: normal;\n}\n.trade-slots {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n  gap: 6px;\n  min-height: 65px;\n  background: #e9dfef;\n  padding: 7px;\n  border-radius: 15px;\n}\n.trade-item {\n  border: 1px solid #fff;\n  background: #fffbf8;\n  border-radius: 12px;\n  padding: 4px;\n  text-align: center;\n  min-width: 0;\n}\n.trade-item img {\n  width: 100%;\n  height: 52px;\n  object-fit: contain;\n}\n.trade-item strong,\n.trade-item small {\n  display: block;\n  font-size: 10px;\n}\n.trade-item small {\n  font-size: 9px;\n  margin-top: 3px;\n}\n.trade-speech {\n  font-size: 12px;\n  line-height: 1.45;\n  background: #fff1cd;\n  border-radius: 13px;\n  padding: 10px;\n  margin: 10px 0;\n}\n.trade-empty {\n  grid-column: 1/-1;\n  margin: 10px;\n  font-size: 12px;\n  line-height: 1.5;\n}\n.trade-bag-heading label {\n  display: flex;\n  gap: 6px;\n  align-items: center;\n  font-size: 12px;\n  min-height: 32px;\n}\n.trade-bag-heading input {\n  width: 20px;\n  height: 20px;\n  accent-color: #8573a2;\n}\n.trade-safety {\n  font-size: 10px;\n  line-height: 1.4;\n  margin: 5px 0 10px;\n  color: #796b87;\n}\n#trade-inventory {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 6px;\n}\n.trade-bag-item {\n  display: flex;\n  align-items: center;\n  min-height: 62px;\n  padding: 4px;\n  border: 1px solid #ded2e6;\n  background: white;\n  border-radius: 12px;\n  text-align: left;\n  min-width: 0;\n}\n.trade-bag-item img {\n  width: 38px;\n  flex-shrink: 0;\n}\n.trade-bag-item strong {\n  font-size: 11px;\n  display: block;\n}\n.trade-bag-item small {\n  font-size: 9px;\n  display: block;\n  margin-top: 3px;\n}\n.trade-footer {\n  flex-shrink: 0;\n  padding: 8px 12px 12px;\n  background: #fcf7ef;\n  border-top: 1px solid #e8ddea;\n}\n.trade-footer p {\n  margin: 0 0 8px;\n  text-align: center;\n  font-size: 12px;\n  font-weight: bold;\n}\n.trade-controls {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  gap: 9px;\n}\n.trade-controls button {\n  border: 2px solid white;\n  border-radius: 18px;\n  font-size: 32px !important;\n  font-weight: bold !important;\n  min-height: 68px;\n  background: #f0c6cc;\n}\n.trade-controls button small {\n  display: block;\n  font-size: 10px;\n}\n.trade-controls #trade-add {\n  background: #f6dfa1;\n}\n.trade-controls #trade-accept {\n  background: #bad6b9;\n}\n#leave-recess {\n  position: absolute;\n  top: 76px;\n  right: 14px;\n  width: auto;\n  font-size: 12px;\n  padding: 9px 13px;\n  z-index: 5;\n}\n.collection-protection {\n  border: 0;\n  background: #fff9;\n  border-radius: 8px;\n  margin: 4px 1px 0;\n  min-width: 30px;\n  min-height: 32px;\n  font-size: 14px;\n  cursor: pointer;\n}\n.collection-protection[aria-pressed=true] {\n  background: #e5c6e9;\n  outline: 1px solid #b68ec0;\n}\n#game[data-scene=recess] #trip-wallet,\n#game[data-scene=recess] #mission-clock {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  .trade-header {\n    padding: 8px 12px;\n  }\n  .trade-header h2 {\n    font-size: 21px;\n  }\n  .trade-header p {\n    font-size: 11px;\n  }\n  .trade-item img {\n    height: 42px;\n  }\n  .trade-controls button {\n    min-height: 60px;\n  }\n  .trade-footer {\n    padding: 6px 10px;\n  }\n}\n#trade-suggest {\n  width: 100%;\n  min-height: 44px;\n  border: 2px solid #b4d4bd;\n  border-radius: 16px;\n  background: #edf8ed;\n  font-weight: 800;\n}\n.trade-help {\n  font-size: 11px;\n  color: #6d6477;\n}\n.trade-loved {\n  border-color: #bad8bb !important;\n}\n.trade-header > small {\n  display: block;\n  margin-top: 7px;\n  font-size: 11px;\n}\n\n/* src/ui/squishy-pop.css */\n.pop-launch {\n  position: fixed;\n  z-index: 20;\n  bottom: max(160px, 22vh);\n  left: 50%;\n  transform: translateX(-50%);\n  width: min(310px, 85vw);\n  border: 3px solid #fff9;\n  border-radius: 30px;\n  padding: 13px 16px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe7ee,\n      #efa6d4);\n  color: #655082;\n  box-shadow: 0 6px 22px #4f3b6240;\n  font-weight: 900;\n  font-size: 17px;\n  cursor: pointer;\n}\n.pop-launch span {\n  margin-right: 8px;\n}\n.pop-launch small {\n  display: block;\n  font-size: 11px;\n  letter-spacing: .5px;\n  margin-top: 5px;\n  font-weight: 600;\n}\n#squishy-pop {\n  padding: 0;\n  border: 0;\n  background: transparent;\n  color: #5d497d;\n  max-width: none;\n  max-height: none;\n  width: 100%;\n  height: 100dvh;\n  inset: 0;\n  margin: 0;\n  overflow: auto;\n  font-family: inherit;\n}\n#squishy-pop::backdrop {\n  background: #46345495;\n  backdrop-filter: blur(9px);\n}\n#squishy-pop * {\n  box-sizing: border-box;\n}\n#squishy-pop button {\n  font: inherit;\n  cursor: pointer;\n  min-height: 44px;\n  color: #654e83;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: linear-gradient(#ffe1ef, #f9aed5);\n  font-weight: 800;\n  padding: 9px 17px;\n  box-shadow: 0 3px 0 #c997c136;\n}\n#squishy-pop button:active {\n  transform: scale(.96);\n}\n#squishy-pop button:focus-visible {\n  outline: 3px solid #8a5fb4;\n  outline-offset: 2px;\n}\n.pop-shell {\n  width: min(100%, 480px);\n  min-height: 100%;\n  margin: auto;\n  padding: max(16px, env(safe-area-inset-top)) 18px max(14px, env(safe-area-inset-bottom));\n  background:\n    radial-gradient(\n      ellipse at 10% 45%,\n      #fff5d2aa,\n      transparent 60%),\n    linear-gradient(\n      155deg,\n      #fff8f1f5,\n      #f1e5fff5 60%,\n      #ffe9f1f5);\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 14px;\n}\n.pop-title {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.pop-title > div {\n  flex: 1;\n}\n.pop-title small {\n  font-size: 9px;\n  letter-spacing: 2px;\n}\n.pop-title h2 {\n  font-size: 30px;\n  letter-spacing: -1px;\n  line-height: 1.1;\n  margin: 6px 0;\n  font-weight: 1000;\n  color: #9878b9;\n  text-shadow: 0 2px 0 white;\n}\n.pop-title em {\n  font-style: normal;\n  color: #ed83b0;\n}\n.pop-title button {\n  width: 44px;\n  padding: 5px !important;\n  background: #ffffffad !important;\n}\n.pop-stats {\n  display: grid;\n  grid-template-columns: 1fr 1.1fr 1.1fr;\n  gap: 8px;\n}\n.pop-stats > div {\n  border-radius: 22px;\n  padding: 11px 5px;\n  background: #ffffffc7;\n  border: 2px solid #fff;\n  text-align: center;\n  box-shadow: 0 4px 0 #cbb4e227;\n}\n.pop-stats small {\n  display: block;\n  font-size: 10px;\n  letter-spacing: 1.6px;\n  color: #957bad;\n  font-weight: 800;\n}\n.pop-stats strong {\n  display: block;\n  font-size: 27px;\n  line-height: 1.3;\n}\n.pop-stats progress {\n  height: 6px;\n  width: 65%;\n  display: block;\n  margin: 4px auto 0;\n}\n.pop-tray {\n  position: relative;\n  border: 6px solid #f6eeff;\n  border-radius: 35px;\n  background:\n    linear-gradient(\n      135deg,\n      #d1b9ee,\n      #c4a6df);\n  padding: 9px;\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #bca1d8,\n    0 14px 25px #76609330;\n  isolation: isolate;\n}\n.pop-tray canvas {\n  width: 100%;\n  aspect-ratio: 1;\n  display: block;\n  touch-action: none;\n  border-radius: 21px;\n  background:\n    radial-gradient(\n      ellipse,\n      #fff2 40%,\n      transparent 70%);\n  user-select: none;\n}\n.pop-feedback {\n  position: absolute;\n  pointer-events: none;\n  inset: 40% 0 auto;\n  text-align: center;\n  font-size: 29px;\n  font-weight: 1000;\n  color: #ec65a9;\n  text-shadow:\n    2px 3px white,\n    -2px -2px white,\n    0 4px 6px #8a5fad;\n  transform: rotate(-6deg);\n  z-index: 2;\n}\n.pop-cover {\n  position: absolute;\n  inset: 0;\n  z-index: 3;\n  border-radius: 28px;\n  background: #fff5f2ef;\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  align-items: center;\n  text-align: center;\n  gap: 10px;\n  padding: 20px;\n  backdrop-filter: blur(4px);\n}\n.pop-cover[hidden] {\n  display: none;\n}\n.pop-cover h3 {\n  font-size: 23px;\n  line-height: 1.2;\n  margin: 0;\n}\n.pop-cover p {\n  font-size: 12px;\n  margin: 0;\n  max-width: 260px;\n}\n.pop-cover button {\n  width: 85%;\n  font-size: 14px !important;\n}\n.pop-cover .pop-link {\n  border: 0;\n  background: none;\n  box-shadow: none;\n  font-size: 12px !important;\n}\n.pop-count {\n  font-size: 80px;\n  color: #e778af;\n  animation: pop-count .8s infinite;\n}\n.pop-demo {\n  position: relative;\n  display: flex;\n  gap: 15px;\n  padding: 8px 10px 25px;\n  font-size: 40px;\n  color: #ec87b6;\n}\n.pop-demo b {\n  position: absolute;\n  left: 10%;\n  bottom: 0;\n  font-size: 32px;\n  animation: pop-finger 2s infinite;\n}\n.pop-frenzy {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 10px;\n  letter-spacing: 1px;\n  font-weight: 900;\n  margin-top: 3px;\n}\n.pop-frenzy progress {\n  flex: 1;\n  min-width: 0;\n}\n.pop-frenzy b {\n  color: #e788b5;\n}\n.pop-hint {\n  text-align: center;\n  font-size: 14px;\n  font-weight: 700;\n  margin: 0;\n}\n.pop-friends {\n  display: flex;\n  justify-content: center;\n  gap: 7px;\n}\n.pop-friends span {\n  width: 40px;\n  text-align: center;\n}\n.pop-friends img {\n  width: 40px;\n  height: 35px;\n  object-fit: contain;\n  display: block;\n}\n.pop-friends small {\n  font-size: 9px;\n  color: #b18a52;\n  display: block;\n}\n.pop-footer {\n  text-align: center;\n  font-size: 10px;\n  color: #a58fb0;\n  letter-spacing: 1px;\n}\n.pop-result-star {\n  font-size: 35px;\n  color: #f5c960;\n}\n.pop-result-numbers {\n  display: flex;\n  justify-content: space-around;\n  width: 100%;\n  font-size: 11px;\n}\n.pop-result-numbers b {\n  display: block;\n  font-size: 24px;\n}\n.pop-ticket-prize {\n  font-size: 15px;\n  color: #d26f9f;\n}\n.pop-cover progress {\n  width: 70%;\n  height: 9px;\n}\n#squishy-pop progress {\n  appearance: none;\n  border: 0;\n  border-radius: 20px;\n  background: #e1d4ed;\n  height: 9px;\n  overflow: hidden;\n}\n#squishy-pop progress::-webkit-progress-bar {\n  background: #e1d4ed;\n  border-radius: 20px;\n}\n#squishy-pop progress::-webkit-progress-value {\n  background:\n    linear-gradient(\n      90deg,\n      #bd95e0,\n      #f49abe);\n  border-radius: 20px;\n  transition: width .2s;\n}\n.urgent {\n  color: #df608a;\n  animation: pop-count 1s infinite;\n}\n@keyframes pop-finger {\n  0%, 15% {\n    left: 10%;\n  }\n  70%, 100% {\n    left: 75%;\n  }\n}\n@keyframes pop-count {\n  0% {\n    transform: scale(1.08);\n  }\n  70% {\n    transform: scale(1);\n  }\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 9px;\n    padding: 10px 15px;\n  }\n  .pop-title h2 {\n    font-size: 25px;\n  }\n  .pop-stats > div {\n    padding: 7px 3px;\n  }\n  .pop-stats strong {\n    font-size: 23px;\n  }\n  .pop-friends {\n    display: none;\n  }\n  .pop-footer {\n    display: none;\n  }\n  .pop-tray {\n    border-width: 5px;\n    padding: 6px;\n  }\n  .pop-cover {\n    gap: 7px;\n    padding: 10px;\n  }\n  .pop-cover h3 {\n    font-size: 20px;\n  }\n  .pop-result-star {\n    display: none;\n  }\n}\n@media (min-width: 500px) {\n  .pop-shell {\n    max-width: min(480px, 70dvh);\n    border-radius: 32px;\n    min-height: 0;\n    margin: 20px auto;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #squishy-pop * {\n    animation: none !important;\n  }\n}\n.pop-demo img {\n  width: 58px;\n  height: 58px;\n  object-fit: contain;\n}\n.pop-demo:before {\n  content: "";\n  position: absolute;\n  height: 5px;\n  background: #ffaad4;\n  left: 25px;\n  right: 25px;\n  top: 45%;\n  z-index: -1;\n  border-radius: 10px;\n}\n.pop-demo {\n  isolation: isolate;\n}\n.is-frenzy .pop-tray {\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #e7afd5,\n    0 0 30px #ffb8d5;\n}\n.is-frenzy .pop-frenzy {\n  color: #cf639e;\n}\n.pop-launch[hidden] {\n  display: none;\n}\n.pop-cover .pop-result-star {\n  animation: pop-count .8s 2;\n}\n#squishy-pop {\n  font-family:\n    "Trebuchet MS",\n    "Arial Rounded MT Bold",\n    Arial,\n    sans-serif;\n}\n[data-tickets] {\n  background-repeat: no-repeat;\n  background-position: calc(50% - 15px) center;\n  background-size: 35px;\n  padding-left: 26px;\n}\n.pop-launch {\n  animation: pop-entrance .3s ease-out;\n}\n@keyframes pop-entrance {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n.pop-frenzy span {\n  padding: 7px 0 7px 24px;\n  background-repeat: no-repeat;\n  background-position: left center;\n  background-size: 25px;\n}\n#squishy-pop[open] .pop-shell {\n  animation: pop-entrance .2s ease-out;\n}\n.pop-chain-cue {\n  position: absolute;\n  z-index: 4;\n  transform: translate(-50%, -100%);\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 5px 10px 5px 5px;\n  border: 2px solid white;\n  border-radius: 22px;\n  background: #fff6fc;\n  color: #6c4487;\n  box-shadow: 0 3px 12px #855a9955;\n  pointer-events: none;\n  white-space: nowrap;\n  font-size: 11px;\n  font-weight: 800;\n}\n.pop-chain-cue[hidden] {\n  display: none;\n}\n.pop-chain-cue > b {\n  display: grid;\n  place-items: center;\n  background: #e88bbb;\n  color: white;\n  border-radius: 50%;\n  width: 30px;\n  height: 30px;\n  font-size: 20px;\n}\n.pop-chain-cue span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-chain-cue img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n}\n.pop-chain-cue.pulse > b {\n  animation: pop-count .22s ease-out;\n}\n.pop-feedback {\n  inset: 3px 0 auto;\n  font-size: 22px;\n  transform: none;\n  line-height: 1.2;\n}\n.is-frenzy .pop-tray {\n  border-color: #fff0b5;\n  box-shadow:\n    inset 0 4px 10px #9973bb40,\n    0 7px 0 #e6a6d6,\n    0 0 24px #ffc8d7;\n}\n.is-frenzy .pop-frenzy {\n  background: #fff6d4;\n  border-radius: 18px;\n  padding: 3px 8px;\n}\n.pop-frenzy b {\n  min-width: 46px;\n  text-align: right;\n}\n.pop-hint {\n  font-size: 13px;\n  min-height: 18px;\n}\n.pop-previous-best {\n  font-size: 11px;\n  color: #957aac;\n}\n.pop-ticket-flight {\n  height: 34px;\n  width: 100%;\n  position: relative;\n  overflow: hidden;\n}\n.pop-ticket-flight img {\n  position: absolute;\n  left: calc(18% + var(--i)*8%);\n  width: 35px;\n  height: 28px;\n  object-fit: contain;\n  animation: pop-ticket-bank .95s calc(var(--i)*.07s) both;\n}\n.pop-ticket-prize {\n  font-size: 17px;\n}\n@keyframes pop-ticket-bank {\n  0% {\n    transform: translateY(23px) rotate(-18deg);\n    opacity: 0;\n  }\n  30% {\n    opacity: 1;\n  }\n  70% {\n    transform: translateY(-4px) rotate(8deg);\n    opacity: 1;\n  }\n  100% {\n    transform: translateY(8px) scale(.65);\n    opacity: 0;\n  }\n}\n.showing-results .pop-stats,\n.showing-results .pop-frenzy,\n.showing-results .pop-hint,\n.showing-results .pop-friends {\n  display: none;\n}\n.showing-results .pop-tray {\n  height: min(480px, calc(100dvh - 140px));\n  flex-shrink: 0;\n}\n.showing-results .pop-tray canvas {\n  position: absolute;\n  visibility: hidden;\n}\n.showing-results .pop-cover {\n  gap: 12px;\n  padding: 18px;\n  overflow: auto;\n}\n.showing-results .pop-cover h3 {\n  font-size: 24px;\n}\n.showing-results .pop-result-star {\n  display: block;\n  line-height: 1;\n  font-size: 32px;\n}\n.showing-results .pop-cover button {\n  flex-shrink: 0;\n  min-height: 44px;\n}\n.showing-results .pop-cover p {\n  line-height: 1.4;\n}\n@media (max-height: 700px) {\n  .showing-results .pop-cover {\n    gap: 8px;\n    padding: 12px;\n  }\n  .showing-results .pop-cover h3 {\n    font-size: 21px;\n  }\n  .showing-results .pop-result-star {\n    font-size: 24px;\n  }\n  .pop-chain-cue {\n    font-size: 10px;\n  }\n  .pop-feedback {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .pop-ticket-flight img {\n    animation: none;\n    opacity: 1;\n  }\n  .pop-chain-cue.pulse > b {\n    animation: none;\n  }\n}\n@media (max-width: 360px) {\n  .pop-title {\n    gap: 5px;\n  }\n  .pop-title > div {\n    min-width: 0;\n  }\n  .pop-title small {\n    font-size: 7px;\n    letter-spacing: .6px;\n  }\n  .pop-title h2 {\n    font-size: 20px;\n  }\n  .showing-results .pop-tray {\n    height: calc(100dvh - 145px);\n  }\n}\n#squishy-pop-shortcut {\n  pointer-events: auto;\n  border: 2px solid #fff;\n  border-radius: 22px;\n  padding: 9px 14px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe6f0,\n      #efb5dd);\n  color: #604c80;\n  font: 800 13px "Trebuchet MS", sans-serif;\n  box-shadow: 0 3px 10px #72538b26;\n  cursor: pointer;\n}\n#squishy-pop-shortcut:hover {\n  background: #f6c7e5;\n}\n#squishy-pop-shortcut:focus-visible {\n  outline: 3px solid #7855ae;\n  outline-offset: 3px;\n}\n@media (max-width: 600px) {\n  footer .asset-credits {\n    display: none;\n  }\n  #squishy-pop-shortcut {\n    font-size: 11px;\n    padding: 8px 10px;\n  }\n}\n#squishy-pop-shortcut {\n  min-height: 44px;\n}\n.pop-result-actions {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 8px;\n  width: 100%;\n}\n.pop-cover .pop-result-actions button {\n  width: 100%;\n  font-size: 12px !important;\n  padding: 8px;\n  line-height: 1.2;\n}\n.pop-result-actions button:first-child:last-child {\n  grid-column: 1/-1;\n}\n.pop-goals {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  padding: 7px 9px;\n  border: 2px solid white;\n  border-radius: 18px;\n  background: #fff6dc;\n  font-size: 12px;\n  font-weight: 800;\n  flex-wrap: wrap;\n}\n.pop-goals[hidden],\n.showing-results .pop-goals {\n  display: none;\n}\n.pop-goals small {\n  font-size: 9px;\n  color: #9878b9;\n}\n.pop-goals span,\n.pop-objectives span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-goals img,\n.pop-objectives img,\n.pop-previous-best img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n  vertical-align: middle;\n}\n.pop-goals .done {\n  color: #487865;\n}\n.pop-level-list {\n  display: flex;\n  flex-direction: column;\n  gap: 9px;\n  width: 100%;\n}\n.pop-level-list button {\n  width: 100%;\n  text-align: left;\n}\n.pop-level-list small {\n  display: block;\n  margin-top: 4px;\n  font-size: 11px;\n  font-weight: 600;\n}\n#squishy-pop button:disabled {\n  opacity: .55;\n  cursor: default;\n  transform: none;\n  background: #e5dfeb;\n}\n.pop-objectives {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 12px;\n  padding: 12px;\n  font-size: 18px;\n  font-weight: 800;\n}\n.showing-results .pop-cover {\n  justify-content: flex-start;\n}\n.showing-results .pop-cover > h3:first-child {\n  margin-top: 8px;\n}\n.pop-previous-best {\n  line-height: 1.5;\n}\n.showing-results .pop-cover > * {\n  flex-shrink: 0;\n}\n.showing-results .pop-cover .pop-link {\n  min-height: 44px;\n  padding: 7px;\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 7px;\n  }\n  .pop-goals {\n    font-size: 11px;\n    padding: 4px 6px;\n    gap: 5px;\n  }\n  .pop-goals img {\n    width: 24px;\n    height: 24px;\n  }\n  .showing-results .pop-cover {\n    gap: 7px;\n  }\n  .pop-level-list {\n    gap: 6px;\n  }\n}\n.pop-prizes {\n  min-height: 44px !important;\n  width: auto !important;\n  padding: 5px 10px !important;\n  font-size: 12px !important;\n}\n.pop-feedback[data-tier=great] {\n  font-size: clamp(22px, 6vw, 32px);\n  color: #fff6a0;\n  text-shadow: 0 3px 0 #7d4690, 0 0 18px #fff;\n}\n.pop-feedback[data-tier=super] {\n  font-size: clamp(26px, 7vw, 38px);\n  color: #fff;\n  border: 3px solid #ffdf65;\n  border-radius: 20px;\n  background: #9554bde8;\n  padding: 12px;\n  box-shadow: 0 0 24px #ffda6a;\n}\n.pop-feedback[data-tier=rainbow] {\n  font-size: clamp(24px, 6.5vw, 36px);\n  color: #fff;\n  background:\n    linear-gradient(\n      110deg,\n      #ea76a7,\n      #d0a554,\n      #61bca4,\n      #618ddb,\n      #a278c8);\n  border: 3px solid white;\n  border-radius: 20px;\n  padding: 12px;\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-tray[data-celebration=super] {\n  box-shadow: 0 0 0 5px #ffe393, 0 0 35px #f1abde;\n}\n.pop-tray[data-celebration=rainbow] {\n  box-shadow:\n    -10px 0 24px #ff9cad,\n    0 -8px 24px #fff09e,\n    10px 0 24px #98daff,\n    0 8px 24px #b5a1ff;\n}\n.pop-feedback[hidden] {\n  display: none;\n}\n.pop-feedback[data-tier=great],\n.pop-feedback[data-tier=super],\n.pop-feedback[data-tier=rainbow] {\n  animation: pop-reward .32s ease-out;\n}\n@keyframes pop-reward {\n  from {\n    transform: translateY(8px) scale(.88);\n    opacity: .5;\n  }\n  to {\n    transform: none;\n    opacity: 1;\n  }\n}\n.pop-feedback[data-tier=super] {\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-launch {\n  position: absolute;\n  top: 175px;\n  bottom: auto;\n  left: 18px;\n  transform: none;\n  width: auto;\n  max-width: 180px;\n  padding: 9px 13px;\n  font-size: 12px;\n  border-width: 2px;\n  box-shadow: 0 3px 10px #4f3b6220;\n}\n.pop-launch small {\n  display: none;\n}\n@media (max-height: 650px) {\n  .pop-launch {\n    top: 135px;\n  }\n}\n\n/* src/ui/ticket-shop.css */\n#ticket-shop {\n  width: min(92vw, 520px);\n  max-height: 88dvh;\n  overflow: auto;\n  border: 3px solid #efb6d2;\n  border-radius: 26px;\n  background: #fff8ed;\n  color: #604861;\n  padding: 22px;\n  text-align: center;\n}\n#ticket-shop::backdrop {\n  background: #403347a8;\n}\n.ticket-prizes {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px;\n  margin: 16px 0;\n}\n.ticket-prizes article {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 10px;\n  border-radius: 18px;\n  background: #f1e7fa;\n}\n.ticket-prizes img {\n  width: 96px;\n  height: 96px;\n  object-fit: contain;\n}\n#ticket-shop button {\n  min-height: 44px;\n  border: 0;\n  border-radius: 16px;\n  padding: 10px 14px;\n  background: #805ba6;\n  color: white;\n  font-weight: 700;\n  cursor: pointer;\n}\n#ticket-shop button:disabled {\n  background: #d3c4d5;\n  color: #665b69;\n  cursor: default;\n}\n#ticket-shop [data-close] {\n  display: block;\n  width: 100%;\n  margin-top: 16px;\n}\n#ticket-shop [role=status] {\n  font-weight: 700;\n  color: #566b40;\n}\n#travel-next-store {\n  position: absolute;\n  right: 12px;\n  top: 175px;\n  z-index: 12;\n  max-width: 170px;\n  min-height: 44px;\n  border: 2px solid #d9c5ec;\n  border-radius: 15px;\n  padding: 8px 12px;\n  background: #fff4e6;\n  color: #604861;\n  font-weight: 700;\n}\n#ticket-shop {\n  box-sizing: border-box;\n}\n#ticket-shop [data-close] {\n  position: sticky;\n  bottom: 0;\n  box-shadow: 0 0 0 5px #fff8ed;\n}\n.ticket-prizes article {\n  min-width: 0;\n}\n.ticket-prizes button {\n  width: 100%;\n}\n@media (max-width: 360px) {\n  #ticket-shop {\n    padding: 14px;\n  }\n  .ticket-prizes {\n    gap: 8px;\n  }\n  .ticket-prizes img {\n    width: 76px;\n    height: 76px;\n  }\n  .ticket-prizes article {\n    padding: 8px;\n  }\n  .ticket-prizes button {\n    padding: 8px;\n    font-size: 12px;\n  }\n}\n#ticket-shop [data-close] {\n  top: 0;\n  bottom: auto;\n  z-index: 2;\n}\n\n/* src/ui/tornado.css */\n#game[data-tornado] .room-title,\n#game[data-tornado] #cleanup-effects,\n#game[data-tornado] #house-doors,\n#game[data-tornado] #move-tip,\n#game[data-tornado] .mission-stats {\n  visibility: hidden;\n}\n#tornado-hud {\n  position: absolute;\n  z-index: 8;\n  top: 110px;\n  left: 22px;\n  width: min(340px, calc(100% - 44px));\n  padding: 15px 18px;\n  border: 2px solid #fff9;\n  border-radius: 23px;\n  background: #fff9f1ef;\n  color: #59476e;\n  box-shadow: 0 8px 25px #52416620;\n  pointer-events: none;\n  box-sizing: border-box;\n}\n#tornado-hud[hidden] {\n  display: none;\n}\n#tornado-hud header {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n#tornado-hud small {\n  font-size: 8px;\n  letter-spacing: 1.6px;\n  color: #907ca6;\n}\n#tornado-hud h2 {\n  font-size: 23px;\n  margin: 3px 0 10px;\n}\n#tornado-hud [data-time] {\n  font-size: 28px;\n  font-variant-numeric: tabular-nums;\n  margin-left: auto;\n}\n#tornado-hud [data-sound] {\n  pointer-events: auto;\n  border: 0;\n  background: #ece0f3;\n  color: #69517e;\n  border-radius: 50%;\n  width: 32px;\n  height: 32px;\n  cursor: pointer;\n}\n.tornado-meter-row,\n.tornado-score {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  font-size: 11px;\n}\n.tornado-score {\n  margin-top: 7px;\n  color: #71865c;\n}\n.tornado-score [data-streak] {\n  color: #a65585;\n  font-size: 10px;\n}\n#tornado-hud meter {\n  display: block;\n  width: 100%;\n  height: 17px;\n  margin-top: 4px;\n}\n#tornado-hud meter::-webkit-meter-bar {\n  background: #eee5f3;\n  border: 0;\n  border-radius: 10px;\n}\n#tornado-hud meter::-webkit-meter-optimum-value {\n  background:\n    linear-gradient(\n      90deg,\n      #c3cde8,\n      #e8adbe);\n  border-radius: 10px;\n}\n#tornado-hud p {\n  font-size: 11px;\n  line-height: 1.4;\n  min-height: 30px;\n  margin: 9px 0 0;\n}\n#tornado-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n  z-index: 7;\n}\n.tornado-marker {\n  position: absolute;\n  font-size: 24px;\n  border: 2px solid #fff;\n  background: #fff4d9ed;\n  box-shadow: 0 4px 12px #71603c30;\n  border-radius: 14px;\n  padding: 3px 7px;\n}\n.tornado-marker.near {\n  background: #dcf3c8;\n  box-shadow: 0 0 20px #fff3a1;\n}\n.tornado-marker.edge::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #9c729d;\n  transform: translate(-50%, -50%) rotate(var(--angle)) translateX(32px);\n}\n.tornado-sparkles {\n  position: absolute;\n  color: #8a599f;\n  text-shadow: 0 2px #fff;\n  font-weight: bold;\n  font-size: 26px;\n  animation: tornado-pop 1s ease-out forwards;\n  white-space: nowrap;\n}\n@keyframes tornado-pop {\n  from {\n    transform: translate(-50%, 0) scale(.6);\n  }\n  50% {\n    opacity: 1;\n  }\n  to {\n    transform: translate(-50%, -80px) scale(1.2);\n    opacity: 0;\n  }\n}\n#tornado-dialog {\n  box-sizing: border-box;\n  width: min(430px, calc(100% - 28px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  padding: 28px;\n  border: 2px solid white;\n  border-radius: 28px;\n  background: #fff8f1;\n  color: #5c4773;\n  text-align: center;\n  box-shadow: 0 20px 80px #51416650;\n}\n#tornado-dialog::backdrop {\n  background: #594d7666;\n  backdrop-filter: blur(3px);\n}\n#tornado-dialog small {\n  font-size: 9px;\n  letter-spacing: 1.4px;\n}\n#tornado-dialog h2 {\n  font-size: 29px;\n  line-height: 1.1;\n  margin: 12px 0;\n}\n#tornado-dialog p {\n  font-size: 14px;\n  line-height: 1.6;\n  color: #8b7094;\n}\n.tornado-emblem {\n  font-size: 60px;\n}\n.tornado-stars {\n  font-size: 48px;\n  color: #e4ae4e;\n  letter-spacing: 7px;\n}\n.tornado-instructions {\n  display: grid;\n  gap: 10px;\n  background: #efe6f4;\n  padding: 16px;\n  border-radius: 18px;\n  text-align: left;\n}\n.tornado-totals {\n  display: flex;\n  justify-content: space-around;\n  background: #efe6f4;\n  padding: 16px 4px;\n  border-radius: 18px;\n  font-size: 11px;\n}\n.tornado-totals b {\n  display: block;\n  font-size: 25px;\n  margin-bottom: 5px;\n}\n#tornado-dialog button {\n  display: block;\n  width: 100%;\n  padding: 14px;\n  border: 2px solid white;\n  border-radius: 16px;\n  margin-top: 10px;\n  background: #b8cfae;\n  color: #466240;\n  font: 700 16px system-ui;\n  cursor: pointer;\n}\n#tornado-dialog button.secondary {\n  background: #eee3f1;\n  color: #705285;\n}\n#tornado-dialog .tornado-earned {\n  color: #5b824e;\n  font-weight: bold;\n}\n@media (max-width: 500px) {\n  #tornado-hud {\n    top: 87px;\n    left: 12px;\n    width: calc(100% - 24px);\n    padding: 10px 13px;\n  }\n  #tornado-hud h2 {\n    font-size: 20px;\n    margin-bottom: 5px;\n  }\n  #tornado-hud p {\n    min-height: 16px;\n    margin-top: 5px;\n  }\n  #tornado-hud [data-time] {\n    font-size: 25px;\n  }\n  .tornado-marker {\n    font-size: 20px;\n  }\n}\n@media (max-height: 600px) and (orientation: landscape) {\n  #tornado-hud {\n    top: 80px;\n    width: 275px;\n    padding: 9px 12px;\n  }\n  #tornado-hud p {\n    min-height: 0;\n  }\n  #tornado-hud h2 {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .tornado-sparkles {\n    animation: none;\n  }\n}\n\n/* src/ui/styles.css */\n:root {\n  font-family:\n    "Trebuchet MS",\n    ui-rounded,\n    system-ui,\n    sans-serif;\n  color: #51466a;\n  background: #ede6f4;\n  font-synthesis: none;\n  -webkit-tap-highlight-color: transparent;\n}\n* {\n  box-sizing: border-box;\n}\nhtml,\nbody,\n#game {\n  margin: 0;\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  overscroll-behavior: none;\n}\nbody {\n  position: fixed;\n  inset: 0;\n}\n#game {\n  height: 100dvh;\n  position: relative;\n  isolation: isolate;\n  user-select: none;\n  -webkit-user-select: none;\n}\n#game-canvas {\n  display: block;\n  width: 100%;\n  height: 100%;\n  outline: none;\n  touch-action: none;\n}\n#game-canvas:focus-visible {\n  outline: 3px solid #9b86bd;\n  outline-offset: -3px;\n}\n.topbar {\n  position: absolute;\n  top: max(22px, env(safe-area-inset-top));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.wordmark {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  font-size: 26px;\n  font-weight: 800;\n  letter-spacing: -1px;\n}\n.wordmark small {\n  display: block;\n  font-size: 7px;\n  letter-spacing: 1.8px;\n  margin-top: 2px;\n  font-weight: 700;\n}\n.flower {\n  color: #a18abd;\n  font-size: 43px;\n  line-height: 1;\n}\n.chapter {\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: 2px;\n}\n.chapter span {\n  color: #b8a8c9;\n  margin: 0 5px;\n}\n.room-title {\n  position: absolute;\n  top: 14%;\n  width: 100%;\n  text-align: center;\n  pointer-events: none;\n}\n.eyebrow {\n  font-size: 9px;\n  letter-spacing: 2.3px;\n  font-weight: 700;\n  color: #8c7a9f;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 7px;\n}\n.eyebrow i {\n  width: 5px;\n  height: 5px;\n  border-radius: 50%;\n  background: #90ac95;\n}\nh1 {\n  font-size: clamp(26px, 4vw, 37px);\n  letter-spacing: -1.2px;\n  margin: 10px 0 7px;\n  font-weight: 800;\n}\n.room-title p {\n  font-size: 12px;\n  color: #8c7a9f;\n  margin: 0;\n}\n.player-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  padding: 5px 10px;\n  background: #fffaf4ee;\n  border: 1px solid #fff;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 800;\n  pointer-events: none;\n  box-shadow: 0 3px 10px #71608518;\n  will-change: transform;\n}\n.player-label span {\n  color: #d592ad;\n  margin-left: 4px;\n}\n.room-caption {\n  position: absolute;\n  bottom: 26%;\n  width: 100%;\n  text-align: center;\n  font-size: 10px;\n  letter-spacing: .5px;\n  color: #9e8db0;\n  pointer-events: none;\n}\n.room-caption span {\n  margin: 0 12px;\n  color: #b9a3cc;\n}\n.move-tip {\n  position: absolute;\n  bottom: 19%;\n  left: 50%;\n  transform: translateX(-50%);\n  display: flex;\n  gap: 10px;\n  align-items: center;\n  width: max-content;\n  max-width: calc(100% - 36px);\n  transition: opacity .6s;\n  pointer-events: none;\n}\n.tip-icon {\n  display: grid;\n  place-items: center;\n  width: 34px;\n  height: 34px;\n  background: #fbf7fcbb;\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  font-size: 22px;\n  color: #a389bb;\n}\n.move-tip strong,\n.move-tip div > span {\n  display: block;\n}\n.move-tip strong {\n  font-size: 12px;\n  margin-bottom: 3px;\n}\n.move-tip div > span {\n  font-size: 10px;\n  color: #9686a7;\n}\n.move-tip.explored {\n  opacity: 0;\n}\n.controls {\n  position: absolute;\n  left: max(27px, env(safe-area-inset-left));\n  right: max(27px, env(safe-area-inset-right));\n  bottom: max(42px, calc(env(safe-area-inset-bottom) + 24px));\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.joystick-group {\n  text-align: center;\n  pointer-events: auto;\n}\n#joystick {\n  position: relative;\n  width: 120px;\n  height: 120px;\n  border: 2px solid #fff9;\n  background:\n    linear-gradient(\n      140deg,\n      #fffc,\n      #ded1ec99);\n  border-radius: 50%;\n  box-shadow: 0 7px 22px #82709516, inset 0 1px 8px #fff8;\n  touch-action: none;\n  cursor: grab;\n}\n#joystick.dragging {\n  cursor: grabbing;\n}\n#joystick-knob {\n  position: absolute;\n  left: 34px;\n  top: 34px;\n  width: 48px;\n  height: 48px;\n  border-radius: 50%;\n  border: 2px solid #fff;\n  background:\n    linear-gradient(\n      145deg,\n      #cdbce5,\n      #aa93c9);\n  box-shadow: 0 5px 8px #6c51813b;\n  pointer-events: none;\n  display: grid;\n  place-items: center;\n  will-change: transform;\n}\n#joystick-knob svg {\n  width: 22px;\n  height: 22px;\n  fill: none;\n  stroke: #fff;\n  stroke-width: 2;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n  opacity: .8;\n}\n.direction {\n  position: absolute;\n  color: #ae9abd;\n  font-size: 22px;\n  line-height: 20px;\n}\n.up {\n  top: 5px;\n  left: 51px;\n}\n.down {\n  bottom: 7px;\n  left: 51px;\n}\n.left {\n  top: 47px;\n  left: 9px;\n}\n.right {\n  top: 47px;\n  right: 9px;\n}\n.control-label {\n  display: block;\n  font-size: 8px;\n  letter-spacing: 1.5px;\n  font-weight: 800;\n  color: #9581a8;\n  margin-top: 11px;\n}\n.explore-note {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  margin-top: 30px;\n  color: #8f7ba3;\n}\n.tiny-house {\n  font-size: 31px;\n  color: #ad98bd;\n}\n.explore-note > span:last-child {\n  font-size: 12px;\n  font-weight: 700;\n}\n.explore-note small {\n  display: block;\n  font-size: 9px;\n  font-weight: 400;\n  margin-top: 5px;\n}\nfooter {\n  position: absolute;\n  bottom: max(12px, env(safe-area-inset-bottom));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  font-size: 8px;\n  color: #a591b7;\n  letter-spacing: .6px;\n  pointer-events: none;\n}\n.build-badge {\n  font-size: 7px;\n  letter-spacing: 1.4px;\n}\n.keyboard-hint {\n  font-size: 8px;\n}\n#loading,\n#error {\n  position: absolute;\n  inset: 0;\n  background: #ede6f4;\n  display: grid;\n  place-content: center;\n  text-align: center;\n  padding: 32px;\n  z-index: 9;\n}\n#loading .loading-flower {\n  font-size: 60px;\n  color: #a18abd;\n  animation: breathe 1.2s infinite alternate;\n}\n#loading p {\n  font-size: 14px;\n}\n#error[hidden] {\n  display: none;\n}\n#error h2 {\n  font-size: 22px;\n}\n#error p {\n  font-size: 14px;\n  max-width: 320px;\n  line-height: 1.6;\n}\n@keyframes breathe {\n  to {\n    transform: scale(.85);\n    opacity: .5;\n  }\n}\n@media (min-width: 700px) {\n  .topbar {\n    left: 40px;\n    right: 40px;\n    top: 28px;\n  }\n  .room-title {\n    top: 12%;\n  }\n  .controls {\n    left: 45px;\n    right: 45px;\n    bottom: 50px;\n  }\n  .room-caption {\n    bottom: 15%;\n  }\n  .move-tip {\n    bottom: 7%;\n  }\n  .explore-note {\n    margin-top: 0;\n  }\n  footer {\n    left: 40px;\n    right: 40px;\n  }\n  .keyboard-hint {\n    font-size: 10px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .topbar {\n    top: 14px;\n  }\n  .room-title {\n    top: 13%;\n  }\n  h1 {\n    font-size: 25px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: 23%;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n  .keyboard-hint {\n    display: none;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .room-title {\n    top: 24%;\n    text-align: left;\n    padding-left: 28px;\n    width: 220px;\n  }\n  .eyebrow {\n    justify-content: flex-start;\n    font-size: 7px;\n    letter-spacing: 1px;\n  }\n  h1 {\n    font-size: 24px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .topbar {\n    top: 14px;\n  }\n  .room-caption,\n  .move-tip,\n  .explore-note {\n    display: none;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  .wordmark {\n    font-size: 21px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #loading .loading-flower {\n    animation: none;\n  }\n  .move-tip {\n    transition: none;\n  }\n}\n@media (max-width: 699px) {\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: calc(max(42px, env(safe-area-inset-bottom)) + 156px);\n  }\n}\n@media (max-width: 380px) {\n  .topbar {\n    left: 18px;\n    right: 18px;\n  }\n  .wordmark {\n    font-size: 24px;\n  }\n  .wordmark small {\n    font-size: 6px;\n    letter-spacing: 1.2px;\n    white-space: nowrap;\n  }\n  .chapter {\n    font-size: 8px;\n    letter-spacing: 1px;\n    white-space: nowrap;\n  }\n  .eyebrow {\n    font-size: 7px;\n    letter-spacing: 1.6px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n  .explore-note {\n    max-width: 125px;\n  }\n  .room-title {\n    top: 15%;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n}\n#house-music {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 10px;\n  line-height: 1.2;\n  padding: 8px;\n  min-height: 40px;\n  min-width: 54px;\n  cursor: pointer;\n}\nfooter {\n  gap: 6px;\n}\nfooter .keyboard-hint {\n  display: none;\n}\n@media (max-width: 380px) {\n  footer {\n    left: 12px;\n    right: 12px;\n  }\n  #collection-button {\n    font-size: 9px !important;\n  }\n}\n#audio-settings {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 11px;\n  padding: 8px;\n  min-height: 40px;\n  cursor: pointer;\n}\n.audio-settings {\n  width: min(340px, 85vw);\n  border: 0;\n  border-radius: 22px;\n  background: #fff9f1;\n  color: #534565;\n  padding: 24px;\n  font-family: inherit;\n}\n.audio-settings::backdrop {\n  background: #30283880;\n}\n.audio-settings label {\n  display: block;\n  margin: 22px 0;\n  font-weight: 700;\n}\n.audio-settings output {\n  float: right;\n}\n.audio-settings input {\n  display: block;\n  width: 100%;\n  height: 40px;\n  accent-color: #9873b5;\n}\n.audio-settings button {\n  min-height: 44px;\n  width: 100%;\n  border: 0;\n  border-radius: 15px;\n  background: #e1d1ed;\n  color: #493659;\n  font-weight: 700;\n}\n.audio-settings p {\n  font-size: 12px;\n}\nfooter {\n  flex-wrap: wrap;\n}\n.audio-settings {\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  box-sizing: border-box;\n}\n.audio-mutes {\n  display: flex;\n  gap: 8px;\n}\n.audio-mutes button {\n  flex: 1;\n  width: auto !important;\n}\n.audio-settings summary {\n  font-size: 13px;\n  cursor: pointer;\n}\n.audio-settings details p {\n  line-height: 1.5;\n}\n@media (max-height: 650px) {\n  .audio-settings {\n    padding: 16px;\n  }\n  .audio-settings h2 {\n    font-size: 20px;\n    margin: 0 0 10px;\n  }\n  .audio-settings label {\n    margin: 10px 0;\n  }\n}\n\n/* src/ui/cleanup.css */\n.mission-stats {\n  display: flex;\n  flex-direction: column;\n  align-items: flex-end;\n  gap: 2px;\n}\n#mission-clock {\n  font-size: 23px;\n  font-weight: 800;\n  font-variant-numeric: tabular-nums;\n  letter-spacing: -1px;\n}\n#mission-clock.soon {\n  color: #b77795;\n}\n.allowance-label {\n  font-size: 7px;\n  letter-spacing: 1px;\n  color: #9581a8;\n}\n#allowance {\n  font-size: 13px;\n  color: #6e856c;\n  margin-left: 3px;\n}\n#task-count {\n  letter-spacing: 1px;\n  color: #6e856c;\n}\n.task-list {\n  display: flex;\n  list-style: none;\n  justify-content: center;\n  gap: 9px;\n  padding: 0;\n  margin: 6px 0 0;\n  height: 22px;\n}\n.task-list li {\n  display: flex;\n  align-items: center;\n  gap: 3px;\n  font-size: 9px;\n  color: #9784a6;\n  border-bottom: 2px solid transparent;\n}\n.task-list li > span:first-child {\n  font-size: 13px;\n}\n.task-list li.done {\n  color: #69866f;\n  border-color: #a6c5a6;\n}\n.task-list li.done > span:first-child {\n  color: #69866f;\n}\n.action-group {\n  pointer-events: auto;\n  text-align: center;\n}\n#action-button {\n  --hold-progress: 0deg;\n  width: 120px;\n  height: 120px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  gap: 3px;\n  border: 3px solid #fff9;\n  border-radius: 50%;\n  background:\n    linear-gradient(\n      145deg,\n      #f6b5d0,\n      #d888b6);\n  box-shadow: 0 6px 0 #ad739441, 0 8px 22px #82709522;\n  color: #663f6a;\n  cursor: pointer;\n  touch-action: none;\n  padding: 8px;\n  font-family: inherit;\n  position: relative;\n  -webkit-user-select: none;\n  user-select: none;\n}\n#action-button:disabled {\n  background:\n    linear-gradient(\n      145deg,\n      #f7f1f9,\n      #ddd0e8);\n  color: #a38caf;\n  box-shadow: 0 4px 0 #a58db222;\n  cursor: default;\n}\n#action-button:not(:disabled):active {\n  box-shadow: 0 2px 0 #ad739441;\n}\n#action-button:focus-visible,\n#replay:focus-visible {\n  outline: 3px solid #7960a5;\n  outline-offset: 4px;\n}\n#action-button.holding {\n  background: conic-gradient(#97c6a0 var(--hold-progress), #ecc0dd 0deg);\n}\n#action-icon {\n  font-size: 26px;\n  line-height: 29px;\n}\n#action-title {\n  font-size: 15px;\n  line-height: 18px;\n}\n#action-detail {\n  font-size: 10px;\n  max-width: 100%;\n  line-height: 13px;\n}\n.cleanup-tip {\n  text-align: center;\n  width: calc(100% - 36px);\n  max-width: 460px;\n  justify-content: center;\n  font-size: 11px;\n  line-height: 16px;\n  color: #887298;\n  min-height: 32px;\n}\n#cleanup-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n}\n.cleanup-marker {\n  position: absolute;\n  left: 0;\n  top: 0;\n  border-radius: 9px;\n  min-width: 22px;\n  padding: 3px 5px;\n  background: #fffaf2db;\n  border: 1px solid #fffc;\n  box-shadow: 0 2px 5px #62507722;\n  font-size: 13px;\n  line-height: 16px;\n  color: #775672;\n  will-change: transform;\n  white-space: nowrap;\n}\n.cleanup-marker[hidden] {\n  display: none;\n}\n.cleanup-marker.destination {\n  font-size: 16px !important;\n  border-radius: 50%;\n  padding: 7px !important;\n  box-shadow: 0 0 14px #fff2a8a0;\n}\n.cleanup-marker.offscreen::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #fff1aa;\n  font-size: 17px;\n  text-shadow: 0 1px 3px #504760;\n  transform: translate(-50%, -50%) rotate(var(--guide-angle)) translateX(26px);\n}\n.cleanup-marker.tool {\n  font-size: 10px;\n}\n.cleanup-marker.nearby {\n  background: #fff0b9;\n  border-color: #fff;\n  box-shadow: 0 0 10px #fff3a4bb;\n}\n.cleanup-marker.destination {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n.coin-popup {\n  position: absolute;\n  color: #63845d;\n  font-size: 22px;\n  font-weight: 800;\n  z-index: 2;\n  transform: translate(-50%, -100%);\n  animation: reward-rise .95s ease-out forwards;\n  text-shadow: 0 2px 0 #fff;\n}\n.coin-popup strong {\n  display: block;\n  padding: 3px 8px;\n  background: #fff9e4ed;\n  border-radius: 12px;\n}\n.coin-popup > span {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #e9bd61;\n  font-size: 17px;\n  animation: sparkle .75s ease-out forwards;\n}\n@keyframes reward-rise {\n  0% {\n    opacity: 0;\n    margin-top: 0;\n  }\n  20% {\n    opacity: 1;\n  }\n  75% {\n    opacity: 1;\n  }\n  100% {\n    opacity: 0;\n    margin-top: -40px;\n  }\n}\n@keyframes sparkle {\n  from {\n    transform: translate(-50%, -50%) scale(.3);\n    opacity: 1;\n  }\n  to {\n    transform: translate(var(--spark-x), var(--spark-y)) scale(.7);\n    opacity: 0;\n  }\n}\n.sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  clip-path: inset(50%);\n  overflow: hidden;\n  white-space: nowrap;\n}\n#results {\n  border: 2px solid #fff;\n  border-radius: 28px;\n  padding: 26px 22px 22px;\n  width: min(350px, calc(100% - 32px));\n  max-height: calc(100dvh - 32px);\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n  box-shadow: 0 16px 60px #55436140;\n}\n#results::backdrop {\n  background: #52416666;\n  backdrop-filter: blur(4px);\n}\n.results-flower {\n  font-size: 43px;\n  line-height: 1;\n  color: #af94cb;\n  margin-bottom: 16px;\n}\n#results .eyebrow {\n  font-size: 7px;\n  letter-spacing: 1.6px;\n}\n#results h2 {\n  margin: 12px 0 8px;\n  font-size: 30px;\n  letter-spacing: -1px;\n}\n#results-summary {\n  font-size: 12px;\n  line-height: 1.6;\n  color: #927d9e;\n}\n.results-totals {\n  display: flex;\n  justify-content: space-evenly;\n  padding: 14px 0;\n  margin: 12px 0 0;\n  background: #eee5f5;\n  border-radius: 17px;\n}\n.results-totals strong {\n  display: block;\n  font-size: 28px;\n}\n.results-totals span {\n  font-size: 10px;\n  color: #8e789f;\n}\n#results-money {\n  color: #708b6b;\n}\n#results-bonus {\n  font-size: 11px;\n  color: #788f6c;\n}\n#results-list {\n  list-style: none;\n  padding: 0;\n  display: flex;\n  justify-content: center;\n  flex-wrap: wrap;\n  gap: 6px 12px;\n  margin: 18px 0;\n  font-size: 10px;\n  color: #a58eb1;\n}\n#results-list .done {\n  color: #638269;\n}\n#replay {\n  width: 100%;\n  border: 2px solid #fff8;\n  border-radius: 17px;\n  padding: 15px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 16px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  box-shadow: 0 4px 0 #8caa8555;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#replay span {\n  margin-left: 7px;\n  font-size: 21px;\n}\n@media (max-width: 380px) {\n  .task-list {\n    gap: 6px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  #mission-clock {\n    font-size: 21px;\n  }\n  .allowance-label {\n    font-size: 6px;\n    letter-spacing: .5px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait), (orientation: landscape) and (max-height: 600px) {\n  #action-button {\n    width: 102px;\n    height: 102px;\n  }\n  #action-title {\n    font-size: 13px;\n  }\n  #action-icon {\n    font-size: 22px;\n    line-height: 24px;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .task-list {\n    height: 18px;\n    margin-top: 2px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  .task-list li > span:first-child {\n    font-size: 11px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .task-list {\n    flex-wrap: wrap;\n    height: auto;\n    justify-content: flex-start;\n    max-width: 175px;\n    gap: 5px 10px;\n  }\n  #results {\n    padding: 12px 18px;\n  }\n  .results-flower {\n    display: none;\n  }\n  #results h2 {\n    font-size: 24px;\n    margin: 7px 0;\n  }\n  .results-totals {\n    padding: 7px 0;\n  }\n  #results-list {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .coin-popup {\n    animation: none;\n  }\n  .coin-popup > span {\n    display: none;\n  }\n}\n\n/* src/ui/collection.css */\n[hidden] {\n  display: none !important;\n}\n#collection-button {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  padding: 8px 0 8px 10px;\n}\n#collection-button:disabled {\n  opacity: .45;\n}\n#wallet {\n  margin-left: 4px;\n  color: #638269;\n}\n.loop-button {\n  width: 100%;\n  border: 2px solid #fff9;\n  border-radius: 16px;\n  padding: 13px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 15px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  margin: 5px 0;\n  touch-action: manipulation;\n}\n.pink-button {\n  background: #e8b5d2;\n  color: #704b75;\n}\n.loop-button:disabled {\n  opacity: .55;\n  cursor: default;\n}\n#results-wallet {\n  font-size: 12px;\n  color: #6f8869;\n}\n#go-shopping {\n  margin-bottom: 10px;\n}\n#collection-dialog {\n  border: 2px solid #fff;\n  border-radius: 26px;\n  width: min(410px, calc(100% - 24px));\n  max-height: calc(100dvh - 24px);\n  padding: 22px 17px 17px;\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n}\n#collection-dialog::backdrop {\n  background: #52416688;\n  backdrop-filter: blur(4px);\n}\n#collection-dialog h2 {\n  margin: 10px 0 6px;\n  font-size: 28px;\n  letter-spacing: -1px;\n}\n#collection-summary {\n  font-size: 11px;\n  color: #947c9e;\n}\n#collection-grid {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 7px;\n  margin: 17px 0;\n}\n.dumpling-card {\n  background: #efe7f4;\n  border: 1px solid #fff;\n  border-radius: 14px;\n  padding: 6px 2px 9px;\n  min-width: 0;\n}\n.dumpling-card.owned {\n  background: linear-gradient(#fff9, var(--rarity));\n}\n.dumpling-card img {\n  width: 100%;\n  height: auto;\n  display: block;\n}\n.dumpling-card strong {\n  font-size: 10px;\n  display: block;\n}\n.dumpling-card small {\n  display: block;\n  font-size: 8px;\n  margin-top: 3px;\n}\n.dumpling-card .copies {\n  font-size: 10px;\n  font-weight: 800;\n  margin-top: 5px;\n}\n#store-markers {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n#shop-display-marker {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n#reveal-copy {\n  position: absolute;\n  top: 71%;\n  left: 6%;\n  width: 88%;\n  text-align: center;\n  color: var(--rarity-ink,#775887);\n  font-size: 13px;\n  pointer-events: none;\n}\n.reveal-badges {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n}\n#reveal-copy small {\n  color: var(--rarity-ink,#665070);\n  padding: 5px 10px;\n  border: 1px solid var(--rarity,#dacbdf);\n  border-radius: 20px;\n  background: var(--rarity-wash,#f4edf5);\n  font-size: 11px;\n  line-height: 1.2;\n  font-weight: 800;\n  letter-spacing: .4px;\n}\n#reveal-copy .reveal-status {\n  background: #fffc;\n  border-color: #fff;\n  color: #64556c;\n}\n#reveal-copy h2 {\n  margin: 7px 0 4px;\n  font-size: 32px;\n  line-height: 1.1;\n  letter-spacing: -.8px;\n}\n#reveal-copy p {\n  font-size: 11px;\n  margin: 0;\n  color: #74647e;\n}\n#reveal-copy[data-rarity=Legendary] .reveal-rarity {\n  box-shadow: 0 0 0 2px #fff8, 0 2px 10px #dbb14b30;\n}\n#reveal-copy.has-reveal {\n  animation: reveal-caption .4s ease-out;\n}\n@keyframes reveal-caption {\n  from {\n    transform: translateY(6px);\n    opacity: 0;\n  }\n  to {\n    transform: translateY(0);\n    opacity: 1;\n  }\n}\n#save-message {\n  position: absolute;\n  bottom: 26%;\n  left: 8%;\n  width: 84%;\n  padding: 12px;\n  border-radius: 14px;\n  background: #fff5de;\n  color: #796143;\n  font-size: 12px;\n  text-align: center;\n  z-index: 8;\n  pointer-events: none;\n}\n#game[data-scene=home] .joystick-group {\n  visibility: hidden;\n}\n#game[data-scene=home] .cleanup-tip {\n  display: none;\n}\n#squish-friend {\n  position: absolute;\n  left: 8%;\n  bottom: 12%;\n  min-width: 100px;\n  min-height: 48px;\n  padding: 12px 20px;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: #f1d6dd;\n  color: #795268;\n  font: 800 16px "Trebuchet MS", sans-serif;\n  box-shadow: 0 4px 12px #75534a15;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#home-vignette {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  background:\n    linear-gradient(\n      #ede6f4ed,\n      transparent 29%,\n      transparent 75%,\n      #ede6f4dd);\n}\n#trip-wallet {\n  font-size: 8px;\n  letter-spacing: 1px;\n  color: #887298;\n  text-align: right;\n}\n#trip-balance {\n  display: block;\n  font-size: 24px;\n  letter-spacing: -1px;\n  color: #638269;\n}\n#reveal-copy {\n  isolation: isolate;\n}\n#game[data-scene=home] .topbar,\n#game[data-scene=home] .room-title,\n#game[data-scene=home] footer {\n  text-shadow: 0 1px 8px #fff;\n}\n@media (max-height: 740px) {\n  #reveal-copy {\n    top: 68%;\n  }\n  #reveal-copy h2 {\n    font-size: 27px;\n  }\n  #collection-dialog {\n    padding-top: 15px;\n  }\n  #collection-grid {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #reveal-copy.has-reveal {\n    animation: none;\n  }\n}\n#game[data-scene=home] .controls {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  right: 18px;\n  justify-content: flex-end;\n}\n#game[data-scene=home] .joystick-group,\n#game[data-scene=home] .control-label {\n  display: none;\n}\n#game[data-scene=home] #action-button {\n  width: 136px;\n  height: 48px;\n  border-radius: 25px;\n  display: flex;\n  flex-direction: row;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n}\n#game[data-scene=home] #action-icon {\n  font-size: 20px;\n  margin: 0;\n}\n#game[data-scene=home] #action-title {\n  font-size: 13px;\n  margin: 0;\n}\n#game[data-scene=home] #action-detail {\n  display: none;\n}\n#game[data-scene=home] #squish-friend {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  left: 18px;\n  min-width: 130px;\n  font-size: 14px;\n}\nbody:has(#game[data-scene=home]) .dev-launch {\n  top: 77px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] .room-title {\n    top: 83px;\n    left: 20px;\n    right: 88px;\n    text-align: left;\n  }\n  #game[data-scene=home] .room-title .eyebrow,\n  #game[data-scene=home] #day-label {\n    display: none;\n  }\n  #game[data-scene=home] .room-title h1 {\n    font-size: 20px;\n    margin: 2px 0 4px;\n  }\n  #game[data-scene=home] .room-title p {\n    margin: 0;\n    font-size: 10px;\n  }\n  #game[data-scene=home] #reveal-copy {\n    top: 64%;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    margin: 7px 0 3px;\n    font-size: 24px;\n  }\n  #game[data-scene=home] #reveal-copy small {\n    font-size: 10px;\n    padding: 4px 8px;\n  }\n  #game[data-scene=home] #reveal-copy p {\n    font-size: 10px;\n  }\n}\n#collection-actions {\n  position: sticky;\n  top: -1px;\n  z-index: 2;\n  background: #faf5fb;\n  padding: 4px 0;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 5px;\n}\n#collection-actions .loop-button {\n  font-size: 12px;\n  padding: 10px 5px;\n  margin: 0;\n  min-height: 44px;\n}\n#collection-actions #open-next {\n  grid-column: 1/-1;\n}\n#reveal-copy {\n  background: #fff9;\n  border-radius: 18px;\n  padding: 8px;\n  left: 8%;\n  width: 84%;\n}\n#home-vignette {\n  background:\n    linear-gradient(\n      #ede6f4a0,\n      transparent 25%,\n      transparent 70%,\n      #ede6f4a0);\n}\n\n/* src/ui/house.css */\n#mission-picker {\n  display: flex;\n  gap: 5px;\n  justify-content: center;\n  margin: 9px auto 0;\n  pointer-events: auto;\n}\n#mission-picker button {\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  background: #f6f0f9db;\n  padding: 5px 10px;\n  color: #8c739d;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#mission-picker button[aria-pressed=true] {\n  color: #614d7c;\n  background: #d6c4e8;\n}\n#mission-picker button:disabled {\n  opacity: .65;\n  cursor: default;\n}\n#room-connections {\n  margin: 7px 12px 0;\n  font-size: 10px;\n  color: #816b90;\n}\n#house-doors {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n.door-label {\n  position: absolute;\n  left: 0;\n  top: 0;\n  white-space: nowrap;\n  padding: 3px 6px;\n  font-size: 9px;\n  font-weight: 700;\n  color: #756085;\n  background: #fff6e7dc;\n  border: 1px solid #fff8;\n  border-radius: 7px;\n}\n.room-title {\n  text-shadow: 0 1px 6px #ede6f4;\n}\n#game[data-mission=practice] #task-count {\n  font-size: 9px;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #mission-picker {\n    margin-top: 5px;\n  }\n  #mission-picker button {\n    padding: 4px 8px;\n    font-size: 9px;\n  }\n  #room-connections {\n    margin-top: 4px;\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #mission-picker {\n    justify-content: flex-start;\n    flex-wrap: wrap;\n    width: 180px;\n    margin-left: 0;\n  }\n  #room-connections {\n    max-width: 165px;\n    margin-left: 0;\n  }\n}\n#game[data-scene=cleanup] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border: 1px solid #fff9;\n  border-radius: 20px;\n  background: #fff9efed;\n  box-shadow: 0 4px 20px #66564412;\n}\n#game[data-scene=cleanup] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=cleanup] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=cleanup] .flower {\n  font-size: 34px;\n}\n#game[data-scene=cleanup] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=cleanup] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1.1px;\n  color: #5c6e52;\n}\n#game[data-scene=cleanup] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n  letter-spacing: -.6px;\n}\n#game[data-scene=cleanup] .task-list {\n  justify-content: flex-start;\n  background: #fff8efdc;\n  border-radius: 9px;\n  padding: 4px 7px;\n  width: max-content;\n  max-width: 100%;\n  height: auto;\n}\n#game[data-scene=cleanup] #mission-picker {\n  justify-content: flex-start;\n  margin: 7px 0 0;\n}\n#game[data-scene=cleanup] #room-connections {\n  display: none;\n}\n#game[data-scene=cleanup] .player-label {\n  font-size: 9px;\n  padding: 3px 7px;\n}\n#game[data-scene=cleanup] .controls {\n  bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px));\n  left: 20px;\n  right: 20px;\n}\n#game[data-scene=cleanup] .control-label {\n  color: #50624c;\n  text-shadow: 0 1px 3px #ffff;\n}\n#game[data-scene=cleanup] #cleanup-hint {\n  background: #fff9efed;\n  width: calc(100% - 32px);\n  left: 16px;\n  padding: 7px 10px;\n  border-radius: 12px;\n  color: #596651;\n  bottom: calc(max(40px, env(safe-area-inset-bottom)) + 150px);\n  font-size: 10px;\n}\n#game[data-scene=cleanup] footer {\n  left: 16px;\n  right: 16px;\n  background: #fff9efed;\n  padding: 5px 9px;\n  border-radius: 12px;\n  bottom: 8px;\n  color: #6c795e;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #game[data-scene=cleanup] .room-title {\n    top: 85px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] #mission-picker {\n    margin-top: 5px;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    bottom: calc(max(36px, env(safe-area-inset-bottom)) + 144px);\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=cleanup] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=cleanup] .room-title {\n    top: 95px;\n    width: 210px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] .task-list {\n    flex-wrap: wrap;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    width: 40%;\n    left: 30%;\n    bottom: 12px;\n  }\n  #game[data-scene=cleanup] footer {\n    display: flex;\n    flex-wrap: wrap;\n    top: 12px;\n    bottom: auto;\n    left: 270px;\n    right: 16px;\n    justify-content: flex-end;\n  }\n}\n.asset-credits {\n  color: inherit;\n  font-size: 9px;\n  text-decoration: none;\n  padding: 5px;\n}\n#day-label {\n  margin: 5px 0;\n  font-size: 11px;\n  font-weight: 700;\n  color: #667b5b;\n  text-transform: capitalize;\n}\n#mission-picker {\n  flex-wrap: wrap;\n}\n#game[data-mission=day] .task-list {\n  flex-wrap: wrap;\n  font-size: 9px;\n}\n#game[data-mission=day] #mission-clock {\n  font-size: 19px;\n  white-space: nowrap;\n}\n#school-transition {\n  position: absolute;\n  z-index: 30;\n  inset: 0;\n  background: #f6eafaed;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  color: #65517b;\n}\n#school-transition[hidden] {\n  display: none;\n}\n#school-transition span {\n  font-size: 64px;\n}\n.lilah-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  max-width: 165px;\n  padding: 7px 10px;\n  border-radius: 15px 15px 15px 3px;\n  background: #fff2ceeF;\n  color: #735978;\n  font-size: 12px;\n  font-weight: 700;\n  pointer-events: none;\n  box-shadow: 0 3px 12px #7c627525;\n  z-index: 5;\n  text-align: center;\n}\n.lilah-label[hidden] {\n  display: none;\n}\n.marc-label {\n  background: #e7f0e4ef;\n  color: #4f655c;\n}\n#player-label,\n#house-doors,\n#room-connections {\n  display: none !important;\n}\n#game[data-scene=cleanup] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border-radius: 20px;\n  background: #fff9efed;\n}\n#game[data-scene=store] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=store] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=store] .flower {\n  font-size: 34px;\n}\n#game[data-scene=store] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=store] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1px;\n}\n#game[data-scene=store] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n}\n#game[data-scene=store] #scene-subtitle {\n  font-size: 11px;\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=store] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=store] .room-title {\n    width: 210px;\n  }\n}\n#bedtime-fade {\n  position: absolute;\n  inset: 0;\n  background: #161325;\n  z-index: 80;\n  pointer-events: none;\n}\n#house-effects {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font: 700 10px "Trebuchet MS", sans-serif;\n  min-height: 36px;\n  cursor: pointer;\n  padding: 4px 6px;\n}\n\n/* src/dev/developer-panel.css */\n.dev-launch,\n.dev-inline {\n  font: 800 11px/1.2 system-ui, sans-serif !important;\n  letter-spacing: .08em;\n  background: #27263c !important;\n  color: #e6dcff !important;\n  border: 1px solid #b9a4e8 !important;\n  border-radius: 12px !important;\n  min-height: 44px;\n  min-width: 44px;\n  padding: 10px !important;\n  cursor: pointer;\n}\n.dev-launch {\n  position: fixed;\n  z-index: 90;\n  bottom: 64px;\n  left: 50%;\n  transform: translateX(-50%);\n  box-shadow: 0 4px 18px #29223a40;\n}\n.dev-launch {\n  bottom: calc(64px + env(safe-area-inset-bottom, 0px));\n}\n#developer-panel {\n  height: min(850px, calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));\n}\n.dev-inline {\n  margin: 6px;\n  flex-shrink: 0;\n}\n.pop-title .dev-inline {\n  font-size: 9px !important;\n  letter-spacing: 0;\n  margin: 0;\n  min-width: 38px;\n  padding: 5px !important;\n}\n#developer-panel {\n  width: min(720px, calc(100vw - 24px));\n  max-width: none;\n  max-height: none;\n  height: min(850px, calc(100dvh - 24px));\n  margin: auto;\n  padding: 0;\n  overflow: hidden;\n  border: 1px solid #b6a4d764;\n  border-radius: 24px;\n  background: #181926;\n  color: #eeeaf8;\n  box-shadow: 0 28px 100px #100c23a6;\n  font: 14px/1.45 system-ui, sans-serif;\n  text-align: left;\n}\n#developer-panel::backdrop {\n  background: #121020a6;\n  backdrop-filter: blur(5px);\n}\n#developer-panel * {\n  box-sizing: border-box;\n}\n#developer-panel [hidden] {\n  display: none !important;\n}\n#developer-panel .dev-shell {\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n}\n#developer-panel button {\n  font: 650 13px/1.35 system-ui, sans-serif;\n  cursor: pointer;\n  min-height: 44px;\n  border: 1px solid #494458;\n  background: #303043;\n  color: #f3efff;\n  border-radius: 12px;\n  padding: 11px 13px;\n  box-shadow: none;\n  text-transform: none;\n  letter-spacing: 0;\n  transition: background .12s;\n}\n#developer-panel button:hover {\n  background: #414057;\n}\n#developer-panel button:focus-visible,\n#developer-panel select:focus-visible {\n  outline: 3px solid #d1bcff;\n  outline-offset: 2px;\n}\n#developer-panel button:disabled {\n  opacity: .4;\n  cursor: not-allowed;\n}\n#developer-panel button[aria-pressed=true] {\n  background: #b5dccc;\n  color: #1d3830;\n  border-color: #b5dccc;\n}\n#developer-panel .dev-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n  padding: 24px 26px 16px;\n  background:\n    radial-gradient(\n      ellipse at 90% 10%,\n      #76588b45,\n      transparent 60%);\n}\n#developer-panel .dev-eyebrow {\n  color: #c0b7d5;\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: .16em;\n  display: flex;\n  align-items: center;\n  gap: 7px;\n}\n#developer-panel .dev-eyebrow i {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: #aaddc4;\n  box-shadow: 0 0 12px #aaddc440;\n}\n#developer-panel h2 {\n  color: #f5f0ff;\n  font-size: 29px;\n  letter-spacing: -1px;\n  margin: 5px 0 2px;\n  font-weight: 750;\n}\n#developer-panel h2 span {\n  color: #d9baf5;\n  margin-left: 10px;\n}\n#developer-panel .dev-header p {\n  color: #b7afc8;\n  margin: 0;\n  font-size: 12px;\n}\n#developer-panel .dev-close {\n  font-size: 25px;\n  padding: 2px;\n  width: 44px;\n  background: #ffffff08;\n  border-color: #ffffff20;\n}\n#developer-panel .dev-live {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 0 26px 16px;\n  color: #d2cddd;\n  font-size: 11px;\n}\n#developer-panel .dev-live span {\n  padding: 5px 9px;\n  border: 1px solid #ffffff15;\n  border-radius: 7px;\n  background: #ffffff05;\n}\n#developer-panel .dev-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 4px;\n  border-block: 1px solid #ffffff12;\n  padding: 6px 20px;\n  background: #20202e;\n}\n#developer-panel .dev-tabs button {\n  background: transparent;\n  border-color: transparent;\n  color: #aaa2bc;\n  border-radius: 9px;\n  padding: 10px 4px;\n  font-size: 12px;\n}\n#developer-panel .dev-tabs button[aria-selected=true] {\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-content {\n  overflow-y: auto;\n  min-height: 0;\n  padding: 20px 26px;\n  flex: 1;\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  scrollbar-color: #6b597f transparent;\n}\n#developer-panel .dev-hero {\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  width: 100%;\n  padding: 22px 18px;\n  text-align: left;\n  background:\n    linear-gradient(\n      120deg,\n      #d7c6f2,\n      #efc8da);\n  border: 0;\n  color: #392e4b;\n  margin-bottom: 16px;\n}\n#developer-panel .dev-hero:hover {\n  background:\n    linear-gradient(\n      120deg,\n      #e2d5f8,\n      #f6d8e5);\n}\n#developer-panel .dev-hero-icon {\n  font-size: 38px;\n  line-height: 1;\n}\n#developer-panel .dev-hero small {\n  display: block;\n  letter-spacing: .13em;\n  font-size: 9px;\n  font-weight: 800;\n  opacity: .75;\n}\n#developer-panel .dev-hero strong {\n  display: block;\n  font-size: 22px;\n  letter-spacing: -.6px;\n  margin: 3px 0;\n}\n#developer-panel .dev-hero span span {\n  display: block;\n  font-size: 11px;\n  font-weight: 500;\n}\n#developer-panel .dev-hero b {\n  font-size: 25px;\n  margin-left: auto;\n}\n#developer-panel .dev-card {\n  background: #232333;\n  border: 1px solid #ffffff10;\n  border-radius: 16px;\n  padding: 18px;\n  margin-bottom: 14px;\n}\n#developer-panel h3 {\n  font-size: 15px;\n  margin: 0 0 8px;\n  color: #f0eafa;\n  font-weight: 700;\n}\n#developer-panel p {\n  color: #b8b0c9;\n  font-size: 12px;\n  margin: 0 0 13px;\n  line-height: 1.55;\n}\n#developer-panel .dev-card > p:last-child {\n  margin: 12px 0 0;\n}\n#developer-panel .dev-grid {\n  display: grid;\n  grid-template-columns: repeat(2, minmax(0, 1fr));\n  gap: 8px;\n}\n#developer-panel .dev-grid button {\n  text-align: left;\n}\n#developer-panel .dev-select-label {\n  display: block;\n  font-size: 11px;\n  color: #b9b1ca;\n  margin: 15px 0 6px;\n}\n#developer-panel select {\n  display: block;\n  width: 100%;\n  border: 1px solid #58506b;\n  background: #181926;\n  color: #eeeaf8;\n  border-radius: 10px;\n  min-height: 44px;\n  padding: 10px;\n  margin-bottom: 8px;\n  font: 13px system-ui, sans-serif;\n}\n#developer-panel .dev-notice {\n  padding: 16px;\n  border-radius: 14px;\n  background: #30342f;\n  border: 1px solid #b8d4bb30;\n  margin-bottom: 14px;\n  color: #c8e5d1;\n}\n#developer-panel .dev-notice strong {\n  font-size: 12px;\n}\n#developer-panel .dev-notice p {\n  margin: 6px 0 0;\n  color: #b4c2b6;\n}\n#developer-panel .dev-resume {\n  width: 100%;\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-danger {\n  color: #ffc4bf;\n  border-color: #965e6455;\n}\n#developer-panel pre {\n  white-space: pre-wrap;\n  font: 11px/1.8 ui-monospace, monospace;\n  color: #bbb4cd;\n  margin: 16px 0 0;\n  overflow-wrap: anywhere;\n}\n#developer-panel .dev-bottom {\n  padding: 13px 26px 15px;\n  border-top: 1px solid #ffffff12;\n  background: #20202e;\n}\n#developer-panel .dev-bottom > span {\n  display: block;\n  font-size: 11px;\n  color: #bce1cd;\n}\n#developer-panel .dev-bottom small {\n  display: block;\n  font-size: 10px;\n  color: #aaa1bc;\n  margin-top: 3px;\n}\n#developer-panel [data-status] {\n  font-size: 11px;\n  color: #d6c4f3;\n  margin-top: 8px;\n}\n#developer-panel [data-status][data-error=true] {\n  color: #ffc1b7;\n}\n@media (max-width: 480px) {\n  #developer-panel {\n    width: calc(100vw - 12px);\n    height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));\n    border-radius: 18px;\n  }\n  #developer-panel .dev-header {\n    padding: 17px 16px 12px;\n  }\n  #developer-panel h2 {\n    font-size: 25px;\n  }\n  #developer-panel .dev-live {\n    padding: 0 16px 12px;\n    gap: 5px;\n  }\n  #developer-panel .dev-tabs {\n    padding: 5px 10px;\n  }\n  #developer-panel .dev-content {\n    padding: 14px;\n  }\n  #developer-panel .dev-card {\n    padding: 14px;\n  }\n  #developer-panel .dev-bottom {\n    padding: 11px 16px;\n  }\n  #developer-panel .dev-hero {\n    padding: 16px 13px;\n    gap: 10px;\n  }\n  #developer-panel .dev-hero strong {\n    font-size: 20px;\n  }\n  #developer-panel .dev-hero-icon {\n    font-size: 28px;\n  }\n  #developer-panel .dev-grid button {\n    font-size: 12px;\n    padding: 10px;\n  }\n  #developer-panel .dev-bottom small {\n    font-size: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #developer-panel button {\n    transition: none;\n  }\n}\n#developer-panel .dev-bottom {\n  position: static;\n  display: block;\n  flex-shrink: 0;\n  letter-spacing: 0;\n  pointer-events: auto;\n}\n#squishy-pop:has(.dev-inline) .pop-footer {\n  display: block;\n}\n#squishy-pop .pop-title .dev-inline {\n  background: #27263c !important;\n  color: #e6dcff !important;\n}\n';
 
 // src/editor/FullGame.ts
 async function startEditorGame(app) {

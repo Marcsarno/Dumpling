@@ -48,3 +48,16 @@ Original OGG retained; MP3 derivative created with FFmpeg for browser compatibil
 ## Household action sounds — September 21, 2026
 
 `src/ui/ChoreAudio.ts` synthesizes original vacuum hum, munching, wiping/washing swishes, and soft handling sounds with Web Audio. No external recordings or additional licenses. A separate persistent Sounds toggle controls these effects.
+
+## Recorded household foley — September 21 refinement
+
+The earlier noise synthesis has been replaced by locally hosted recorded CC0 clips. All downloads were checked against the original creator pages. Files are mono 24 kHz MP3; long actions are trimmed to at most six seconds, level-normalized and edge-faded. Footstep files are retained as unused source assets; walking no longer loads or plays them. No network streaming occurs during play.
+
+- vacuum.mp3: wjtaylor, vacuum_cleaner.wav — https://freesound.org/people/wjtaylor/sounds/266099/
+- munch.mp3: Closetwalrus, chewing.wav — https://freesound.org/people/Closetwalrus/sounds/370297/
+- wipe.mp3: polyn, wipe and scrub.wav — https://freesound.org/people/polyn/sounds/540972/
+- water.mp3: miacx, tap water — https://freesound.org/people/miacx/sounds/614493/
+- step-*.mp3 and handle.mp3: Kenney, Impact Sounds — https://kenney.nl/assets/impact-sounds (footstep wood/carpet/concrete 000–002, impactSoft_medium_000).
+- All above: CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/
+
+Music defaults to a 50% slider level and its base gain was reduced a further 10%. Existing explicit slider values are retained. Music/effects sliders persist independently. The supplied Squishy unlock.mp3 remains reserved; opening choreography is deferred.

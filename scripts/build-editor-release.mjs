@@ -10,6 +10,17 @@ const output=resolve('dist');
 await mkdir(output,{recursive:true});
 await cp('editor-release',output,{recursive:true});
 const config=JSON.parse(await readFile('dist/config.json','utf8'));
+// Updated source assets override the historical scene-export copies.
+let updatedId=900002000;
+const overlays=['food/pizza.glb','food/taco.glb','food/turkey.glb','characters/arianna/arianna.glb','characters/marc/marc.glb','characters/lilah/lilah.glb','pets/sunny-pup.glb','environment/kenney/furniture/loungeChairUpright.glb',...(await readdir('public/assets/audio/foley')).filter(f=>f.endsWith('.mp3')).map(f=>'audio/foley/'+f)];
+for(const path of overlays){
+ const url='assets/'+path,name='game__'+path.replaceAll('/','__')+(path.endsWith('.glb')?'.bin':'');
+ await mkdir(dirname(resolve(output,url)),{recursive:true});await copyFile('public/'+url,resolve(output,url));
+ const existing=Object.values(config.assets).find(a=>a.name===name);
+ if(existing){existing.file={...existing.file,url};continue;}
+ while(config.assets[updatedId])updatedId++;
+ config.assets[updatedId]={id:String(updatedId),name,type:'binary',file:{url,filename:basename(path)},data:{},preload:false,tags:[]};updatedId++;
+}
 // Code-owned reference-led animal sculpts use the same binary naming convention
 // as migrated GLBs. Keep authored scene files intact and overlay current art.
 let sculptId=900001000;

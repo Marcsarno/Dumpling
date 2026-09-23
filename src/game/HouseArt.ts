@@ -61,6 +61,7 @@ export class HouseArt {
       normalization.setLocalScale(scale, scale, scale);
       normalization.setLocalPosition(-bounds.center.x * scale, -(bounds.center.y - bounds.halfExtents.y) * scale, -bounds.center.z * scale);
       anchor.setLocalPosition(...position); anchor.setLocalEulerAngles(pitch, yaw, 0);
+      if(this.root.name==='Maple cottage'&&position[0]===5.95&&position[2]===4.9&&['bookcaseOpenLow','books'].includes(name))anchor.enabled=false;
       recordArt(anchor,this.root,`environment/${pack==='nursery'||pack==='school'?'':'kenney/'}${key}.glb`);
       for (const render of renderers) render.batchGroupId = this.group.id;
       this.loaded++;

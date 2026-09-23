@@ -1,3 +1,4 @@
+import {audioLevel} from './AudioSettings';
 import {saveKey} from '../systems/SaveNamespace';
 import {assetUrl} from '../editor/AssetUrls';
 export interface MusicScene {
@@ -54,7 +55,7 @@ export class HouseMusic {
   if(this.gap){this.gap=Math.max(0,this.gap-step);if(!this.gap){this.audio.currentTime=0;this.sync();}return;}
   this.sync();
   if(!this.audio.paused){
-   const left=this.audio.duration-this.audio.currentTime,level=scene.revealing?.09:.28;
+   const left=this.audio.duration-this.audio.currentTime,level=(scene.revealing?.081:.252)*audioLevel('music');
    const target=Number.isFinite(left)?Math.min(level,Math.max(0,left/3)*level):level;
    this.audio.volume=Math.max(0,Math.min(1,this.audio.volume+Math.max(-step*.45,Math.min(step*.14,target-this.audio.volume))));
   }

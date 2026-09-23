@@ -134,7 +134,7 @@ export function createHouse(app: Application): Bedroom {
   furniture('kitchenCoffeeMachine',-2.63,10.1,.36,90,'height',undefined,1.05);
   furniture('toaster',-2.65,10.55,.23,90,'height',undefined,1.05);
   furniture('tableRound',.55,13.85,1.75,0,'width',[1.65,1.65]);
-  for(const [x,z,yaw] of [[.55,12.55,0],[.55,15.05,180],[1.78,13.85,-90],[-.7,13.85,90]])furniture('chairCushion',x,z,.82,yaw,'height',[.55,.55]);
+  for(const [x,z,yaw] of [[.55,12.55,0],[.55,15.05,180],[1.78,13.85,-90],[-.7,13.85,90]])furniture('chairCushion',x,z,(window as any).__editorMode?.82:.943,yaw,'height',[.55,.55]);
   furniture('plantSmall1',.55,13.85,.28,0,'height',undefined,.95);
   furniture('trashcan',1.95,10.3,.6,0,'height',[.4,.4]);
   box('Kitchen woven runner',-1.65,.05,11.35,.65,.025,2.7,m.mint);
@@ -151,7 +151,7 @@ export function createHouse(app: Application): Bedroom {
 
   // Compact private bathroom, with no passage through the bathing area.
   furniture('bathroomSink',4.12,-3.08,.9,0,'height',[1.0,.7]);
-  furniture('bathroomMirror',4.12,-3.49,.9,0,'height',undefined,1.35,{metal:'#a5c6cc'});
+  furniture('bathroomMirror',4.12,-3.15,.9,0,'height',undefined,1.35,{metal:'#a5c6cc'});
   furniture('bathtub',5.75,-2.12,2.15,90,'width',[.94,2.15]);
   // Cistern against the east wall; the seat projects west into the room.
   furniture('toilet',5.98,-.32,.8,-90,'height',[.8,.58]);

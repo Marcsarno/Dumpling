@@ -70,7 +70,10 @@ export async function captureWorld(app:Application,house:Bedroom,props:CleanupPr
   }
   const classroom=app.root.findByTag('prop:Classroom trading club:0')[0] as Entity|undefined;
   if(classroom)loop.recess.bindLayout(classroom);
-  app.batcher.generate();
+  // Explicit numeric IDs retire old batches; this engine's no-argument path uses
+  // string keys, which fail to match existing numeric IDs and leave ghost furniture.
+  const batchIds=[...new Set((app.root.findComponents('render') as RenderComponent[]).map(r=>r.batchGroupId).filter(id=>id>=0))];
+  app.batcher.generate(batchIds);
   app.on('update',()=>{for(const {source,target} of emission)if(target.emissiveIntensity!==source.emissiveIntensity||!target.emissive.equals(source.emissive)){target.emissive.copy(source.emissive);target.emissiveIntensity=source.emissiveIntensity;target.update();}});
  }
  (window as any).__migration.ready=true;

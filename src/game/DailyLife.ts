@@ -17,7 +17,7 @@ export class DailyLife {
   active=false;
   shoppingDone=false;
   onLilahBed:()=>void=()=>{};
-  get canSleep(){return this.shoppingDone&&this.tasks.every(t=>this.completed.includes(t.id))&&(this.clock.state.phase==='afternoon'||this.clock.state.phase==='night');}
+  get canSleep(){return this.tasks.every(t=>this.completed.includes(t.id))&&(this.clock.state.phase==='night'||this.clock.state.phase==='afternoon'&&this.shoppingDone);}
   private needsTask(id:string){return this.clock.tasks.some(t=>t.id===id)&&!this.clock.state.done.includes(id);}
   readonly root: Entity;
   readonly outfit: CleanupItem;
@@ -108,19 +108,22 @@ export class DailyLife {
     target('put-tool-away','Put tool away','↩',[0,0,0],[0,.8,0],h=>h==='vacuum'||h==='paper-towel',0);
     target('bedtime-book','Read a bedtime book','📘',[-.85,0,-.8],[-1.4,.9,-.8],h=>!h&&phase()==='night'&&notDone('read'),1600,'read');
     target('school-door','Go to school','🎒',[-2.35,0,8.2],[-3.1,1.1,8.2],h=>!h&&this.clock.schoolDue,0);
-    target('shop-door','Choose a store','🛍',[-2.35,0,8.2],[-3.1,1.1,8.2],h=>!h&&this.clock.canShop&&(phase()==='night'||this.clock.ready),0);
+    target('shop-door','Choose a store','🛍',[-2.35,0,8.2],[-3.1,1.1,8.2],h=>!h&&this.clock.canShop&&this.clock.ready,0);
     target('sleep','Go to bed','🌙',[-.85,0,-1.6],[-1.4,.8,-1.6],h=>!h&&this.canSleep,6500);
     target('lilah-bed','Put Lilah to bed','🌙',[8.55,0,-1.3],[9.1,.9,-1.7],h=>!h&&this.clock.state.minutes>=1095&&['afternoon','night'].includes(phase())&&!this.clock.state.lilahAsleep,1000);
     this.refresh();void pan;
   }
   get tasks(){const key=this.clock.state.phase+'-'+this.clock.state.day+'-'+this.lilahMesses.count;if(key!==this.taskKey){this.taskKey=key;this.taskCache=[...this.clock.tasks,...this.lilahMesses.tasks];}return this.taskCache;}
   get completed(){return [...this.clock.state.done,...this.lilahMesses.completed];}
+  get bowlPosition(){return this.dogFood.getPosition().clone();}
+  get hasDogFood(){return this.dogFood.enabled;}
+  consumeDogFood(){if(!this.hasDogFood)return;this.clock.state.dogFoodEmpty=true;this.dogFood.enabled=false;this.save();}
   save(){try{localStorage.setItem(SAVE_KEY,JSON.stringify(this.clock.state));}catch{document.querySelector('#save-message')!.textContent='Daily progress could not be saved.';}}
   setActive(active:boolean){this.active=active;this.root.enabled=active;this.last=0;this.refresh();}
   refresh(){
     const s=this.clock.state;
     const spill=SPILL_LOCATIONS[s.spillSite??0]??SPILL_LOCATIONS[0];this.spill.setLocalPosition(spill[0],.04,spill[1]);const spillTarget=this.props.interactions.find(t=>t.id==='wipe-spill')!;spillTarget.anchor.set(spill[0],0,spill[1]);spillTarget.marker.set(spill[0],.12,spill[1]);
-    this.dogFood.enabled=s.done.includes('feed-dog')||s.phase!=='afternoon'||s.petTask!=='feed-dog';
+    this.dogFood.enabled=!s.dogFoodEmpty&&(s.done.includes('feed-dog')||s.phase!=='afternoon'||s.petTask!=='feed-dog');
     this.lilahMesses.syncDay(s.day);this.lilahMesses.refresh();if(s.done.includes('pet-care')){this.props.pet?.finish();this.props.pet!.poop.enabled=false;}
     for(const mess of [...this.dust,this.spill,this.eggSpill])mess.setLocalScale(1,1,1);
     for(let i=0;i<3;i++){const p=DUST_LOCATIONS[s.dust[i]],t=this.props.interactions.find(t=>t.id==='vacuum-'+i)!;this.dust[i].setLocalPosition(p[0],.04,p[1]);t.anchor.set(p[0],0,p[1]);t.marker.set(p[0],.35,p[1]);this.dust[i].enabled=s.phase==='afternoon'&&this.clock.tasks.some(t=>t.id==='dust-'+i)&&!s.done.includes('dust-'+i);}
@@ -176,7 +179,7 @@ export class DailyLife {
       this.save();return;
     }
     switch(target.id){
-      case 'feed-dog':this.dogFood.enabled=true;break;
+      case 'feed-dog':this.clock.state.dogFoodEmpty=false;this.dogFood.enabled=true;break;
       case 'play-lilah':this.onPlayLilah();break;
       case 'choose-clothes':case 'night-clothes':take(this.outfit);break;
       case 'take-egg':take(this.egg);break;
@@ -207,6 +210,6 @@ export class DailyLife {
     this.wipingPaper.enabled=!!target&&(target.id.startsWith('wipe-')||target.id==='lilah-mess-1')&&progress>0;
     if(this.wipingPaper.enabled&&target){this.wipingPaper.setPosition(hands.x,Math.max(.08,hands.y-.035),hands.z);this.wipingPaper.setLocalEulerAngles(0,0,0);}
   }
-  get hint(){const s=this.clock.state;if(s.phase==='school')return 'At school · See you after class!';if(this.clock.schoolDue)return '🎒 Time for school. Walk to the front door in the living room.';if(s.phase==='morning'&&s.breakfast==='spill')return 'Oops! Get a paper towel and hold Action over the dropped egg.';if(this.canSleep)return '🌙 Chores and shopping done! Walk to your bed whenever you’re ready.';if(s.phase==='afternoon')return 'After school · Help a little, then visit two stores. Take your time!';return s.phase==='morning'?'A fresh morning · Brush, choose clothes, and make breakfast.':'Wind down · Brush teeth, put clothes away, and read.';}
+  get hint(){const s=this.clock.state;if(s.phase==='school')return 'At school · See you after class!';if(this.clock.schoolDue)return '🎒 Time for school. Walk to the front door in the living room.';if(s.phase==='morning'&&s.breakfast==='spill')return 'Oops! Get a paper towel and hold Action over the dropped egg.';if(this.canSleep)return '🌙 All done! Walk to your bed whenever you’re ready.';if(s.phase==='afternoon')return 'After school · Help a little, then visit two stores. Take your time!';return s.phase==='morning'?'A fresh morning · Brush, choose clothes, and make breakfast.':'Wind down · Brush teeth, put clothes away, and read.';}
   snapshot(){return {...this.clock.state,clock:this.clock.label,canShop:this.clock.canShop,held:this.held,dirt:this.dust.map(e=>({visible:e.enabled,position:e.getPosition().toArray(),scale:e.getLocalScale().toArray()})),eggSpill:this.eggSpill.enabled,lilah:this.lilahMesses.snapshot()};}
 }

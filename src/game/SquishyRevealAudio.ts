@@ -1,3 +1,4 @@
+import {audioLevel} from '../ui/AudioSettings';
 /** Short, quiet major-key bells. Cues follow animation time, so pause never queues a fanfare. */
 export class SquishyRevealAudio {
   private context:AudioContext|null=null;
@@ -8,7 +9,7 @@ export class SquishyRevealAudio {
       if(this.voices.size>=8)return;
       const c=this.context,osc=c.createOscillator(),gain=c.createGain(),t=c.currentTime+delay;
       osc.type='sine';osc.frequency.setValueAtTime(frequency,t);
-      gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(volume,t+.012);
+      gain.gain.setValueAtTime(0,t);gain.gain.linearRampToValueAtTime(volume*audioLevel('effects'),t+.012);
       gain.gain.exponentialRampToValueAtTime(.0001,t+duration);
       osc.connect(gain);gain.connect(c.destination);this.voices.add(osc);
       osc.onended=()=>{osc.disconnect();gain.disconnect();this.voices.delete(osc);};

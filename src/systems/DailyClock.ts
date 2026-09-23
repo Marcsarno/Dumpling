@@ -5,6 +5,8 @@ export interface DayState {
   dust: number[]; schoolSeconds: number;
   afternoonTasks?: string[];
   lilahAsleep?: boolean;
+  dinnerServed?: boolean;
+  dogFoodEmpty?: boolean;
   petTask?: 'feed-dog'|'pet-care';
   spillSite?: number;
   breakfastAtTable?: boolean;
@@ -48,7 +50,7 @@ export class DailyClock {
   }
   get tasks() { if(this.state.phase==='afternoon'&&Array.isArray(this.state.afternoonTasks)&&this.state.afternoonTasks.length===5&&new Set(this.state.afternoonTasks).size===5&&this.state.afternoonTasks.every(id=>afternoonCatalog.some(t=>t.id===id)))return this.state.afternoonTasks.map(id=>afternoonCatalog.find(t=>t.id===id)!);const tasks=DAILY_TASKS[this.state.phase];if(this.state.phase!=='afternoon'||!this.state.petTask)return tasks;return [...tasks.filter(t=>t.id!=='dust-2'&&t.id!=='laundry-clothes'),this.state.sideTask==='living-toy'?{id:'living-toy',name:'Put toys away',icon:'🧸'}:this.state.sideTask==='kitchen-dish'?{id:'kitchen-dish',name:'Take dish to sink',icon:'🍽'}:{id:'laundry-clothes',name:'Put laundry in washer',icon:'👕'},this.state.petTask==='feed-dog'?{id:'feed-dog',name:'Fill puppy’s bowl',icon:'🐾'}:{id:'pet-care',name:'Scoop · flush · wash',icon:'🐾'}]; }
   get ready() { return this.tasks.every(t=>this.state.done.includes(t.id)); }
-  get canShop() { return this.state.phase === 'afternoon'||this.state.phase==='night'; }
+  get canShop() { return this.state.phase === 'afternoon'&&this.state.minutes<1140; }
   get schoolDue() { return this.state.phase==='morning' && (this.ready || this.state.minutes>=510); }
   get canSleep() { return this.state.phase==='night' && (this.ready || this.state.minutes>=1260); }
   complete(id: string) { if(!this.tasks.some(t=>t.id===id)||this.state.done.includes(id)) return false; this.state.done.push(id); return true; }

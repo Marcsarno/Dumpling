@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {mkdir,writeFile} from 'node:fs/promises';
+const {chromium}=await import('file:///C:/Users/marc7/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs');
+const browser=await chromium.launch({channel:'msedge',headless:true});const out='artifacts/family';await mkdir(out,{recursive:true});
+const errors=[];let page;
+async function start(daily){const context=await browser.newContext({viewport:{width:1000,height:800}});await context.addInitScript(d=>{for(const prefix of ['arianna','dumpling.editorMigration'])localStorage.setItem(prefix+'.daily.v1',JSON.stringify(d));},daily);page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400&&!r.url().endsWith('/favicon.ico'))errors.push(r.status()+' '+r.url());});await page.goto('http://127.0.0.1:5191/dist/index.html');await page.waitForFunction(()=>window.__roomTest?.snapshot().marc.loaded&&window.__roomTest.snapshot().marc.dinner.ready,undefined,{timeout:90000});return context;}
+const snap=()=>page.evaluate(()=>window.__roomTest.snapshot());
+async function pos(x,z){await page.evaluate(async([x,z])=>{const pc=await import('playcanvas');pc.Application.getApplication().root.findByName('Arianna').setPosition(x,.09,z);},[x,z]);await page.waitForTimeout(600);}
+const base={version:1,day:3,phase:'night',minutes:1150,done:['teeth','outfit','read'],dust:[0,2,4],breakfast:'done',eggDrop:false,schoolSeconds:0,petTask:'pet-care',sideTask:'living-toy',spillSite:0,lilahAsleep:true};
+try{
+ let context=await start(base);await pos(-.85,-1.6);assert.equal(await page.locator('#action-button').getAttribute('data-target'),'sleep');assert.equal((await snap()).cleanup.daily.canShop,false);await page.screenshot({path:out+'/bedtime.png'});await page.locator('#action-button').click();await page.waitForFunction(()=>window.__roomTest.snapshot().cleanup.daily.day===4,undefined,{timeout:15000});console.log('PASS bedtime without shopping advances day');await context.close();
+ context=await start({...base,day:1,phase:'afternoon',minutes:1030,done:[],lilahAsleep:false});await pos(1,11.5);const stages=new Set();const startTime=Date.now();
+ while(Date.now()-startTime<180000){const s=await snap(),stage=s.marc.dinner.stage;if(!stages.has(stage)){stages.add(stage);console.log('STAGE',stage,JSON.stringify(s.marc.dinner));await page.screenshot({path:out+'/dinner-'+stage+'.png'});}if(s.marc.dinner.served&&s.dogRoaming.meals>0&&stage==='idle')break;await page.waitForTimeout(1000);}
+ const s=await snap();await writeFile(out+'/report.json',JSON.stringify({errors,stages:[...stages],snapshot:s},null,2));assert.equal(s.marc.dinner.served,true);assert.ok(stages.has('seated'),'Dad sat at dinner');assert.ok(s.dogRoaming.meals>0,'Dog ate');assert.equal(s.dogRoaming.food,false);assert.deepEqual(errors,[]);console.log('PASS Dad served dinner and dog emptied bowl',JSON.stringify({stages:[...stages],dog:s.dogRoaming}));await page.screenshot({path:out+'/dinner-finished.png'});
+}finally{await browser.close();}

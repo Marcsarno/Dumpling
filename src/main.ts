@@ -1,3 +1,5 @@
+import {performanceSettings} from './ui/PerformanceSettings';
+import {createAudioSettings} from './ui/AudioSettings';
 import {captureWorld} from './editor/LayoutBridge';
 import {DogRoaming} from './game/DogRoaming';
 import {HouseMusic} from './ui/HouseMusic';
@@ -66,12 +68,12 @@ export async function startGame(editorApp?:Application) {
   const observer = new ResizeObserver(resize);
   observer.observe(viewport);
   resize();
-  const houseMusic=new HouseMusic();
-  const dogRoaming=new DogRoaming(room,props.pet!.dog);
+  const houseMusic=new HouseMusic();const destroyAudioSettings=createAudioSettings();const destroyPerformance=performanceSettings(app,()=>loop.popUI.isOpen||loop.developerPaused);
+  const dogRoaming=new DogRoaming(room,props.pet!.dog,props.daily!);
   app.on('update', (elapsed: number) => {
     houseMusic.update({mode:loop.mode,phase:props.daily!.clock.state.phase,store:loop.mode==='store'?loop.store.definition.id:'',paused:loop.popUI.isOpen||loop.developerPaused||tornado.active,revealing:loop.opening.phase==='opening'},Math.min(elapsed,.1));
     const now = performance.now();
-    if(loop.developerPaused||loop.popUI.isOpen||document.hidden)cleanup.audio.stop();
+    if(loop.developerPaused||loop.popUI.isOpen||document.hidden)cleanup.audio.silence();
     if(loop.developerPaused){loop.developerTick(now,elapsed);return;}
     loop.beforeMovement(now);
     if(loop.popUI.isOpen)return;
@@ -87,6 +89,7 @@ export async function startGame(editorApp?:Application) {
     app.scene.ambientLight.set(ambientBase.r*(1-.42/.72*dusk),ambientBase.g*(1-.36/.68*dusk),ambientBase.b*(1-.31/.77*dusk));
     if(loop.mode==='home')app.scene.ambientLight.set(.7,.68,.65);
     controller.update(dt);
+
     if (loop.mode !== 'home') camera.follow(character.player.getPosition(), dt);
     loop.update(now);
     tornado.update(document.hidden?0:Math.min(elapsed,.1));
@@ -142,7 +145,7 @@ export async function startGame(editorApp?:Application) {
         character: character.animator.snapshot(),
         lilah: lilah.snapshot(),
         marc: marc.snapshot(),
-        dog:props.pet?.dogAnimator?.snapshot(),houseMusic:houseMusic.snapshot(),
+        dog:props.pet?.dogAnimator?.snapshot(),dogRoaming:dogRoaming.snapshot(),houseMusic:houseMusic.snapshot(),
         lighting: room.lighting!.snapshot(),
         cleanup: cleanup.snapshot(),tornado:tornado.snapshot(),cameraState:camera.state,
         loop: loop.snapshot(),
@@ -153,7 +156,7 @@ export async function startGame(editorApp?:Application) {
   let developerPanel:{destroy():void}|undefined;let disposed=false;
   void import('./dev/DeveloperPanel').then(({DeveloperPanel})=>{if(!disposed)developerPanel=new DeveloperPanel(loop,()=>({fps:app.stats.frame.fps,drawCalls:app.stats.drawCalls.total,position:character.player.getPosition().toArray()}));});
   if (import.meta.hot) import.meta.hot.dispose(() => {
-    disposed=true;developerPanel?.destroy();houseMusic.destroy();
+    disposed=true;developerPanel?.destroy();houseMusic.destroy();destroyPerformance();destroyAudioSettings();
     observer.disconnect(); tornado.destroy(); marc.destroy(); lilah.destroy(); navigation.destroy(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
     delete (window as unknown as Record<string, unknown>).__roomTest;
   });

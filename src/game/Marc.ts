@@ -1,3 +1,4 @@
+import {FamilyDinner} from './FamilyDinner';
 import {propPoint,propYaw} from '../editor/PropSpace';
 import {assetUrl} from '../editor/AssetUrls';
 import { Asset, AnimData, AnimTrack, Entity, Quat, Vec3, type Application, type ContainerResource } from 'playcanvas';
@@ -24,6 +25,7 @@ export class Marc {
   private animator: CharacterAnimator;
   private grounding: CharacterGrounding | null = null;
   private planner: HousePath;
+  private dinner: FamilyDinner;
   private label=document.createElement('div');
   private tools: Entity[]=[];
   private route: Vec3[]=[];
@@ -54,6 +56,7 @@ export class Marc {
     this.visual=new Entity('Marc visual',app);this.root.addChild(this.visual);
     const placeholder=new Entity('Marc loading',app);this.visual.addChild(placeholder);
     this.animator=new CharacterAnimator(this.visual,placeholder);this.planner=new HousePath(house,.25);
+    this.dinner=new FamilyDinner(app,house,daily,this.root,this.visual,this.animator,text=>this.say(text));
     this.label.id='marc-label';this.label.className='lilah-label marc-label';this.label.hidden=true;document.querySelector('#game')!.append(this.label);
     const colors=['#cda678','#c5d9dd','#b8c39d'];
     for(let i=0;i<3;i++){
@@ -74,6 +77,8 @@ export class Marc {
     for(const name of ['SitDown','SitIdle','StandUp','Idle','Walk_Basic'])required(name);
     const walk=required('Walk_Basic'),idle=required('Idle');
     const tracks=[...source,new AnimTrack('Walk',walk.duration,walk.inputs,walk.outputs,walk.curves)];
+    const carry=required('CarryWalk'),carryOutputs=carry.outputs.map(o=>new AnimData(o.components,Array.from(o.data,(v,i)=>o.data[i%o.components])));
+    tracks.push(new AnimTrack('CarryIdle',carry.duration,carry.inputs,carryOutputs,carry.curves));
     // A modest runtime torso bend for cleanup; this is not an authored source animation.
     const outputs=idle.outputs.map(o=>new AnimData(o.components,Array.from(o.data)));
     for(const curve of idle.curves){
@@ -84,7 +89,7 @@ export class Marc {
       }
     }
     tracks.push(new AnimTrack('Cleaning',idle.duration,idle.inputs,outputs,idle.curves));
-    const manifest:CharacterManifest={animations:tracks.map(t=>({name:t.name,duration_seconds:t.duration,loop:!['SitDown','StandUp'].includes(t.name)})),locomotion:{Walk:{travel_speed_mps:1.2}},interaction_events:{},scale:{rest_height_m:1.8},hand_joints:['LeftHand','RightHand'],walk_playback:1};
+    const manifest:CharacterManifest={animations:tracks.map(t=>({name:t.name,duration_seconds:t.duration,loop:!['SitDown','StandUp'].includes(t.name)})),locomotion:{Walk:{travel_speed_mps:1.2},CarryWalk:{travel_speed_mps:1.05}},interaction_events:{},scale:{rest_height_m:1.8},hand_joints:['LeftHand','RightHand'],walk_playback:1};
     const alignment=new Entity('Marc ground alignment',this.app);this.visual.addChild(alignment);alignment.addChild(model);
     model.setLocalScale(this.height/1.8,this.height/1.8,this.height/1.8);this.animator.attach(model,tracks,manifest,this.height/1.8);
     this.grounding=new CharacterGrounding(this.house.root,this.root,alignment);this.loaded=true;
@@ -108,6 +113,10 @@ export class Marc {
     if(!active){this.animator.update(0,new Vec3(),Math.max(elapsed,.001));return;}
     this.time+=dt;this.velocity.set(0,0,0);
     if(this.day!==this.daily.clock.state.day){this.day=this.daily.clock.state.day;this.seen.clear();this.target=null;if(this.state==='cleaning')this.settle();}
+    if(this.dinner.due()&&!this.target&&this.state==='seated')this.stand();
+    const dining=this.dinner.update(dt,!this.target&&['idle','walking'].includes(this.state)&&!this.animator.busy,[arianna,lilah],this.velocity);
+    if(dining){this.route=[];this.state='idle';this.target=null;this.until=this.time+4;this.tools.forEach(t=>t.enabled=false);}
+    else {
     const messes=this.daily.lilahMesses.snapshot().messes;
     for(const m of messes)if(!this.seen.has(m.id))this.seen.set(m.id,this.time);
     const eligible=()=>messes.find(m=>!m.done&&m.id!==playerTarget&&Math.hypot(m.x-arianna.x,m.z-arianna.z)>1.65&&this.time-(this.seen.get(m.id)??this.time)>8);
@@ -157,13 +166,14 @@ export class Marc {
     // The first destination is the chair, so a later Lilah incident can interrupt a real rest.
     if(this.time<2&&this.state==='idle'){this.go(propPoint('marc-seat',ENTRY),'seat');}
     if(this.time>=this.nextSpeech&&arianna.distance(this.root.getPosition())<5&&this.state!=='cleaning')this.say(REMARKS[this.lineIndex++%REMARKS.length]);
+    }
     this.grounding?.update();this.animator.update(dt,this.velocity,elapsed);
     const p=this.root.getPosition(),room=HOUSE_ROOMS.find(r=>p.x>=r.minX&&p.x<=r.maxX&&p.z>=r.minZ&&p.z<=r.maxZ);if(room)this.visited.add(room.id);
     const screen=camera.camera!.worldToScreen(new Vec3(p.x,p.y+this.height+.1,p.z)),viewport=document.querySelector('#game')!.getBoundingClientRect();
     this.label.hidden=performance.now()>this.speechUntil||screen.x<0||screen.x>viewport.width||screen.y<135||screen.y>viewport.height-145;
     this.label.style.transform=`translate(${Math.max(6,Math.min(viewport.width-this.label.offsetWidth-6,screen.x-this.label.offsetWidth/2))}px,${screen.y-this.label.offsetHeight}px)`;
   }
-  snapshot(){return {loaded:this.loaded,height:this.height,position:this.root.getPosition().toArray(),state:this.state,target:this.target,route:this.route.map(p=>p.toArray()),speech:this.speech,cleaned:this.cleaned,sitCount:this.sitCount,standCount:this.standCount,visited:[...this.visited],animation:this.animator.snapshot(),seat:{center:SEAT.toArray(),entry:ENTRY.toArray(),anchor:SEATED.toArray()}};}
+  snapshot(){return {dinner:this.dinner.snapshot(),loaded:this.loaded,height:this.height,position:this.root.getPosition().toArray(),state:this.state,target:this.target,route:this.route.map(p=>p.toArray()),speech:this.speech,cleaned:this.cleaned,sitCount:this.sitCount,standCount:this.standCount,visited:[...this.visited],animation:this.animator.snapshot(),seat:{center:SEAT.toArray(),entry:ENTRY.toArray(),anchor:SEATED.toArray()}};}
   geometry(){return this.animator.geometrySnapshot();}
-  destroy(){this.label.remove();this.root.destroy();}
+  destroy(){this.dinner.destroy();this.label.remove();this.root.destroy();}
 }

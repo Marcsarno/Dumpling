@@ -145,6 +145,8 @@ export class SquishyPopUI {
     const last=chain.at(-1)!;cue.style.left=`${Math.max(24,Math.min(76,(last%6+.5)/6*100))}%`;cue.style.top=`${Math.max(0,(Math.floor(last/6)-.55)/6*100)}%`;
   }
   private tick=(now:number)=>{
+    if(document.hidden||document.querySelector('.audio-settings[open]')){this.last=now;if(this.isOpen)this.frame=requestAnimationFrame(this.tick);return;}
+
     const dt=Math.max(0,(now-this.last)/1000);this.last=now;
     this.q('.pop-footer').textContent=this.developerPractice?`DEV PRACTICE · no rewards saved${this.developerFreeze?' · timer frozen':''}`:'Soft friends. Happy little chains.';
     if(this.developerHold){this.audio.pause(true);if(this.isOpen)this.frame=requestAnimationFrame(this.tick);return;}

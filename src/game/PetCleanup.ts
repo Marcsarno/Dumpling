@@ -27,7 +27,7 @@ export class PetCleanup {
     this.poop.setLocalPosition(3.7, .04, 5.3);
     const dog = this.dog = new Entity('Sunny pup', app); props.root.addChild(dog); dog.setLocalPosition(4.8, .04, 5.85);
     const paper = new Entity('Bathroom toilet paper', app); props.root.addChild(paper); paper.setLocalPosition(6.21, .7, -.8);
-    const soap = new Entity('Hand soap', app); props.root.addChild(soap); soap.setLocalPosition(3.83, .96, -3.03);
+    const soap = new Entity('Hand soap', app); props.root.addChild(soap); soap.setLocalPosition(3.96, .90, -3.24);
     void Promise.all([
       importProp(app, tool, 'shovel', .75, false, [180, 0, 0]), importProp(app, this.poop, 'poop', .18),
       importProp(app, dog, 'sunny-pup', .48, true).then(model=>{this.dogAnimator=new DogAnimator(dog,model);}), importProp(app, paper, 'paper', .24), importProp(app, soap, 'soap', .21),

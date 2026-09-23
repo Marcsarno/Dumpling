@@ -97,7 +97,7 @@ export class CleanupGame {
           this.seatReturn=this.character.player.getPosition().clone();this.bedYaw=this.character.visual.getLocalEulerAngles().y;this.controller.reset();this.character.animator.setCarrying(false);this.character.animator.setWorkClip('SleepEnter');return;
         }
         if(target.id==='eat-breakfast'){
-          this.seatReturn=this.character.player.getPosition().clone();this.controller.reset();this.character.player.setPosition(propPoint('dining',new Vec3(.55,.09,12.49)));this.character.visual.setLocalEulerAngles(0,propYaw('dining',0),0);this.character.animator.setCarrying(false);this.character.animator.setWorkClip('EatSit',propPoint('dining',new Vec3(.55,1,13.85)));return;
+          this.seatReturn=this.character.player.getPosition().clone();this.controller.reset();this.character.player.setPosition(propPoint('dining',new Vec3(.55,.09,12.49)));this.character.visual.setLocalEulerAngles(0,propYaw('dining',0),0);this.character.animator.setCarrying(false);if(this.character.grounding)this.character.grounding.surfaceHeight=.07;this.character.animator.setWorkClip('EatSit',propPoint('dining',new Vec3(.55,1,13.85)));return;
         }
         if(target.id.startsWith('wipe-')||target.id==='lilah-mess-1')this.character.animator.setWorkClip('Wipe',facing);
         else if(target.id.includes('vacuum')||target.id==='lilah-mess-2')this.character.animator.setWorkClip('Vacuum',facing);
