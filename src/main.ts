@@ -1,5 +1,5 @@
 import {performanceSettings} from './ui/PerformanceSettings';
-import {SCHOOL_REVIEW} from './systems/SaveNamespace';
+import {SCHOOL_REVIEW,OUTDOOR_REVIEW} from './systems/SaveNamespace';
 import {createAudioSettings} from './ui/AudioSettings';
 import {captureWorld} from './editor/LayoutBridge';
 import {DogRoaming} from './game/DogRoaming';
@@ -108,6 +108,7 @@ export async function startGame(editorApp?:Application) {
     label.style.transform = `translate(${screenPoint.x - label.offsetWidth / 2}px, ${screenPoint.y - label.offsetHeight - 5}px)`;
   });
   await captureWorld(app,room,props,loop,!!editorApp);
+  await Promise.all([loop.outdoors.ready,loop.fishing.ready]);loop.outdoors.installDoor();
   props.daily!.refresh();
   controller.setRoom(loop.mode==='store'?loop.store:loop.mode==='recess'?loop.recess:room);
   // A saved store visit starts before the authored layout is loaded. Reposition
@@ -116,6 +117,7 @@ export async function startGame(editorApp?:Application) {
     character.player.setPosition(loop.store.exitAnchor.x,.09,loop.store.exitAnchor.z-.4);
     camera.reset();
   }
+  if(OUTDOOR_REVIEW){loop.developerCommand('phase','morning');character.player.setPosition(-2.1,.09,8.2);}
   if(SCHOOL_REVIEW){
     loop.developerCommand('recess');
     if(new URLSearchParams(location.search).get('room')==='cafeteria')character.player.setPosition(4.6,.09,-14.8);

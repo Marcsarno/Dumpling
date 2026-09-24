@@ -12,7 +12,7 @@ await cp('editor-release',output,{recursive:true});
 const config=JSON.parse(await readFile('dist/config.json','utf8'));
 // Updated source assets override the historical scene-export copies.
 let updatedId=900002000;
-const overlays=['backgrounds/squishy-bedroom.png','school-kit/classroom.glb','school-kit/cafeteria.glb','food/pizza.glb','food/taco.glb','food/turkey.glb','characters/arianna/arianna.glb','characters/marc/marc.glb','characters/lilah/lilah.glb','pets/sunny-pup.glb','environment/kenney/furniture/loungeChairUpright.glb',...(await readdir('public/assets/audio/foley')).filter(f=>f.endsWith('.mp3')).map(f=>'audio/foley/'+f)];
+const overlays=[...(await readdir('public/assets/people')).filter(f=>f.endsWith('.glb')).map(f=>'people/'+f),...(await readdir('public/assets/outdoors')).filter(f=>/\.(glb|json|mp3)$/.test(f)).map(f=>'outdoors/'+f),'backgrounds/squishy-bedroom.png','school-kit/classroom.glb','school-kit/cafeteria.glb','food/pizza.glb','food/taco.glb','food/turkey.glb','characters/arianna/arianna.glb','characters/marc/marc.glb','characters/lilah/lilah.glb','pets/sunny-pup.glb','environment/kenney/furniture/loungeChairUpright.glb',...(await readdir('public/assets/audio/foley')).filter(f=>f.endsWith('.mp3')).map(f=>'audio/foley/'+f)];
 for(const path of overlays){
  const url='assets/'+path,name='game__'+path.replaceAll('/','__')+(path.endsWith('.glb')?'.bin':'');
  await mkdir(dirname(resolve(output,url)),{recursive:true});await copyFile('public/'+url,resolve(output,url));
@@ -21,7 +21,12 @@ for(const path of overlays){
  while(config.assets[updatedId])updatedId++;
  config.assets[updatedId]={id:String(updatedId),name,type:'binary',file:{url,filename:basename(path)},data:{},preload:false,tags:[]};updatedId++;
 }
-// Code-owned reference-led animal sculpts use the same binary naming convention
+// Keep the in-game credits and compact license manifest current as well.
+const credits=Object.values(config.assets).find(a=>a.name==='game__asset-credits.html');
+if(credits)await copyFile('public/asset-credits.html',resolve(output,credits.file.url.split('?')[0]));
+for(const file of ['SOURCES.md','KayKit-CC0.txt','Quaternius-CC0.txt'])await copyFile('public/assets/outdoors/'+file,resolve(output,'assets/outdoors/'+file));
+for(const file of ['SOURCES.md','Quaternius-CC0.txt'])await copyFile('public/assets/people/'+file,resolve(output,'assets/people/'+file));
+ // Code-owned reference-led animal sculpts use the same binary naming convention
 // as migrated GLBs. Keep authored scene files intact and overlay current art.
 let sculptId=900001000;
 for(const kind of ['panda','frog','bunny','cat']){
@@ -59,5 +64,5 @@ await writeFile('dist/config.json',JSON.stringify(config));
 const html=await readFile('editor-release/index.html','utf8');
 await writeFile('dist/index.html',html.replace('<head>','<head>\n<script>globalThis.__productionRelease=true;</script>').replace(/<title>.*?<\/title>/,'<title>Arianna · Little Everyday Adventures</title>'));
 const commit=process.env.VERCEL_GIT_COMMIT_SHA||execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
-await writeFile('dist/release.json',JSON.stringify({commit,scene:2600724,checkpoint:'4cb508b4-1c57-4729-bcf6-05d7f29eba7c',runtimeHash:hash,savePrefix:'arianna'},null,2));
+await writeFile('dist/release.json',JSON.stringify({commit,scene:2600724,checkpoint:'866dbecf-16a4-4257-8c7f-a56289d85c36',runtimeHash:hash,savePrefix:'arianna'},null,2));
 console.log('Production Editor release built:',commit,hash);

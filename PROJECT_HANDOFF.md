@@ -1,3 +1,11 @@
+## Latest: character and interactive fishing upgrade
+
+See NPC_FISHING_UPGRADE.md. Actual Quaternius Worker guard; slimmer fitted classmates/cook; hold/release/countersteer fishing battle and visual pass. Tested locally, synced to PlayCanvas checkpoint 8c8b45c9-3521-4ba6-85fe-4edabd243ec1. No new Git commit or public deployment. Preserve all uncommitted work.
+
+## Latest: outdoor route and fishing preview
+
+See OUTDOOR_FISHING.md. Implemented and tested using the existing house/controller/rig/camera/school/collection. Local review: http://127.0.0.1:5191/dist/index.html?preview=outdoors . PlayCanvas checkpoint 866dbecf-16a4-4257-8c7f-a56289d85c36. Not committed or publicly deployed; production remains 8c00fe8. Preserve all current changes. Physical-phone thermal testing remains unverified.
+
 ## Approved school and opening release
 User authorized commit, push and deployment of the approved classroom/cafeteria and bedroom-backed squishy reveal. PlayCanvas checkpoint 53c1a828-db27-4f44-a792-3c358d615449. Verify deployed SHA via /release.json. Preview-only notes below are historical.
 

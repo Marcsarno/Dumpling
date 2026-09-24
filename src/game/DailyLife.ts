@@ -107,8 +107,8 @@ export class DailyLife {
     for(let i=0;i<3;i++)target('vacuum-'+i,'Hold to vacuum','✦',[0,0,0],[0,.3,0],h=>h==='vacuum'&&phase()==='afternoon'&&this.clock.tasks.some(t=>t.id==='dust-'+i)&&notDone('dust-'+i),1150,'dust-'+i,true,this.dust[i]);
     target('put-tool-away','Put tool away','↩',[0,0,0],[0,.8,0],h=>h==='vacuum'||h==='paper-towel',0);
     target('bedtime-book','Read a bedtime book','📘',[-.85,0,-.8],[-1.4,.9,-.8],h=>!h&&phase()==='night'&&notDone('read'),1600,'read');
-    target('school-door','Go to school','🎒',[-2.35,0,8.2],[-3.1,1.1,8.2],h=>!h&&this.clock.schoolDue,0);
-    target('shop-door','Choose a store','🛍',[-2.35,0,8.2],[-3.1,1.1,8.2],h=>!h&&this.clock.canShop&&this.clock.ready,0);
+    target('school-door','Go to school','🎒',[-2.35,0,8.2],[-3.1,1.1,8.2],_h=>false,0);
+    target('shop-door','Choose a store','🛍',[-2.35,0,8.2],[-3.1,1.1,8.2],_h=>false,0);
     target('sleep','Go to bed','🌙',[-.85,0,-1.6],[-1.4,.8,-1.6],h=>!h&&this.canSleep,6500);
     target('lilah-bed','Put Lilah to bed','🌙',[8.55,0,-1.3],[9.1,.9,-1.7],h=>!h&&this.clock.state.minutes>=1095&&['afternoon','night'].includes(phase())&&!this.clock.state.lilahAsleep,1000);
     this.refresh();void pan;
@@ -210,6 +210,6 @@ export class DailyLife {
     this.wipingPaper.enabled=!!target&&(target.id.startsWith('wipe-')||target.id==='lilah-mess-1')&&progress>0;
     if(this.wipingPaper.enabled&&target){this.wipingPaper.setPosition(hands.x,Math.max(.08,hands.y-.035),hands.z);this.wipingPaper.setLocalEulerAngles(0,0,0);}
   }
-  get hint(){const s=this.clock.state;if(s.phase==='school')return 'At school · See you after class!';if(this.clock.schoolDue)return '🎒 Time for school. Walk to the front door in the living room.';if(s.phase==='morning'&&s.breakfast==='spill')return 'Oops! Get a paper towel and hold Action over the dropped egg.';if(this.canSleep)return '🌙 All done! Walk to your bed whenever you’re ready.';if(s.phase==='afternoon')return 'After school · Help a little, then visit two stores. Take your time!';return s.phase==='morning'?'A fresh morning · Brush, choose clothes, and make breakfast.':'Wind down · Brush teeth, put clothes away, and read.';}
+  get hint(){const s=this.clock.state;if(s.phase==='school')return 'At school · See you after class!';if(this.clock.schoolDue)return '🎒 Time for school. Walk outside and follow the garden path to the school gate.';if(s.phase==='morning'&&s.breakfast==='spill')return 'Oops! Get a paper towel and hold Action over the dropped egg.';if(this.canSleep)return '🌙 All done! Walk to your bed whenever you’re ready.';if(s.phase==='afternoon')return 'After school · Help a little, then visit two stores. Take your time!';return s.phase==='morning'?'A fresh morning · Brush, choose clothes, and make breakfast.':'Wind down · Brush teeth, put clothes away, and read.';}
   snapshot(){return {...this.clock.state,clock:this.clock.label,canShop:this.clock.canShop,held:this.held,dirt:this.dust.map(e=>({visible:e.enabled,position:e.getPosition().toArray(),scale:e.getLocalScale().toArray()})),eggSpill:this.eggSpill.enabled,lilah:this.lilahMesses.snapshot()};}
 }

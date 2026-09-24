@@ -2,7 +2,7 @@ import {audioLevel} from './AudioSettings';
 import {saveKey} from '../systems/SaveNamespace';
 import {assetUrl} from '../editor/AssetUrls';
 export interface MusicScene {
- mode:'cleanup'|'home'|'store'|'recess'; phase:string; store:string;
+ mode:'cleanup'|'home'|'store'|'recess'|'outdoors'; phase:string; store:string;
  paused:boolean; revealing:boolean;
 }
 const tracks={

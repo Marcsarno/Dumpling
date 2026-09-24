@@ -4,6 +4,7 @@ import { meshyGameplay, type ChoreCapture } from './MeshyGameplayAdapter';
 import { material, primitives } from '../game/primitives';
 import { CharacterAnimator, type CharacterManifest } from './CharacterAnimator';
 import { CharacterGrounding } from './CharacterGrounding';
+import {fishingTracks,type FishingMotion} from './FishingRetarget';
 import {sleepingTrack,bedEntryTrack} from './RestingPose';
 
 export function createCharacter(app: Application) {
@@ -57,6 +58,10 @@ export async function loadArianna(app: Application, character: ReturnType<typeof
     ({tracks,manifest}=meshyGameplay(model,tracks,await motion.json() as ChoreCapture));
     const sleep=sleepingTrack(model,tracks.find(t=>t.name==='Idle')!,await(await fetch(resolveAsset('assets/animations/rest/sleep.json'))).json());tracks.push(sleep,bedEntryTrack(model,tracks.find(t=>t.name==='Idle')!,sleep));manifest.animations.push({name:'Sleep',duration_seconds:4,loop:true},{name:'SleepEnter',duration_seconds:3.2,loop:false});
   }
+  const fishingResponse=await fetch(resolveAsset('assets/outdoors/fishing-motion.json'));
+  if(!fishingResponse.ok)throw new Error('Fishing animation library could not load.');
+  const fishing=fishingTracks(model,tracks.find(t=>t.name==='Idle')!,await fishingResponse.json() as FishingMotion);
+  tracks.push(...fishing);manifest.animations.push(...fishing.map(t=>({name:t.name,duration_seconds:t.duration,loop:['Fishing_Idle','Fishing_Reeling','Fishing_Left','Fishing_Right'].includes(t.name)})));
   // Normalize the visual only. Root position, movement and collision radius stay untouched.
   const bounds = new BoundingBox();
   let first = true;

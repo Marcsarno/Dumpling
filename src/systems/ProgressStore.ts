@@ -19,6 +19,7 @@ export interface ProgressData {
   version: 1; balance: number; collection: Record<string, number>; boxes: SealedBox[];
   creditedRounds: string[]; trip: { active: boolean; purchases: number };
   location: 'cleanup' | 'store' | 'home' | 'collection'; reveal: RevealReceipt | null;
+  fishingCatches?: RevealReceipt[];
   hunt?: HuntDay;
   prizes?: PrizeShelf;
   trading?: TradingDay;
@@ -39,6 +40,7 @@ function parse(raw: string | null): ProgressData {
     || (value.reveal !== null && (!value.reveal || !validId(value.reveal.dumplingId) || typeof value.reveal.id !== 'string' || !Number.isSafeInteger(value.reveal.count) || value.reveal.count < 1))) {
     throw new Error('Saved progress could not be read. It has not been overwritten.');
   }
+  if(value.fishingCatches&&(!Array.isArray(value.fishingCatches)||value.fishingCatches.some(r=>!r||typeof r.id!=='string'||!validId(r.dumplingId)||!Number.isSafeInteger(r.count)||r.count<1||typeof r.isNew!=='boolean')))throw Error('Fishing receipt could not be read.');
   if(value.hunt){
     const h=value.hunt;
     if(!Number.isInteger(h.day)||h.day<1||!Number.isFinite(h.clockFloor)||h.clockFloor<0||h.clockFloor>HUNT_RULES.closingMinute
@@ -76,6 +78,12 @@ export class ProgressStore {
     const result = change(draft);
     try { this.repository.write(JSON.stringify(draft)); } catch { throw new Error('Unable to save. Please allow local storage and try again.'); }
     this.data = draft; this.problem = ''; return result;
+  }
+  catchFishingSquishy(id:string):RevealReceipt {
+    if(!id)throw Error('Missing fishing round.');
+    return this.commit(data=>{const history=data.fishingCatches??=[];const prior=history.find(r=>r.id===id);if(prior)return prior;
+      const item=rollDumpling(this.random),count=(data.collection[item.id]??0)+1,receipt={id,dumplingId:item.id,count,isNew:count===1};data.collection[item.id]=count;history.push(receipt);return receipt;
+    });
   }
   refresh() { this.data = parse(this.repository.read()); }
   /** Developer tools use the same read/validate/write transaction as gameplay. */

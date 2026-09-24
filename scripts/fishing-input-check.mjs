@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {browser,page,cdp,errors,snap,sleep} from './store-test-helpers.mjs';
+import {landFish} from './fishing-touch-helper.mjs';
+import {writeFile} from 'node:fs/promises';
+try{await page.route('**/favicon.ico',r=>r.fulfill({status:204}));await page.goto('http://127.0.0.1:5191/dist/index.html?preview=outdoors');await page.waitForFunction(()=>window.__roomTest?.snapshot().characterLoaded,undefined,{timeout:120000});
+ const move=p=>page.evaluate(async p=>{const pc=await import('playcanvas');pc.Application.getApplication().root.findByName('Arianna').setPosition(...p)},p);await move([-6.3,.09,8.25]);await sleep(500);await move([-4.1,.09,-10]);await sleep(1200);
+ await page.locator('#action-button[data-target=pond-fish]').tap();await sleep(850);await page.keyboard.press('Space');await page.waitForFunction(()=>window.__roomTest.snapshot().loop.fishing.phase==='bite');await page.keyboard.press('Space');assert.equal((await snap()).loop.fishing.phase,'reel');await page.keyboard.down('Space');await page.keyboard.down('ArrowLeft');await sleep(250);assert.equal((await snap()).loop.fishing.reeling,true);assert.equal((await snap()).loop.fishing.direction,-1);
+ await page.evaluate(()=>window.dispatchEvent(new Event('blur')));assert.equal((await snap()).loop.fishing.reeling,false);assert.equal((await snap()).loop.fishing.direction,0);await page.keyboard.up('Space');await page.keyboard.up('ArrowLeft');
+ const battle=await landFish(page,cdp,{photo:'artifacts/npc-upgrade/final-battle.png'});await sleep(700);await page.screenshot({path:'artifacts/npc-upgrade/final-catch.png'});await page.locator('#fish-action').tap();await page.waitForFunction(()=>window.__roomTest.snapshot().loop.fishing.phase==='idle');assert.deepEqual(errors,[]);await writeFile('artifacts/npc-upgrade/input-check.json',JSON.stringify({battle,errors,keyboard:true,blurReleased:true},null,2));console.log('Keyboard, blur release, multi-touch battle and final catch transition passed');
+}finally{await browser.close();}
