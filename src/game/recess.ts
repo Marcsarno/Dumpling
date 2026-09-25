@@ -23,7 +23,7 @@ export function createRecess(app:Application){
  const load=async(name:string,parent:Entity)=>{try{const a=new Asset('School '+name,'container',{url:assetUrl(`/assets/school-kit/${name}.glb`)});app.assets.add(a);await new Promise<void>((resolve,reject)=>{a.once('load',resolve);a.once('error',reject);app.assets.load(a);});const model=(a.resource as ContainerResource).instantiateRenderEntity({castShadows:true});parent.addChild(model);loaded++;}catch(e){errors.push(name);console.error('School art failed',name,e);}};
  const desks=[{x:-3.1,z:-1.75},{x:2.65,z:-1.75},{x:0,z:1.5}];
  const classmates=new Classmates(app,classroom,desks.map(p=>({x:p.x-.51,z:p.z-.8})));
- const lunchFriends=new Classmates(app,cafeteria,[{x:-4.15,z:-2.58},{x:-1.85,z:-2.58},{x:2.55,z:-2.58}],false);
+ const lunchFriends=new Classmates(app,cafeteria,[{x:-4.15,y:.085,z:-2.50},{x:-1.85,y:.085,z:-2.50},{x:2.55,y:.085,z:-2.50}],false);
  const offers=new Entity('Today’s trading squishies',app);classroom.addChild(offers);
  const display=new Entity('Squishy friends display',app);classroom.addChild(display);
  for(const [i,id] of ['bunny','rosie','mochi','panda','lavendream'].entries()){

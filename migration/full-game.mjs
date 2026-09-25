@@ -2237,6 +2237,139 @@ var init_CharacterGrounding = __esm({
   }
 });
 
+// src/systems/FishingRound.ts
+var FISHING_TEMPO, clamp, FISH_PERSONALITIES, FishingRound;
+var init_FishingRound = __esm({
+  "src/systems/FishingRound.ts"() {
+    "use strict";
+    FISHING_TEMPO = 4 / 3;
+    clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
+    FISH_PERSONALITIES = [
+      { name: "Gentle", strength: 0.8, pace: 4.6, run: 1.8 },
+      { name: "Stubborn", strength: 1.02, pace: 5.2, run: 2.2 },
+      { name: "Darting", strength: 0.9, pace: 3.9, run: 1.8 },
+      { name: "Steady", strength: 1.08, pace: 5.5, run: 2.4 }
+    ];
+    FishingRound = class {
+      constructor(random = () => Math.random()) {
+        this.random = random;
+      }
+      random;
+      phase = "idle";
+      elapsed = 0;
+      total = 0;
+      nextBite = 0;
+      catchKind = "fish";
+      fishIndex = 0;
+      id = "";
+      distance = 0.88;
+      tension = 0.16;
+      energy = 1;
+      strain = 0;
+      reeling = false;
+      direction = 0;
+      pullSide = 0;
+      fightTime = 0;
+      missReason = "";
+      seed = 0;
+      get tired() {
+        return this.energy < 0.34;
+      }
+      get desiredDirection() {
+        return this.pullSide === 0 ? 0 : this.pullSide === 1 ? -1 : 1;
+      }
+      get matching() {
+        return this.pullSide !== 0 && this.direction === this.desiredDirection;
+      }
+      get progress() {
+        return clamp(1 - this.distance);
+      }
+      get warning() {
+        return this.tension >= 0.76;
+      }
+      start(id) {
+        this.phase = "prepare";
+        this.elapsed = 0;
+        this.total = 0;
+        this.id = id;
+        this.seed = clamp(this.random());
+        this.nextBite = 1.6 + this.seed * 2.2;
+        this.catchKind = this.random() < 0.12 ? "squishy" : "fish";
+        this.fishIndex = Math.min(3, Math.floor(this.random() * 4));
+        this.distance = 0.88;
+        this.tension = 0.16;
+        this.energy = 1;
+        this.strain = 0;
+        this.fightTime = 0;
+        this.pullSide = 0;
+        this.missReason = "";
+        this.releaseControls();
+      }
+      step(phase) {
+        this.phase = phase;
+        this.elapsed = 0;
+        if (phase !== "reel") this.releaseControls();
+      }
+      releaseControls() {
+        this.reeling = false;
+        this.direction = 0;
+      }
+      holdReel(held) {
+        this.reeling = this.phase === "reel" && held;
+      }
+      steer(side) {
+        this.direction = this.phase === "reel" ? side : 0;
+      }
+      tap() {
+        if (this.phase === "prepare") this.step("cast");
+        else if (this.phase === "bite") {
+          this.step("reel");
+          this.fightTime = 0;
+        } else if (this.phase === "miss") this.start(this.id);
+      }
+      update(dt) {
+        if (this.phase === "idle") return;
+        dt = clamp(dt, 0, 0.05);
+        const pace = this.phase === "bite" ? 1 : FISHING_TEMPO;
+        dt *= pace;
+        this.elapsed += dt;
+        this.total += dt;
+        if (this.phase === "cast" && this.elapsed > 1.93) this.step("wait");
+        else if (this.phase === "wait" && this.elapsed > this.nextBite) this.step("bite");
+        else if (this.phase === "bite" && this.elapsed > 3.6) {
+          this.missReason = "That nibble got away. Cast again!";
+          this.step("miss");
+        } else if (this.phase === "release" && this.elapsed > 1) this.step("idle");
+        else if (this.phase === "reel") this.battle(dt);
+      }
+      battle(dt) {
+        this.fightTime += dt;
+        const p = FISH_PERSONALITIES[this.fishIndex], cycle = Math.floor(this.fightTime / p.pace), beat = this.fightTime % p.pace;
+        const pulling = this.fightTime > 1.4 && beat > p.pace - p.run && !this.tired;
+        this.pullSide = pulling ? (cycle + Math.floor(this.seed * 9)) % 2 ? 1 : -1 : 0;
+        this.energy = clamp(this.energy - dt * (0.027 + (this.matching ? 0.06 : 0) + (this.reeling ? 0.014 : 0)));
+        const wrong = this.pullSide !== 0 && this.direction !== 0 && !this.matching;
+        const heat = this.tired ? 0.055 : pulling ? (this.matching ? 0.105 : 0.27) * p.strength : 0.115;
+        this.tension = clamp(this.tension + dt * (this.reeling ? heat + (wrong ? 0.09 : 0) : -0.37));
+        this.strain = this.tension > 0.97 ? this.strain + dt : Math.max(0, this.strain - dt * 2);
+        if (this.strain > 1.8) {
+          this.missReason = "The fish slipped free. Let go when the line turns coral.";
+          this.step("miss");
+          return;
+        }
+        const gain = this.tired ? 0.145 : pulling ? this.matching ? 0.07 : 0.012 : 0.1;
+        this.distance = clamp(this.distance + dt * (this.reeling ? -gain : pulling ? 0.038 : 0.012));
+        if (this.matching && !this.reeling) this.distance = clamp(this.distance - dt * 0.022);
+        if (this.distance <= 0.015 && this.fightTime > 4) this.step("catch");
+        else if (this.fightTime > 90) {
+          this.missReason = "This friend wants to stay in the pond. Try another cast!";
+          this.step("miss");
+        }
+      }
+    };
+  }
+});
+
 // src/components/FishingRetarget.ts
 import { AnimCurve as AnimCurve3, AnimData as AnimData3, AnimTrack as AnimTrack3, Quat as Quat3, Vec3 as Vec311, INTERPOLATION_LINEAR as INTERPOLATION_LINEAR3 } from "playcanvas";
 function fishingTracks(model, idle, data) {
@@ -2299,7 +2432,8 @@ function fishingTracks(model, idle, data) {
         } else output[i].push(...Array.from(c.values).slice(0, 3));
       });
     }
-    return new AnimTrack3(name, clip.duration, [new AnimData3(1, clip.frames.map((_, i) => Math.min(clip.duration, i / clip.fps)))], output.map((v, i) => new AnimData3(channels[i].prop === "localRotation" ? 4 : 3, v)), channels.map((c, i) => new AnimCurve3([c.path], 0, i, INTERPOLATION_LINEAR3)));
+    const tempo = name === "Fishing_Cast" ? FISHING_TEMPO : 1;
+    return new AnimTrack3(name, clip.duration / tempo, [new AnimData3(1, clip.frames.map((_, i) => Math.min(clip.duration, i / clip.fps) / tempo))], output.map((v, i) => new AnimData3(channels[i].prop === "localRotation" ? 4 : 3, v)), channels.map((c, i) => new AnimCurve3([c.path], 0, i, INTERPOLATION_LINEAR3)));
   });
   restore();
   return tracks2;
@@ -2307,6 +2441,7 @@ function fishingTracks(model, idle, data) {
 var init_FishingRetarget = __esm({
   "src/components/FishingRetarget.ts"() {
     "use strict";
+    init_FishingRound();
   }
 });
 
@@ -6186,16 +6321,16 @@ function squishyOpeningPose(seconds, intensity = 1) {
   const size = 0.51 + 0.49 * launch;
   const stretch = 1 + 0.17 * intensity * Math.sin(launch * Math.PI) - 0.16 * intensity * Math.sin(smooth((seconds - 2.12) / 0.5) * Math.PI);
   const lid = -112 * smooth((seconds - 0.76) / 0.4) - 9 * Math.sin(smooth((seconds - 1.16) / 0.35) * Math.PI);
-  const tension = clamp(seconds / 0.76);
+  const tension = clamp2(seconds / 0.76);
   return { lid, height: height + 0.02 * Math.sin(smooth((seconds - 2.21) / 0.64) * Math.PI), scale: [size / Math.sqrt(stretch), size * stretch, size / Math.sqrt(stretch)], wiggle: seconds < 0.76 ? Math.sin(seconds * 42) * tension * tension * 4 : 0 };
 }
-var clamp, smooth, SQUISHY_REVEAL_SECONDS;
+var clamp2, smooth, SQUISHY_REVEAL_SECONDS;
 var init_SquishyMotion = __esm({
   "src/game/SquishyMotion.ts"() {
     "use strict";
-    clamp = (n) => Math.max(0, Math.min(1, n));
+    clamp2 = (n) => Math.max(0, Math.min(1, n));
     smooth = (n) => {
-      const x = clamp(n);
+      const x = clamp2(n);
       return x * x * (3 - 2 * x);
     };
     SQUISHY_REVEAL_SECONDS = 2.85;
@@ -7078,7 +7213,7 @@ var init_TradingUI = __esm({
 
 // src/game/SchoolPerson.ts
 import { Asset as Asset5, AnimCurve as AnimCurve5, AnimData as AnimData5, AnimTrack as AnimTrack5, BoundingBox as BoundingBox12, Entity as Entity28, Quat as Quat5, Vec3 as Vec327, INTERPOLATION_LINEAR as INTERPOLATION_LINEAR5 } from "playcanvas";
-function seatedTrack(model, source, scale) {
+function seatedTrack(model, source, scale, student = false) {
   const channels = source.curves.flatMap((curve) => curve.paths.map((path) => ({ curve, path, node: model.findByName(path.entityPath.at(-1)) })));
   const output = channels.map(() => []), times = Array.from({ length: Math.ceil(source.duration * 24) + 1 }, (_, i) => Math.min(source.duration, i / 24));
   const sample = (time) => {
@@ -7110,6 +7245,18 @@ function seatedTrack(model, source, scale) {
       leg.foot.setPosition(leg.lower.getPosition().clone().add(new Vec327(0, -leg.length, 0.035)));
       leg.foot.setRotation(leg.rotation);
     }
+    if (student && source.name !== "Wave") for (const side of ["L", "R"]) {
+      const upper = model.findByName("UpperArm." + side), lower = model.findByName("LowerArm." + side), wrist = model.findByName("Wrist." + side), origin = upper.getPosition().clone(), a = origin.distance(lower.getPosition()), b = lower.getPosition().distance(wrist.getPosition());
+      const target = new Vec327((side === "L" ? 1 : -1) * 0.15 / scale, 0.81 / scale, 0.28 / scale), toward = target.clone().sub(origin), distance = Math.min(toward.length(), (a + b) * 0.98);
+      toward.normalize();
+      const pole = new Vec327(side === "L" ? 1 : -1, -1, 0), normal = pole.sub(toward.clone().mulScalar(pole.dot(toward))).normalize(), along = (a * a - b * b + distance * distance) / (2 * distance), elbow = origin.clone().add(toward.clone().mulScalar(along)).add(normal.mulScalar(Math.sqrt(Math.max(0, a * a - along * along))));
+      const rotate = (node, child, destination) => {
+        const from = child.getPosition().clone().sub(node.getPosition()).normalize(), to = destination.clone().sub(node.getPosition()).normalize();
+        node.setRotation(new Quat5().mul2(new Quat5().setFromDirections(from, to), node.getRotation()));
+      };
+      rotate(upper, lower, elbow);
+      rotate(lower, wrist, origin.add(toward.mulScalar(distance)));
+    }
     for (const [i, { path, node }] of channels.entries()) {
       const v = path.propertyPath[0] === "localRotation" ? node.getLocalRotation() : path.propertyPath[0] === "localScale" ? node.getLocalScale() : node.getLocalPosition();
       output[i].push(v.x, v.y, v.z);
@@ -7139,7 +7286,7 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
       first = false;
     } else bounds.add(m.aabb);
   }
-  if (seated) {
+  if (seated && !file.startsWith("student-")) {
     model.findByName("Head").setLocalScale(1.2, 1.2, 1.2);
     const palette = { jules: { Purple: "#9d88bf", LightBlue: "#587995", White: "#eee4d8" }, remy: { LightBrown: "#9dbda6", Red_Dark: "#6c8d78", LightBlue: "#567188" }, poppy: { White: "#ead2e6", Orange: "#b88aac", Grey: "#ede3d7" } };
     for (const render of model.findComponents("render")) for (const mesh of render.meshInstances) {
@@ -7152,7 +7299,7 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
       }
     }
   }
-  const scale = height / (bounds.halfExtents.y * 2), tracks2 = res.animations.map((a) => a.resource).map((t) => seated ? seatedTrack(model, t, scale) : t);
+  const scale = height / (file.startsWith("student-") ? 2.14 : bounds.halfExtents.y * 2), tracks2 = res.animations.map((a) => a.resource).map((t) => seated ? seatedTrack(model, t, scale, file.startsWith("student-")) : t);
   const root = new Entity28(name, app), sizing = new Entity28("Proportional size", app);
   parent.addChild(root);
   root.addChild(sizing);
@@ -7162,8 +7309,17 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
   model.addComponent("anim", { activate: true });
   for (const t of tracks2) model.anim.assignAnimation(t.name, t);
   model.anim.baseLayer.play("Idle_Neutral");
-  let waving = false, until = 0;
+  let waving = false, until = 0, lastBlink = -1;
+  const blinkOffset = file.includes("poppy") ? 1.2 : file.includes("remy") ? 2.6 : 0;
+  const morphs = model.findComponents("render").flatMap((r) => r.meshInstances.map((m) => m.morphInstance).filter((m) => m != null));
   return { root, model, height, scale, update(time, greeting = false) {
+    if (file.startsWith("student-")) {
+      const phase = (time + blinkOffset) % 4.6, blink = phase < 0.2 ? Math.sin(phase / 0.2 * Math.PI) : 0;
+      if (Math.abs(blink - lastBlink) > 1e-3) {
+        for (const m of morphs) m.setWeight(0, blink);
+        lastBlink = blink;
+      }
+    }
     if (greeting && !waving) {
       model.anim.baseLayer.transition("Wave", 0.22);
       until = time + (tracks2.find((t) => t.name === "Wave")?.duration ?? 2);
@@ -7261,8 +7417,8 @@ var init_Classmates = __esm({
           const x = placements?.[i].x ?? (i - 1) * 1.75, z = placements?.[i].z ?? -0.74;
           if (showNames) this.signs[i] = classroomSign(app, parent, t.name + " nameplate", t.name + "\n" + t.title, [x, 0.92, z + 1.12], 1, 0.24, t.color);
           try {
-            const person = await schoolPerson(app, parent, ["jules", "remy", "poppy"][i], t.name + " classmate", [1.38, 1.36, 1.34][i], true);
-            person.root.setLocalPosition(x, 0, z);
+            const person = await schoolPerson(app, parent, ["student-jules", "student-remy", "student-poppy"][i], t.name + " classmate", [1.38, 1.36, 1.34][i], true);
+            person.root.setLocalPosition(x, placements?.[i].y ?? 0, z);
             this.actors.push({ person, id: t.id, near: false });
             this.loaded++;
           } catch (e) {
@@ -7296,7 +7452,7 @@ var init_Classmates = __esm({
         }
       }
       snapshot() {
-        return { loaded: this.loaded, errors: [...this.errors], people: this.actors.map((a) => ({ id: a.id, height: a.person.height, source: "Quaternius modular" })) };
+        return { loaded: this.loaded, errors: [...this.errors], people: this.actors.map((a) => ({ id: a.id, height: a.person.height, source: "Original student sculpt on Quaternius rig" })) };
       }
     };
   }
@@ -7319,7 +7475,7 @@ var init_cafeteria_collision = __esm({
 });
 
 // src/game/recess.ts
-import { Asset as Asset7, BoundingBox as BoundingBox14, Entity as Entity30, Vec3 as Vec328 } from "playcanvas";
+import { Asset as Asset6, BoundingBox as BoundingBox13, Entity as Entity30, Vec3 as Vec328 } from "playcanvas";
 function createRecess(app) {
   const root = new Entity30("Classroom trading club", app);
   app.root.addChild(root);
@@ -7337,7 +7493,7 @@ function createRecess(app) {
   let loaded2 = 0;
   const load = async (name, parent) => {
     try {
-      const a = new Asset7("School " + name, "container", { url: assetUrl(`/assets/school-kit/${name}.glb`) });
+      const a = new Asset6("School " + name, "container", { url: assetUrl(`/assets/school-kit/${name}.glb`) });
       app.assets.add(a);
       await new Promise((resolve, reject) => {
         a.once("load", resolve);
@@ -7354,7 +7510,7 @@ function createRecess(app) {
   };
   const desks = [{ x: -3.1, z: -1.75 }, { x: 2.65, z: -1.75 }, { x: 0, z: 1.5 }];
   const classmates = new Classmates(app, classroom, desks.map((p) => ({ x: p.x - 0.51, z: p.z - 0.8 })));
-  const lunchFriends = new Classmates(app, cafeteria, [{ x: -4.15, z: -2.58 }, { x: -1.85, z: -2.58 }, { x: 2.55, z: -2.58 }], false);
+  const lunchFriends = new Classmates(app, cafeteria, [{ x: -4.15, y: 0.085, z: -2.5 }, { x: -1.85, y: 0.085, z: -2.5 }, { x: 2.55, y: 0.085, z: -2.5 }], false);
   const offers = new Entity30("Today\u2019s trading squishies", app);
   classroom.addChild(offers);
   const display = new Entity30("Squishy friends display", app);
@@ -7369,7 +7525,7 @@ function createRecess(app) {
     const glow = primitives(app, classroom)("Trading spot", "cylinder", [anchor.x, 0.016, anchor.z], [0.82, 0.022, 0.82], material(trader.name + " cue", trader.color), false);
     return { id: trader.id, anchor, glow };
   });
-  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox14(new Vec328(...b.center), new Vec328(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox14(new Vec328(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec328(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox14(new Vec328(x, 0, -8), new Vec328(0.05, 1, 1.05)))];
+  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec328(...b.center), new Vec328(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec328(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec328(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec328(x, 0, -8), new Vec328(0.05, 1, 1.05)))];
   const room = { root, halfWidth: 12, halfDepth: 24, walkable: [{ minX: -5.9, maxX: 5.9, minZ: -6.96, maxZ: 6.9 }, { minX: 3.7, maxX: 5.5, minZ: -9.2, maxZ: -6.7 }, { minX: -1.3, maxX: 10.5, minZ: -22.9, maxZ: -9 }], obstacles, ready: Promise.all([load("classroom", classroom), load("cafeteria", cafeteria), classmates.ready, lunchFriends.ready, schoolCook(app, cafeteria).catch((e) => {
     errors.push("School cook");
     console.error(e);
@@ -8511,8 +8667,161 @@ var init_SquishyPopUI = __esm({
   }
 });
 
+// src/game/OutdoorGround.ts
+import { Color as Color10, Entity as Entity31, Mesh as Mesh3, MeshInstance as MeshInstance3, Texture as Texture4, ADDRESS_REPEAT as ADDRESS_REPEAT2, FILTER_LINEAR_MIPMAP_LINEAR as FILTER_LINEAR_MIPMAP_LINEAR2 } from "playcanvas";
+function outdoorSurface(app, kind) {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  let seed = 137;
+  const random = () => {
+    seed = Math.imul(seed, 1664525) + 1013904223 >>> 0;
+    return seed / 4294967296;
+  };
+  ctx.fillStyle = kind === "grass" ? "#8da46c" : kind === "path" ? "#d9c6a4" : "#bc8179";
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 1500; i++) {
+    const x = random() * 256, y = random() * 256, r = i < 90 ? 14 + random() * 27 : random() * 1.2 + 0.2;
+    ctx.filter = i < 90 ? "blur(10px)" : "none";
+    ctx.globalAlpha = i < 90 ? 0.22 : 0.65;
+    ctx.fillStyle = kind === "grass" ? i % 2 ? "rgba(75,105,59,.075)" : "rgba(226,219,159,.10)" : kind === "path" ? i % 2 ? "rgba(122,104,80,.12)" : "rgba(255,246,217,.22)" : i % 2 ? "rgba(129,71,68,.07)" : "rgba(245,189,151,.10)";
+    for (const dx of [-256, 0, 256]) for (const dy of [-256, 0, 256]) {
+      ctx.beginPath();
+      ctx.ellipse(x + dx, y + dy, r, r * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.filter = "none";
+  ctx.globalAlpha = 1;
+  if (kind === "roof") {
+    for (let y = 0; y < 256; y += 32) {
+      ctx.strokeStyle = "rgba(101,63,65,.27)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, y + 30);
+      ctx.lineTo(256, y + 30);
+      ctx.stroke();
+      for (let x = y / 32 % 2 * 32; x < 256; x += 64) {
+        ctx.strokeStyle = "rgba(101,63,65,.16)";
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + 30);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = "rgba(246,190,165,.30)";
+      ctx.beginPath();
+      ctx.moveTo(0, y + 2);
+      ctx.lineTo(256, y + 2);
+      ctx.stroke();
+    }
+  }
+  const texture = new Texture4(app.graphicsDevice, { name: "Painted outdoor " + kind, width: 256, height: 256, mipmaps: true, addressU: ADDRESS_REPEAT2, addressV: ADDRESS_REPEAT2, minFilter: FILTER_LINEAR_MIPMAP_LINEAR2 });
+  texture.setSource(canvas);
+  const mat = material("Painted " + kind, "#ffffff");
+  mat.diffuseMap = texture;
+  mat.gloss = 0.05;
+  mat.specular.set(0.025, 0.025, 0.025);
+  if (kind === "roof") mat.diffuseMapTiling.set(2, 3);
+  mat.update();
+  return mat;
+}
+function gardenGround(app, parent, grass, group) {
+  const positions = [], normals = [], uv = [], colors = [], indices = [];
+  const patch = (x0, z0, w, d) => {
+    const nx = Math.ceil(w), nz = Math.ceil(d), start = positions.length / 3;
+    for (let z = 0; z <= nz; z++) for (let x = 0; x <= nx; x++) {
+      const wx = x0 + x * w / nx, wz = z0 + z * d / nz, v = 1 + 0.035 * Math.sin(wx * 0.37 + wz * 0.23) + 0.025 * Math.sin(wx * 0.89 - wz * 0.38);
+      positions.push(wx, -0.029, wz);
+      normals.push(0, 1, 0);
+      uv.push(wx / 5, wz / 5);
+      colors.push(v, v, 0.99 * v, 1);
+    }
+    for (let z = 0; z < nz; z++) for (let x = 0; x < nx; x++) {
+      const i = start + z * (nx + 1) + x;
+      indices.push(i, i + nx + 1, i + 1, i + 1, i + nx + 1, i + nx + 2);
+    }
+  };
+  patch(-20, -36, 54, 40);
+  patch(-9, 4, 4.8, 6);
+  const mesh = new Mesh3(app.graphicsDevice);
+  mesh.setPositions(positions);
+  mesh.setNormals(normals);
+  mesh.setUvs(0, uv);
+  mesh.setColors(colors);
+  mesh.setIndices(indices);
+  mesh.update();
+  grass.diffuseVertexColor = true;
+  grass.update();
+  const e = new Entity31("World painted meadow", app);
+  parent.addChild(e);
+  e.addComponent("render", { meshInstances: [new MeshInstance3(mesh, grass)], castShadows: false, batchGroupId: group });
+}
+function meadowFringes(app, parent, group) {
+  const p = [], n = [], c = [], idx = [];
+  let seed = 27;
+  const random = () => {
+    seed = Math.imul(seed, 1664525) + 1013904223 >>> 0;
+    return seed / 4294967296;
+  };
+  const palette = ["#758e55", "#899f60", "#aabd76", "#b4bd79"].map((h) => new Color10().fromString(h).linear());
+  for (const [cx, cz, rx, rz, count] of [[-11.7, -8, 1.3, 1.3, 80], [-11.5, -15, 1.5, 1.1, 90], [-8.6, -16.5, 2.3, 0.7, 90], [-1.5, -5.7, 1, 0.5, 50], [4, -8, 1.8, 1, 90], [-8.1, 4.5, 0.35, 2.3, 65], [15.3, -31.2, 1.4, 1, 70], [29, -30.7, 1.1, 1.3, 70]]) {
+    for (let i = 0; i < count; i++) {
+      const a = random() * Math.PI * 2, r = Math.sqrt(random()), x = cx + Math.cos(a) * rx * r, z = cz + Math.sin(a) * rz * r, color = palette[i % 4];
+      for (let j = 0; j < 3; j++) {
+        const angle = random() * Math.PI * 2, w = 0.025 + random() * 0.025, h = 0.1 + random() * 0.16, dx = Math.cos(angle) * w, dz = Math.sin(angle) * w, k = p.length / 3;
+        p.push(x - dx, 0.015, z - dz, x + dx, 0.015, z + dz, x + dx * 2, h, z + dz * 2);
+        for (let q = 0; q < 3; q++) {
+          n.push(0, 1, 0);
+          c.push(color.r, color.g, color.b, 1);
+        }
+        idx.push(k, k + 2, k + 1, k + 1, k + 2, k);
+      }
+    }
+  }
+  const petals = ["#f4df94", "#e9aebe", "#f7edce"].map((h) => new Color10().fromString(h).linear()), heart = new Color10().fromString("#cfa45a").linear();
+  const disc = (x, y, z, r, color) => {
+    const k = p.length / 3;
+    p.push(x, y + 8e-3, z);
+    n.push(0, 1, 0);
+    c.push(color.r, color.g, color.b, 1);
+    for (let j = 0; j <= 8; j++) {
+      const a = j * Math.PI / 4;
+      p.push(x + Math.cos(a) * r, y, z + Math.sin(a) * r);
+      n.push(0, 1, 0);
+      c.push(color.r, color.g, color.b, 1);
+      if (j < 8) idx.push(k, k + j + 2, k + j + 1);
+    }
+  };
+  for (const [cx, cz, count] of [[-11.1, -8.4, 7], [-10.5, -15.2, 8], [-1.3, -5.8, 6], [15.3, -30.7, 7], [28.4, -30.6, 7]]) for (let i = 0; i < count; i++) {
+    const a = i * 2.4, x = cx + Math.cos(a) * (0.2 + i * 0.07), z = cz + Math.sin(a) * (0.2 + i * 0.05), y = 0.17 + i % 3 * 0.045;
+    for (let k = 0; k < 4; k++) {
+      const a2 = k * Math.PI / 2;
+      disc(x + Math.cos(a2) * 0.045, y, z + Math.sin(a2) * 0.045, 0.04, petals[i % 3]);
+    }
+    disc(x, y + 0.014, z, 0.025, heart);
+  }
+  const mesh = new Mesh3(app.graphicsDevice);
+  mesh.setPositions(p);
+  mesh.setNormals(n);
+  mesh.setColors(c);
+  mesh.setIndices(idx);
+  mesh.update();
+  const mat = material("Meadow edge blades and flowers", "#ffffff");
+  mat.diffuseVertexColor = true;
+  mat.update();
+  const e = new Entity31("Composed meadow fringes", app);
+  parent.addChild(e);
+  e.addComponent("render", { meshInstances: [new MeshInstance3(mesh, mat)], castShadows: false, batchGroupId: group });
+}
+var init_OutdoorGround = __esm({
+  "src/game/OutdoorGround.ts"() {
+    "use strict";
+    init_primitives();
+  }
+});
+
 // src/game/OutdoorArt.ts
-import { Asset as Asset8, BoundingBox as BoundingBox15, Entity as Entity31, Color as Color10 } from "playcanvas";
+import { Asset as Asset7, BoundingBox as BoundingBox14, Entity as Entity32, Color as Color11 } from "playcanvas";
 var OutdoorArt;
 var init_OutdoorArt = __esm({
   "src/game/OutdoorArt.ts"() {
@@ -8530,16 +8839,17 @@ var init_OutdoorArt = __esm({
       errors = [];
       cache = /* @__PURE__ */ new Map();
       group;
+      leaves = /* @__PURE__ */ new Map();
       add(file, x, z, height, yaw = 0) {
         if (!this.cache.has(file)) this.cache.set(file, new Promise((resolve, reject) => {
-          const a = new Asset8(file, "container", { url: assetUrl("assets/outdoors/" + file + ".glb") });
+          const a = new Asset7(file, "container", { url: assetUrl("assets/outdoors/" + file + ".glb") });
           a.once("load", () => resolve(a.resource));
           a.once("error", reject);
           this.app.assets.add(a);
           this.app.assets.load(a);
         }));
         const task = this.cache.get(file).then((r) => {
-          const e = r.instantiateRenderEntity({ castShadows: true }), box = new BoundingBox15();
+          const e = r.instantiateRenderEntity({ castShadows: true }), box = new BoundingBox14();
           let first = true;
           for (const c of e.findComponents("render")) for (const m of c.meshInstances) {
             if (first) {
@@ -8547,17 +8857,27 @@ var init_OutdoorArt = __esm({
               first = false;
             } else box.add(m.aabb);
             m.mask = 1;
-            const mat = m.material;
-            mat.diffuseVertexColor = false;
+            let mat = m.material;
             if (/Leaves/.test(mat.name)) {
-              mat.opacityMap = mat.opacityMap ?? mat.diffuseMap;
-              mat.opacityMapChannel = "a";
-              mat.diffuseMap = null;
-              mat.diffuse = new Color10().fromString(file.includes("Bush") ? "#81a364" : "#8dab69");
+              const variant = Math.abs(Math.round(yaw)) % 3, key = file + ":" + mat.name + ":" + variant;
+              let leaf = this.leaves.get(key);
+              if (!leaf) {
+                leaf = mat.clone();
+                leaf.diffuseVertexColor = false;
+                leaf.opacityMap = leaf.opacityMap ?? leaf.diffuseMap;
+                leaf.opacityMapChannel = "a";
+                leaf.diffuseMap = null;
+                leaf.diffuse = new Color11().fromString((file.includes("Bush") ? ["#71915e", "#7b9c68", "#88a170"] : ["#84a66e", "#8dab69", "#789666"])[variant]);
+                leaf.update();
+                this.leaves.set(key, leaf);
+              }
+              m.material = leaf;
+            } else {
+              mat.diffuseVertexColor = false;
+              mat.update();
             }
-            mat.update();
           }
-          const scale = height / (box.halfExtents.y * 2), anchor = new Entity31(file, this.app);
+          const scale = height / (box.halfExtents.y * 2), anchor = new Entity32(file, this.app);
           this.parent.addChild(anchor);
           anchor.addChild(e);
           e.setLocalScale(scale, scale, scale);
@@ -8580,11 +8900,11 @@ var init_OutdoorArt = __esm({
 });
 
 // src/game/CrossingGuard.ts
-import { Entity as Entity32, Texture as Texture4, StandardMaterial as StandardMaterial9, CULLFACE_NONE as CULLFACE_NONE4 } from "playcanvas";
+import { Entity as Entity33, Texture as Texture5, StandardMaterial as StandardMaterial10, CULLFACE_NONE as CULLFACE_NONE4 } from "playcanvas";
 async function crossingGuard(app, parent) {
   const person = await schoolPerson(app, parent, "crossing-guard", "Ms Maple crossing guard", 1.8);
   person.root.setLocalPosition(20, 0.09, -18);
-  const paddle = new Entity32("Handheld STOP paddle", app);
+  const paddle = new Entity33("Handheld STOP paddle", app);
   parent.addChild(paddle);
   const shape = primitives(app, paddle);
   shape("Paddle handle", "cylinder", [0, 0.12, 0], [0.026, 0.4, 0.026], material("Paddle handle", "#eee4d0"));
@@ -8607,16 +8927,16 @@ async function crossingGuard(app, parent) {
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillText("STOP", 128, 131);
-  const texture = new Texture4(app.graphicsDevice, { mipmaps: false });
+  const texture = new Texture5(app.graphicsDevice, { mipmaps: false });
   texture.setSource(canvas);
-  const mat = new StandardMaterial9();
+  const mat = new StandardMaterial10();
   mat.diffuseMap = texture;
   mat.opacityMap = texture;
   mat.opacityMapChannel = "a";
   mat.alphaTest = 0.5;
   mat.cull = CULLFACE_NONE4;
   mat.update();
-  const face = new Entity32("Octagonal STOP sign", app);
+  const face = new Entity33("Octagonal STOP sign", app);
   paddle.addChild(face);
   face.addComponent("render", { type: "plane", material: mat, castShadows: false });
   face.setLocalPosition(0, 0.4, 0);
@@ -8641,11 +8961,12 @@ var init_CrossingGuard = __esm({
 });
 
 // src/game/Outdoors.ts
-import { BoundingBox as BoundingBox16, Entity as Entity33, Vec3 as Vec331, Mesh as Mesh3, MeshInstance as MeshInstance3 } from "playcanvas";
+import { BoundingBox as BoundingBox15, Entity as Entity34, Vec3 as Vec331, Mesh as Mesh4, MeshInstance as MeshInstance4 } from "playcanvas";
 var POND, SCHOOL_GATE, Outdoors;
 var init_Outdoors = __esm({
   "src/game/Outdoors.ts"() {
     "use strict";
+    init_OutdoorGround();
     init_primitives();
     init_OutdoorArt();
     init_Classmates();
@@ -8656,16 +8977,19 @@ var init_Outdoors = __esm({
       constructor(app, house) {
         this.app = app;
         this.house = house;
-        this.root = new Entity33("Pond and school walk", app);
+        this.root = new Entity34("Pond and school walk", app);
         app.root.addChild(this.root);
-        const group = app.batcher.addGroup("Outdoor architecture", false, 14), s = primitives(app, this.root, group.id), grass = material("Soft meadow", "#9fb97a"), stone = material("Warm pathway", "#ddceae"), edge = material("Limestone edges", "#eadfc3"), soil = material("Pond bank", "#a79b74"), road = material("Quiet street", "#8994a0"), white = material("Crossing paint", "#fff4d7"), wood = material("Honey garden oak", "#b89570"), mint = material("School mint", "#b3cbbc"), cream = material("School plaster", "#f5dfb8"), pink = material("Roof clay", "#cb8d88");
+        const group = app.batcher.addGroup("Outdoor architecture", false, 14), s = primitives(app, this.root, group.id), grass = outdoorSurface(app, "grass"), stone = outdoorSurface(app, "path"), edge = material("Limestone edges", "#eadfc3"), soil = material("Pond bank", "#a79b74"), road = material("Quiet street", "#8994a0"), white = material("Crossing paint", "#fff4d7"), wood = material("Honey garden oak", "#b89570"), mint = material("School mint", "#b3cbbc"), cream = material("School plaster", "#f5dfb8"), pink = material("Roof clay", "#cb8d88");
         this.art = new OutdoorArt(app, this.root);
         const box = (n, x, y, z, w, h, d, m = stone) => s(n, "box", [x, y, z], [w, h, d], m);
         box("Back garden lawn", 7, -0.16, -16, 54, 0.25, 40, grass);
         box("Side garden lawn", -6.6, -0.16, 3, 4.8, 0.25, 14, grass);
+        gardenGround(app, this.root, grass, group.id);
+        meadowFringes(app, this.root, group.id);
         const path = (ax, az, bx, bz, w) => {
-          const e = box("Garden path", (ax + bx) / 2, -5e-3, (az + bz) / 2, w, 0.06, Math.hypot(bx - ax, bz - az) + 0.3);
+          const e = box("Garden path", (ax + bx) / 2, -5e-3, (az + bz) / 2, w, 0.06, Math.hypot(bx - ax, bz - az));
           e.setLocalEulerAngles(0, Math.atan2(bx - ax, bz - az) * 180 / Math.PI, 0);
+          for (const [x, z] of [[ax, az], [bx, bz]]) s("Soft path join", "cylinder", [x, -6e-3, z], [w, 0.058, w], stone, false);
         };
         path(-3.8, 8.25, -6.3, 8.25, 1.8);
         path(-6.3, 8.25, -6.3, -4, 1.8);
@@ -8675,7 +8999,7 @@ var init_Outdoors = __esm({
         path(-0.5, -10, -4.4, -10, 1.5);
         for (const [x, z, w] of [[-6.3, -4, 1.8], [-3.5, -7, 2], [-0.5, -12, 2.1], [6, -17.3, 2.2]]) s("Rounded path corner", "cylinder", [x, -5e-3, z], [w, 0.06, w], stone, false);
         const pondLayer = (name, rx, rz, y, mat) => {
-          const e = new Entity33(name, app), mesh = new Mesh3(app.graphicsDevice), pos = [0, 0, 0], norm = [0, 1, 0], idx = [];
+          const e = new Entity34(name, app), mesh = new Mesh4(app.graphicsDevice), pos = [0, 0, 0], norm = [0, 1, 0], idx = [];
           for (let i = 0; i <= 80; i++) {
             const a = i * Math.PI / 40, k = 1 + 0.035 * Math.sin(a * 3) + 0.025 * Math.cos(a * 5);
             pos.push(Math.cos(a) * rx * k, 0, Math.sin(a) * rz * k);
@@ -8685,8 +9009,15 @@ var init_Outdoors = __esm({
           mesh.setPositions(pos);
           mesh.setNormals(norm);
           mesh.setIndices(idx);
+          if (name === "Pond water") {
+            const colors = [0.57, 0.78, 0.9, 1];
+            for (let i = 0; i <= 80; i++) colors.push(0.96, 1, 0.98, 1);
+            mesh.setColors(colors);
+            mat.diffuseVertexColor = true;
+            mat.update();
+          }
           mesh.update();
-          e.addComponent("render", { meshInstances: [new MeshInstance3(mesh, mat)], castShadows: false });
+          e.addComponent("render", { meshInstances: [new MeshInstance4(mesh, mat)], castShadows: false });
           this.root.addChild(e);
           e.setLocalPosition(-8, y, -12);
           return e;
@@ -8694,7 +9025,7 @@ var init_Outdoors = __esm({
         pondLayer("Grassy pond lip", 3.95, 3.25, 0.018, soil);
         pondLayer("Pond shallows", 3.72, 3.02, 0.055, material("Pond shallow turquoise", "#a4d4c6"));
         this.water = pondLayer("Pond water", 3.45, 2.77, 0.077, material("Pond blue", "#78bac5"));
-        this.obstacles.push(new BoundingBox16(new Vec331(-8, 0.5, -12), new Vec331(3.45, 2, 2.8)));
+        this.obstacles.push(new BoundingBox15(new Vec331(-8, 0.5, -12), new Vec331(3.45, 2, 2.8)));
         for (let i = 0; i < 15; i++) {
           const a = i * Math.PI * 2 / 15;
           if (a < 0.7 || a > 5.75) continue;
@@ -8760,15 +9091,21 @@ var init_Outdoors = __esm({
         const trees = [[-12, -6, 3.8], [-13, -16, 4.8], [-10, -18, 3.6], [0, -5.2, 3.8], [4, -7, 4.7], [10, -10, 4.5], [13, -15, 3.8], [28, -31, 4.5], [15, -31, 4.7], [30, -18, 4.1]];
         trees.forEach(([x, z, h], i) => {
           this.art.add(i % 2 ? "CommonTree_1" : "CommonTree_3", x, z, h, i * 67);
-          this.obstacles.push(new BoundingBox16(new Vec331(x, 1, z), new Vec331(0.38, 2, 0.38)));
+          this.obstacles.push(new BoundingBox15(new Vec331(x, 1, z), new Vec331(0.38, 2, 0.38)));
         });
         for (let x = -13; x < 14; x += 1.15) if (x < 4 || x > 8) this.art.add("Bush_Common", x, -18.7, 0.65, x * 17);
         for (let z = -17; z < -4; z += 1.15) this.art.add("Bush_Common_Flowers", -13.4, z, 0.65, z * 9);
         for (let z = -4; z < 10; z += 1.15) this.art.add("Bush_Common", -8.7, z, 0.62, z * 9);
-        for (let i = 0; i < 16; i++) this.art.add("Plant_1", -12 + i % 8 * 3.2, -5.4 - Math.floor(i / 8) * 10.2, 0.35, i * 40);
-        this.roof = new Entity33("Outside cottage shell and roof", app);
+        for (const [x, z, h] of [[-11.8, -7.4, 0.55], [-11, -8.3, 0.4], [-12, -15.8, 0.6], [-8.9, -16.5, 0.5], [-1.4, -5.5, 0.45], [3.6, -7.8, 0.55], [4.5, -8.3, 0.4], [15.5, -31.4, 0.5], [28.9, -31, 0.6]]) this.art.add("Plant_1", x, z, h, x * 27);
+        for (const [x, z, h] of [[-12.1, -7.8, 0.8], [-10.7, -16.7, 0.8], [-9.3, -16.9, 0.55], [3.8, -8.5, 0.75], [4.8, -8.1, 0.55], [28.9, -31.9, 0.85]]) this.art.add("Bush_Common_Flowers", x, z, h, z * 21);
+        for (const x of [16.5, 28]) {
+          box("Bed front limestone", x, 0.13, -27.48, 3.18, 0.35, 0.12, edge);
+          for (const side of [-1, 1]) box("Bed side limestone", x + side * 1.55, 0.13, -28.5, 0.12, 0.35, 2.15, edge);
+        }
+        for (const x of [20.8, 23.2]) for (let z = -31.4; z > -33.2; z -= 0.55) box("Entry court inset", x, 0.04, z, 0.55, 0.03, 0.4, edge);
+        this.roof = new Entity34("Outside cottage shell and roof", app);
         house.root.addChild(this.roof);
-        const r = primitives(app, this.roof), roofMat = material("Cottage rose tiles", "#bc8179");
+        const r = primitives(app, this.roof), roofMat = outdoorSurface(app, "roof");
         for (const [x, z, w, d] of [[3.85, 4.8, 14.65, 17.1], [-0.35, 14.7, 6.4, 3.8]]) {
           r("Exterior upper wall", "box", [x, 1.8, z], [w, 1.9, d], material("Exterior cottage cream", "#ecd8b2"));
           r("Ivory eaves", "box", [x, 2.83, z], [w + 0.55, 0.16, d + 0.55], edge);
@@ -8788,7 +9125,7 @@ var init_Outdoors = __esm({
         r("Chimney", "box", [7, 4, 8], [0.75, 1.4, 0.75], cream);
         r("Chimney cap", "box", [7, 4.73, 8], [0.95, 0.14, 0.95], edge);
         this.roof.enabled = false;
-        for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [16.5, -28.5, 1.5, 1], [28, -28.5, 1.5, 1], [17, -29.8, 3.05, 0.12], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox16(new Vec331(x, 0.6, z), new Vec331(hx, 1, hz)));
+        for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [16.5, -28.5, 1.5, 1], [28, -28.5, 1.5, 1], [17, -29.8, 3.05, 0.12], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox15(new Vec331(x, 0.6, z), new Vec331(hx, 1, hz)));
         this.ready = Promise.all([this.art.finish(), crossingGuard(app, this.root).then((g) => this.guard = g)]).then(() => {
           app.batcher.generate([group.id]);
         });
@@ -8832,7 +9169,7 @@ var init_Outdoors = __esm({
         for (const [a, b] of [[3.6, 7.6], [8.95, 9.5]]) {
           shapes("Open entry wall", "box", [-3.3, 1.325, (a + b) / 2], [0.14, 2.65, b - a], wall);
           shapes("Open entry skirting", "box", [-3.28, 0.12, (a + b) / 2], [0.16, 0.16, b - a], trim);
-          this.house.obstacles.push(new BoundingBox16(new Vec331(-3.3, 0.7, (a + b) / 2), new Vec331(0.07, 1.4, (b - a) / 2)));
+          this.house.obstacles.push(new BoundingBox15(new Vec331(-3.3, 0.7, (a + b) / 2), new Vec331(0.07, 1.4, (b - a) / 2)));
         }
         this.house.walkable.push(...this.walkable);
         this.house.obstacles.push(...this.obstacles);
@@ -8853,141 +9190,11 @@ var init_Outdoors = __esm({
   }
 });
 
-// src/systems/FishingRound.ts
-var clamp2, FISH_PERSONALITIES, FishingRound;
-var init_FishingRound = __esm({
-  "src/systems/FishingRound.ts"() {
-    "use strict";
-    clamp2 = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
-    FISH_PERSONALITIES = [
-      { name: "Gentle", strength: 0.8, pace: 4.6, run: 1.8 },
-      { name: "Stubborn", strength: 1.02, pace: 5.2, run: 2.2 },
-      { name: "Darting", strength: 0.9, pace: 3.9, run: 1.8 },
-      { name: "Steady", strength: 1.08, pace: 5.5, run: 2.4 }
-    ];
-    FishingRound = class {
-      constructor(random = () => Math.random()) {
-        this.random = random;
-      }
-      random;
-      phase = "idle";
-      elapsed = 0;
-      total = 0;
-      nextBite = 0;
-      catchKind = "fish";
-      fishIndex = 0;
-      id = "";
-      distance = 0.88;
-      tension = 0.16;
-      energy = 1;
-      strain = 0;
-      reeling = false;
-      direction = 0;
-      pullSide = 0;
-      fightTime = 0;
-      missReason = "";
-      seed = 0;
-      get tired() {
-        return this.energy < 0.34;
-      }
-      get desiredDirection() {
-        return this.pullSide === 0 ? 0 : this.pullSide === 1 ? -1 : 1;
-      }
-      get matching() {
-        return this.pullSide !== 0 && this.direction === this.desiredDirection;
-      }
-      get progress() {
-        return clamp2(1 - this.distance);
-      }
-      get warning() {
-        return this.tension >= 0.76;
-      }
-      start(id) {
-        this.phase = "prepare";
-        this.elapsed = 0;
-        this.total = 0;
-        this.id = id;
-        this.seed = clamp2(this.random());
-        this.nextBite = 1.6 + this.seed * 2.2;
-        this.catchKind = this.random() < 0.12 ? "squishy" : "fish";
-        this.fishIndex = Math.min(3, Math.floor(this.random() * 4));
-        this.distance = 0.88;
-        this.tension = 0.16;
-        this.energy = 1;
-        this.strain = 0;
-        this.fightTime = 0;
-        this.pullSide = 0;
-        this.missReason = "";
-        this.releaseControls();
-      }
-      step(phase) {
-        this.phase = phase;
-        this.elapsed = 0;
-        if (phase !== "reel") this.releaseControls();
-      }
-      releaseControls() {
-        this.reeling = false;
-        this.direction = 0;
-      }
-      holdReel(held) {
-        this.reeling = this.phase === "reel" && held;
-      }
-      steer(side) {
-        this.direction = this.phase === "reel" ? side : 0;
-      }
-      tap() {
-        if (this.phase === "prepare") this.step("cast");
-        else if (this.phase === "bite") {
-          this.step("reel");
-          this.fightTime = 0;
-        } else if (this.phase === "miss") this.start(this.id);
-      }
-      update(dt) {
-        if (this.phase === "idle") return;
-        dt = clamp2(dt, 0, 0.05);
-        this.elapsed += dt;
-        this.total += dt;
-        if (this.phase === "cast" && this.elapsed > 1.93) this.step("wait");
-        else if (this.phase === "wait" && this.elapsed > this.nextBite) this.step("bite");
-        else if (this.phase === "bite" && this.elapsed > 3.6) {
-          this.missReason = "That nibble got away. Cast again!";
-          this.step("miss");
-        } else if (this.phase === "release" && this.elapsed > 1) this.step("idle");
-        else if (this.phase === "reel") this.battle(dt);
-      }
-      battle(dt) {
-        this.fightTime += dt;
-        const p = FISH_PERSONALITIES[this.fishIndex], cycle = Math.floor(this.fightTime / p.pace), beat = this.fightTime % p.pace;
-        const pulling = this.fightTime > 1.4 && beat > p.pace - p.run && !this.tired;
-        this.pullSide = pulling ? (cycle + Math.floor(this.seed * 9)) % 2 ? 1 : -1 : 0;
-        this.energy = clamp2(this.energy - dt * (0.027 + (this.matching ? 0.06 : 0) + (this.reeling ? 0.014 : 0)));
-        const wrong = this.pullSide !== 0 && this.direction !== 0 && !this.matching;
-        const heat = this.tired ? 0.055 : pulling ? (this.matching ? 0.105 : 0.27) * p.strength : 0.115;
-        this.tension = clamp2(this.tension + dt * (this.reeling ? heat + (wrong ? 0.09 : 0) : -0.37));
-        this.strain = this.tension > 0.97 ? this.strain + dt : Math.max(0, this.strain - dt * 2);
-        if (this.strain > 1.8) {
-          this.missReason = "The fish slipped free. Let go when the line turns coral.";
-          this.step("miss");
-          return;
-        }
-        const gain = this.tired ? 0.145 : pulling ? this.matching ? 0.07 : 0.012 : 0.1;
-        this.distance = clamp2(this.distance + dt * (this.reeling ? -gain : pulling ? 0.038 : 0.012));
-        if (this.matching && !this.reeling) this.distance = clamp2(this.distance - dt * 0.022);
-        if (this.distance <= 0.015 && this.fightTime > 4) this.step("catch");
-        else if (this.fightTime > 90) {
-          this.missReason = "This friend wants to stay in the pond. Try another cast!";
-          this.step("miss");
-        }
-      }
-    };
-  }
-});
-
 // src/game/FishingRod.ts
-import { Entity as Entity34, Mat4 as Mat43, Mesh as Mesh4, MeshInstance as MeshInstance4, Vec3 as Vec332 } from "playcanvas";
+import { Entity as Entity35, Mat4 as Mat43, Mesh as Mesh5, MeshInstance as MeshInstance5, Vec3 as Vec332 } from "playcanvas";
 function flexibleRod(app, root, source) {
   const inverse = new Mat43().copy(root.getWorldTransform()).invert(), parts = [];
-  const output = new Entity34("Flexible rod mesh", app);
+  const output = new Entity35("Flexible rod mesh", app);
   root.addChild(output);
   const instances = [];
   for (const render of source.findComponents("render")) {
@@ -9003,13 +9210,13 @@ function flexibleRod(app, root, source) {
         positions.splice(i, 3, p.x, p.y, p.z);
         normals.splice(i, 3, n.x, n.y, n.z);
       }
-      const mesh = new Mesh4(app.graphicsDevice);
+      const mesh = new Mesh5(app.graphicsDevice);
       mesh.setPositions(positions);
       mesh.setNormals(normals);
       if (uv.length) mesh.setUvs(0, uv);
       mesh.setIndices(indices);
       mesh.update();
-      instances.push(new MeshInstance4(mesh, original.material, output));
+      instances.push(new MeshInstance5(mesh, original.material, output));
       parts.push({ mesh, positions, normals });
     }
     render.enabled = false;
@@ -9041,7 +9248,22 @@ var init_FishingRod = __esm({
 });
 
 // src/game/Fishing.ts
-import { Asset as Asset9, Entity as Entity35, Vec3 as Vec333, Quat as Quat7, BoundingBox as BoundingBox17 } from "playcanvas";
+import { Asset as Asset8, Entity as Entity36, Vec3 as Vec333, Quat as Quat6, BoundingBox as BoundingBox16, AnimData as AnimData6, AnimTrack as AnimTrack6 } from "playcanvas";
+function uprightCatch(source, swim) {
+  const output = [...source.outputs];
+  for (const curve of source.curves) {
+    const paths = curve.paths, path = paths[0];
+    if (path?.entityPath.at(-1) !== "Main1" || !["localRotation", "localPosition"].includes(path.propertyPath[0])) continue;
+    const rest = swim.curves.find((c) => {
+      const p = c.paths[0];
+      return p?.entityPath.at(-1) === "Main1" && p.propertyPath[0] === path.propertyPath[0];
+    });
+    if (!rest) continue;
+    const data = source.outputs[curve.output], base = swim.outputs[rest.output].data;
+    output[curve.output] = new AnimData6(data.components, Array.from(data.data, (_, i) => base[i % data.components]));
+  }
+  return new AnimTrack6(source.name + " upright", source.duration, source.inputs, output, source.curves);
+}
 var FISH, Fishing;
 var init_Fishing = __esm({
   "src/game/Fishing.ts"() {
@@ -9067,10 +9289,10 @@ var init_Fishing = __esm({
         this.save = save;
         this.splash = new Audio(assetUrl("assets/outdoors/pond-splash.mp3"));
         this.splash.preload = "auto";
-        this.root = new Entity35("Pond fishing presentation", app);
+        this.root = new Entity36("Pond fishing presentation", app);
         parent.addChild(this.root);
         const shape = primitives(app, this.root), wood = material("Fishing rod cork", "#ac8762"), red = material("Bobber coral", "#f1958c"), cream = material("Fishing cream", "#fff1d7");
-        this.rod = new Entity35("Hand fitted fishing rod", app);
+        this.rod = new Entity36("Hand fitted fishing rod", app);
         this.root.addChild(this.rod);
         const r = primitives(app, this.rod);
         r("Cork grip", "cylinder", [0, 0.12, 0], [0.07, 0.24, 0.07], wood);
@@ -9085,7 +9307,7 @@ var init_Fishing = __esm({
         this.root.enabled = false;
         this.setupControls();
         const rodReady = this.load("fishingrod_lvl1").then((res) => {
-          const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity35("Rod normalization", app);
+          const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity36("Rod normalization", app);
           this.rod.addChild(pivot);
           pivot.addChild(e);
           pivot.setLocalScale(scale, scale, scale);
@@ -9094,9 +9316,9 @@ var init_Fishing = __esm({
           for (const name of ["Cork grip", "Slender rod", "Reel"]) this.rod.findByName(name).enabled = false;
         });
         this.ready = Promise.all(FISH.map(async ([file], i) => {
-          const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity35(file, app);
+          const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity36(file, app);
           this.root.addChild(anchor);
-          const normalization = new Entity35("Fish size and origin", app);
+          const normalization = new Entity36("Fish size and origin", app);
           anchor.addChild(normalization);
           normalization.addChild(e);
           const scale = 0.8 / Math.max(bounds.halfExtents.x * 2, bounds.halfExtents.y * 2, bounds.halfExtents.z * 2);
@@ -9104,8 +9326,10 @@ var init_Fishing = __esm({
           normalization.setLocalPosition(-bounds.center.x * scale, -bounds.center.y * scale, -bounds.center.z * scale);
           const tracks2 = res.animations.map((a) => a.resource);
           e.addComponent("anim", { activate: true });
-          e.anim.assignAnimation("Swim", tracks2.find((a) => /swim/i.test(a.name)) ?? tracks2[0]);
-          e.anim.assignAnimation("Caught", tracks2.find((a) => a.name.includes("Out_Of_Water")) ?? tracks2[0]);
+          e.anim.assignAnimation("Swim", tracks2.find((a) => a.name.includes("Swimming_Normal")) ?? tracks2[0]);
+          e.anim.assignAnimation("Dart", tracks2.find((a) => a.name.includes("Swimming_Fast")) ?? tracks2[0]);
+          e.anim.assignAnimation("Kick", tracks2.find((a) => a.name.includes("Swimming_Impulse")) ?? tracks2[0]);
+          e.anim.assignAnimation("Caught", uprightCatch(tracks2.find((a) => a.name.includes("Out_Of_Water")) ?? tracks2[0], tracks2.find((a) => a.name.includes("Swimming_Normal")) ?? tracks2[0]));
           e.anim.baseLayer.play("Swim");
           this.fishModels[i] = e;
           anchor.enabled = false;
@@ -9146,6 +9370,9 @@ var init_Fishing = __esm({
       lastFish = POND.bobber.clone();
       landingPoint = POND.bobber.clone();
       events = new AbortController();
+      cue = document.createElement("div");
+      catchTime = 0;
+      fishClip = "";
       heldClick = false;
       panel = document.createElement("section");
       cancel = document.createElement("button");
@@ -9168,7 +9395,7 @@ var init_Fishing = __esm({
       }
       load(file) {
         return new Promise((resolve, reject) => {
-          const a = new Asset9(file, "container", { url: assetUrl("assets/outdoors/" + file + ".glb") });
+          const a = new Asset8(file, "container", { url: assetUrl("assets/outdoors/" + file + ".glb") });
           a.once("load", () => resolve(a.resource));
           a.once("error", reject);
           this.app.assets.add(a);
@@ -9176,7 +9403,7 @@ var init_Fishing = __esm({
         });
       }
       bounds(e) {
-        const b = new BoundingBox17();
+        const b = new BoundingBox16();
         let first = true;
         for (const r of e.findComponents("render")) for (const m of r.meshInstances) {
           if (first) {
@@ -9215,7 +9442,10 @@ var init_Fishing = __esm({
         this.right.setAttribute("aria-label", "Hold to pull right");
         this.controls.append(this.left, this.button, this.right);
         this.panel.append(this.status, this.copy, this.gauges, this.controls, this.tip, this.cancel);
-        document.querySelector("#game").append(this.panel);
+        this.cue.id = "fish-direction-cue";
+        this.cue.hidden = true;
+        this.cue.setAttribute("aria-hidden", "true");
+        document.querySelector("#game").append(this.panel, this.cue);
         const signal = this.events.signal, release = () => this.round.releaseControls();
         this.button.addEventListener("click", () => {
           if (this.heldClick) {
@@ -9269,7 +9499,8 @@ var init_Fishing = __esm({
         this.round.start(saveId());
         this.root.enabled = true;
         this.panel.hidden = false;
-        this.prev = this.lastClip = "";
+        this.prev = this.lastClip = this.fishClip = "";
+        this.catchTime = 0;
         this.settle = 0;
         this.side = 0;
         this.heldClick = false;
@@ -9328,6 +9559,7 @@ var init_Fishing = __esm({
             });
           }
           if (r.phase === "catch") {
+            this.catchTime = 0;
             this.landingPoint.copy(this.fishPoint);
             this.fishModels[r.fishIndex]?.anim.baseLayer.play("Caught");
             this.catchReward();
@@ -9338,6 +9570,18 @@ var init_Fishing = __esm({
         if (clip !== this.lastClip) {
           this.lastClip = clip;
           this.character.animator.setWorkClip(clip, POND.bobber);
+        }
+        if (r.phase === "catch") this.catchTime += dt;
+        if (r.phase === "reel") {
+          const desired = r.pullSide ? "Dart" : r.tired ? "Swim" : "Kick";
+          if (this.fishClip !== desired) {
+            this.fishClip = desired;
+            this.fishModels[r.fishIndex]?.anim.baseLayer.transition(desired, 0.15);
+          }
+        }
+        if (r.phase === "release" && this.fishClip !== "Release") {
+          this.fishClip = "Release";
+          this.fishModels[r.fishIndex]?.anim.baseLayer.transition("Dart", 0.12);
         }
         this.updatePanel();
         this.present(dt);
@@ -9357,8 +9601,24 @@ var init_Fishing = __esm({
         this.tension.value = r.tension;
         this.panel.dataset.warning = String(r.warning);
         this.button.dataset.held = String(r.reeling);
-        this.left.dataset.cue = String(r.desiredDirection === -1);
-        this.right.dataset.cue = String(r.desiredDirection === 1);
+        this.left.dataset.cue = String(!r.warning && r.desiredDirection === -1);
+        this.right.dataset.cue = String(!r.warning && r.desiredDirection === 1);
+        this.controls.dataset.pull = r.warning ? "rest" : String(r.desiredDirection);
+        this.cue.hidden = r.phase !== "reel" || !r.pullSide && !r.warning;
+        this.cue.dataset.side = r.warning ? "rest" : r.desiredDirection < 0 ? "left" : "right";
+        this.cue.dataset.correct = String(r.matching && !r.warning);
+        const cueKey = this.cue.dataset.side + ":" + this.cue.dataset.correct;
+        if (this.cue.dataset.key !== cueKey) {
+          this.cue.dataset.key = cueKey;
+          this.cue.innerHTML = r.warning ? "<span class=fish-hand>\u270B</span><b>LET GO</b>" : r.matching ? "<span>\u2713</span><b>Good pull!</b>" : r.desiredDirection < 0 ? "<span class=fish-arrows>\u2039\u2039\u2039</span><b>THIS WAY</b>" : "<span class=fish-arrows>\u203A\u203A\u203A</span><b>THIS WAY</b>";
+        }
+        const panelHeight = this.panel.offsetHeight, game = this.panel.parentElement, layoutKey = this.cue.dataset.side + ":" + panelHeight + ":" + game.clientWidth + ":" + game.clientHeight;
+        if (this.cue.dataset.layout !== layoutKey) {
+          this.cue.dataset.layout = layoutKey;
+          this.cue.style.setProperty("--panel-height", panelHeight + "px");
+          const control = (r.warning ? this.button : r.desiredDirection < 0 ? this.left : this.right).getBoundingClientRect();
+          this.cue.style.left = control.left + control.width / 2 - game.getBoundingClientRect().left + "px";
+        }
         this.left.dataset.held = String(r.direction === -1);
         this.right.dataset.held = String(r.direction === 1);
         this.tip.textContent = r.phase === "reel" ? "Hold to reel \u2022 Pull against the fish \u2022 Let go to relax" : r.phase === "prepare" ? "Tap to cast, then tap when a fish bites." : "";
@@ -9384,7 +9644,7 @@ var init_Fishing = __esm({
           this.rod.setPosition(hand);
           const tip = new Vec333().lerp(hand, this.fishPoint, 0.58);
           tip.y += 1.35 + (r.phase === "cast" ? Math.sin(r.elapsed / 1.93 * Math.PI) * 0.7 : 0);
-          this.rod.setRotation(new Quat7().setFromDirections(Vec333.UP, tip.sub(hand).normalize()));
+          this.rod.setRotation(new Quat6().setFromDirections(Vec333.UP, tip.sub(hand).normalize()));
         }
         this.flexible?.update(r.phase === "reel" ? r.tension * 0.3 + (r.pullSide ? Math.sin(r.total * 18) * 0.018 : 0) : 0.015, dt);
         this.rod.enabled = !["catch", "release"].includes(r.phase);
@@ -9416,7 +9676,7 @@ var init_Fishing = __esm({
         });
         const delta = bob.clone().sub(rodTip);
         this.line.setPosition(new Vec333().lerp(bob, rodTip, 0.5));
-        this.line.setRotation(new Quat7().setFromDirections(Vec333.UP, delta.clone().normalize()));
+        this.line.setRotation(new Quat6().setFromDirections(Vec333.UP, delta.clone().normalize()));
         this.line.setLocalScale(8e-3, delta.length(), 8e-3);
         this.line.enabled = !["catch", "release"].includes(r.phase);
         const reward = this.receipt ? this.reward : this.fishes[r.fishIndex];
@@ -9429,13 +9689,24 @@ var init_Fishing = __esm({
           if (move.lengthSq() > 1e-6) fish.setEulerAngles(0, Math.atan2(move.x, move.z) * 180 / Math.PI, Math.sin(r.total * 7) * 6);
         }
         if (reward && ["catch", "release"].includes(r.phase)) {
-          const t = Math.min(1, r.elapsed / (r.phase === "release" ? 1 : 1.2)), from = r.phase === "release" ? POND.bobber : this.landingPoint, to = new Vec333(-5.55, 1.55, -10.65);
-          if (!this.receipt) reward.setLocalScale(1, 1, 1);
-          reward.setPosition(new Vec333().lerp(r.phase === "release" ? to : from, r.phase === "release" ? from : to, t));
-          reward.rotateLocal(0, dt * 35, 0);
+          const landing = new Vec333(-5.55, 1.55, -10.65), release = r.phase === "release", t = Math.min(1, release ? r.elapsed / 0.95 : this.catchTime / 0.8), ease = t * t * (3 - 2 * t), point = new Vec333().lerp(release ? landing : this.landingPoint, release ? POND.bobber : landing, ease);
           if (this.receipt) {
-            this.vfx.root.setPosition(to.x, to.y + 0.4, to.z - 0.3);
-            this.vfx.update(r.elapsed, false);
+            reward.setPosition(point);
+            reward.rotateLocal(0, dt * 24, 0);
+            this.vfx.root.setPosition(landing.x, landing.y + 0.4, landing.z - 0.3);
+            this.vfx.update(this.catchTime, false);
+          } else {
+            const personality = [{ pace: 7, tilt: 13, bounce: 0.055 }, { pace: 4.5, tilt: 8, bounce: 0.075 }, { pace: 5.7, tilt: 17, bounce: 0.035 }, { pace: 3.5, tilt: 9, bounce: 0.028 }][r.fishIndex], time = this.catchTime, burst = Math.pow(Math.max(0, Math.sin(time * 2.1 + r.fishIndex)), 3), wiggle = Math.sin(time * personality.pace) * (1 + burst * 0.65);
+            if (release) {
+              point.y += Math.sin(t * Math.PI) * 0.45;
+              reward.setEulerAngles(-12 + Math.sin(t * Math.PI) * 25, -110 + t * 28, Math.sin(t * 10) * 8);
+            } else {
+              point.y += Math.sin(t * Math.PI) * 0.35 + Math.sin(time * personality.pace * 0.7) * personality.bounce * t;
+              point.x += Math.sin(time * 2.8) * 0.045 * t;
+              reward.setEulerAngles(wiggle * personality.tilt * 0.45, 85 + Math.sin(time * 2.2) * 12, wiggle * personality.tilt);
+            }
+            reward.setLocalScale(1, 1, 1);
+            reward.setPosition(point);
           }
         }
       }
@@ -9461,6 +9732,7 @@ var init_Fishing = __esm({
       end() {
         this.round.step("idle");
         this.panel.hidden = true;
+        this.cue.hidden = true;
         this.root.enabled = false;
         this.vfx.hide();
         this.audio.stop();
@@ -9477,6 +9749,7 @@ var init_Fishing = __esm({
         this.events.abort();
         this.end();
         this.panel.remove();
+        this.cue.remove();
         this.vfx.destroy();
         this.root.destroy();
         this.audio.destroy();
@@ -10526,7 +10799,7 @@ var init_HouseNavigation = __esm({
 });
 
 // src/game/Lilah.ts
-import { Asset as Asset10, BoundingBox as BoundingBox18, Entity as Entity36, Vec3 as Vec336 } from "playcanvas";
+import { Asset as Asset9, BoundingBox as BoundingBox17, Entity as Entity37, Vec3 as Vec336 } from "playcanvas";
 var Lilah;
 var init_Lilah = __esm({
   "src/game/Lilah.ts"() {
@@ -10544,16 +10817,16 @@ var init_Lilah = __esm({
         this.app = app;
         this.house = house;
         this.daily = daily;
-        this.root = new Entity36("Lilah \xB7 age 2", app);
+        this.root = new Entity37("Lilah \xB7 age 2", app);
         app.root.addChild(this.root);
         this.root.setPosition(1, 0.09, 0.7);
-        this.visual = new Entity36("Lilah visual", app);
+        this.visual = new Entity37("Lilah visual", app);
         this.root.addChild(this.visual);
-        const placeholder = new Entity36("Lilah loading", app);
+        const placeholder = new Entity37("Lilah loading", app);
         this.visual.addChild(placeholder);
         this.animator = new CharacterAnimator(this.visual, placeholder);
         this.planner = new HousePath(house);
-        this.socket = new Entity36("Lilah toy grip", app);
+        this.socket = new Entity37("Lilah toy grip", app);
         this.visual.addChild(this.socket);
         this.animator.bindCarrySocket(this.socket);
         this.toy = primitives(app, this.socket)("Favorite block", "box", [0, 0, 0], [0.13, 0.13, 0.13], material("Lilah favorite block", "#edb867"));
@@ -10661,7 +10934,7 @@ var init_Lilah = __esm({
           if (separation < 0.43 && separation <= previousSeparation) {
             job.blocked += dt;
             if (job.blocked > 0.45) {
-              const obstacle = new BoundingBox18(new Vec336(arianna.x, 0, arianna.z), new Vec336(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec336(p.x, 0, p.z);
+              const obstacle = new BoundingBox17(new Vec336(arianna.x, 0, arianna.z), new Vec336(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec336(p.x, 0, p.z);
               let path = planner.route(start, job.point);
               if (!path.length) {
                 for (let i = 0; i < 16; i++) {
@@ -10707,7 +10980,7 @@ var init_Lilah = __esm({
       async load() {
         const config = await (await fetch(assetUrl(`${"/"}assets/characters/arianna/character.json`))).json();
         this.height = config.height * 0.625;
-        const asset = new Asset10("Lilah Meshy review", "container", { url: assetUrl(`${"/"}assets/characters/lilah/lilah.glb`) });
+        const asset = new Asset9("Lilah Meshy review", "container", { url: assetUrl(`${"/"}assets/characters/lilah/lilah.glb`) });
         await new Promise((resolve, reject) => {
           asset.once("load", resolve);
           asset.once("error", reject);
@@ -10727,7 +11000,7 @@ var init_Lilah = __esm({
           walk_playback: 1
         };
         for (const required of ["Idle", "Walk", "CarryIdle", "CarryWalk", "PickUp", "PutDown", "Celebrate"]) if (!tracks2.some((t) => t.name === required)) throw new Error("Missing Lilah clip " + required);
-        const alignment = new Entity36("Lilah ground alignment", this.app);
+        const alignment = new Entity37("Lilah ground alignment", this.app);
         this.visual.addChild(alignment);
         alignment.addChild(model);
         model.setLocalScale(this.height / 1.03, this.height / 1.03, this.height / 1.03);
@@ -10952,7 +11225,7 @@ var init_TornadoRules = __esm({
 });
 
 // src/game/LilahTornado.ts
-import { Entity as Entity37, Vec3 as Vec337 } from "playcanvas";
+import { Entity as Entity38, Vec3 as Vec337 } from "playcanvas";
 var roomOf, TYPES, get, LilahTornado;
 var init_LilahTornado = __esm({
   "src/game/LilahTornado.ts"() {
@@ -11178,7 +11451,7 @@ var init_LilahTornado = __esm({
       }
       spawn(point, type, special) {
         if (this.messes.length >= 3) return;
-        const root = new Entity37("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
+        const root = new Entity38("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
         this.props.root.addChild(root);
         root.setPosition(point.x, 0.06, point.z);
         const shape = primitives(this.app, root), n = special === "basket" ? 12 : type === 3 ? 5 : 6;
@@ -11402,7 +11675,7 @@ var init_LilahTornado = __esm({
 });
 
 // src/game/FamilyDinner.ts
-import { Asset as Asset11, BoundingBox as BoundingBox19, Entity as Entity38, Vec3 as Vec338 } from "playcanvas";
+import { Asset as Asset10, BoundingBox as BoundingBox18, Entity as Entity39, Vec3 as Vec338 } from "playcanvas";
 var FamilyDinner;
 var init_FamilyDinner = __esm({
   "src/game/FamilyDinner.ts"() {
@@ -11421,22 +11694,22 @@ var init_FamilyDinner = __esm({
         this.animator = animator;
         this.say = say;
         this.planner = new HousePath(house, 0.25);
-        this.socket = new Entity38("Dad serving hands", app);
+        this.socket = new Entity39("Dad serving hands", app);
         visual.addChild(this.socket);
         animator.bindCarrySocket(this.socket);
-        this.tray = new Entity38("Family dinner", app);
+        this.tray = new Entity39("Family dinner", app);
         house.root.addChild(this.tray);
         this.tray.enabled = false;
         primitives(app, this.tray)("Dinner platter", "cylinder", [0, 0, 0], [0.72, 0.025, 0.58], material("Dinner china", "#fff2d9"), false);
         void Promise.all(["pizza", "taco", "turkey"].map(async (name) => {
-          const a = new Asset11("Family " + name, "container", { url: assetUrl(`/assets/food/${name}.glb`) });
+          const a = new Asset10("Family " + name, "container", { url: assetUrl(`/assets/food/${name}.glb`) });
           app.assets.add(a);
           await new Promise((resolve, reject) => {
             a.once("load", resolve);
             a.once("error", reject);
             app.assets.load(a);
           });
-          const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox19();
+          const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox18();
           let first = true;
           for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
             if (first) {
@@ -11629,7 +11902,7 @@ var init_FamilyDinner = __esm({
 });
 
 // src/game/Marc.ts
-import { Asset as Asset12, AnimData as AnimData6, AnimTrack as AnimTrack6, Entity as Entity39, Quat as Quat8, Vec3 as Vec339 } from "playcanvas";
+import { Asset as Asset11, AnimData as AnimData7, AnimTrack as AnimTrack7, Entity as Entity40, Quat as Quat7, Vec3 as Vec339 } from "playcanvas";
 var SEAT, YAW, FORWARD, ENTRY, SEATED, PATROL, REMARKS, Marc;
 var init_Marc = __esm({
   "src/game/Marc.ts"() {
@@ -11654,12 +11927,12 @@ var init_Marc = __esm({
         this.app = app;
         this.house = house;
         this.daily = daily;
-        this.root = new Entity39("Marc", app);
+        this.root = new Entity40("Marc", app);
         app.root.addChild(this.root);
         this.root.setPosition(3.5, 0.09, 6.2);
-        this.visual = new Entity39("Marc visual", app);
+        this.visual = new Entity40("Marc visual", app);
         this.root.addChild(this.visual);
-        const placeholder = new Entity39("Marc loading", app);
+        const placeholder = new Entity40("Marc loading", app);
         this.visual.addChild(placeholder);
         this.animator = new CharacterAnimator(this.visual, placeholder);
         this.planner = new HousePath(house, 0.25);
@@ -11670,7 +11943,7 @@ var init_Marc = __esm({
         document.querySelector("#game").append(this.label);
         const colors = ["#cda678", "#c5d9dd", "#b8c39d"];
         for (let i = 0; i < 3; i++) {
-          const tool = new Entity39(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
+          const tool = new Entity40(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
           this.root.addChild(tool);
           const shape = primitives(app, tool);
           shape("Dad cleanup tool", "box", [0, 0, 0], i === 0 ? [0.25, 0.16, 0.23] : i === 1 ? [0.3, 0.025, 0.23] : [0.3, 0.07, 0.13], material("Dad tool " + i, colors[i]));
@@ -11717,7 +11990,7 @@ var init_Marc = __esm({
       async load() {
         const config = await (await fetch(assetUrl(`${"/"}assets/characters/arianna/character.json`))).json();
         this.height = config.height * 1.3;
-        const asset = new Asset12("Marc animation v2", "container", { url: assetUrl(`${"/"}assets/characters/marc/marc.glb`) });
+        const asset = new Asset11("Marc animation v2", "container", { url: assetUrl(`${"/"}assets/characters/marc/marc.glb`) });
         await new Promise((resolve, reject) => {
           asset.once("load", resolve);
           asset.once("error", reject);
@@ -11733,16 +12006,16 @@ var init_Marc = __esm({
         };
         for (const name of ["SitDown", "SitIdle", "StandUp", "Idle", "Walk_Basic"]) required(name);
         const walk = required("Walk_Basic"), idle = required("Idle");
-        const tracks2 = [...source, new AnimTrack6("Walk", walk.duration, walk.inputs, walk.outputs, walk.curves)];
-        const carry = required("CarryWalk"), carryOutputs = carry.outputs.map((o) => new AnimData6(o.components, Array.from(o.data, (v, i) => o.data[i % o.components])));
-        tracks2.push(new AnimTrack6("CarryIdle", carry.duration, carry.inputs, carryOutputs, carry.curves));
-        const outputs = idle.outputs.map((o) => new AnimData6(o.components, Array.from(o.data)));
+        const tracks2 = [...source, new AnimTrack7("Walk", walk.duration, walk.inputs, walk.outputs, walk.curves)];
+        const carry = required("CarryWalk"), carryOutputs = carry.outputs.map((o) => new AnimData7(o.components, Array.from(o.data, (v, i) => o.data[i % o.components])));
+        tracks2.push(new AnimTrack7("CarryIdle", carry.duration, carry.inputs, carryOutputs, carry.curves));
+        const outputs = idle.outputs.map((o) => new AnimData7(o.components, Array.from(o.data)));
         for (const curve of idle.curves) {
           const paths = curve.paths;
           if (paths.some((p) => p.entityPath.at(-1) === "Spine02" && p.propertyPath[0] === "localRotation")) {
             const data = outputs[curve.output].data;
             for (let i = 0; i < data.length; i += 4) {
-              const q = new Quat8(data[i], data[i + 1], data[i + 2], data[i + 3]).mul(new Quat8().setFromEulerAngles(24, 0, 0));
+              const q = new Quat7(data[i], data[i + 1], data[i + 2], data[i + 3]).mul(new Quat7().setFromEulerAngles(24, 0, 0));
               data[i] = q.x;
               data[i + 1] = q.y;
               data[i + 2] = q.z;
@@ -11750,9 +12023,9 @@ var init_Marc = __esm({
             }
           }
         }
-        tracks2.push(new AnimTrack6("Cleaning", idle.duration, idle.inputs, outputs, idle.curves));
+        tracks2.push(new AnimTrack7("Cleaning", idle.duration, idle.inputs, outputs, idle.curves));
         const manifest = { animations: tracks2.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: !["SitDown", "StandUp"].includes(t.name) })), locomotion: { Walk: { travel_speed_mps: 1.2 }, CarryWalk: { travel_speed_mps: 1.05 } }, interaction_events: {}, scale: { rest_height_m: 1.8 }, hand_joints: ["LeftHand", "RightHand"], walk_playback: 1 };
-        const alignment = new Entity39("Marc ground alignment", this.app);
+        const alignment = new Entity40("Marc ground alignment", this.app);
         this.visual.addChild(alignment);
         alignment.addChild(model);
         model.setLocalScale(this.height / 1.8, this.height / 1.8, this.height / 1.8);
@@ -12264,7 +12537,7 @@ var main_exports = {};
 __export(main_exports, {
   startGame: () => startGame
 });
-import { Application, Color as Color11, Entity as Entity40, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec340 } from "playcanvas";
+import { Application, Color as Color12, Entity as Entity41, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec340 } from "playcanvas";
 async function startGame(editorApp) {
   const canvas = document.querySelector("#game-canvas");
   const app = editorApp ?? new Application(canvas, { graphicsDeviceOptions: { alpha: false, antialias: true, powerPreference: "low-power" } });
@@ -12272,12 +12545,12 @@ async function startGame(editorApp) {
   app.setCanvasFillMode(FILLMODE_NONE);
   app.setCanvasResolution(RESOLUTION_AUTO);
   await loadSquishyArt(app);
-  const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color11(0.72, 0.68, 0.77);
+  const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color12(0.72, 0.68, 0.77);
   app.scene.ambientLight = ambientBase.clone();
-  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity40("Soft afternoon sunlight", app);
+  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity41("Soft afternoon sunlight", app);
   if (!sun.light) sun.addComponent("light", {
     type: "directional",
-    color: new Color11(1, 0.92, 0.83),
+    color: new Color12(1, 0.92, 0.83),
     intensity: 1.2,
     castShadows: true,
     shadowResolution: 1024,
@@ -12557,7 +12830,7 @@ var index_default = `<!doctype html>
 `;
 
 // migration/local.css
-var local_default = '/* src/ui/hunt.css */\n#hunt-routes {\n  width: min(420px, calc(100% - 24px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  border: 2px solid white;\n  border-radius: 26px;\n  padding: 23px 16px 14px;\n  color: #57496b;\n  background: #faf5ef;\n}\n#hunt-routes::backdrop {\n  background: #46395480;\n  backdrop-filter: blur(4px);\n}\n#hunt-routes h2 {\n  font-size: 25px;\n  letter-spacing: -.8px;\n  margin: 12px 0 7px;\n}\n.hunt-budget {\n  font-size: 13px;\n  color: #59765e;\n  font-weight: 800;\n  margin: 0 0 15px;\n}\n.store-choice {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  width: 100%;\n  padding: 13px 10px;\n  margin: 9px 0;\n  text-align: left;\n  border: 1px solid #fff;\n  border-radius: 18px;\n  background:\n    linear-gradient(\n      110deg,\n      var(--shop-color),\n      #fff7ee);\n  color: #514863;\n  box-shadow: 0 3px 8px #69546710;\n  cursor: pointer;\n}\n.store-choice:disabled {\n  opacity: .5;\n  cursor: default;\n}\n.store-icon {\n  display: grid;\n  place-items: center;\n  width: 43px;\n  min-width: 43px;\n  height: 43px;\n  border-radius: 50%;\n  background: #fff8;\n  font-size: 28px;\n}\n.store-choice strong {\n  display: block;\n  font-size: 17px;\n  margin-bottom: 4px;\n}\n.store-choice small {\n  display: block;\n  font-size: 10px;\n  line-height: 1.5;\n}\n.store-choice em {\n  display: block;\n  font-size: 11px;\n  line-height: 1.35;\n  margin: 7px 0 4px;\n  font-style: normal;\n  font-weight: 700;\n}\n.route-status {\n  color: #5e795b;\n}\n.hunt-explainer {\n  font-size: 10px;\n  line-height: 1.5;\n  color: #8d7b8b;\n  margin: 12px 4px;\n}\n#shopping-time {\n  display: inline-block;\n  padding: 6px 10px;\n  margin: 3px 0;\n  background: #fffaeeed;\n  color: #66795b;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 700;\n  pointer-events: none;\n}\n#hunt-find {\n  position: absolute;\n  left: 16px;\n  right: 16px;\n  bottom: 220px;\n  max-width: 360px;\n  margin: auto;\n  padding: 12px 14px;\n  border: 1px solid white;\n  border-radius: 18px;\n  background: #fff8eff2;\n  color: #655371;\n  box-shadow: 0 4px 18px #56466320;\n  pointer-events: none;\n}\n#hunt-find strong {\n  font-size: 17px;\n}\n#hunt-find p {\n  font-size: 12px;\n  margin: 5px 0;\n  color: #59816b;\n  font-weight: 700;\n}\n#hunt-find small {\n  font-size: 10px;\n}\n#game[data-scene=store] #save-message {\n  bottom: auto;\n  top: 190px;\n  left: 16px;\n  width: calc(100% - 32px);\n  padding: 9px 12px;\n}\n#game[data-scene=store] #cleanup-hint {\n  background: #fff9efdf;\n  border-radius: 12px;\n  padding: 7px 9px;\n}\n#game[data-scene=store] #shop-display-marker {\n  background: transparent;\n  color: #ffe6a0;\n  border: 0;\n  padding: 0;\n  box-shadow: none;\n  font-size: 23px;\n  text-shadow: 0 0 4px white, 0 0 9px #e6b761;\n}\n#hunt-travel {\n  position: absolute;\n  inset: 0;\n  z-index: 45;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  background: #f5edf7f5;\n  color: #705b83;\n}\n#hunt-travel span {\n  font-size: 65px;\n  animation: hunt-bob .6s ease-in-out infinite alternate;\n}\n#hunt-travel h2 {\n  font-size: 27px;\n}\n@keyframes hunt-bob {\n  to {\n    transform: translateY(-10px) rotate(6deg);\n  }\n}\n.series-heading {\n  grid-column: 1/-1;\n  text-align: left;\n  padding: 10px 3px 4px;\n  font-size: 14px;\n}\n#game[data-scene=store] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] #day-label,\n#game[data-scene=store] #scene-subtitle {\n  display: none;\n}\n#game[data-scene=store] .room-title .eyebrow {\n  font-size: 12px;\n  letter-spacing: .7px;\n  margin-bottom: 4px;\n}\n@media (max-height: 740px) {\n  #hunt-find {\n    bottom: 190px;\n    padding: 8px 12px;\n  }\n  #hunt-routes {\n    padding-top: 14px;\n  }\n  .store-choice {\n    padding: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #hunt-travel span {\n    animation: none;\n  }\n}\n#hunt-routes .dialog-top-action {\n  position: sticky;\n  top: 0;\n  z-index: 2;\n  box-shadow: 0 0 0 5px #faf5fb;\n}\n\n/* src/ui/trading.css */\n#trading-dialog {\n  box-sizing: border-box;\n  width: min(460px, calc(100% - 16px));\n  max-height: calc(100dvh - 16px);\n  padding: 0;\n  border: 2px solid white;\n  border-radius: 24px;\n  background: #fcf7ef;\n  color: #514365;\n  overflow: hidden;\n}\n#trading-dialog[open] {\n  display: flex;\n  flex-direction: column;\n}\n#trading-dialog::backdrop {\n  background: #44355288;\n  backdrop-filter: blur(3px);\n}\n#trading-dialog button {\n  font: inherit;\n  color: inherit;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#trading-dialog button:disabled {\n  opacity: .48;\n  cursor: default;\n}\n.trade-header {\n  padding: 14px 18px 10px;\n  background:\n    linear-gradient(\n      120deg,\n      #fff,\n      var(--trader));\n  flex-shrink: 0;\n}\n.trade-header h2 {\n  margin: 4px 0;\n  font-size: 27px;\n}\n.trade-header strong {\n  font-size: 12px;\n}\n.trade-header p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  line-height: 1.4;\n}\n.trade-scroll {\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  padding: 0 14px 12px;\n  min-height: 0;\n}\n#trading-dialog h3 {\n  font-size: 13px;\n  margin: 12px 0 7px;\n  display: flex;\n  justify-content: space-between;\n  gap: 4px;\n}\n#trading-dialog h3 small {\n  font-size: 10px;\n  font-weight: normal;\n}\n.trade-slots {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n  gap: 6px;\n  min-height: 65px;\n  background: #e9dfef;\n  padding: 7px;\n  border-radius: 15px;\n}\n.trade-item {\n  border: 1px solid #fff;\n  background: #fffbf8;\n  border-radius: 12px;\n  padding: 4px;\n  text-align: center;\n  min-width: 0;\n}\n.trade-item img {\n  width: 100%;\n  height: 52px;\n  object-fit: contain;\n}\n.trade-item strong,\n.trade-item small {\n  display: block;\n  font-size: 10px;\n}\n.trade-item small {\n  font-size: 9px;\n  margin-top: 3px;\n}\n.trade-speech {\n  font-size: 12px;\n  line-height: 1.45;\n  background: #fff1cd;\n  border-radius: 13px;\n  padding: 10px;\n  margin: 10px 0;\n}\n.trade-empty {\n  grid-column: 1/-1;\n  margin: 10px;\n  font-size: 12px;\n  line-height: 1.5;\n}\n.trade-bag-heading label {\n  display: flex;\n  gap: 6px;\n  align-items: center;\n  font-size: 12px;\n  min-height: 32px;\n}\n.trade-bag-heading input {\n  width: 20px;\n  height: 20px;\n  accent-color: #8573a2;\n}\n.trade-safety {\n  font-size: 10px;\n  line-height: 1.4;\n  margin: 5px 0 10px;\n  color: #796b87;\n}\n#trade-inventory {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 6px;\n}\n.trade-bag-item {\n  display: flex;\n  align-items: center;\n  min-height: 62px;\n  padding: 4px;\n  border: 1px solid #ded2e6;\n  background: white;\n  border-radius: 12px;\n  text-align: left;\n  min-width: 0;\n}\n.trade-bag-item img {\n  width: 38px;\n  flex-shrink: 0;\n}\n.trade-bag-item strong {\n  font-size: 11px;\n  display: block;\n}\n.trade-bag-item small {\n  font-size: 9px;\n  display: block;\n  margin-top: 3px;\n}\n.trade-footer {\n  flex-shrink: 0;\n  padding: 8px 12px 12px;\n  background: #fcf7ef;\n  border-top: 1px solid #e8ddea;\n}\n.trade-footer p {\n  margin: 0 0 8px;\n  text-align: center;\n  font-size: 12px;\n  font-weight: bold;\n}\n.trade-controls {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  gap: 9px;\n}\n.trade-controls button {\n  border: 2px solid white;\n  border-radius: 18px;\n  font-size: 32px !important;\n  font-weight: bold !important;\n  min-height: 68px;\n  background: #f0c6cc;\n}\n.trade-controls button small {\n  display: block;\n  font-size: 10px;\n}\n.trade-controls #trade-add {\n  background: #f6dfa1;\n}\n.trade-controls #trade-accept {\n  background: #bad6b9;\n}\n#leave-recess {\n  position: absolute;\n  top: 76px;\n  right: 14px;\n  width: auto;\n  font-size: 12px;\n  padding: 9px 13px;\n  z-index: 5;\n}\n.collection-protection {\n  border: 0;\n  background: #fff9;\n  border-radius: 8px;\n  margin: 4px 1px 0;\n  min-width: 30px;\n  min-height: 32px;\n  font-size: 14px;\n  cursor: pointer;\n}\n.collection-protection[aria-pressed=true] {\n  background: #e5c6e9;\n  outline: 1px solid #b68ec0;\n}\n#game[data-scene=recess] #trip-wallet,\n#game[data-scene=recess] #mission-clock {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  .trade-header {\n    padding: 8px 12px;\n  }\n  .trade-header h2 {\n    font-size: 21px;\n  }\n  .trade-header p {\n    font-size: 11px;\n  }\n  .trade-item img {\n    height: 42px;\n  }\n  .trade-controls button {\n    min-height: 60px;\n  }\n  .trade-footer {\n    padding: 6px 10px;\n  }\n}\n#trade-suggest {\n  width: 100%;\n  min-height: 44px;\n  border: 2px solid #b4d4bd;\n  border-radius: 16px;\n  background: #edf8ed;\n  font-weight: 800;\n}\n.trade-help {\n  font-size: 11px;\n  color: #6d6477;\n}\n.trade-loved {\n  border-color: #bad8bb !important;\n}\n.trade-header > small {\n  display: block;\n  margin-top: 7px;\n  font-size: 11px;\n}\n\n/* src/ui/squishy-pop.css */\n.pop-launch {\n  position: fixed;\n  z-index: 20;\n  bottom: max(160px, 22vh);\n  left: 50%;\n  transform: translateX(-50%);\n  width: min(310px, 85vw);\n  border: 3px solid #fff9;\n  border-radius: 30px;\n  padding: 13px 16px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe7ee,\n      #efa6d4);\n  color: #655082;\n  box-shadow: 0 6px 22px #4f3b6240;\n  font-weight: 900;\n  font-size: 17px;\n  cursor: pointer;\n}\n.pop-launch span {\n  margin-right: 8px;\n}\n.pop-launch small {\n  display: block;\n  font-size: 11px;\n  letter-spacing: .5px;\n  margin-top: 5px;\n  font-weight: 600;\n}\n#squishy-pop {\n  padding: 0;\n  border: 0;\n  background: transparent;\n  color: #5d497d;\n  max-width: none;\n  max-height: none;\n  width: 100%;\n  height: 100dvh;\n  inset: 0;\n  margin: 0;\n  overflow: auto;\n  font-family: inherit;\n}\n#squishy-pop::backdrop {\n  background: #46345495;\n  backdrop-filter: blur(9px);\n}\n#squishy-pop * {\n  box-sizing: border-box;\n}\n#squishy-pop button {\n  font: inherit;\n  cursor: pointer;\n  min-height: 44px;\n  color: #654e83;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: linear-gradient(#ffe1ef, #f9aed5);\n  font-weight: 800;\n  padding: 9px 17px;\n  box-shadow: 0 3px 0 #c997c136;\n}\n#squishy-pop button:active {\n  transform: scale(.96);\n}\n#squishy-pop button:focus-visible {\n  outline: 3px solid #8a5fb4;\n  outline-offset: 2px;\n}\n.pop-shell {\n  width: min(100%, 480px);\n  min-height: 100%;\n  margin: auto;\n  padding: max(16px, env(safe-area-inset-top)) 18px max(14px, env(safe-area-inset-bottom));\n  background:\n    radial-gradient(\n      ellipse at 10% 45%,\n      #fff5d2aa,\n      transparent 60%),\n    linear-gradient(\n      155deg,\n      #fff8f1f5,\n      #f1e5fff5 60%,\n      #ffe9f1f5);\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 14px;\n}\n.pop-title {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.pop-title > div {\n  flex: 1;\n}\n.pop-title small {\n  font-size: 9px;\n  letter-spacing: 2px;\n}\n.pop-title h2 {\n  font-size: 30px;\n  letter-spacing: -1px;\n  line-height: 1.1;\n  margin: 6px 0;\n  font-weight: 1000;\n  color: #9878b9;\n  text-shadow: 0 2px 0 white;\n}\n.pop-title em {\n  font-style: normal;\n  color: #ed83b0;\n}\n.pop-title button {\n  width: 44px;\n  padding: 5px !important;\n  background: #ffffffad !important;\n}\n.pop-stats {\n  display: grid;\n  grid-template-columns: 1fr 1.1fr 1.1fr;\n  gap: 8px;\n}\n.pop-stats > div {\n  border-radius: 22px;\n  padding: 11px 5px;\n  background: #ffffffc7;\n  border: 2px solid #fff;\n  text-align: center;\n  box-shadow: 0 4px 0 #cbb4e227;\n}\n.pop-stats small {\n  display: block;\n  font-size: 10px;\n  letter-spacing: 1.6px;\n  color: #957bad;\n  font-weight: 800;\n}\n.pop-stats strong {\n  display: block;\n  font-size: 27px;\n  line-height: 1.3;\n}\n.pop-stats progress {\n  height: 6px;\n  width: 65%;\n  display: block;\n  margin: 4px auto 0;\n}\n.pop-tray {\n  position: relative;\n  border: 6px solid #f6eeff;\n  border-radius: 35px;\n  background:\n    linear-gradient(\n      135deg,\n      #d1b9ee,\n      #c4a6df);\n  padding: 9px;\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #bca1d8,\n    0 14px 25px #76609330;\n  isolation: isolate;\n}\n.pop-tray canvas {\n  width: 100%;\n  aspect-ratio: 1;\n  display: block;\n  touch-action: none;\n  border-radius: 21px;\n  background:\n    radial-gradient(\n      ellipse,\n      #fff2 40%,\n      transparent 70%);\n  user-select: none;\n}\n.pop-feedback {\n  position: absolute;\n  pointer-events: none;\n  inset: 40% 0 auto;\n  text-align: center;\n  font-size: 29px;\n  font-weight: 1000;\n  color: #ec65a9;\n  text-shadow:\n    2px 3px white,\n    -2px -2px white,\n    0 4px 6px #8a5fad;\n  transform: rotate(-6deg);\n  z-index: 2;\n}\n.pop-cover {\n  position: absolute;\n  inset: 0;\n  z-index: 3;\n  border-radius: 28px;\n  background: #fff5f2ef;\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  align-items: center;\n  text-align: center;\n  gap: 10px;\n  padding: 20px;\n  backdrop-filter: blur(4px);\n}\n.pop-cover[hidden] {\n  display: none;\n}\n.pop-cover h3 {\n  font-size: 23px;\n  line-height: 1.2;\n  margin: 0;\n}\n.pop-cover p {\n  font-size: 12px;\n  margin: 0;\n  max-width: 260px;\n}\n.pop-cover button {\n  width: 85%;\n  font-size: 14px !important;\n}\n.pop-cover .pop-link {\n  border: 0;\n  background: none;\n  box-shadow: none;\n  font-size: 12px !important;\n}\n.pop-count {\n  font-size: 80px;\n  color: #e778af;\n  animation: pop-count .8s infinite;\n}\n.pop-demo {\n  position: relative;\n  display: flex;\n  gap: 15px;\n  padding: 8px 10px 25px;\n  font-size: 40px;\n  color: #ec87b6;\n}\n.pop-demo b {\n  position: absolute;\n  left: 10%;\n  bottom: 0;\n  font-size: 32px;\n  animation: pop-finger 2s infinite;\n}\n.pop-frenzy {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 10px;\n  letter-spacing: 1px;\n  font-weight: 900;\n  margin-top: 3px;\n}\n.pop-frenzy progress {\n  flex: 1;\n  min-width: 0;\n}\n.pop-frenzy b {\n  color: #e788b5;\n}\n.pop-hint {\n  text-align: center;\n  font-size: 14px;\n  font-weight: 700;\n  margin: 0;\n}\n.pop-friends {\n  display: flex;\n  justify-content: center;\n  gap: 7px;\n}\n.pop-friends span {\n  width: 40px;\n  text-align: center;\n}\n.pop-friends img {\n  width: 40px;\n  height: 35px;\n  object-fit: contain;\n  display: block;\n}\n.pop-friends small {\n  font-size: 9px;\n  color: #b18a52;\n  display: block;\n}\n.pop-footer {\n  text-align: center;\n  font-size: 10px;\n  color: #a58fb0;\n  letter-spacing: 1px;\n}\n.pop-result-star {\n  font-size: 35px;\n  color: #f5c960;\n}\n.pop-result-numbers {\n  display: flex;\n  justify-content: space-around;\n  width: 100%;\n  font-size: 11px;\n}\n.pop-result-numbers b {\n  display: block;\n  font-size: 24px;\n}\n.pop-ticket-prize {\n  font-size: 15px;\n  color: #d26f9f;\n}\n.pop-cover progress {\n  width: 70%;\n  height: 9px;\n}\n#squishy-pop progress {\n  appearance: none;\n  border: 0;\n  border-radius: 20px;\n  background: #e1d4ed;\n  height: 9px;\n  overflow: hidden;\n}\n#squishy-pop progress::-webkit-progress-bar {\n  background: #e1d4ed;\n  border-radius: 20px;\n}\n#squishy-pop progress::-webkit-progress-value {\n  background:\n    linear-gradient(\n      90deg,\n      #bd95e0,\n      #f49abe);\n  border-radius: 20px;\n  transition: width .2s;\n}\n.urgent {\n  color: #df608a;\n  animation: pop-count 1s infinite;\n}\n@keyframes pop-finger {\n  0%, 15% {\n    left: 10%;\n  }\n  70%, 100% {\n    left: 75%;\n  }\n}\n@keyframes pop-count {\n  0% {\n    transform: scale(1.08);\n  }\n  70% {\n    transform: scale(1);\n  }\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 9px;\n    padding: 10px 15px;\n  }\n  .pop-title h2 {\n    font-size: 25px;\n  }\n  .pop-stats > div {\n    padding: 7px 3px;\n  }\n  .pop-stats strong {\n    font-size: 23px;\n  }\n  .pop-friends {\n    display: none;\n  }\n  .pop-footer {\n    display: none;\n  }\n  .pop-tray {\n    border-width: 5px;\n    padding: 6px;\n  }\n  .pop-cover {\n    gap: 7px;\n    padding: 10px;\n  }\n  .pop-cover h3 {\n    font-size: 20px;\n  }\n  .pop-result-star {\n    display: none;\n  }\n}\n@media (min-width: 500px) {\n  .pop-shell {\n    max-width: min(480px, 70dvh);\n    border-radius: 32px;\n    min-height: 0;\n    margin: 20px auto;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #squishy-pop * {\n    animation: none !important;\n  }\n}\n.pop-demo img {\n  width: 58px;\n  height: 58px;\n  object-fit: contain;\n}\n.pop-demo:before {\n  content: "";\n  position: absolute;\n  height: 5px;\n  background: #ffaad4;\n  left: 25px;\n  right: 25px;\n  top: 45%;\n  z-index: -1;\n  border-radius: 10px;\n}\n.pop-demo {\n  isolation: isolate;\n}\n.is-frenzy .pop-tray {\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #e7afd5,\n    0 0 30px #ffb8d5;\n}\n.is-frenzy .pop-frenzy {\n  color: #cf639e;\n}\n.pop-launch[hidden] {\n  display: none;\n}\n.pop-cover .pop-result-star {\n  animation: pop-count .8s 2;\n}\n#squishy-pop {\n  font-family:\n    "Trebuchet MS",\n    "Arial Rounded MT Bold",\n    Arial,\n    sans-serif;\n}\n[data-tickets] {\n  background-repeat: no-repeat;\n  background-position: calc(50% - 15px) center;\n  background-size: 35px;\n  padding-left: 26px;\n}\n.pop-launch {\n  animation: pop-entrance .3s ease-out;\n}\n@keyframes pop-entrance {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n.pop-frenzy span {\n  padding: 7px 0 7px 24px;\n  background-repeat: no-repeat;\n  background-position: left center;\n  background-size: 25px;\n}\n#squishy-pop[open] .pop-shell {\n  animation: pop-entrance .2s ease-out;\n}\n.pop-chain-cue {\n  position: absolute;\n  z-index: 4;\n  transform: translate(-50%, -100%);\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 5px 10px 5px 5px;\n  border: 2px solid white;\n  border-radius: 22px;\n  background: #fff6fc;\n  color: #6c4487;\n  box-shadow: 0 3px 12px #855a9955;\n  pointer-events: none;\n  white-space: nowrap;\n  font-size: 11px;\n  font-weight: 800;\n}\n.pop-chain-cue[hidden] {\n  display: none;\n}\n.pop-chain-cue > b {\n  display: grid;\n  place-items: center;\n  background: #e88bbb;\n  color: white;\n  border-radius: 50%;\n  width: 30px;\n  height: 30px;\n  font-size: 20px;\n}\n.pop-chain-cue span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-chain-cue img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n}\n.pop-chain-cue.pulse > b {\n  animation: pop-count .22s ease-out;\n}\n.pop-feedback {\n  inset: 3px 0 auto;\n  font-size: 22px;\n  transform: none;\n  line-height: 1.2;\n}\n.is-frenzy .pop-tray {\n  border-color: #fff0b5;\n  box-shadow:\n    inset 0 4px 10px #9973bb40,\n    0 7px 0 #e6a6d6,\n    0 0 24px #ffc8d7;\n}\n.is-frenzy .pop-frenzy {\n  background: #fff6d4;\n  border-radius: 18px;\n  padding: 3px 8px;\n}\n.pop-frenzy b {\n  min-width: 46px;\n  text-align: right;\n}\n.pop-hint {\n  font-size: 13px;\n  min-height: 18px;\n}\n.pop-previous-best {\n  font-size: 11px;\n  color: #957aac;\n}\n.pop-ticket-flight {\n  height: 34px;\n  width: 100%;\n  position: relative;\n  overflow: hidden;\n}\n.pop-ticket-flight img {\n  position: absolute;\n  left: calc(18% + var(--i)*8%);\n  width: 35px;\n  height: 28px;\n  object-fit: contain;\n  animation: pop-ticket-bank .95s calc(var(--i)*.07s) both;\n}\n.pop-ticket-prize {\n  font-size: 17px;\n}\n@keyframes pop-ticket-bank {\n  0% {\n    transform: translateY(23px) rotate(-18deg);\n    opacity: 0;\n  }\n  30% {\n    opacity: 1;\n  }\n  70% {\n    transform: translateY(-4px) rotate(8deg);\n    opacity: 1;\n  }\n  100% {\n    transform: translateY(8px) scale(.65);\n    opacity: 0;\n  }\n}\n.showing-results .pop-stats,\n.showing-results .pop-frenzy,\n.showing-results .pop-hint,\n.showing-results .pop-friends {\n  display: none;\n}\n.showing-results .pop-tray {\n  height: min(480px, calc(100dvh - 140px));\n  flex-shrink: 0;\n}\n.showing-results .pop-tray canvas {\n  position: absolute;\n  visibility: hidden;\n}\n.showing-results .pop-cover {\n  gap: 12px;\n  padding: 18px;\n  overflow: auto;\n}\n.showing-results .pop-cover h3 {\n  font-size: 24px;\n}\n.showing-results .pop-result-star {\n  display: block;\n  line-height: 1;\n  font-size: 32px;\n}\n.showing-results .pop-cover button {\n  flex-shrink: 0;\n  min-height: 44px;\n}\n.showing-results .pop-cover p {\n  line-height: 1.4;\n}\n@media (max-height: 700px) {\n  .showing-results .pop-cover {\n    gap: 8px;\n    padding: 12px;\n  }\n  .showing-results .pop-cover h3 {\n    font-size: 21px;\n  }\n  .showing-results .pop-result-star {\n    font-size: 24px;\n  }\n  .pop-chain-cue {\n    font-size: 10px;\n  }\n  .pop-feedback {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .pop-ticket-flight img {\n    animation: none;\n    opacity: 1;\n  }\n  .pop-chain-cue.pulse > b {\n    animation: none;\n  }\n}\n@media (max-width: 360px) {\n  .pop-title {\n    gap: 5px;\n  }\n  .pop-title > div {\n    min-width: 0;\n  }\n  .pop-title small {\n    font-size: 7px;\n    letter-spacing: .6px;\n  }\n  .pop-title h2 {\n    font-size: 20px;\n  }\n  .showing-results .pop-tray {\n    height: calc(100dvh - 145px);\n  }\n}\n#squishy-pop-shortcut {\n  pointer-events: auto;\n  border: 2px solid #fff;\n  border-radius: 22px;\n  padding: 9px 14px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe6f0,\n      #efb5dd);\n  color: #604c80;\n  font: 800 13px "Trebuchet MS", sans-serif;\n  box-shadow: 0 3px 10px #72538b26;\n  cursor: pointer;\n}\n#squishy-pop-shortcut:hover {\n  background: #f6c7e5;\n}\n#squishy-pop-shortcut:focus-visible {\n  outline: 3px solid #7855ae;\n  outline-offset: 3px;\n}\n@media (max-width: 600px) {\n  footer .asset-credits {\n    display: none;\n  }\n  #squishy-pop-shortcut {\n    font-size: 11px;\n    padding: 8px 10px;\n  }\n}\n#squishy-pop-shortcut {\n  min-height: 44px;\n}\n.pop-result-actions {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 8px;\n  width: 100%;\n}\n.pop-cover .pop-result-actions button {\n  width: 100%;\n  font-size: 12px !important;\n  padding: 8px;\n  line-height: 1.2;\n}\n.pop-result-actions button:first-child:last-child {\n  grid-column: 1/-1;\n}\n.pop-goals {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  padding: 7px 9px;\n  border: 2px solid white;\n  border-radius: 18px;\n  background: #fff6dc;\n  font-size: 12px;\n  font-weight: 800;\n  flex-wrap: wrap;\n}\n.pop-goals[hidden],\n.showing-results .pop-goals {\n  display: none;\n}\n.pop-goals small {\n  font-size: 9px;\n  color: #9878b9;\n}\n.pop-goals span,\n.pop-objectives span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-goals img,\n.pop-objectives img,\n.pop-previous-best img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n  vertical-align: middle;\n}\n.pop-goals .done {\n  color: #487865;\n}\n.pop-level-list {\n  display: flex;\n  flex-direction: column;\n  gap: 9px;\n  width: 100%;\n}\n.pop-level-list button {\n  width: 100%;\n  text-align: left;\n}\n.pop-level-list small {\n  display: block;\n  margin-top: 4px;\n  font-size: 11px;\n  font-weight: 600;\n}\n#squishy-pop button:disabled {\n  opacity: .55;\n  cursor: default;\n  transform: none;\n  background: #e5dfeb;\n}\n.pop-objectives {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 12px;\n  padding: 12px;\n  font-size: 18px;\n  font-weight: 800;\n}\n.showing-results .pop-cover {\n  justify-content: flex-start;\n}\n.showing-results .pop-cover > h3:first-child {\n  margin-top: 8px;\n}\n.pop-previous-best {\n  line-height: 1.5;\n}\n.showing-results .pop-cover > * {\n  flex-shrink: 0;\n}\n.showing-results .pop-cover .pop-link {\n  min-height: 44px;\n  padding: 7px;\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 7px;\n  }\n  .pop-goals {\n    font-size: 11px;\n    padding: 4px 6px;\n    gap: 5px;\n  }\n  .pop-goals img {\n    width: 24px;\n    height: 24px;\n  }\n  .showing-results .pop-cover {\n    gap: 7px;\n  }\n  .pop-level-list {\n    gap: 6px;\n  }\n}\n.pop-prizes {\n  min-height: 44px !important;\n  width: auto !important;\n  padding: 5px 10px !important;\n  font-size: 12px !important;\n}\n.pop-feedback[data-tier=great] {\n  font-size: clamp(22px, 6vw, 32px);\n  color: #fff6a0;\n  text-shadow: 0 3px 0 #7d4690, 0 0 18px #fff;\n}\n.pop-feedback[data-tier=super] {\n  font-size: clamp(26px, 7vw, 38px);\n  color: #fff;\n  border: 3px solid #ffdf65;\n  border-radius: 20px;\n  background: #9554bde8;\n  padding: 12px;\n  box-shadow: 0 0 24px #ffda6a;\n}\n.pop-feedback[data-tier=rainbow] {\n  font-size: clamp(24px, 6.5vw, 36px);\n  color: #fff;\n  background:\n    linear-gradient(\n      110deg,\n      #ea76a7,\n      #d0a554,\n      #61bca4,\n      #618ddb,\n      #a278c8);\n  border: 3px solid white;\n  border-radius: 20px;\n  padding: 12px;\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-tray[data-celebration=super] {\n  box-shadow: 0 0 0 5px #ffe393, 0 0 35px #f1abde;\n}\n.pop-tray[data-celebration=rainbow] {\n  box-shadow:\n    -10px 0 24px #ff9cad,\n    0 -8px 24px #fff09e,\n    10px 0 24px #98daff,\n    0 8px 24px #b5a1ff;\n}\n.pop-feedback[hidden] {\n  display: none;\n}\n.pop-feedback[data-tier=great],\n.pop-feedback[data-tier=super],\n.pop-feedback[data-tier=rainbow] {\n  animation: pop-reward .32s ease-out;\n}\n@keyframes pop-reward {\n  from {\n    transform: translateY(8px) scale(.88);\n    opacity: .5;\n  }\n  to {\n    transform: none;\n    opacity: 1;\n  }\n}\n.pop-feedback[data-tier=super] {\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-launch {\n  position: absolute;\n  top: 175px;\n  bottom: auto;\n  left: 18px;\n  transform: none;\n  width: auto;\n  max-width: 180px;\n  padding: 9px 13px;\n  font-size: 12px;\n  border-width: 2px;\n  box-shadow: 0 3px 10px #4f3b6220;\n}\n.pop-launch small {\n  display: none;\n}\n@media (max-height: 650px) {\n  .pop-launch {\n    top: 135px;\n  }\n}\n\n/* src/ui/ticket-shop.css */\n#ticket-shop {\n  width: min(92vw, 520px);\n  max-height: 88dvh;\n  overflow: auto;\n  border: 3px solid #efb6d2;\n  border-radius: 26px;\n  background: #fff8ed;\n  color: #604861;\n  padding: 22px;\n  text-align: center;\n}\n#ticket-shop::backdrop {\n  background: #403347a8;\n}\n.ticket-prizes {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px;\n  margin: 16px 0;\n}\n.ticket-prizes article {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 10px;\n  border-radius: 18px;\n  background: #f1e7fa;\n}\n.ticket-prizes img {\n  width: 96px;\n  height: 96px;\n  object-fit: contain;\n}\n#ticket-shop button {\n  min-height: 44px;\n  border: 0;\n  border-radius: 16px;\n  padding: 10px 14px;\n  background: #805ba6;\n  color: white;\n  font-weight: 700;\n  cursor: pointer;\n}\n#ticket-shop button:disabled {\n  background: #d3c4d5;\n  color: #665b69;\n  cursor: default;\n}\n#ticket-shop [data-close] {\n  display: block;\n  width: 100%;\n  margin-top: 16px;\n}\n#ticket-shop [role=status] {\n  font-weight: 700;\n  color: #566b40;\n}\n#travel-next-store {\n  position: absolute;\n  right: 12px;\n  top: 175px;\n  z-index: 12;\n  max-width: 170px;\n  min-height: 44px;\n  border: 2px solid #d9c5ec;\n  border-radius: 15px;\n  padding: 8px 12px;\n  background: #fff4e6;\n  color: #604861;\n  font-weight: 700;\n}\n#ticket-shop {\n  box-sizing: border-box;\n}\n#ticket-shop [data-close] {\n  position: sticky;\n  bottom: 0;\n  box-shadow: 0 0 0 5px #fff8ed;\n}\n.ticket-prizes article {\n  min-width: 0;\n}\n.ticket-prizes button {\n  width: 100%;\n}\n@media (max-width: 360px) {\n  #ticket-shop {\n    padding: 14px;\n  }\n  .ticket-prizes {\n    gap: 8px;\n  }\n  .ticket-prizes img {\n    width: 76px;\n    height: 76px;\n  }\n  .ticket-prizes article {\n    padding: 8px;\n  }\n  .ticket-prizes button {\n    padding: 8px;\n    font-size: 12px;\n  }\n}\n#ticket-shop [data-close] {\n  top: 0;\n  bottom: auto;\n  z-index: 2;\n}\n\n/* src/ui/tornado.css */\n#game[data-tornado] .room-title,\n#game[data-tornado] #cleanup-effects,\n#game[data-tornado] #house-doors,\n#game[data-tornado] #move-tip,\n#game[data-tornado] .mission-stats {\n  visibility: hidden;\n}\n#tornado-hud {\n  position: absolute;\n  z-index: 8;\n  top: 110px;\n  left: 22px;\n  width: min(340px, calc(100% - 44px));\n  padding: 15px 18px;\n  border: 2px solid #fff9;\n  border-radius: 23px;\n  background: #fff9f1ef;\n  color: #59476e;\n  box-shadow: 0 8px 25px #52416620;\n  pointer-events: none;\n  box-sizing: border-box;\n}\n#tornado-hud[hidden] {\n  display: none;\n}\n#tornado-hud header {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n#tornado-hud small {\n  font-size: 8px;\n  letter-spacing: 1.6px;\n  color: #907ca6;\n}\n#tornado-hud h2 {\n  font-size: 23px;\n  margin: 3px 0 10px;\n}\n#tornado-hud [data-time] {\n  font-size: 28px;\n  font-variant-numeric: tabular-nums;\n  margin-left: auto;\n}\n#tornado-hud [data-sound] {\n  pointer-events: auto;\n  border: 0;\n  background: #ece0f3;\n  color: #69517e;\n  border-radius: 50%;\n  width: 32px;\n  height: 32px;\n  cursor: pointer;\n}\n.tornado-meter-row,\n.tornado-score {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  font-size: 11px;\n}\n.tornado-score {\n  margin-top: 7px;\n  color: #71865c;\n}\n.tornado-score [data-streak] {\n  color: #a65585;\n  font-size: 10px;\n}\n#tornado-hud meter {\n  display: block;\n  width: 100%;\n  height: 17px;\n  margin-top: 4px;\n}\n#tornado-hud meter::-webkit-meter-bar {\n  background: #eee5f3;\n  border: 0;\n  border-radius: 10px;\n}\n#tornado-hud meter::-webkit-meter-optimum-value {\n  background:\n    linear-gradient(\n      90deg,\n      #c3cde8,\n      #e8adbe);\n  border-radius: 10px;\n}\n#tornado-hud p {\n  font-size: 11px;\n  line-height: 1.4;\n  min-height: 30px;\n  margin: 9px 0 0;\n}\n#tornado-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n  z-index: 7;\n}\n.tornado-marker {\n  position: absolute;\n  font-size: 24px;\n  border: 2px solid #fff;\n  background: #fff4d9ed;\n  box-shadow: 0 4px 12px #71603c30;\n  border-radius: 14px;\n  padding: 3px 7px;\n}\n.tornado-marker.near {\n  background: #dcf3c8;\n  box-shadow: 0 0 20px #fff3a1;\n}\n.tornado-marker.edge::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #9c729d;\n  transform: translate(-50%, -50%) rotate(var(--angle)) translateX(32px);\n}\n.tornado-sparkles {\n  position: absolute;\n  color: #8a599f;\n  text-shadow: 0 2px #fff;\n  font-weight: bold;\n  font-size: 26px;\n  animation: tornado-pop 1s ease-out forwards;\n  white-space: nowrap;\n}\n@keyframes tornado-pop {\n  from {\n    transform: translate(-50%, 0) scale(.6);\n  }\n  50% {\n    opacity: 1;\n  }\n  to {\n    transform: translate(-50%, -80px) scale(1.2);\n    opacity: 0;\n  }\n}\n#tornado-dialog {\n  box-sizing: border-box;\n  width: min(430px, calc(100% - 28px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  padding: 28px;\n  border: 2px solid white;\n  border-radius: 28px;\n  background: #fff8f1;\n  color: #5c4773;\n  text-align: center;\n  box-shadow: 0 20px 80px #51416650;\n}\n#tornado-dialog::backdrop {\n  background: #594d7666;\n  backdrop-filter: blur(3px);\n}\n#tornado-dialog small {\n  font-size: 9px;\n  letter-spacing: 1.4px;\n}\n#tornado-dialog h2 {\n  font-size: 29px;\n  line-height: 1.1;\n  margin: 12px 0;\n}\n#tornado-dialog p {\n  font-size: 14px;\n  line-height: 1.6;\n  color: #8b7094;\n}\n.tornado-emblem {\n  font-size: 60px;\n}\n.tornado-stars {\n  font-size: 48px;\n  color: #e4ae4e;\n  letter-spacing: 7px;\n}\n.tornado-instructions {\n  display: grid;\n  gap: 10px;\n  background: #efe6f4;\n  padding: 16px;\n  border-radius: 18px;\n  text-align: left;\n}\n.tornado-totals {\n  display: flex;\n  justify-content: space-around;\n  background: #efe6f4;\n  padding: 16px 4px;\n  border-radius: 18px;\n  font-size: 11px;\n}\n.tornado-totals b {\n  display: block;\n  font-size: 25px;\n  margin-bottom: 5px;\n}\n#tornado-dialog button {\n  display: block;\n  width: 100%;\n  padding: 14px;\n  border: 2px solid white;\n  border-radius: 16px;\n  margin-top: 10px;\n  background: #b8cfae;\n  color: #466240;\n  font: 700 16px system-ui;\n  cursor: pointer;\n}\n#tornado-dialog button.secondary {\n  background: #eee3f1;\n  color: #705285;\n}\n#tornado-dialog .tornado-earned {\n  color: #5b824e;\n  font-weight: bold;\n}\n@media (max-width: 500px) {\n  #tornado-hud {\n    top: 87px;\n    left: 12px;\n    width: calc(100% - 24px);\n    padding: 10px 13px;\n  }\n  #tornado-hud h2 {\n    font-size: 20px;\n    margin-bottom: 5px;\n  }\n  #tornado-hud p {\n    min-height: 16px;\n    margin-top: 5px;\n  }\n  #tornado-hud [data-time] {\n    font-size: 25px;\n  }\n  .tornado-marker {\n    font-size: 20px;\n  }\n}\n@media (max-height: 600px) and (orientation: landscape) {\n  #tornado-hud {\n    top: 80px;\n    width: 275px;\n    padding: 9px 12px;\n  }\n  #tornado-hud p {\n    min-height: 0;\n  }\n  #tornado-hud h2 {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .tornado-sparkles {\n    animation: none;\n  }\n}\n\n/* src/ui/styles.css */\n:root {\n  font-family:\n    "Trebuchet MS",\n    ui-rounded,\n    system-ui,\n    sans-serif;\n  color: #51466a;\n  background: #ede6f4;\n  font-synthesis: none;\n  -webkit-tap-highlight-color: transparent;\n}\n* {\n  box-sizing: border-box;\n}\nhtml,\nbody,\n#game {\n  margin: 0;\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  overscroll-behavior: none;\n}\nbody {\n  position: fixed;\n  inset: 0;\n}\n#game {\n  height: 100dvh;\n  position: relative;\n  isolation: isolate;\n  user-select: none;\n  -webkit-user-select: none;\n}\n#game-canvas {\n  display: block;\n  width: 100%;\n  height: 100%;\n  outline: none;\n  touch-action: none;\n}\n#game-canvas:focus-visible {\n  outline: 3px solid #9b86bd;\n  outline-offset: -3px;\n}\n.topbar {\n  position: absolute;\n  top: max(22px, env(safe-area-inset-top));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.wordmark {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  font-size: 26px;\n  font-weight: 800;\n  letter-spacing: -1px;\n}\n.wordmark small {\n  display: block;\n  font-size: 7px;\n  letter-spacing: 1.8px;\n  margin-top: 2px;\n  font-weight: 700;\n}\n.flower {\n  color: #a18abd;\n  font-size: 43px;\n  line-height: 1;\n}\n.chapter {\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: 2px;\n}\n.chapter span {\n  color: #b8a8c9;\n  margin: 0 5px;\n}\n.room-title {\n  position: absolute;\n  top: 14%;\n  width: 100%;\n  text-align: center;\n  pointer-events: none;\n}\n.eyebrow {\n  font-size: 9px;\n  letter-spacing: 2.3px;\n  font-weight: 700;\n  color: #8c7a9f;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 7px;\n}\n.eyebrow i {\n  width: 5px;\n  height: 5px;\n  border-radius: 50%;\n  background: #90ac95;\n}\nh1 {\n  font-size: clamp(26px, 4vw, 37px);\n  letter-spacing: -1.2px;\n  margin: 10px 0 7px;\n  font-weight: 800;\n}\n.room-title p {\n  font-size: 12px;\n  color: #8c7a9f;\n  margin: 0;\n}\n.player-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  padding: 5px 10px;\n  background: #fffaf4ee;\n  border: 1px solid #fff;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 800;\n  pointer-events: none;\n  box-shadow: 0 3px 10px #71608518;\n  will-change: transform;\n}\n.player-label span {\n  color: #d592ad;\n  margin-left: 4px;\n}\n.room-caption {\n  position: absolute;\n  bottom: 26%;\n  width: 100%;\n  text-align: center;\n  font-size: 10px;\n  letter-spacing: .5px;\n  color: #9e8db0;\n  pointer-events: none;\n}\n.room-caption span {\n  margin: 0 12px;\n  color: #b9a3cc;\n}\n.move-tip {\n  position: absolute;\n  bottom: 19%;\n  left: 50%;\n  transform: translateX(-50%);\n  display: flex;\n  gap: 10px;\n  align-items: center;\n  width: max-content;\n  max-width: calc(100% - 36px);\n  transition: opacity .6s;\n  pointer-events: none;\n}\n.tip-icon {\n  display: grid;\n  place-items: center;\n  width: 34px;\n  height: 34px;\n  background: #fbf7fcbb;\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  font-size: 22px;\n  color: #a389bb;\n}\n.move-tip strong,\n.move-tip div > span {\n  display: block;\n}\n.move-tip strong {\n  font-size: 12px;\n  margin-bottom: 3px;\n}\n.move-tip div > span {\n  font-size: 10px;\n  color: #9686a7;\n}\n.move-tip.explored {\n  opacity: 0;\n}\n.controls {\n  position: absolute;\n  left: max(27px, env(safe-area-inset-left));\n  right: max(27px, env(safe-area-inset-right));\n  bottom: max(42px, calc(env(safe-area-inset-bottom) + 24px));\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.joystick-group {\n  text-align: center;\n  pointer-events: auto;\n}\n#joystick {\n  position: relative;\n  width: 120px;\n  height: 120px;\n  border: 2px solid #fff9;\n  background:\n    linear-gradient(\n      140deg,\n      #fffc,\n      #ded1ec99);\n  border-radius: 50%;\n  box-shadow: 0 7px 22px #82709516, inset 0 1px 8px #fff8;\n  touch-action: none;\n  cursor: grab;\n}\n#joystick.dragging {\n  cursor: grabbing;\n}\n#joystick-knob {\n  position: absolute;\n  left: 34px;\n  top: 34px;\n  width: 48px;\n  height: 48px;\n  border-radius: 50%;\n  border: 2px solid #fff;\n  background:\n    linear-gradient(\n      145deg,\n      #cdbce5,\n      #aa93c9);\n  box-shadow: 0 5px 8px #6c51813b;\n  pointer-events: none;\n  display: grid;\n  place-items: center;\n  will-change: transform;\n}\n#joystick-knob svg {\n  width: 22px;\n  height: 22px;\n  fill: none;\n  stroke: #fff;\n  stroke-width: 2;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n  opacity: .8;\n}\n.direction {\n  position: absolute;\n  color: #ae9abd;\n  font-size: 22px;\n  line-height: 20px;\n}\n.up {\n  top: 5px;\n  left: 51px;\n}\n.down {\n  bottom: 7px;\n  left: 51px;\n}\n.left {\n  top: 47px;\n  left: 9px;\n}\n.right {\n  top: 47px;\n  right: 9px;\n}\n.control-label {\n  display: block;\n  font-size: 8px;\n  letter-spacing: 1.5px;\n  font-weight: 800;\n  color: #9581a8;\n  margin-top: 11px;\n}\n.explore-note {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  margin-top: 30px;\n  color: #8f7ba3;\n}\n.tiny-house {\n  font-size: 31px;\n  color: #ad98bd;\n}\n.explore-note > span:last-child {\n  font-size: 12px;\n  font-weight: 700;\n}\n.explore-note small {\n  display: block;\n  font-size: 9px;\n  font-weight: 400;\n  margin-top: 5px;\n}\nfooter {\n  position: absolute;\n  bottom: max(12px, env(safe-area-inset-bottom));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  font-size: 8px;\n  color: #a591b7;\n  letter-spacing: .6px;\n  pointer-events: none;\n}\n.build-badge {\n  font-size: 7px;\n  letter-spacing: 1.4px;\n}\n.keyboard-hint {\n  font-size: 8px;\n}\n#loading,\n#error {\n  position: absolute;\n  inset: 0;\n  background: #ede6f4;\n  display: grid;\n  place-content: center;\n  text-align: center;\n  padding: 32px;\n  z-index: 9;\n}\n#loading .loading-flower {\n  font-size: 60px;\n  color: #a18abd;\n  animation: breathe 1.2s infinite alternate;\n}\n#loading p {\n  font-size: 14px;\n}\n#error[hidden] {\n  display: none;\n}\n#error h2 {\n  font-size: 22px;\n}\n#error p {\n  font-size: 14px;\n  max-width: 320px;\n  line-height: 1.6;\n}\n@keyframes breathe {\n  to {\n    transform: scale(.85);\n    opacity: .5;\n  }\n}\n@media (min-width: 700px) {\n  .topbar {\n    left: 40px;\n    right: 40px;\n    top: 28px;\n  }\n  .room-title {\n    top: 12%;\n  }\n  .controls {\n    left: 45px;\n    right: 45px;\n    bottom: 50px;\n  }\n  .room-caption {\n    bottom: 15%;\n  }\n  .move-tip {\n    bottom: 7%;\n  }\n  .explore-note {\n    margin-top: 0;\n  }\n  footer {\n    left: 40px;\n    right: 40px;\n  }\n  .keyboard-hint {\n    font-size: 10px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .topbar {\n    top: 14px;\n  }\n  .room-title {\n    top: 13%;\n  }\n  h1 {\n    font-size: 25px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: 23%;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n  .keyboard-hint {\n    display: none;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .room-title {\n    top: 24%;\n    text-align: left;\n    padding-left: 28px;\n    width: 220px;\n  }\n  .eyebrow {\n    justify-content: flex-start;\n    font-size: 7px;\n    letter-spacing: 1px;\n  }\n  h1 {\n    font-size: 24px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .topbar {\n    top: 14px;\n  }\n  .room-caption,\n  .move-tip,\n  .explore-note {\n    display: none;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  .wordmark {\n    font-size: 21px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #loading .loading-flower {\n    animation: none;\n  }\n  .move-tip {\n    transition: none;\n  }\n}\n@media (max-width: 699px) {\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: calc(max(42px, env(safe-area-inset-bottom)) + 156px);\n  }\n}\n@media (max-width: 380px) {\n  .topbar {\n    left: 18px;\n    right: 18px;\n  }\n  .wordmark {\n    font-size: 24px;\n  }\n  .wordmark small {\n    font-size: 6px;\n    letter-spacing: 1.2px;\n    white-space: nowrap;\n  }\n  .chapter {\n    font-size: 8px;\n    letter-spacing: 1px;\n    white-space: nowrap;\n  }\n  .eyebrow {\n    font-size: 7px;\n    letter-spacing: 1.6px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n  .explore-note {\n    max-width: 125px;\n  }\n  .room-title {\n    top: 15%;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n}\n#house-music {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 10px;\n  line-height: 1.2;\n  padding: 8px;\n  min-height: 40px;\n  min-width: 54px;\n  cursor: pointer;\n}\nfooter {\n  gap: 6px;\n}\nfooter .keyboard-hint {\n  display: none;\n}\n@media (max-width: 380px) {\n  footer {\n    left: 12px;\n    right: 12px;\n  }\n  #collection-button {\n    font-size: 9px !important;\n  }\n}\n#audio-settings {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 11px;\n  padding: 8px;\n  min-height: 40px;\n  cursor: pointer;\n}\n.audio-settings {\n  width: min(340px, 85vw);\n  border: 0;\n  border-radius: 22px;\n  background: #fff9f1;\n  color: #534565;\n  padding: 24px;\n  font-family: inherit;\n}\n.audio-settings::backdrop {\n  background: #30283880;\n}\n.audio-settings label {\n  display: block;\n  margin: 22px 0;\n  font-weight: 700;\n}\n.audio-settings output {\n  float: right;\n}\n.audio-settings input {\n  display: block;\n  width: 100%;\n  height: 40px;\n  accent-color: #9873b5;\n}\n.audio-settings button {\n  min-height: 44px;\n  width: 100%;\n  border: 0;\n  border-radius: 15px;\n  background: #e1d1ed;\n  color: #493659;\n  font-weight: 700;\n}\n.audio-settings p {\n  font-size: 12px;\n}\nfooter {\n  flex-wrap: wrap;\n}\n.audio-settings {\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  box-sizing: border-box;\n}\n.audio-mutes {\n  display: flex;\n  gap: 8px;\n}\n.audio-mutes button {\n  flex: 1;\n  width: auto !important;\n}\n.audio-settings summary {\n  font-size: 13px;\n  cursor: pointer;\n}\n.audio-settings details p {\n  line-height: 1.5;\n}\n@media (max-height: 650px) {\n  .audio-settings {\n    padding: 16px;\n  }\n  .audio-settings h2 {\n    font-size: 20px;\n    margin: 0 0 10px;\n  }\n  .audio-settings label {\n    margin: 10px 0;\n  }\n}\n#game[data-scene=recess] .room-title {\n  top: 84px;\n  left: 18px;\n  right: auto;\n  width: auto;\n  max-width: 65%;\n  text-align: left;\n  padding: 10px 16px;\n  background: #fff8ece8;\n  border-radius: 18px;\n  pointer-events: none;\n}\n#game[data-scene=recess] .room-title h1 {\n  font-size: 22px;\n  margin: 3px 0;\n}\n#game[data-scene=recess] #scene-subtitle,\n#game[data-scene=recess] #day-label,\n#game[data-scene=recess] #room-connections {\n  display: none;\n}\n#game[data-scene=recess] .topbar {\n  background: #fff8ece8;\n  border-radius: 20px;\n  padding: 10px 18px;\n}\n#game[data-scene=recess] .cleanup-tip {\n  max-width: 70%;\n  background: #fff8ece6;\n  border-radius: 16px;\n  padding: 9px;\n}\n#game[data-scene=recess] #leave-recess {\n  top: 36px;\n  right: 44px;\n}\n@media (max-width: 600px) {\n  #game[data-scene=recess] .topbar {\n    left: 12px;\n    right: 12px;\n    padding: 9px 12px;\n  }\n  #game[data-scene=recess] .wordmark {\n    font-size: 20px;\n    gap: 6px;\n  }\n  #game[data-scene=recess] .wordmark .flower {\n    font-size: 29px;\n  }\n  #game[data-scene=recess] .wordmark small {\n    display: none;\n  }\n  #game[data-scene=recess] #leave-recess {\n    top: 28px;\n    right: 24px;\n    font-size: 11px;\n    padding: 9px 10px;\n  }\n  #game[data-scene=recess] .room-title {\n    top: 78px;\n    padding: 6px 12px;\n  }\n  #game[data-scene=recess] .room-title .eyebrow {\n    display: none;\n  }\n  #game[data-scene=recess] .room-title h1 {\n    font-size: 20px;\n    margin: 0;\n  }\n}\n\n/* src/ui/cleanup.css */\n.mission-stats {\n  display: flex;\n  flex-direction: column;\n  align-items: flex-end;\n  gap: 2px;\n}\n#mission-clock {\n  font-size: 23px;\n  font-weight: 800;\n  font-variant-numeric: tabular-nums;\n  letter-spacing: -1px;\n}\n#mission-clock.soon {\n  color: #b77795;\n}\n.allowance-label {\n  font-size: 7px;\n  letter-spacing: 1px;\n  color: #9581a8;\n}\n#allowance {\n  font-size: 13px;\n  color: #6e856c;\n  margin-left: 3px;\n}\n#task-count {\n  letter-spacing: 1px;\n  color: #6e856c;\n}\n.task-list {\n  display: flex;\n  list-style: none;\n  justify-content: center;\n  gap: 9px;\n  padding: 0;\n  margin: 6px 0 0;\n  height: 22px;\n}\n.task-list li {\n  display: flex;\n  align-items: center;\n  gap: 3px;\n  font-size: 9px;\n  color: #9784a6;\n  border-bottom: 2px solid transparent;\n}\n.task-list li > span:first-child {\n  font-size: 13px;\n}\n.task-list li.done {\n  color: #69866f;\n  border-color: #a6c5a6;\n}\n.task-list li.done > span:first-child {\n  color: #69866f;\n}\n.action-group {\n  pointer-events: auto;\n  text-align: center;\n}\n#action-button {\n  --hold-progress: 0deg;\n  width: 120px;\n  height: 120px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  gap: 3px;\n  border: 3px solid #fff9;\n  border-radius: 50%;\n  background:\n    linear-gradient(\n      145deg,\n      #f6b5d0,\n      #d888b6);\n  box-shadow: 0 6px 0 #ad739441, 0 8px 22px #82709522;\n  color: #663f6a;\n  cursor: pointer;\n  touch-action: none;\n  padding: 8px;\n  font-family: inherit;\n  position: relative;\n  -webkit-user-select: none;\n  user-select: none;\n}\n#action-button:disabled {\n  background:\n    linear-gradient(\n      145deg,\n      #f7f1f9,\n      #ddd0e8);\n  color: #a38caf;\n  box-shadow: 0 4px 0 #a58db222;\n  cursor: default;\n}\n#action-button:not(:disabled):active {\n  box-shadow: 0 2px 0 #ad739441;\n}\n#action-button:focus-visible,\n#replay:focus-visible {\n  outline: 3px solid #7960a5;\n  outline-offset: 4px;\n}\n#action-button.holding {\n  background: conic-gradient(#97c6a0 var(--hold-progress), #ecc0dd 0deg);\n}\n#action-icon {\n  font-size: 26px;\n  line-height: 29px;\n}\n#action-title {\n  font-size: 15px;\n  line-height: 18px;\n}\n#action-detail {\n  font-size: 10px;\n  max-width: 100%;\n  line-height: 13px;\n}\n.cleanup-tip {\n  text-align: center;\n  width: calc(100% - 36px);\n  max-width: 460px;\n  justify-content: center;\n  font-size: 11px;\n  line-height: 16px;\n  color: #887298;\n  min-height: 32px;\n}\n#cleanup-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n}\n.cleanup-marker {\n  position: absolute;\n  left: 0;\n  top: 0;\n  border-radius: 9px;\n  min-width: 22px;\n  padding: 3px 5px;\n  background: #fffaf2db;\n  border: 1px solid #fffc;\n  box-shadow: 0 2px 5px #62507722;\n  font-size: 13px;\n  line-height: 16px;\n  color: #775672;\n  will-change: transform;\n  white-space: nowrap;\n}\n.cleanup-marker[hidden] {\n  display: none;\n}\n.cleanup-marker.destination {\n  font-size: 16px !important;\n  border-radius: 50%;\n  padding: 7px !important;\n  box-shadow: 0 0 14px #fff2a8a0;\n}\n.cleanup-marker.offscreen::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #fff1aa;\n  font-size: 17px;\n  text-shadow: 0 1px 3px #504760;\n  transform: translate(-50%, -50%) rotate(var(--guide-angle)) translateX(26px);\n}\n.cleanup-marker.tool {\n  font-size: 10px;\n}\n.cleanup-marker.nearby {\n  background: #fff0b9;\n  border-color: #fff;\n  box-shadow: 0 0 10px #fff3a4bb;\n}\n.cleanup-marker.destination {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n.coin-popup {\n  position: absolute;\n  color: #63845d;\n  font-size: 22px;\n  font-weight: 800;\n  z-index: 2;\n  transform: translate(-50%, -100%);\n  animation: reward-rise .95s ease-out forwards;\n  text-shadow: 0 2px 0 #fff;\n}\n.coin-popup strong {\n  display: block;\n  padding: 3px 8px;\n  background: #fff9e4ed;\n  border-radius: 12px;\n}\n.coin-popup > span {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #e9bd61;\n  font-size: 17px;\n  animation: sparkle .75s ease-out forwards;\n}\n@keyframes reward-rise {\n  0% {\n    opacity: 0;\n    margin-top: 0;\n  }\n  20% {\n    opacity: 1;\n  }\n  75% {\n    opacity: 1;\n  }\n  100% {\n    opacity: 0;\n    margin-top: -40px;\n  }\n}\n@keyframes sparkle {\n  from {\n    transform: translate(-50%, -50%) scale(.3);\n    opacity: 1;\n  }\n  to {\n    transform: translate(var(--spark-x), var(--spark-y)) scale(.7);\n    opacity: 0;\n  }\n}\n.sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  clip-path: inset(50%);\n  overflow: hidden;\n  white-space: nowrap;\n}\n#results {\n  border: 2px solid #fff;\n  border-radius: 28px;\n  padding: 26px 22px 22px;\n  width: min(350px, calc(100% - 32px));\n  max-height: calc(100dvh - 32px);\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n  box-shadow: 0 16px 60px #55436140;\n}\n#results::backdrop {\n  background: #52416666;\n  backdrop-filter: blur(4px);\n}\n.results-flower {\n  font-size: 43px;\n  line-height: 1;\n  color: #af94cb;\n  margin-bottom: 16px;\n}\n#results .eyebrow {\n  font-size: 7px;\n  letter-spacing: 1.6px;\n}\n#results h2 {\n  margin: 12px 0 8px;\n  font-size: 30px;\n  letter-spacing: -1px;\n}\n#results-summary {\n  font-size: 12px;\n  line-height: 1.6;\n  color: #927d9e;\n}\n.results-totals {\n  display: flex;\n  justify-content: space-evenly;\n  padding: 14px 0;\n  margin: 12px 0 0;\n  background: #eee5f5;\n  border-radius: 17px;\n}\n.results-totals strong {\n  display: block;\n  font-size: 28px;\n}\n.results-totals span {\n  font-size: 10px;\n  color: #8e789f;\n}\n#results-money {\n  color: #708b6b;\n}\n#results-bonus {\n  font-size: 11px;\n  color: #788f6c;\n}\n#results-list {\n  list-style: none;\n  padding: 0;\n  display: flex;\n  justify-content: center;\n  flex-wrap: wrap;\n  gap: 6px 12px;\n  margin: 18px 0;\n  font-size: 10px;\n  color: #a58eb1;\n}\n#results-list .done {\n  color: #638269;\n}\n#replay {\n  width: 100%;\n  border: 2px solid #fff8;\n  border-radius: 17px;\n  padding: 15px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 16px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  box-shadow: 0 4px 0 #8caa8555;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#replay span {\n  margin-left: 7px;\n  font-size: 21px;\n}\n@media (max-width: 380px) {\n  .task-list {\n    gap: 6px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  #mission-clock {\n    font-size: 21px;\n  }\n  .allowance-label {\n    font-size: 6px;\n    letter-spacing: .5px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait), (orientation: landscape) and (max-height: 600px) {\n  #action-button {\n    width: 102px;\n    height: 102px;\n  }\n  #action-title {\n    font-size: 13px;\n  }\n  #action-icon {\n    font-size: 22px;\n    line-height: 24px;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .task-list {\n    height: 18px;\n    margin-top: 2px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  .task-list li > span:first-child {\n    font-size: 11px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .task-list {\n    flex-wrap: wrap;\n    height: auto;\n    justify-content: flex-start;\n    max-width: 175px;\n    gap: 5px 10px;\n  }\n  #results {\n    padding: 12px 18px;\n  }\n  .results-flower {\n    display: none;\n  }\n  #results h2 {\n    font-size: 24px;\n    margin: 7px 0;\n  }\n  .results-totals {\n    padding: 7px 0;\n  }\n  #results-list {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .coin-popup {\n    animation: none;\n  }\n  .coin-popup > span {\n    display: none;\n  }\n}\n\n/* src/ui/collection.css */\n[hidden] {\n  display: none !important;\n}\n#collection-button {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  padding: 8px 0 8px 10px;\n}\n#collection-button:disabled {\n  opacity: .45;\n}\n#wallet {\n  margin-left: 4px;\n  color: #638269;\n}\n.loop-button {\n  width: 100%;\n  border: 2px solid #fff9;\n  border-radius: 16px;\n  padding: 13px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 15px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  margin: 5px 0;\n  touch-action: manipulation;\n}\n.pink-button {\n  background: #e8b5d2;\n  color: #704b75;\n}\n.loop-button:disabled {\n  opacity: .55;\n  cursor: default;\n}\n#results-wallet {\n  font-size: 12px;\n  color: #6f8869;\n}\n#go-shopping {\n  margin-bottom: 10px;\n}\n#collection-dialog {\n  border: 2px solid #fff;\n  border-radius: 26px;\n  width: min(410px, calc(100% - 24px));\n  max-height: calc(100dvh - 24px);\n  padding: 22px 17px 17px;\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n}\n#collection-dialog::backdrop {\n  background: #52416688;\n  backdrop-filter: blur(4px);\n}\n#collection-dialog h2 {\n  margin: 10px 0 6px;\n  font-size: 28px;\n  letter-spacing: -1px;\n}\n#collection-summary {\n  font-size: 11px;\n  color: #947c9e;\n}\n#collection-grid {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 7px;\n  margin: 17px 0;\n}\n.dumpling-card {\n  background: #efe7f4;\n  border: 1px solid #fff;\n  border-radius: 14px;\n  padding: 6px 2px 9px;\n  min-width: 0;\n}\n.dumpling-card.owned {\n  background: linear-gradient(#fff9, var(--rarity));\n}\n.dumpling-card img {\n  width: 100%;\n  height: auto;\n  display: block;\n}\n.dumpling-card strong {\n  font-size: 10px;\n  display: block;\n}\n.dumpling-card small {\n  display: block;\n  font-size: 8px;\n  margin-top: 3px;\n}\n.dumpling-card .copies {\n  font-size: 10px;\n  font-weight: 800;\n  margin-top: 5px;\n}\n#store-markers {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n#shop-display-marker {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n#reveal-copy {\n  position: absolute;\n  top: 71%;\n  left: 6%;\n  width: 88%;\n  text-align: center;\n  color: var(--rarity-ink,#775887);\n  font-size: 13px;\n  pointer-events: none;\n}\n.reveal-badges {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n}\n#reveal-copy small {\n  color: var(--rarity-ink,#665070);\n  padding: 5px 10px;\n  border: 1px solid var(--rarity,#dacbdf);\n  border-radius: 20px;\n  background: var(--rarity-wash,#f4edf5);\n  font-size: 11px;\n  line-height: 1.2;\n  font-weight: 800;\n  letter-spacing: .4px;\n}\n#reveal-copy .reveal-status {\n  background: #fffc;\n  border-color: #fff;\n  color: #64556c;\n}\n#reveal-copy h2 {\n  margin: 7px 0 4px;\n  font-size: 32px;\n  line-height: 1.1;\n  letter-spacing: -.8px;\n}\n#reveal-copy p {\n  font-size: 11px;\n  margin: 0;\n  color: #74647e;\n}\n#reveal-copy[data-rarity=Legendary] .reveal-rarity {\n  box-shadow: 0 0 0 2px #fff8, 0 2px 10px #dbb14b30;\n}\n#reveal-copy.has-reveal {\n  animation: reveal-caption .4s ease-out;\n}\n@keyframes reveal-caption {\n  from {\n    transform: translateY(6px);\n    opacity: 0;\n  }\n  to {\n    transform: translateY(0);\n    opacity: 1;\n  }\n}\n#save-message {\n  position: absolute;\n  bottom: 26%;\n  left: 8%;\n  width: 84%;\n  padding: 12px;\n  border-radius: 14px;\n  background: #fff5de;\n  color: #796143;\n  font-size: 12px;\n  text-align: center;\n  z-index: 8;\n  pointer-events: none;\n}\n#game[data-scene=home] .joystick-group {\n  visibility: hidden;\n}\n#game[data-scene=home] .cleanup-tip {\n  display: none;\n}\n#squish-friend {\n  position: absolute;\n  left: 8%;\n  bottom: 12%;\n  min-width: 100px;\n  min-height: 48px;\n  padding: 12px 20px;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: #f1d6dd;\n  color: #795268;\n  font: 800 16px "Trebuchet MS", sans-serif;\n  box-shadow: 0 4px 12px #75534a15;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#home-vignette {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  background:\n    linear-gradient(\n      #ede6f4ed,\n      transparent 29%,\n      transparent 75%,\n      #ede6f4dd);\n}\n#trip-wallet {\n  font-size: 8px;\n  letter-spacing: 1px;\n  color: #887298;\n  text-align: right;\n}\n#trip-balance {\n  display: block;\n  font-size: 24px;\n  letter-spacing: -1px;\n  color: #638269;\n}\n#reveal-copy {\n  isolation: isolate;\n}\n#game[data-scene=home] .topbar,\n#game[data-scene=home] .room-title,\n#game[data-scene=home] footer {\n  text-shadow: 0 1px 8px #fff;\n}\n@media (max-height: 740px) {\n  #reveal-copy {\n    top: 68%;\n  }\n  #reveal-copy h2 {\n    font-size: 27px;\n  }\n  #collection-dialog {\n    padding-top: 15px;\n  }\n  #collection-grid {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #reveal-copy.has-reveal {\n    animation: none;\n  }\n}\n#game[data-scene=home] .controls {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  right: 18px;\n  justify-content: flex-end;\n}\n#game[data-scene=home] .joystick-group,\n#game[data-scene=home] .control-label {\n  display: none;\n}\n#game[data-scene=home] #action-button {\n  width: 136px;\n  height: 48px;\n  border-radius: 25px;\n  display: flex;\n  flex-direction: row;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n}\n#game[data-scene=home] #action-icon {\n  font-size: 20px;\n  margin: 0;\n}\n#game[data-scene=home] #action-title {\n  font-size: 13px;\n  margin: 0;\n}\n#game[data-scene=home] #action-detail {\n  display: none;\n}\n#game[data-scene=home] #squish-friend {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  left: 18px;\n  min-width: 130px;\n  font-size: 14px;\n}\nbody:has(#game[data-scene=home]) .dev-launch {\n  top: 77px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] .room-title {\n    top: 83px;\n    left: 20px;\n    right: 88px;\n    text-align: left;\n  }\n  #game[data-scene=home] .room-title .eyebrow,\n  #game[data-scene=home] #day-label {\n    display: none;\n  }\n  #game[data-scene=home] .room-title h1 {\n    font-size: 20px;\n    margin: 2px 0 4px;\n  }\n  #game[data-scene=home] .room-title p {\n    margin: 0;\n    font-size: 10px;\n  }\n  #game[data-scene=home] #reveal-copy {\n    top: 64%;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    margin: 7px 0 3px;\n    font-size: 24px;\n  }\n  #game[data-scene=home] #reveal-copy small {\n    font-size: 10px;\n    padding: 4px 8px;\n  }\n  #game[data-scene=home] #reveal-copy p {\n    font-size: 10px;\n  }\n}\n#collection-actions {\n  position: sticky;\n  top: -1px;\n  z-index: 2;\n  background: #faf5fb;\n  padding: 4px 0;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 5px;\n}\n#collection-actions .loop-button {\n  font-size: 12px;\n  padding: 10px 5px;\n  margin: 0;\n  min-height: 44px;\n}\n#collection-actions #open-next {\n  grid-column: 1/-1;\n}\n#reveal-copy {\n  background: #fff9;\n  border-radius: 18px;\n  padding: 8px;\n  left: 8%;\n  width: 84%;\n}\n#home-vignette {\n  background:\n    linear-gradient(\n      #ede6f4a0,\n      transparent 25%,\n      transparent 70%,\n      #ede6f4a0);\n}\n#game[data-scene=home] #home-vignette {\n  background:\n    linear-gradient(\n      180deg,\n      #21112465,\n      transparent 27%,\n      transparent 65%,\n      #21112450);\n}\n#game[data-scene=home] .room-title,\n#game[data-scene=home] .topbar,\n#game[data-scene=home] footer {\n  color: #fff7ee;\n  text-shadow: 0 2px 5px #341c40;\n}\n#game[data-scene=home] #reveal-copy {\n  background: #fff8f0ed;\n  box-shadow: 0 5px 24px #49254920;\n}\n#game[data-scene=home] #reveal-copy {\n  top: auto;\n  bottom: 140px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] #reveal-copy {\n    top: auto;\n    bottom: 132px;\n    padding: 6px;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    font-size: 20px;\n    margin: 5px 0 3px;\n  }\n}\n#game[data-scene=home] #reveal-copy {\n  width: min(84%, 380px);\n  left: 50%;\n  translate: -50% 0;\n}\n@media (min-height: 651px) {\n  #game[data-scene=home] #reveal-copy {\n    bottom: 125px;\n  }\n}\n#fishing-panel {\n  position: absolute;\n  bottom: 22px;\n  left: 50%;\n  translate: -50% 0;\n  width: min(92%, 420px);\n  padding: 14px;\n  border-radius: 22px;\n  border: 2px solid #fff7;\n  background: #fff8eefa;\n  box-shadow: 0 5px 25px #35555130;\n  text-align: center;\n  color: #4e5f69;\n  z-index: 25;\n}\n#fishing-panel p {\n  font-size: 15px;\n  line-height: 1.4;\n  margin: 0 0 10px;\n  font-weight: 700;\n}\n#fishing-panel button {\n  border: 2px solid #fff;\n  border-radius: 20px;\n  background: #afd7ca;\n  color: #335a54;\n  font: 800 16px system-ui;\n  padding: 13px 22px;\n  min-height: 48px;\n  margin: 3px;\n  touch-action: manipulation;\n}\n#fishing-panel button:last-child {\n  background: #ede3ea;\n  font-size: 12px;\n  padding: 10px 14px;\n}\n#fishing-panel progress {\n  width: 80%;\n  display: block;\n  margin: 8px auto;\n  accent-color: #81b6a2;\n}\n#game[data-fishing=true] .controls,\n#game[data-fishing=true] .joystick-group,\n#game[data-fishing=true] footer,\n#game[data-fishing=true] .room-title {\n  visibility: hidden;\n}\n#game[data-scene=outdoors] .room-title {\n  pointer-events: none;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 22px;\n}\n#game[data-scene=outdoors] .room-title .eyebrow {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title {\n  top: 84px;\n  left: 20px;\n  right: 20px;\n  text-align: left;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 18px;\n  margin: 3px 0;\n}\n#game[data-scene=outdoors] #day-label {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title p {\n  font-size: 11px;\n}\nbody:has(#game[data-fishing=true]) .dev-launch {\n  top: 78px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n#game[data-fishing=true] #move-tip {\n  visibility: hidden;\n}\n#fishing-panel progress[hidden] {\n  display: none;\n}\n#fishing-panel {\n  padding: 12px 14px;\n  bottom: 14px;\n  max-width: 390px;\n}\n#fishing-panel .fish-status {\n  display: block;\n  text-transform: uppercase;\n  font: 800 10px system-ui;\n  letter-spacing: 1.5px;\n  color: #738b87;\n  margin-bottom: 5px;\n}\n#fishing-panel p {\n  margin: 0 0 8px;\n  min-height: 22px;\n}\n#fishing-panel .fish-gauges {\n  display: flex;\n  gap: 12px;\n  margin: 8px 0;\n}\n#fishing-panel label {\n  flex: 1;\n  text-align: left;\n  font: 700 11px system-ui;\n}\n#fishing-panel progress {\n  width: 100%;\n  height: 9px;\n  margin: 5px 0;\n  appearance: none;\n  border: 0;\n  border-radius: 8px;\n  overflow: hidden;\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-bar {\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-value {\n  background: #7eaf9c;\n  border-radius: 8px;\n  transition: width .12s;\n}\n#fishing-panel[data-warning=true] label:last-child progress::-webkit-progress-value {\n  background: #d67976;\n}\n#fishing-panel[data-warning=true] p {\n  color: #ad535a;\n}\n#fishing-panel .fish-controls {\n  display: flex;\n  align-items: stretch;\n  gap: 5px;\n}\n#fishing-panel .fish-controls button {\n  touch-action: none;\n  user-select: none;\n  margin: 0;\n  padding: 13px 8px;\n  flex: 1;\n  border-radius: 15px;\n  font: 800 12px system-ui;\n  min-height: 52px;\n  background: #eee6f0;\n  color: #635470;\n}\n#fishing-panel #fish-action {\n  flex: 1.55;\n  background: #b1dac7;\n  color: #335e51;\n  font-size: 15px;\n}\n#fishing-panel .fish-controls button[data-held=true] {\n  background: #80bfa7 !important;\n  box-shadow: inset 0 2px 4px #416a6133;\n}\n#fishing-panel .fish-controls button[data-cue=true] {\n  border-color: #b194cf;\n  background: #e3d5f0;\n}\n#fishing-panel .fish-tip {\n  display: block;\n  font: 11px system-ui;\n  line-height: 1.4;\n  color: #79857f;\n  margin: 7px 0 2px;\n}\n#fishing-panel > button:last-child {\n  min-height: 32px;\n  padding: 5px 12px;\n  margin: 0;\n  background: transparent;\n  color: #797e83;\n  font-size: 11px;\n}\n#fishing-panel [hidden] {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  #fishing-panel {\n    bottom: 8px;\n    padding: 8px 12px;\n  }\n  #fishing-panel .fish-status,\n  #fishing-panel .fish-tip {\n    display: none;\n  }\n  #fishing-panel .fish-controls button {\n    min-height: 44px;\n    padding: 9px 6px;\n  }\n}\n\n/* src/ui/house.css */\n#mission-picker {\n  display: flex;\n  gap: 5px;\n  justify-content: center;\n  margin: 9px auto 0;\n  pointer-events: auto;\n}\n#mission-picker button {\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  background: #f6f0f9db;\n  padding: 5px 10px;\n  color: #8c739d;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#mission-picker button[aria-pressed=true] {\n  color: #614d7c;\n  background: #d6c4e8;\n}\n#mission-picker button:disabled {\n  opacity: .65;\n  cursor: default;\n}\n#room-connections {\n  margin: 7px 12px 0;\n  font-size: 10px;\n  color: #816b90;\n}\n#house-doors {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n.door-label {\n  position: absolute;\n  left: 0;\n  top: 0;\n  white-space: nowrap;\n  padding: 3px 6px;\n  font-size: 9px;\n  font-weight: 700;\n  color: #756085;\n  background: #fff6e7dc;\n  border: 1px solid #fff8;\n  border-radius: 7px;\n}\n.room-title {\n  text-shadow: 0 1px 6px #ede6f4;\n}\n#game[data-mission=practice] #task-count {\n  font-size: 9px;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #mission-picker {\n    margin-top: 5px;\n  }\n  #mission-picker button {\n    padding: 4px 8px;\n    font-size: 9px;\n  }\n  #room-connections {\n    margin-top: 4px;\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #mission-picker {\n    justify-content: flex-start;\n    flex-wrap: wrap;\n    width: 180px;\n    margin-left: 0;\n  }\n  #room-connections {\n    max-width: 165px;\n    margin-left: 0;\n  }\n}\n#game[data-scene=cleanup] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border: 1px solid #fff9;\n  border-radius: 20px;\n  background: #fff9efed;\n  box-shadow: 0 4px 20px #66564412;\n}\n#game[data-scene=cleanup] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=cleanup] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=cleanup] .flower {\n  font-size: 34px;\n}\n#game[data-scene=cleanup] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=cleanup] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1.1px;\n  color: #5c6e52;\n}\n#game[data-scene=cleanup] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n  letter-spacing: -.6px;\n}\n#game[data-scene=cleanup] .task-list {\n  justify-content: flex-start;\n  background: #fff8efdc;\n  border-radius: 9px;\n  padding: 4px 7px;\n  width: max-content;\n  max-width: 100%;\n  height: auto;\n}\n#game[data-scene=cleanup] #mission-picker {\n  justify-content: flex-start;\n  margin: 7px 0 0;\n}\n#game[data-scene=cleanup] #room-connections {\n  display: none;\n}\n#game[data-scene=cleanup] .player-label {\n  font-size: 9px;\n  padding: 3px 7px;\n}\n#game[data-scene=cleanup] .controls {\n  bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px));\n  left: 20px;\n  right: 20px;\n}\n#game[data-scene=cleanup] .control-label {\n  color: #50624c;\n  text-shadow: 0 1px 3px #ffff;\n}\n#game[data-scene=cleanup] #cleanup-hint {\n  background: #fff9efed;\n  width: calc(100% - 32px);\n  left: 16px;\n  padding: 7px 10px;\n  border-radius: 12px;\n  color: #596651;\n  bottom: calc(max(40px, env(safe-area-inset-bottom)) + 150px);\n  font-size: 10px;\n}\n#game[data-scene=cleanup] footer {\n  left: 16px;\n  right: 16px;\n  background: #fff9efed;\n  padding: 5px 9px;\n  border-radius: 12px;\n  bottom: 8px;\n  color: #6c795e;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #game[data-scene=cleanup] .room-title {\n    top: 85px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] #mission-picker {\n    margin-top: 5px;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    bottom: calc(max(36px, env(safe-area-inset-bottom)) + 144px);\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=cleanup] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=cleanup] .room-title {\n    top: 95px;\n    width: 210px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] .task-list {\n    flex-wrap: wrap;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    width: 40%;\n    left: 30%;\n    bottom: 12px;\n  }\n  #game[data-scene=cleanup] footer {\n    display: flex;\n    flex-wrap: wrap;\n    top: 12px;\n    bottom: auto;\n    left: 270px;\n    right: 16px;\n    justify-content: flex-end;\n  }\n}\n.asset-credits {\n  color: inherit;\n  font-size: 9px;\n  text-decoration: none;\n  padding: 5px;\n}\n#day-label {\n  margin: 5px 0;\n  font-size: 11px;\n  font-weight: 700;\n  color: #667b5b;\n  text-transform: capitalize;\n}\n#mission-picker {\n  flex-wrap: wrap;\n}\n#game[data-mission=day] .task-list {\n  flex-wrap: wrap;\n  font-size: 9px;\n}\n#game[data-mission=day] #mission-clock {\n  font-size: 19px;\n  white-space: nowrap;\n}\n#school-transition {\n  position: absolute;\n  z-index: 30;\n  inset: 0;\n  background: #f6eafaed;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  color: #65517b;\n}\n#school-transition[hidden] {\n  display: none;\n}\n#school-transition span {\n  font-size: 64px;\n}\n.lilah-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  max-width: 165px;\n  padding: 7px 10px;\n  border-radius: 15px 15px 15px 3px;\n  background: #fff2ceeF;\n  color: #735978;\n  font-size: 12px;\n  font-weight: 700;\n  pointer-events: none;\n  box-shadow: 0 3px 12px #7c627525;\n  z-index: 5;\n  text-align: center;\n}\n.lilah-label[hidden] {\n  display: none;\n}\n.marc-label {\n  background: #e7f0e4ef;\n  color: #4f655c;\n}\n#player-label,\n#house-doors,\n#room-connections {\n  display: none !important;\n}\n#game[data-scene=cleanup] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border-radius: 20px;\n  background: #fff9efed;\n}\n#game[data-scene=store] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=store] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=store] .flower {\n  font-size: 34px;\n}\n#game[data-scene=store] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=store] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1px;\n}\n#game[data-scene=store] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n}\n#game[data-scene=store] #scene-subtitle {\n  font-size: 11px;\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=store] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=store] .room-title {\n    width: 210px;\n  }\n}\n#bedtime-fade {\n  position: absolute;\n  inset: 0;\n  background: #161325;\n  z-index: 80;\n  pointer-events: none;\n}\n#house-effects {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font: 700 10px "Trebuchet MS", sans-serif;\n  min-height: 36px;\n  cursor: pointer;\n  padding: 4px 6px;\n}\n\n/* src/dev/developer-panel.css */\n.dev-launch,\n.dev-inline {\n  font: 800 11px/1.2 system-ui, sans-serif !important;\n  letter-spacing: .08em;\n  background: #27263c !important;\n  color: #e6dcff !important;\n  border: 1px solid #b9a4e8 !important;\n  border-radius: 12px !important;\n  min-height: 44px;\n  min-width: 44px;\n  padding: 10px !important;\n  cursor: pointer;\n}\n.dev-launch {\n  position: fixed;\n  z-index: 90;\n  bottom: 64px;\n  left: 50%;\n  transform: translateX(-50%);\n  box-shadow: 0 4px 18px #29223a40;\n}\n.dev-launch {\n  bottom: calc(64px + env(safe-area-inset-bottom, 0px));\n}\n#developer-panel {\n  height: min(850px, calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));\n}\n.dev-inline {\n  margin: 6px;\n  flex-shrink: 0;\n}\n.pop-title .dev-inline {\n  font-size: 9px !important;\n  letter-spacing: 0;\n  margin: 0;\n  min-width: 38px;\n  padding: 5px !important;\n}\n#developer-panel {\n  width: min(720px, calc(100vw - 24px));\n  max-width: none;\n  max-height: none;\n  height: min(850px, calc(100dvh - 24px));\n  margin: auto;\n  padding: 0;\n  overflow: hidden;\n  border: 1px solid #b6a4d764;\n  border-radius: 24px;\n  background: #181926;\n  color: #eeeaf8;\n  box-shadow: 0 28px 100px #100c23a6;\n  font: 14px/1.45 system-ui, sans-serif;\n  text-align: left;\n}\n#developer-panel::backdrop {\n  background: #121020a6;\n  backdrop-filter: blur(5px);\n}\n#developer-panel * {\n  box-sizing: border-box;\n}\n#developer-panel [hidden] {\n  display: none !important;\n}\n#developer-panel .dev-shell {\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n}\n#developer-panel button {\n  font: 650 13px/1.35 system-ui, sans-serif;\n  cursor: pointer;\n  min-height: 44px;\n  border: 1px solid #494458;\n  background: #303043;\n  color: #f3efff;\n  border-radius: 12px;\n  padding: 11px 13px;\n  box-shadow: none;\n  text-transform: none;\n  letter-spacing: 0;\n  transition: background .12s;\n}\n#developer-panel button:hover {\n  background: #414057;\n}\n#developer-panel button:focus-visible,\n#developer-panel select:focus-visible {\n  outline: 3px solid #d1bcff;\n  outline-offset: 2px;\n}\n#developer-panel button:disabled {\n  opacity: .4;\n  cursor: not-allowed;\n}\n#developer-panel button[aria-pressed=true] {\n  background: #b5dccc;\n  color: #1d3830;\n  border-color: #b5dccc;\n}\n#developer-panel .dev-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n  padding: 24px 26px 16px;\n  background:\n    radial-gradient(\n      ellipse at 90% 10%,\n      #76588b45,\n      transparent 60%);\n}\n#developer-panel .dev-eyebrow {\n  color: #c0b7d5;\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: .16em;\n  display: flex;\n  align-items: center;\n  gap: 7px;\n}\n#developer-panel .dev-eyebrow i {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: #aaddc4;\n  box-shadow: 0 0 12px #aaddc440;\n}\n#developer-panel h2 {\n  color: #f5f0ff;\n  font-size: 29px;\n  letter-spacing: -1px;\n  margin: 5px 0 2px;\n  font-weight: 750;\n}\n#developer-panel h2 span {\n  color: #d9baf5;\n  margin-left: 10px;\n}\n#developer-panel .dev-header p {\n  color: #b7afc8;\n  margin: 0;\n  font-size: 12px;\n}\n#developer-panel .dev-close {\n  font-size: 25px;\n  padding: 2px;\n  width: 44px;\n  background: #ffffff08;\n  border-color: #ffffff20;\n}\n#developer-panel .dev-live {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 0 26px 16px;\n  color: #d2cddd;\n  font-size: 11px;\n}\n#developer-panel .dev-live span {\n  padding: 5px 9px;\n  border: 1px solid #ffffff15;\n  border-radius: 7px;\n  background: #ffffff05;\n}\n#developer-panel .dev-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 4px;\n  border-block: 1px solid #ffffff12;\n  padding: 6px 20px;\n  background: #20202e;\n}\n#developer-panel .dev-tabs button {\n  background: transparent;\n  border-color: transparent;\n  color: #aaa2bc;\n  border-radius: 9px;\n  padding: 10px 4px;\n  font-size: 12px;\n}\n#developer-panel .dev-tabs button[aria-selected=true] {\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-content {\n  overflow-y: auto;\n  min-height: 0;\n  padding: 20px 26px;\n  flex: 1;\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  scrollbar-color: #6b597f transparent;\n}\n#developer-panel .dev-hero {\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  width: 100%;\n  padding: 22px 18px;\n  text-align: left;\n  background:\n    linear-gradient(\n      120deg,\n      #d7c6f2,\n      #efc8da);\n  border: 0;\n  color: #392e4b;\n  margin-bottom: 16px;\n}\n#developer-panel .dev-hero:hover {\n  background:\n    linear-gradient(\n      120deg,\n      #e2d5f8,\n      #f6d8e5);\n}\n#developer-panel .dev-hero-icon {\n  font-size: 38px;\n  line-height: 1;\n}\n#developer-panel .dev-hero small {\n  display: block;\n  letter-spacing: .13em;\n  font-size: 9px;\n  font-weight: 800;\n  opacity: .75;\n}\n#developer-panel .dev-hero strong {\n  display: block;\n  font-size: 22px;\n  letter-spacing: -.6px;\n  margin: 3px 0;\n}\n#developer-panel .dev-hero span span {\n  display: block;\n  font-size: 11px;\n  font-weight: 500;\n}\n#developer-panel .dev-hero b {\n  font-size: 25px;\n  margin-left: auto;\n}\n#developer-panel .dev-card {\n  background: #232333;\n  border: 1px solid #ffffff10;\n  border-radius: 16px;\n  padding: 18px;\n  margin-bottom: 14px;\n}\n#developer-panel h3 {\n  font-size: 15px;\n  margin: 0 0 8px;\n  color: #f0eafa;\n  font-weight: 700;\n}\n#developer-panel p {\n  color: #b8b0c9;\n  font-size: 12px;\n  margin: 0 0 13px;\n  line-height: 1.55;\n}\n#developer-panel .dev-card > p:last-child {\n  margin: 12px 0 0;\n}\n#developer-panel .dev-grid {\n  display: grid;\n  grid-template-columns: repeat(2, minmax(0, 1fr));\n  gap: 8px;\n}\n#developer-panel .dev-grid button {\n  text-align: left;\n}\n#developer-panel .dev-select-label {\n  display: block;\n  font-size: 11px;\n  color: #b9b1ca;\n  margin: 15px 0 6px;\n}\n#developer-panel select {\n  display: block;\n  width: 100%;\n  border: 1px solid #58506b;\n  background: #181926;\n  color: #eeeaf8;\n  border-radius: 10px;\n  min-height: 44px;\n  padding: 10px;\n  margin-bottom: 8px;\n  font: 13px system-ui, sans-serif;\n}\n#developer-panel .dev-notice {\n  padding: 16px;\n  border-radius: 14px;\n  background: #30342f;\n  border: 1px solid #b8d4bb30;\n  margin-bottom: 14px;\n  color: #c8e5d1;\n}\n#developer-panel .dev-notice strong {\n  font-size: 12px;\n}\n#developer-panel .dev-notice p {\n  margin: 6px 0 0;\n  color: #b4c2b6;\n}\n#developer-panel .dev-resume {\n  width: 100%;\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-danger {\n  color: #ffc4bf;\n  border-color: #965e6455;\n}\n#developer-panel pre {\n  white-space: pre-wrap;\n  font: 11px/1.8 ui-monospace, monospace;\n  color: #bbb4cd;\n  margin: 16px 0 0;\n  overflow-wrap: anywhere;\n}\n#developer-panel .dev-bottom {\n  padding: 13px 26px 15px;\n  border-top: 1px solid #ffffff12;\n  background: #20202e;\n}\n#developer-panel .dev-bottom > span {\n  display: block;\n  font-size: 11px;\n  color: #bce1cd;\n}\n#developer-panel .dev-bottom small {\n  display: block;\n  font-size: 10px;\n  color: #aaa1bc;\n  margin-top: 3px;\n}\n#developer-panel [data-status] {\n  font-size: 11px;\n  color: #d6c4f3;\n  margin-top: 8px;\n}\n#developer-panel [data-status][data-error=true] {\n  color: #ffc1b7;\n}\n@media (max-width: 480px) {\n  #developer-panel {\n    width: calc(100vw - 12px);\n    height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));\n    border-radius: 18px;\n  }\n  #developer-panel .dev-header {\n    padding: 17px 16px 12px;\n  }\n  #developer-panel h2 {\n    font-size: 25px;\n  }\n  #developer-panel .dev-live {\n    padding: 0 16px 12px;\n    gap: 5px;\n  }\n  #developer-panel .dev-tabs {\n    padding: 5px 10px;\n  }\n  #developer-panel .dev-content {\n    padding: 14px;\n  }\n  #developer-panel .dev-card {\n    padding: 14px;\n  }\n  #developer-panel .dev-bottom {\n    padding: 11px 16px;\n  }\n  #developer-panel .dev-hero {\n    padding: 16px 13px;\n    gap: 10px;\n  }\n  #developer-panel .dev-hero strong {\n    font-size: 20px;\n  }\n  #developer-panel .dev-hero-icon {\n    font-size: 28px;\n  }\n  #developer-panel .dev-grid button {\n    font-size: 12px;\n    padding: 10px;\n  }\n  #developer-panel .dev-bottom small {\n    font-size: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #developer-panel button {\n    transition: none;\n  }\n}\n#developer-panel .dev-bottom {\n  position: static;\n  display: block;\n  flex-shrink: 0;\n  letter-spacing: 0;\n  pointer-events: auto;\n}\n#squishy-pop:has(.dev-inline) .pop-footer {\n  display: block;\n}\n#squishy-pop .pop-title .dev-inline {\n  background: #27263c !important;\n  color: #e6dcff !important;\n}\n';
+var local_default = '/* src/ui/hunt.css */\n#hunt-routes {\n  width: min(420px, calc(100% - 24px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  border: 2px solid white;\n  border-radius: 26px;\n  padding: 23px 16px 14px;\n  color: #57496b;\n  background: #faf5ef;\n}\n#hunt-routes::backdrop {\n  background: #46395480;\n  backdrop-filter: blur(4px);\n}\n#hunt-routes h2 {\n  font-size: 25px;\n  letter-spacing: -.8px;\n  margin: 12px 0 7px;\n}\n.hunt-budget {\n  font-size: 13px;\n  color: #59765e;\n  font-weight: 800;\n  margin: 0 0 15px;\n}\n.store-choice {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  width: 100%;\n  padding: 13px 10px;\n  margin: 9px 0;\n  text-align: left;\n  border: 1px solid #fff;\n  border-radius: 18px;\n  background:\n    linear-gradient(\n      110deg,\n      var(--shop-color),\n      #fff7ee);\n  color: #514863;\n  box-shadow: 0 3px 8px #69546710;\n  cursor: pointer;\n}\n.store-choice:disabled {\n  opacity: .5;\n  cursor: default;\n}\n.store-icon {\n  display: grid;\n  place-items: center;\n  width: 43px;\n  min-width: 43px;\n  height: 43px;\n  border-radius: 50%;\n  background: #fff8;\n  font-size: 28px;\n}\n.store-choice strong {\n  display: block;\n  font-size: 17px;\n  margin-bottom: 4px;\n}\n.store-choice small {\n  display: block;\n  font-size: 10px;\n  line-height: 1.5;\n}\n.store-choice em {\n  display: block;\n  font-size: 11px;\n  line-height: 1.35;\n  margin: 7px 0 4px;\n  font-style: normal;\n  font-weight: 700;\n}\n.route-status {\n  color: #5e795b;\n}\n.hunt-explainer {\n  font-size: 10px;\n  line-height: 1.5;\n  color: #8d7b8b;\n  margin: 12px 4px;\n}\n#shopping-time {\n  display: inline-block;\n  padding: 6px 10px;\n  margin: 3px 0;\n  background: #fffaeeed;\n  color: #66795b;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 700;\n  pointer-events: none;\n}\n#hunt-find {\n  position: absolute;\n  left: 16px;\n  right: 16px;\n  bottom: 220px;\n  max-width: 360px;\n  margin: auto;\n  padding: 12px 14px;\n  border: 1px solid white;\n  border-radius: 18px;\n  background: #fff8eff2;\n  color: #655371;\n  box-shadow: 0 4px 18px #56466320;\n  pointer-events: none;\n}\n#hunt-find strong {\n  font-size: 17px;\n}\n#hunt-find p {\n  font-size: 12px;\n  margin: 5px 0;\n  color: #59816b;\n  font-weight: 700;\n}\n#hunt-find small {\n  font-size: 10px;\n}\n#game[data-scene=store] #save-message {\n  bottom: auto;\n  top: 190px;\n  left: 16px;\n  width: calc(100% - 32px);\n  padding: 9px 12px;\n}\n#game[data-scene=store] #cleanup-hint {\n  background: #fff9efdf;\n  border-radius: 12px;\n  padding: 7px 9px;\n}\n#game[data-scene=store] #shop-display-marker {\n  background: transparent;\n  color: #ffe6a0;\n  border: 0;\n  padding: 0;\n  box-shadow: none;\n  font-size: 23px;\n  text-shadow: 0 0 4px white, 0 0 9px #e6b761;\n}\n#hunt-travel {\n  position: absolute;\n  inset: 0;\n  z-index: 45;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  background: #f5edf7f5;\n  color: #705b83;\n}\n#hunt-travel span {\n  font-size: 65px;\n  animation: hunt-bob .6s ease-in-out infinite alternate;\n}\n#hunt-travel h2 {\n  font-size: 27px;\n}\n@keyframes hunt-bob {\n  to {\n    transform: translateY(-10px) rotate(6deg);\n  }\n}\n.series-heading {\n  grid-column: 1/-1;\n  text-align: left;\n  padding: 10px 3px 4px;\n  font-size: 14px;\n}\n#game[data-scene=store] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] #day-label,\n#game[data-scene=store] #scene-subtitle {\n  display: none;\n}\n#game[data-scene=store] .room-title .eyebrow {\n  font-size: 12px;\n  letter-spacing: .7px;\n  margin-bottom: 4px;\n}\n@media (max-height: 740px) {\n  #hunt-find {\n    bottom: 190px;\n    padding: 8px 12px;\n  }\n  #hunt-routes {\n    padding-top: 14px;\n  }\n  .store-choice {\n    padding: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #hunt-travel span {\n    animation: none;\n  }\n}\n#hunt-routes .dialog-top-action {\n  position: sticky;\n  top: 0;\n  z-index: 2;\n  box-shadow: 0 0 0 5px #faf5fb;\n}\n\n/* src/ui/trading.css */\n#trading-dialog {\n  box-sizing: border-box;\n  width: min(460px, calc(100% - 16px));\n  max-height: calc(100dvh - 16px);\n  padding: 0;\n  border: 2px solid white;\n  border-radius: 24px;\n  background: #fcf7ef;\n  color: #514365;\n  overflow: hidden;\n}\n#trading-dialog[open] {\n  display: flex;\n  flex-direction: column;\n}\n#trading-dialog::backdrop {\n  background: #44355288;\n  backdrop-filter: blur(3px);\n}\n#trading-dialog button {\n  font: inherit;\n  color: inherit;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#trading-dialog button:disabled {\n  opacity: .48;\n  cursor: default;\n}\n.trade-header {\n  padding: 14px 18px 10px;\n  background:\n    linear-gradient(\n      120deg,\n      #fff,\n      var(--trader));\n  flex-shrink: 0;\n}\n.trade-header h2 {\n  margin: 4px 0;\n  font-size: 27px;\n}\n.trade-header strong {\n  font-size: 12px;\n}\n.trade-header p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  line-height: 1.4;\n}\n.trade-scroll {\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  padding: 0 14px 12px;\n  min-height: 0;\n}\n#trading-dialog h3 {\n  font-size: 13px;\n  margin: 12px 0 7px;\n  display: flex;\n  justify-content: space-between;\n  gap: 4px;\n}\n#trading-dialog h3 small {\n  font-size: 10px;\n  font-weight: normal;\n}\n.trade-slots {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n  gap: 6px;\n  min-height: 65px;\n  background: #e9dfef;\n  padding: 7px;\n  border-radius: 15px;\n}\n.trade-item {\n  border: 1px solid #fff;\n  background: #fffbf8;\n  border-radius: 12px;\n  padding: 4px;\n  text-align: center;\n  min-width: 0;\n}\n.trade-item img {\n  width: 100%;\n  height: 52px;\n  object-fit: contain;\n}\n.trade-item strong,\n.trade-item small {\n  display: block;\n  font-size: 10px;\n}\n.trade-item small {\n  font-size: 9px;\n  margin-top: 3px;\n}\n.trade-speech {\n  font-size: 12px;\n  line-height: 1.45;\n  background: #fff1cd;\n  border-radius: 13px;\n  padding: 10px;\n  margin: 10px 0;\n}\n.trade-empty {\n  grid-column: 1/-1;\n  margin: 10px;\n  font-size: 12px;\n  line-height: 1.5;\n}\n.trade-bag-heading label {\n  display: flex;\n  gap: 6px;\n  align-items: center;\n  font-size: 12px;\n  min-height: 32px;\n}\n.trade-bag-heading input {\n  width: 20px;\n  height: 20px;\n  accent-color: #8573a2;\n}\n.trade-safety {\n  font-size: 10px;\n  line-height: 1.4;\n  margin: 5px 0 10px;\n  color: #796b87;\n}\n#trade-inventory {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 6px;\n}\n.trade-bag-item {\n  display: flex;\n  align-items: center;\n  min-height: 62px;\n  padding: 4px;\n  border: 1px solid #ded2e6;\n  background: white;\n  border-radius: 12px;\n  text-align: left;\n  min-width: 0;\n}\n.trade-bag-item img {\n  width: 38px;\n  flex-shrink: 0;\n}\n.trade-bag-item strong {\n  font-size: 11px;\n  display: block;\n}\n.trade-bag-item small {\n  font-size: 9px;\n  display: block;\n  margin-top: 3px;\n}\n.trade-footer {\n  flex-shrink: 0;\n  padding: 8px 12px 12px;\n  background: #fcf7ef;\n  border-top: 1px solid #e8ddea;\n}\n.trade-footer p {\n  margin: 0 0 8px;\n  text-align: center;\n  font-size: 12px;\n  font-weight: bold;\n}\n.trade-controls {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  gap: 9px;\n}\n.trade-controls button {\n  border: 2px solid white;\n  border-radius: 18px;\n  font-size: 32px !important;\n  font-weight: bold !important;\n  min-height: 68px;\n  background: #f0c6cc;\n}\n.trade-controls button small {\n  display: block;\n  font-size: 10px;\n}\n.trade-controls #trade-add {\n  background: #f6dfa1;\n}\n.trade-controls #trade-accept {\n  background: #bad6b9;\n}\n#leave-recess {\n  position: absolute;\n  top: 76px;\n  right: 14px;\n  width: auto;\n  font-size: 12px;\n  padding: 9px 13px;\n  z-index: 5;\n}\n.collection-protection {\n  border: 0;\n  background: #fff9;\n  border-radius: 8px;\n  margin: 4px 1px 0;\n  min-width: 30px;\n  min-height: 32px;\n  font-size: 14px;\n  cursor: pointer;\n}\n.collection-protection[aria-pressed=true] {\n  background: #e5c6e9;\n  outline: 1px solid #b68ec0;\n}\n#game[data-scene=recess] #trip-wallet,\n#game[data-scene=recess] #mission-clock {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  .trade-header {\n    padding: 8px 12px;\n  }\n  .trade-header h2 {\n    font-size: 21px;\n  }\n  .trade-header p {\n    font-size: 11px;\n  }\n  .trade-item img {\n    height: 42px;\n  }\n  .trade-controls button {\n    min-height: 60px;\n  }\n  .trade-footer {\n    padding: 6px 10px;\n  }\n}\n#trade-suggest {\n  width: 100%;\n  min-height: 44px;\n  border: 2px solid #b4d4bd;\n  border-radius: 16px;\n  background: #edf8ed;\n  font-weight: 800;\n}\n.trade-help {\n  font-size: 11px;\n  color: #6d6477;\n}\n.trade-loved {\n  border-color: #bad8bb !important;\n}\n.trade-header > small {\n  display: block;\n  margin-top: 7px;\n  font-size: 11px;\n}\n\n/* src/ui/squishy-pop.css */\n.pop-launch {\n  position: fixed;\n  z-index: 20;\n  bottom: max(160px, 22vh);\n  left: 50%;\n  transform: translateX(-50%);\n  width: min(310px, 85vw);\n  border: 3px solid #fff9;\n  border-radius: 30px;\n  padding: 13px 16px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe7ee,\n      #efa6d4);\n  color: #655082;\n  box-shadow: 0 6px 22px #4f3b6240;\n  font-weight: 900;\n  font-size: 17px;\n  cursor: pointer;\n}\n.pop-launch span {\n  margin-right: 8px;\n}\n.pop-launch small {\n  display: block;\n  font-size: 11px;\n  letter-spacing: .5px;\n  margin-top: 5px;\n  font-weight: 600;\n}\n#squishy-pop {\n  padding: 0;\n  border: 0;\n  background: transparent;\n  color: #5d497d;\n  max-width: none;\n  max-height: none;\n  width: 100%;\n  height: 100dvh;\n  inset: 0;\n  margin: 0;\n  overflow: auto;\n  font-family: inherit;\n}\n#squishy-pop::backdrop {\n  background: #46345495;\n  backdrop-filter: blur(9px);\n}\n#squishy-pop * {\n  box-sizing: border-box;\n}\n#squishy-pop button {\n  font: inherit;\n  cursor: pointer;\n  min-height: 44px;\n  color: #654e83;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: linear-gradient(#ffe1ef, #f9aed5);\n  font-weight: 800;\n  padding: 9px 17px;\n  box-shadow: 0 3px 0 #c997c136;\n}\n#squishy-pop button:active {\n  transform: scale(.96);\n}\n#squishy-pop button:focus-visible {\n  outline: 3px solid #8a5fb4;\n  outline-offset: 2px;\n}\n.pop-shell {\n  width: min(100%, 480px);\n  min-height: 100%;\n  margin: auto;\n  padding: max(16px, env(safe-area-inset-top)) 18px max(14px, env(safe-area-inset-bottom));\n  background:\n    radial-gradient(\n      ellipse at 10% 45%,\n      #fff5d2aa,\n      transparent 60%),\n    linear-gradient(\n      155deg,\n      #fff8f1f5,\n      #f1e5fff5 60%,\n      #ffe9f1f5);\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 14px;\n}\n.pop-title {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.pop-title > div {\n  flex: 1;\n}\n.pop-title small {\n  font-size: 9px;\n  letter-spacing: 2px;\n}\n.pop-title h2 {\n  font-size: 30px;\n  letter-spacing: -1px;\n  line-height: 1.1;\n  margin: 6px 0;\n  font-weight: 1000;\n  color: #9878b9;\n  text-shadow: 0 2px 0 white;\n}\n.pop-title em {\n  font-style: normal;\n  color: #ed83b0;\n}\n.pop-title button {\n  width: 44px;\n  padding: 5px !important;\n  background: #ffffffad !important;\n}\n.pop-stats {\n  display: grid;\n  grid-template-columns: 1fr 1.1fr 1.1fr;\n  gap: 8px;\n}\n.pop-stats > div {\n  border-radius: 22px;\n  padding: 11px 5px;\n  background: #ffffffc7;\n  border: 2px solid #fff;\n  text-align: center;\n  box-shadow: 0 4px 0 #cbb4e227;\n}\n.pop-stats small {\n  display: block;\n  font-size: 10px;\n  letter-spacing: 1.6px;\n  color: #957bad;\n  font-weight: 800;\n}\n.pop-stats strong {\n  display: block;\n  font-size: 27px;\n  line-height: 1.3;\n}\n.pop-stats progress {\n  height: 6px;\n  width: 65%;\n  display: block;\n  margin: 4px auto 0;\n}\n.pop-tray {\n  position: relative;\n  border: 6px solid #f6eeff;\n  border-radius: 35px;\n  background:\n    linear-gradient(\n      135deg,\n      #d1b9ee,\n      #c4a6df);\n  padding: 9px;\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #bca1d8,\n    0 14px 25px #76609330;\n  isolation: isolate;\n}\n.pop-tray canvas {\n  width: 100%;\n  aspect-ratio: 1;\n  display: block;\n  touch-action: none;\n  border-radius: 21px;\n  background:\n    radial-gradient(\n      ellipse,\n      #fff2 40%,\n      transparent 70%);\n  user-select: none;\n}\n.pop-feedback {\n  position: absolute;\n  pointer-events: none;\n  inset: 40% 0 auto;\n  text-align: center;\n  font-size: 29px;\n  font-weight: 1000;\n  color: #ec65a9;\n  text-shadow:\n    2px 3px white,\n    -2px -2px white,\n    0 4px 6px #8a5fad;\n  transform: rotate(-6deg);\n  z-index: 2;\n}\n.pop-cover {\n  position: absolute;\n  inset: 0;\n  z-index: 3;\n  border-radius: 28px;\n  background: #fff5f2ef;\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  align-items: center;\n  text-align: center;\n  gap: 10px;\n  padding: 20px;\n  backdrop-filter: blur(4px);\n}\n.pop-cover[hidden] {\n  display: none;\n}\n.pop-cover h3 {\n  font-size: 23px;\n  line-height: 1.2;\n  margin: 0;\n}\n.pop-cover p {\n  font-size: 12px;\n  margin: 0;\n  max-width: 260px;\n}\n.pop-cover button {\n  width: 85%;\n  font-size: 14px !important;\n}\n.pop-cover .pop-link {\n  border: 0;\n  background: none;\n  box-shadow: none;\n  font-size: 12px !important;\n}\n.pop-count {\n  font-size: 80px;\n  color: #e778af;\n  animation: pop-count .8s infinite;\n}\n.pop-demo {\n  position: relative;\n  display: flex;\n  gap: 15px;\n  padding: 8px 10px 25px;\n  font-size: 40px;\n  color: #ec87b6;\n}\n.pop-demo b {\n  position: absolute;\n  left: 10%;\n  bottom: 0;\n  font-size: 32px;\n  animation: pop-finger 2s infinite;\n}\n.pop-frenzy {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 10px;\n  letter-spacing: 1px;\n  font-weight: 900;\n  margin-top: 3px;\n}\n.pop-frenzy progress {\n  flex: 1;\n  min-width: 0;\n}\n.pop-frenzy b {\n  color: #e788b5;\n}\n.pop-hint {\n  text-align: center;\n  font-size: 14px;\n  font-weight: 700;\n  margin: 0;\n}\n.pop-friends {\n  display: flex;\n  justify-content: center;\n  gap: 7px;\n}\n.pop-friends span {\n  width: 40px;\n  text-align: center;\n}\n.pop-friends img {\n  width: 40px;\n  height: 35px;\n  object-fit: contain;\n  display: block;\n}\n.pop-friends small {\n  font-size: 9px;\n  color: #b18a52;\n  display: block;\n}\n.pop-footer {\n  text-align: center;\n  font-size: 10px;\n  color: #a58fb0;\n  letter-spacing: 1px;\n}\n.pop-result-star {\n  font-size: 35px;\n  color: #f5c960;\n}\n.pop-result-numbers {\n  display: flex;\n  justify-content: space-around;\n  width: 100%;\n  font-size: 11px;\n}\n.pop-result-numbers b {\n  display: block;\n  font-size: 24px;\n}\n.pop-ticket-prize {\n  font-size: 15px;\n  color: #d26f9f;\n}\n.pop-cover progress {\n  width: 70%;\n  height: 9px;\n}\n#squishy-pop progress {\n  appearance: none;\n  border: 0;\n  border-radius: 20px;\n  background: #e1d4ed;\n  height: 9px;\n  overflow: hidden;\n}\n#squishy-pop progress::-webkit-progress-bar {\n  background: #e1d4ed;\n  border-radius: 20px;\n}\n#squishy-pop progress::-webkit-progress-value {\n  background:\n    linear-gradient(\n      90deg,\n      #bd95e0,\n      #f49abe);\n  border-radius: 20px;\n  transition: width .2s;\n}\n.urgent {\n  color: #df608a;\n  animation: pop-count 1s infinite;\n}\n@keyframes pop-finger {\n  0%, 15% {\n    left: 10%;\n  }\n  70%, 100% {\n    left: 75%;\n  }\n}\n@keyframes pop-count {\n  0% {\n    transform: scale(1.08);\n  }\n  70% {\n    transform: scale(1);\n  }\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 9px;\n    padding: 10px 15px;\n  }\n  .pop-title h2 {\n    font-size: 25px;\n  }\n  .pop-stats > div {\n    padding: 7px 3px;\n  }\n  .pop-stats strong {\n    font-size: 23px;\n  }\n  .pop-friends {\n    display: none;\n  }\n  .pop-footer {\n    display: none;\n  }\n  .pop-tray {\n    border-width: 5px;\n    padding: 6px;\n  }\n  .pop-cover {\n    gap: 7px;\n    padding: 10px;\n  }\n  .pop-cover h3 {\n    font-size: 20px;\n  }\n  .pop-result-star {\n    display: none;\n  }\n}\n@media (min-width: 500px) {\n  .pop-shell {\n    max-width: min(480px, 70dvh);\n    border-radius: 32px;\n    min-height: 0;\n    margin: 20px auto;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #squishy-pop * {\n    animation: none !important;\n  }\n}\n.pop-demo img {\n  width: 58px;\n  height: 58px;\n  object-fit: contain;\n}\n.pop-demo:before {\n  content: "";\n  position: absolute;\n  height: 5px;\n  background: #ffaad4;\n  left: 25px;\n  right: 25px;\n  top: 45%;\n  z-index: -1;\n  border-radius: 10px;\n}\n.pop-demo {\n  isolation: isolate;\n}\n.is-frenzy .pop-tray {\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #e7afd5,\n    0 0 30px #ffb8d5;\n}\n.is-frenzy .pop-frenzy {\n  color: #cf639e;\n}\n.pop-launch[hidden] {\n  display: none;\n}\n.pop-cover .pop-result-star {\n  animation: pop-count .8s 2;\n}\n#squishy-pop {\n  font-family:\n    "Trebuchet MS",\n    "Arial Rounded MT Bold",\n    Arial,\n    sans-serif;\n}\n[data-tickets] {\n  background-repeat: no-repeat;\n  background-position: calc(50% - 15px) center;\n  background-size: 35px;\n  padding-left: 26px;\n}\n.pop-launch {\n  animation: pop-entrance .3s ease-out;\n}\n@keyframes pop-entrance {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n.pop-frenzy span {\n  padding: 7px 0 7px 24px;\n  background-repeat: no-repeat;\n  background-position: left center;\n  background-size: 25px;\n}\n#squishy-pop[open] .pop-shell {\n  animation: pop-entrance .2s ease-out;\n}\n.pop-chain-cue {\n  position: absolute;\n  z-index: 4;\n  transform: translate(-50%, -100%);\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 5px 10px 5px 5px;\n  border: 2px solid white;\n  border-radius: 22px;\n  background: #fff6fc;\n  color: #6c4487;\n  box-shadow: 0 3px 12px #855a9955;\n  pointer-events: none;\n  white-space: nowrap;\n  font-size: 11px;\n  font-weight: 800;\n}\n.pop-chain-cue[hidden] {\n  display: none;\n}\n.pop-chain-cue > b {\n  display: grid;\n  place-items: center;\n  background: #e88bbb;\n  color: white;\n  border-radius: 50%;\n  width: 30px;\n  height: 30px;\n  font-size: 20px;\n}\n.pop-chain-cue span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-chain-cue img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n}\n.pop-chain-cue.pulse > b {\n  animation: pop-count .22s ease-out;\n}\n.pop-feedback {\n  inset: 3px 0 auto;\n  font-size: 22px;\n  transform: none;\n  line-height: 1.2;\n}\n.is-frenzy .pop-tray {\n  border-color: #fff0b5;\n  box-shadow:\n    inset 0 4px 10px #9973bb40,\n    0 7px 0 #e6a6d6,\n    0 0 24px #ffc8d7;\n}\n.is-frenzy .pop-frenzy {\n  background: #fff6d4;\n  border-radius: 18px;\n  padding: 3px 8px;\n}\n.pop-frenzy b {\n  min-width: 46px;\n  text-align: right;\n}\n.pop-hint {\n  font-size: 13px;\n  min-height: 18px;\n}\n.pop-previous-best {\n  font-size: 11px;\n  color: #957aac;\n}\n.pop-ticket-flight {\n  height: 34px;\n  width: 100%;\n  position: relative;\n  overflow: hidden;\n}\n.pop-ticket-flight img {\n  position: absolute;\n  left: calc(18% + var(--i)*8%);\n  width: 35px;\n  height: 28px;\n  object-fit: contain;\n  animation: pop-ticket-bank .95s calc(var(--i)*.07s) both;\n}\n.pop-ticket-prize {\n  font-size: 17px;\n}\n@keyframes pop-ticket-bank {\n  0% {\n    transform: translateY(23px) rotate(-18deg);\n    opacity: 0;\n  }\n  30% {\n    opacity: 1;\n  }\n  70% {\n    transform: translateY(-4px) rotate(8deg);\n    opacity: 1;\n  }\n  100% {\n    transform: translateY(8px) scale(.65);\n    opacity: 0;\n  }\n}\n.showing-results .pop-stats,\n.showing-results .pop-frenzy,\n.showing-results .pop-hint,\n.showing-results .pop-friends {\n  display: none;\n}\n.showing-results .pop-tray {\n  height: min(480px, calc(100dvh - 140px));\n  flex-shrink: 0;\n}\n.showing-results .pop-tray canvas {\n  position: absolute;\n  visibility: hidden;\n}\n.showing-results .pop-cover {\n  gap: 12px;\n  padding: 18px;\n  overflow: auto;\n}\n.showing-results .pop-cover h3 {\n  font-size: 24px;\n}\n.showing-results .pop-result-star {\n  display: block;\n  line-height: 1;\n  font-size: 32px;\n}\n.showing-results .pop-cover button {\n  flex-shrink: 0;\n  min-height: 44px;\n}\n.showing-results .pop-cover p {\n  line-height: 1.4;\n}\n@media (max-height: 700px) {\n  .showing-results .pop-cover {\n    gap: 8px;\n    padding: 12px;\n  }\n  .showing-results .pop-cover h3 {\n    font-size: 21px;\n  }\n  .showing-results .pop-result-star {\n    font-size: 24px;\n  }\n  .pop-chain-cue {\n    font-size: 10px;\n  }\n  .pop-feedback {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .pop-ticket-flight img {\n    animation: none;\n    opacity: 1;\n  }\n  .pop-chain-cue.pulse > b {\n    animation: none;\n  }\n}\n@media (max-width: 360px) {\n  .pop-title {\n    gap: 5px;\n  }\n  .pop-title > div {\n    min-width: 0;\n  }\n  .pop-title small {\n    font-size: 7px;\n    letter-spacing: .6px;\n  }\n  .pop-title h2 {\n    font-size: 20px;\n  }\n  .showing-results .pop-tray {\n    height: calc(100dvh - 145px);\n  }\n}\n#squishy-pop-shortcut {\n  pointer-events: auto;\n  border: 2px solid #fff;\n  border-radius: 22px;\n  padding: 9px 14px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe6f0,\n      #efb5dd);\n  color: #604c80;\n  font: 800 13px "Trebuchet MS", sans-serif;\n  box-shadow: 0 3px 10px #72538b26;\n  cursor: pointer;\n}\n#squishy-pop-shortcut:hover {\n  background: #f6c7e5;\n}\n#squishy-pop-shortcut:focus-visible {\n  outline: 3px solid #7855ae;\n  outline-offset: 3px;\n}\n@media (max-width: 600px) {\n  footer .asset-credits {\n    display: none;\n  }\n  #squishy-pop-shortcut {\n    font-size: 11px;\n    padding: 8px 10px;\n  }\n}\n#squishy-pop-shortcut {\n  min-height: 44px;\n}\n.pop-result-actions {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 8px;\n  width: 100%;\n}\n.pop-cover .pop-result-actions button {\n  width: 100%;\n  font-size: 12px !important;\n  padding: 8px;\n  line-height: 1.2;\n}\n.pop-result-actions button:first-child:last-child {\n  grid-column: 1/-1;\n}\n.pop-goals {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  padding: 7px 9px;\n  border: 2px solid white;\n  border-radius: 18px;\n  background: #fff6dc;\n  font-size: 12px;\n  font-weight: 800;\n  flex-wrap: wrap;\n}\n.pop-goals[hidden],\n.showing-results .pop-goals {\n  display: none;\n}\n.pop-goals small {\n  font-size: 9px;\n  color: #9878b9;\n}\n.pop-goals span,\n.pop-objectives span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-goals img,\n.pop-objectives img,\n.pop-previous-best img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n  vertical-align: middle;\n}\n.pop-goals .done {\n  color: #487865;\n}\n.pop-level-list {\n  display: flex;\n  flex-direction: column;\n  gap: 9px;\n  width: 100%;\n}\n.pop-level-list button {\n  width: 100%;\n  text-align: left;\n}\n.pop-level-list small {\n  display: block;\n  margin-top: 4px;\n  font-size: 11px;\n  font-weight: 600;\n}\n#squishy-pop button:disabled {\n  opacity: .55;\n  cursor: default;\n  transform: none;\n  background: #e5dfeb;\n}\n.pop-objectives {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 12px;\n  padding: 12px;\n  font-size: 18px;\n  font-weight: 800;\n}\n.showing-results .pop-cover {\n  justify-content: flex-start;\n}\n.showing-results .pop-cover > h3:first-child {\n  margin-top: 8px;\n}\n.pop-previous-best {\n  line-height: 1.5;\n}\n.showing-results .pop-cover > * {\n  flex-shrink: 0;\n}\n.showing-results .pop-cover .pop-link {\n  min-height: 44px;\n  padding: 7px;\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 7px;\n  }\n  .pop-goals {\n    font-size: 11px;\n    padding: 4px 6px;\n    gap: 5px;\n  }\n  .pop-goals img {\n    width: 24px;\n    height: 24px;\n  }\n  .showing-results .pop-cover {\n    gap: 7px;\n  }\n  .pop-level-list {\n    gap: 6px;\n  }\n}\n.pop-prizes {\n  min-height: 44px !important;\n  width: auto !important;\n  padding: 5px 10px !important;\n  font-size: 12px !important;\n}\n.pop-feedback[data-tier=great] {\n  font-size: clamp(22px, 6vw, 32px);\n  color: #fff6a0;\n  text-shadow: 0 3px 0 #7d4690, 0 0 18px #fff;\n}\n.pop-feedback[data-tier=super] {\n  font-size: clamp(26px, 7vw, 38px);\n  color: #fff;\n  border: 3px solid #ffdf65;\n  border-radius: 20px;\n  background: #9554bde8;\n  padding: 12px;\n  box-shadow: 0 0 24px #ffda6a;\n}\n.pop-feedback[data-tier=rainbow] {\n  font-size: clamp(24px, 6.5vw, 36px);\n  color: #fff;\n  background:\n    linear-gradient(\n      110deg,\n      #ea76a7,\n      #d0a554,\n      #61bca4,\n      #618ddb,\n      #a278c8);\n  border: 3px solid white;\n  border-radius: 20px;\n  padding: 12px;\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-tray[data-celebration=super] {\n  box-shadow: 0 0 0 5px #ffe393, 0 0 35px #f1abde;\n}\n.pop-tray[data-celebration=rainbow] {\n  box-shadow:\n    -10px 0 24px #ff9cad,\n    0 -8px 24px #fff09e,\n    10px 0 24px #98daff,\n    0 8px 24px #b5a1ff;\n}\n.pop-feedback[hidden] {\n  display: none;\n}\n.pop-feedback[data-tier=great],\n.pop-feedback[data-tier=super],\n.pop-feedback[data-tier=rainbow] {\n  animation: pop-reward .32s ease-out;\n}\n@keyframes pop-reward {\n  from {\n    transform: translateY(8px) scale(.88);\n    opacity: .5;\n  }\n  to {\n    transform: none;\n    opacity: 1;\n  }\n}\n.pop-feedback[data-tier=super] {\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-launch {\n  position: absolute;\n  top: 175px;\n  bottom: auto;\n  left: 18px;\n  transform: none;\n  width: auto;\n  max-width: 180px;\n  padding: 9px 13px;\n  font-size: 12px;\n  border-width: 2px;\n  box-shadow: 0 3px 10px #4f3b6220;\n}\n.pop-launch small {\n  display: none;\n}\n@media (max-height: 650px) {\n  .pop-launch {\n    top: 135px;\n  }\n}\n\n/* src/ui/ticket-shop.css */\n#ticket-shop {\n  width: min(92vw, 520px);\n  max-height: 88dvh;\n  overflow: auto;\n  border: 3px solid #efb6d2;\n  border-radius: 26px;\n  background: #fff8ed;\n  color: #604861;\n  padding: 22px;\n  text-align: center;\n}\n#ticket-shop::backdrop {\n  background: #403347a8;\n}\n.ticket-prizes {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px;\n  margin: 16px 0;\n}\n.ticket-prizes article {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 10px;\n  border-radius: 18px;\n  background: #f1e7fa;\n}\n.ticket-prizes img {\n  width: 96px;\n  height: 96px;\n  object-fit: contain;\n}\n#ticket-shop button {\n  min-height: 44px;\n  border: 0;\n  border-radius: 16px;\n  padding: 10px 14px;\n  background: #805ba6;\n  color: white;\n  font-weight: 700;\n  cursor: pointer;\n}\n#ticket-shop button:disabled {\n  background: #d3c4d5;\n  color: #665b69;\n  cursor: default;\n}\n#ticket-shop [data-close] {\n  display: block;\n  width: 100%;\n  margin-top: 16px;\n}\n#ticket-shop [role=status] {\n  font-weight: 700;\n  color: #566b40;\n}\n#travel-next-store {\n  position: absolute;\n  right: 12px;\n  top: 175px;\n  z-index: 12;\n  max-width: 170px;\n  min-height: 44px;\n  border: 2px solid #d9c5ec;\n  border-radius: 15px;\n  padding: 8px 12px;\n  background: #fff4e6;\n  color: #604861;\n  font-weight: 700;\n}\n#ticket-shop {\n  box-sizing: border-box;\n}\n#ticket-shop [data-close] {\n  position: sticky;\n  bottom: 0;\n  box-shadow: 0 0 0 5px #fff8ed;\n}\n.ticket-prizes article {\n  min-width: 0;\n}\n.ticket-prizes button {\n  width: 100%;\n}\n@media (max-width: 360px) {\n  #ticket-shop {\n    padding: 14px;\n  }\n  .ticket-prizes {\n    gap: 8px;\n  }\n  .ticket-prizes img {\n    width: 76px;\n    height: 76px;\n  }\n  .ticket-prizes article {\n    padding: 8px;\n  }\n  .ticket-prizes button {\n    padding: 8px;\n    font-size: 12px;\n  }\n}\n#ticket-shop [data-close] {\n  top: 0;\n  bottom: auto;\n  z-index: 2;\n}\n\n/* src/ui/tornado.css */\n#game[data-tornado] .room-title,\n#game[data-tornado] #cleanup-effects,\n#game[data-tornado] #house-doors,\n#game[data-tornado] #move-tip,\n#game[data-tornado] .mission-stats {\n  visibility: hidden;\n}\n#tornado-hud {\n  position: absolute;\n  z-index: 8;\n  top: 110px;\n  left: 22px;\n  width: min(340px, calc(100% - 44px));\n  padding: 15px 18px;\n  border: 2px solid #fff9;\n  border-radius: 23px;\n  background: #fff9f1ef;\n  color: #59476e;\n  box-shadow: 0 8px 25px #52416620;\n  pointer-events: none;\n  box-sizing: border-box;\n}\n#tornado-hud[hidden] {\n  display: none;\n}\n#tornado-hud header {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n#tornado-hud small {\n  font-size: 8px;\n  letter-spacing: 1.6px;\n  color: #907ca6;\n}\n#tornado-hud h2 {\n  font-size: 23px;\n  margin: 3px 0 10px;\n}\n#tornado-hud [data-time] {\n  font-size: 28px;\n  font-variant-numeric: tabular-nums;\n  margin-left: auto;\n}\n#tornado-hud [data-sound] {\n  pointer-events: auto;\n  border: 0;\n  background: #ece0f3;\n  color: #69517e;\n  border-radius: 50%;\n  width: 32px;\n  height: 32px;\n  cursor: pointer;\n}\n.tornado-meter-row,\n.tornado-score {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  font-size: 11px;\n}\n.tornado-score {\n  margin-top: 7px;\n  color: #71865c;\n}\n.tornado-score [data-streak] {\n  color: #a65585;\n  font-size: 10px;\n}\n#tornado-hud meter {\n  display: block;\n  width: 100%;\n  height: 17px;\n  margin-top: 4px;\n}\n#tornado-hud meter::-webkit-meter-bar {\n  background: #eee5f3;\n  border: 0;\n  border-radius: 10px;\n}\n#tornado-hud meter::-webkit-meter-optimum-value {\n  background:\n    linear-gradient(\n      90deg,\n      #c3cde8,\n      #e8adbe);\n  border-radius: 10px;\n}\n#tornado-hud p {\n  font-size: 11px;\n  line-height: 1.4;\n  min-height: 30px;\n  margin: 9px 0 0;\n}\n#tornado-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n  z-index: 7;\n}\n.tornado-marker {\n  position: absolute;\n  font-size: 24px;\n  border: 2px solid #fff;\n  background: #fff4d9ed;\n  box-shadow: 0 4px 12px #71603c30;\n  border-radius: 14px;\n  padding: 3px 7px;\n}\n.tornado-marker.near {\n  background: #dcf3c8;\n  box-shadow: 0 0 20px #fff3a1;\n}\n.tornado-marker.edge::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #9c729d;\n  transform: translate(-50%, -50%) rotate(var(--angle)) translateX(32px);\n}\n.tornado-sparkles {\n  position: absolute;\n  color: #8a599f;\n  text-shadow: 0 2px #fff;\n  font-weight: bold;\n  font-size: 26px;\n  animation: tornado-pop 1s ease-out forwards;\n  white-space: nowrap;\n}\n@keyframes tornado-pop {\n  from {\n    transform: translate(-50%, 0) scale(.6);\n  }\n  50% {\n    opacity: 1;\n  }\n  to {\n    transform: translate(-50%, -80px) scale(1.2);\n    opacity: 0;\n  }\n}\n#tornado-dialog {\n  box-sizing: border-box;\n  width: min(430px, calc(100% - 28px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  padding: 28px;\n  border: 2px solid white;\n  border-radius: 28px;\n  background: #fff8f1;\n  color: #5c4773;\n  text-align: center;\n  box-shadow: 0 20px 80px #51416650;\n}\n#tornado-dialog::backdrop {\n  background: #594d7666;\n  backdrop-filter: blur(3px);\n}\n#tornado-dialog small {\n  font-size: 9px;\n  letter-spacing: 1.4px;\n}\n#tornado-dialog h2 {\n  font-size: 29px;\n  line-height: 1.1;\n  margin: 12px 0;\n}\n#tornado-dialog p {\n  font-size: 14px;\n  line-height: 1.6;\n  color: #8b7094;\n}\n.tornado-emblem {\n  font-size: 60px;\n}\n.tornado-stars {\n  font-size: 48px;\n  color: #e4ae4e;\n  letter-spacing: 7px;\n}\n.tornado-instructions {\n  display: grid;\n  gap: 10px;\n  background: #efe6f4;\n  padding: 16px;\n  border-radius: 18px;\n  text-align: left;\n}\n.tornado-totals {\n  display: flex;\n  justify-content: space-around;\n  background: #efe6f4;\n  padding: 16px 4px;\n  border-radius: 18px;\n  font-size: 11px;\n}\n.tornado-totals b {\n  display: block;\n  font-size: 25px;\n  margin-bottom: 5px;\n}\n#tornado-dialog button {\n  display: block;\n  width: 100%;\n  padding: 14px;\n  border: 2px solid white;\n  border-radius: 16px;\n  margin-top: 10px;\n  background: #b8cfae;\n  color: #466240;\n  font: 700 16px system-ui;\n  cursor: pointer;\n}\n#tornado-dialog button.secondary {\n  background: #eee3f1;\n  color: #705285;\n}\n#tornado-dialog .tornado-earned {\n  color: #5b824e;\n  font-weight: bold;\n}\n@media (max-width: 500px) {\n  #tornado-hud {\n    top: 87px;\n    left: 12px;\n    width: calc(100% - 24px);\n    padding: 10px 13px;\n  }\n  #tornado-hud h2 {\n    font-size: 20px;\n    margin-bottom: 5px;\n  }\n  #tornado-hud p {\n    min-height: 16px;\n    margin-top: 5px;\n  }\n  #tornado-hud [data-time] {\n    font-size: 25px;\n  }\n  .tornado-marker {\n    font-size: 20px;\n  }\n}\n@media (max-height: 600px) and (orientation: landscape) {\n  #tornado-hud {\n    top: 80px;\n    width: 275px;\n    padding: 9px 12px;\n  }\n  #tornado-hud p {\n    min-height: 0;\n  }\n  #tornado-hud h2 {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .tornado-sparkles {\n    animation: none;\n  }\n}\n\n/* src/ui/styles.css */\n:root {\n  font-family:\n    "Trebuchet MS",\n    ui-rounded,\n    system-ui,\n    sans-serif;\n  color: #51466a;\n  background: #ede6f4;\n  font-synthesis: none;\n  -webkit-tap-highlight-color: transparent;\n}\n* {\n  box-sizing: border-box;\n}\nhtml,\nbody,\n#game {\n  margin: 0;\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  overscroll-behavior: none;\n}\nbody {\n  position: fixed;\n  inset: 0;\n}\n#game {\n  height: 100dvh;\n  position: relative;\n  isolation: isolate;\n  user-select: none;\n  -webkit-user-select: none;\n}\n#game-canvas {\n  display: block;\n  width: 100%;\n  height: 100%;\n  outline: none;\n  touch-action: none;\n}\n#game-canvas:focus-visible {\n  outline: 3px solid #9b86bd;\n  outline-offset: -3px;\n}\n.topbar {\n  position: absolute;\n  top: max(22px, env(safe-area-inset-top));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.wordmark {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  font-size: 26px;\n  font-weight: 800;\n  letter-spacing: -1px;\n}\n.wordmark small {\n  display: block;\n  font-size: 7px;\n  letter-spacing: 1.8px;\n  margin-top: 2px;\n  font-weight: 700;\n}\n.flower {\n  color: #a18abd;\n  font-size: 43px;\n  line-height: 1;\n}\n.chapter {\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: 2px;\n}\n.chapter span {\n  color: #b8a8c9;\n  margin: 0 5px;\n}\n.room-title {\n  position: absolute;\n  top: 14%;\n  width: 100%;\n  text-align: center;\n  pointer-events: none;\n}\n.eyebrow {\n  font-size: 9px;\n  letter-spacing: 2.3px;\n  font-weight: 700;\n  color: #8c7a9f;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 7px;\n}\n.eyebrow i {\n  width: 5px;\n  height: 5px;\n  border-radius: 50%;\n  background: #90ac95;\n}\nh1 {\n  font-size: clamp(26px, 4vw, 37px);\n  letter-spacing: -1.2px;\n  margin: 10px 0 7px;\n  font-weight: 800;\n}\n.room-title p {\n  font-size: 12px;\n  color: #8c7a9f;\n  margin: 0;\n}\n.player-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  padding: 5px 10px;\n  background: #fffaf4ee;\n  border: 1px solid #fff;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 800;\n  pointer-events: none;\n  box-shadow: 0 3px 10px #71608518;\n  will-change: transform;\n}\n.player-label span {\n  color: #d592ad;\n  margin-left: 4px;\n}\n.room-caption {\n  position: absolute;\n  bottom: 26%;\n  width: 100%;\n  text-align: center;\n  font-size: 10px;\n  letter-spacing: .5px;\n  color: #9e8db0;\n  pointer-events: none;\n}\n.room-caption span {\n  margin: 0 12px;\n  color: #b9a3cc;\n}\n.move-tip {\n  position: absolute;\n  bottom: 19%;\n  left: 50%;\n  transform: translateX(-50%);\n  display: flex;\n  gap: 10px;\n  align-items: center;\n  width: max-content;\n  max-width: calc(100% - 36px);\n  transition: opacity .6s;\n  pointer-events: none;\n}\n.tip-icon {\n  display: grid;\n  place-items: center;\n  width: 34px;\n  height: 34px;\n  background: #fbf7fcbb;\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  font-size: 22px;\n  color: #a389bb;\n}\n.move-tip strong,\n.move-tip div > span {\n  display: block;\n}\n.move-tip strong {\n  font-size: 12px;\n  margin-bottom: 3px;\n}\n.move-tip div > span {\n  font-size: 10px;\n  color: #9686a7;\n}\n.move-tip.explored {\n  opacity: 0;\n}\n.controls {\n  position: absolute;\n  left: max(27px, env(safe-area-inset-left));\n  right: max(27px, env(safe-area-inset-right));\n  bottom: max(42px, calc(env(safe-area-inset-bottom) + 24px));\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.joystick-group {\n  text-align: center;\n  pointer-events: auto;\n}\n#joystick {\n  position: relative;\n  width: 120px;\n  height: 120px;\n  border: 2px solid #fff9;\n  background:\n    linear-gradient(\n      140deg,\n      #fffc,\n      #ded1ec99);\n  border-radius: 50%;\n  box-shadow: 0 7px 22px #82709516, inset 0 1px 8px #fff8;\n  touch-action: none;\n  cursor: grab;\n}\n#joystick.dragging {\n  cursor: grabbing;\n}\n#joystick-knob {\n  position: absolute;\n  left: 34px;\n  top: 34px;\n  width: 48px;\n  height: 48px;\n  border-radius: 50%;\n  border: 2px solid #fff;\n  background:\n    linear-gradient(\n      145deg,\n      #cdbce5,\n      #aa93c9);\n  box-shadow: 0 5px 8px #6c51813b;\n  pointer-events: none;\n  display: grid;\n  place-items: center;\n  will-change: transform;\n}\n#joystick-knob svg {\n  width: 22px;\n  height: 22px;\n  fill: none;\n  stroke: #fff;\n  stroke-width: 2;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n  opacity: .8;\n}\n.direction {\n  position: absolute;\n  color: #ae9abd;\n  font-size: 22px;\n  line-height: 20px;\n}\n.up {\n  top: 5px;\n  left: 51px;\n}\n.down {\n  bottom: 7px;\n  left: 51px;\n}\n.left {\n  top: 47px;\n  left: 9px;\n}\n.right {\n  top: 47px;\n  right: 9px;\n}\n.control-label {\n  display: block;\n  font-size: 8px;\n  letter-spacing: 1.5px;\n  font-weight: 800;\n  color: #9581a8;\n  margin-top: 11px;\n}\n.explore-note {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  margin-top: 30px;\n  color: #8f7ba3;\n}\n.tiny-house {\n  font-size: 31px;\n  color: #ad98bd;\n}\n.explore-note > span:last-child {\n  font-size: 12px;\n  font-weight: 700;\n}\n.explore-note small {\n  display: block;\n  font-size: 9px;\n  font-weight: 400;\n  margin-top: 5px;\n}\nfooter {\n  position: absolute;\n  bottom: max(12px, env(safe-area-inset-bottom));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  font-size: 8px;\n  color: #a591b7;\n  letter-spacing: .6px;\n  pointer-events: none;\n}\n.build-badge {\n  font-size: 7px;\n  letter-spacing: 1.4px;\n}\n.keyboard-hint {\n  font-size: 8px;\n}\n#loading,\n#error {\n  position: absolute;\n  inset: 0;\n  background: #ede6f4;\n  display: grid;\n  place-content: center;\n  text-align: center;\n  padding: 32px;\n  z-index: 9;\n}\n#loading .loading-flower {\n  font-size: 60px;\n  color: #a18abd;\n  animation: breathe 1.2s infinite alternate;\n}\n#loading p {\n  font-size: 14px;\n}\n#error[hidden] {\n  display: none;\n}\n#error h2 {\n  font-size: 22px;\n}\n#error p {\n  font-size: 14px;\n  max-width: 320px;\n  line-height: 1.6;\n}\n@keyframes breathe {\n  to {\n    transform: scale(.85);\n    opacity: .5;\n  }\n}\n@media (min-width: 700px) {\n  .topbar {\n    left: 40px;\n    right: 40px;\n    top: 28px;\n  }\n  .room-title {\n    top: 12%;\n  }\n  .controls {\n    left: 45px;\n    right: 45px;\n    bottom: 50px;\n  }\n  .room-caption {\n    bottom: 15%;\n  }\n  .move-tip {\n    bottom: 7%;\n  }\n  .explore-note {\n    margin-top: 0;\n  }\n  footer {\n    left: 40px;\n    right: 40px;\n  }\n  .keyboard-hint {\n    font-size: 10px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .topbar {\n    top: 14px;\n  }\n  .room-title {\n    top: 13%;\n  }\n  h1 {\n    font-size: 25px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: 23%;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n  .keyboard-hint {\n    display: none;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .room-title {\n    top: 24%;\n    text-align: left;\n    padding-left: 28px;\n    width: 220px;\n  }\n  .eyebrow {\n    justify-content: flex-start;\n    font-size: 7px;\n    letter-spacing: 1px;\n  }\n  h1 {\n    font-size: 24px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .topbar {\n    top: 14px;\n  }\n  .room-caption,\n  .move-tip,\n  .explore-note {\n    display: none;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  .wordmark {\n    font-size: 21px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #loading .loading-flower {\n    animation: none;\n  }\n  .move-tip {\n    transition: none;\n  }\n}\n@media (max-width: 699px) {\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: calc(max(42px, env(safe-area-inset-bottom)) + 156px);\n  }\n}\n@media (max-width: 380px) {\n  .topbar {\n    left: 18px;\n    right: 18px;\n  }\n  .wordmark {\n    font-size: 24px;\n  }\n  .wordmark small {\n    font-size: 6px;\n    letter-spacing: 1.2px;\n    white-space: nowrap;\n  }\n  .chapter {\n    font-size: 8px;\n    letter-spacing: 1px;\n    white-space: nowrap;\n  }\n  .eyebrow {\n    font-size: 7px;\n    letter-spacing: 1.6px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n  .explore-note {\n    max-width: 125px;\n  }\n  .room-title {\n    top: 15%;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n}\n#house-music {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 10px;\n  line-height: 1.2;\n  padding: 8px;\n  min-height: 40px;\n  min-width: 54px;\n  cursor: pointer;\n}\nfooter {\n  gap: 6px;\n}\nfooter .keyboard-hint {\n  display: none;\n}\n@media (max-width: 380px) {\n  footer {\n    left: 12px;\n    right: 12px;\n  }\n  #collection-button {\n    font-size: 9px !important;\n  }\n}\n#audio-settings {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 11px;\n  padding: 8px;\n  min-height: 40px;\n  cursor: pointer;\n}\n.audio-settings {\n  width: min(340px, 85vw);\n  border: 0;\n  border-radius: 22px;\n  background: #fff9f1;\n  color: #534565;\n  padding: 24px;\n  font-family: inherit;\n}\n.audio-settings::backdrop {\n  background: #30283880;\n}\n.audio-settings label {\n  display: block;\n  margin: 22px 0;\n  font-weight: 700;\n}\n.audio-settings output {\n  float: right;\n}\n.audio-settings input {\n  display: block;\n  width: 100%;\n  height: 40px;\n  accent-color: #9873b5;\n}\n.audio-settings button {\n  min-height: 44px;\n  width: 100%;\n  border: 0;\n  border-radius: 15px;\n  background: #e1d1ed;\n  color: #493659;\n  font-weight: 700;\n}\n.audio-settings p {\n  font-size: 12px;\n}\nfooter {\n  flex-wrap: wrap;\n}\n.audio-settings {\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  box-sizing: border-box;\n}\n.audio-mutes {\n  display: flex;\n  gap: 8px;\n}\n.audio-mutes button {\n  flex: 1;\n  width: auto !important;\n}\n.audio-settings summary {\n  font-size: 13px;\n  cursor: pointer;\n}\n.audio-settings details p {\n  line-height: 1.5;\n}\n@media (max-height: 650px) {\n  .audio-settings {\n    padding: 16px;\n  }\n  .audio-settings h2 {\n    font-size: 20px;\n    margin: 0 0 10px;\n  }\n  .audio-settings label {\n    margin: 10px 0;\n  }\n}\n#game[data-scene=recess] .room-title {\n  top: 84px;\n  left: 18px;\n  right: auto;\n  width: auto;\n  max-width: 65%;\n  text-align: left;\n  padding: 10px 16px;\n  background: #fff8ece8;\n  border-radius: 18px;\n  pointer-events: none;\n}\n#game[data-scene=recess] .room-title h1 {\n  font-size: 22px;\n  margin: 3px 0;\n}\n#game[data-scene=recess] #scene-subtitle,\n#game[data-scene=recess] #day-label,\n#game[data-scene=recess] #room-connections {\n  display: none;\n}\n#game[data-scene=recess] .topbar {\n  background: #fff8ece8;\n  border-radius: 20px;\n  padding: 10px 18px;\n}\n#game[data-scene=recess] .cleanup-tip {\n  max-width: 70%;\n  background: #fff8ece6;\n  border-radius: 16px;\n  padding: 9px;\n}\n#game[data-scene=recess] #leave-recess {\n  top: 36px;\n  right: 44px;\n}\n@media (max-width: 600px) {\n  #game[data-scene=recess] .topbar {\n    left: 12px;\n    right: 12px;\n    padding: 9px 12px;\n  }\n  #game[data-scene=recess] .wordmark {\n    font-size: 20px;\n    gap: 6px;\n  }\n  #game[data-scene=recess] .wordmark .flower {\n    font-size: 29px;\n  }\n  #game[data-scene=recess] .wordmark small {\n    display: none;\n  }\n  #game[data-scene=recess] #leave-recess {\n    top: 28px;\n    right: 24px;\n    font-size: 11px;\n    padding: 9px 10px;\n  }\n  #game[data-scene=recess] .room-title {\n    top: 78px;\n    padding: 6px 12px;\n  }\n  #game[data-scene=recess] .room-title .eyebrow {\n    display: none;\n  }\n  #game[data-scene=recess] .room-title h1 {\n    font-size: 20px;\n    margin: 0;\n  }\n}\n\n/* src/ui/cleanup.css */\n.mission-stats {\n  display: flex;\n  flex-direction: column;\n  align-items: flex-end;\n  gap: 2px;\n}\n#mission-clock {\n  font-size: 23px;\n  font-weight: 800;\n  font-variant-numeric: tabular-nums;\n  letter-spacing: -1px;\n}\n#mission-clock.soon {\n  color: #b77795;\n}\n.allowance-label {\n  font-size: 7px;\n  letter-spacing: 1px;\n  color: #9581a8;\n}\n#allowance {\n  font-size: 13px;\n  color: #6e856c;\n  margin-left: 3px;\n}\n#task-count {\n  letter-spacing: 1px;\n  color: #6e856c;\n}\n.task-list {\n  display: flex;\n  list-style: none;\n  justify-content: center;\n  gap: 9px;\n  padding: 0;\n  margin: 6px 0 0;\n  height: 22px;\n}\n.task-list li {\n  display: flex;\n  align-items: center;\n  gap: 3px;\n  font-size: 9px;\n  color: #9784a6;\n  border-bottom: 2px solid transparent;\n}\n.task-list li > span:first-child {\n  font-size: 13px;\n}\n.task-list li.done {\n  color: #69866f;\n  border-color: #a6c5a6;\n}\n.task-list li.done > span:first-child {\n  color: #69866f;\n}\n.action-group {\n  pointer-events: auto;\n  text-align: center;\n}\n#action-button {\n  --hold-progress: 0deg;\n  width: 120px;\n  height: 120px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  gap: 3px;\n  border: 3px solid #fff9;\n  border-radius: 50%;\n  background:\n    linear-gradient(\n      145deg,\n      #f6b5d0,\n      #d888b6);\n  box-shadow: 0 6px 0 #ad739441, 0 8px 22px #82709522;\n  color: #663f6a;\n  cursor: pointer;\n  touch-action: none;\n  padding: 8px;\n  font-family: inherit;\n  position: relative;\n  -webkit-user-select: none;\n  user-select: none;\n}\n#action-button:disabled {\n  background:\n    linear-gradient(\n      145deg,\n      #f7f1f9,\n      #ddd0e8);\n  color: #a38caf;\n  box-shadow: 0 4px 0 #a58db222;\n  cursor: default;\n}\n#action-button:not(:disabled):active {\n  box-shadow: 0 2px 0 #ad739441;\n}\n#action-button:focus-visible,\n#replay:focus-visible {\n  outline: 3px solid #7960a5;\n  outline-offset: 4px;\n}\n#action-button.holding {\n  background: conic-gradient(#97c6a0 var(--hold-progress), #ecc0dd 0deg);\n}\n#action-icon {\n  font-size: 26px;\n  line-height: 29px;\n}\n#action-title {\n  font-size: 15px;\n  line-height: 18px;\n}\n#action-detail {\n  font-size: 10px;\n  max-width: 100%;\n  line-height: 13px;\n}\n.cleanup-tip {\n  text-align: center;\n  width: calc(100% - 36px);\n  max-width: 460px;\n  justify-content: center;\n  font-size: 11px;\n  line-height: 16px;\n  color: #887298;\n  min-height: 32px;\n}\n#cleanup-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n}\n.cleanup-marker {\n  position: absolute;\n  left: 0;\n  top: 0;\n  border-radius: 9px;\n  min-width: 22px;\n  padding: 3px 5px;\n  background: #fffaf2db;\n  border: 1px solid #fffc;\n  box-shadow: 0 2px 5px #62507722;\n  font-size: 13px;\n  line-height: 16px;\n  color: #775672;\n  will-change: transform;\n  white-space: nowrap;\n}\n.cleanup-marker[hidden] {\n  display: none;\n}\n.cleanup-marker.destination {\n  font-size: 16px !important;\n  border-radius: 50%;\n  padding: 7px !important;\n  box-shadow: 0 0 14px #fff2a8a0;\n}\n.cleanup-marker.offscreen::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #fff1aa;\n  font-size: 17px;\n  text-shadow: 0 1px 3px #504760;\n  transform: translate(-50%, -50%) rotate(var(--guide-angle)) translateX(26px);\n}\n.cleanup-marker.tool {\n  font-size: 10px;\n}\n.cleanup-marker.nearby {\n  background: #fff0b9;\n  border-color: #fff;\n  box-shadow: 0 0 10px #fff3a4bb;\n}\n.cleanup-marker.destination {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n.coin-popup {\n  position: absolute;\n  color: #63845d;\n  font-size: 22px;\n  font-weight: 800;\n  z-index: 2;\n  transform: translate(-50%, -100%);\n  animation: reward-rise .95s ease-out forwards;\n  text-shadow: 0 2px 0 #fff;\n}\n.coin-popup strong {\n  display: block;\n  padding: 3px 8px;\n  background: #fff9e4ed;\n  border-radius: 12px;\n}\n.coin-popup > span {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #e9bd61;\n  font-size: 17px;\n  animation: sparkle .75s ease-out forwards;\n}\n@keyframes reward-rise {\n  0% {\n    opacity: 0;\n    margin-top: 0;\n  }\n  20% {\n    opacity: 1;\n  }\n  75% {\n    opacity: 1;\n  }\n  100% {\n    opacity: 0;\n    margin-top: -40px;\n  }\n}\n@keyframes sparkle {\n  from {\n    transform: translate(-50%, -50%) scale(.3);\n    opacity: 1;\n  }\n  to {\n    transform: translate(var(--spark-x), var(--spark-y)) scale(.7);\n    opacity: 0;\n  }\n}\n.sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  clip-path: inset(50%);\n  overflow: hidden;\n  white-space: nowrap;\n}\n#results {\n  border: 2px solid #fff;\n  border-radius: 28px;\n  padding: 26px 22px 22px;\n  width: min(350px, calc(100% - 32px));\n  max-height: calc(100dvh - 32px);\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n  box-shadow: 0 16px 60px #55436140;\n}\n#results::backdrop {\n  background: #52416666;\n  backdrop-filter: blur(4px);\n}\n.results-flower {\n  font-size: 43px;\n  line-height: 1;\n  color: #af94cb;\n  margin-bottom: 16px;\n}\n#results .eyebrow {\n  font-size: 7px;\n  letter-spacing: 1.6px;\n}\n#results h2 {\n  margin: 12px 0 8px;\n  font-size: 30px;\n  letter-spacing: -1px;\n}\n#results-summary {\n  font-size: 12px;\n  line-height: 1.6;\n  color: #927d9e;\n}\n.results-totals {\n  display: flex;\n  justify-content: space-evenly;\n  padding: 14px 0;\n  margin: 12px 0 0;\n  background: #eee5f5;\n  border-radius: 17px;\n}\n.results-totals strong {\n  display: block;\n  font-size: 28px;\n}\n.results-totals span {\n  font-size: 10px;\n  color: #8e789f;\n}\n#results-money {\n  color: #708b6b;\n}\n#results-bonus {\n  font-size: 11px;\n  color: #788f6c;\n}\n#results-list {\n  list-style: none;\n  padding: 0;\n  display: flex;\n  justify-content: center;\n  flex-wrap: wrap;\n  gap: 6px 12px;\n  margin: 18px 0;\n  font-size: 10px;\n  color: #a58eb1;\n}\n#results-list .done {\n  color: #638269;\n}\n#replay {\n  width: 100%;\n  border: 2px solid #fff8;\n  border-radius: 17px;\n  padding: 15px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 16px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  box-shadow: 0 4px 0 #8caa8555;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#replay span {\n  margin-left: 7px;\n  font-size: 21px;\n}\n@media (max-width: 380px) {\n  .task-list {\n    gap: 6px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  #mission-clock {\n    font-size: 21px;\n  }\n  .allowance-label {\n    font-size: 6px;\n    letter-spacing: .5px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait), (orientation: landscape) and (max-height: 600px) {\n  #action-button {\n    width: 102px;\n    height: 102px;\n  }\n  #action-title {\n    font-size: 13px;\n  }\n  #action-icon {\n    font-size: 22px;\n    line-height: 24px;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .task-list {\n    height: 18px;\n    margin-top: 2px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  .task-list li > span:first-child {\n    font-size: 11px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .task-list {\n    flex-wrap: wrap;\n    height: auto;\n    justify-content: flex-start;\n    max-width: 175px;\n    gap: 5px 10px;\n  }\n  #results {\n    padding: 12px 18px;\n  }\n  .results-flower {\n    display: none;\n  }\n  #results h2 {\n    font-size: 24px;\n    margin: 7px 0;\n  }\n  .results-totals {\n    padding: 7px 0;\n  }\n  #results-list {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .coin-popup {\n    animation: none;\n  }\n  .coin-popup > span {\n    display: none;\n  }\n}\n\n/* src/ui/collection.css */\n[hidden] {\n  display: none !important;\n}\n#collection-button {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  padding: 8px 0 8px 10px;\n}\n#collection-button:disabled {\n  opacity: .45;\n}\n#wallet {\n  margin-left: 4px;\n  color: #638269;\n}\n.loop-button {\n  width: 100%;\n  border: 2px solid #fff9;\n  border-radius: 16px;\n  padding: 13px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 15px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  margin: 5px 0;\n  touch-action: manipulation;\n}\n.pink-button {\n  background: #e8b5d2;\n  color: #704b75;\n}\n.loop-button:disabled {\n  opacity: .55;\n  cursor: default;\n}\n#results-wallet {\n  font-size: 12px;\n  color: #6f8869;\n}\n#go-shopping {\n  margin-bottom: 10px;\n}\n#collection-dialog {\n  border: 2px solid #fff;\n  border-radius: 26px;\n  width: min(410px, calc(100% - 24px));\n  max-height: calc(100dvh - 24px);\n  padding: 22px 17px 17px;\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n}\n#collection-dialog::backdrop {\n  background: #52416688;\n  backdrop-filter: blur(4px);\n}\n#collection-dialog h2 {\n  margin: 10px 0 6px;\n  font-size: 28px;\n  letter-spacing: -1px;\n}\n#collection-summary {\n  font-size: 11px;\n  color: #947c9e;\n}\n#collection-grid {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 7px;\n  margin: 17px 0;\n}\n.dumpling-card {\n  background: #efe7f4;\n  border: 1px solid #fff;\n  border-radius: 14px;\n  padding: 6px 2px 9px;\n  min-width: 0;\n}\n.dumpling-card.owned {\n  background: linear-gradient(#fff9, var(--rarity));\n}\n.dumpling-card img {\n  width: 100%;\n  height: auto;\n  display: block;\n}\n.dumpling-card strong {\n  font-size: 10px;\n  display: block;\n}\n.dumpling-card small {\n  display: block;\n  font-size: 8px;\n  margin-top: 3px;\n}\n.dumpling-card .copies {\n  font-size: 10px;\n  font-weight: 800;\n  margin-top: 5px;\n}\n#store-markers {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n#shop-display-marker {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n#reveal-copy {\n  position: absolute;\n  top: 71%;\n  left: 6%;\n  width: 88%;\n  text-align: center;\n  color: var(--rarity-ink,#775887);\n  font-size: 13px;\n  pointer-events: none;\n}\n.reveal-badges {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n}\n#reveal-copy small {\n  color: var(--rarity-ink,#665070);\n  padding: 5px 10px;\n  border: 1px solid var(--rarity,#dacbdf);\n  border-radius: 20px;\n  background: var(--rarity-wash,#f4edf5);\n  font-size: 11px;\n  line-height: 1.2;\n  font-weight: 800;\n  letter-spacing: .4px;\n}\n#reveal-copy .reveal-status {\n  background: #fffc;\n  border-color: #fff;\n  color: #64556c;\n}\n#reveal-copy h2 {\n  margin: 7px 0 4px;\n  font-size: 32px;\n  line-height: 1.1;\n  letter-spacing: -.8px;\n}\n#reveal-copy p {\n  font-size: 11px;\n  margin: 0;\n  color: #74647e;\n}\n#reveal-copy[data-rarity=Legendary] .reveal-rarity {\n  box-shadow: 0 0 0 2px #fff8, 0 2px 10px #dbb14b30;\n}\n#reveal-copy.has-reveal {\n  animation: reveal-caption .4s ease-out;\n}\n@keyframes reveal-caption {\n  from {\n    transform: translateY(6px);\n    opacity: 0;\n  }\n  to {\n    transform: translateY(0);\n    opacity: 1;\n  }\n}\n#save-message {\n  position: absolute;\n  bottom: 26%;\n  left: 8%;\n  width: 84%;\n  padding: 12px;\n  border-radius: 14px;\n  background: #fff5de;\n  color: #796143;\n  font-size: 12px;\n  text-align: center;\n  z-index: 8;\n  pointer-events: none;\n}\n#game[data-scene=home] .joystick-group {\n  visibility: hidden;\n}\n#game[data-scene=home] .cleanup-tip {\n  display: none;\n}\n#squish-friend {\n  position: absolute;\n  left: 8%;\n  bottom: 12%;\n  min-width: 100px;\n  min-height: 48px;\n  padding: 12px 20px;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: #f1d6dd;\n  color: #795268;\n  font: 800 16px "Trebuchet MS", sans-serif;\n  box-shadow: 0 4px 12px #75534a15;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#home-vignette {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  background:\n    linear-gradient(\n      #ede6f4ed,\n      transparent 29%,\n      transparent 75%,\n      #ede6f4dd);\n}\n#trip-wallet {\n  font-size: 8px;\n  letter-spacing: 1px;\n  color: #887298;\n  text-align: right;\n}\n#trip-balance {\n  display: block;\n  font-size: 24px;\n  letter-spacing: -1px;\n  color: #638269;\n}\n#reveal-copy {\n  isolation: isolate;\n}\n#game[data-scene=home] .topbar,\n#game[data-scene=home] .room-title,\n#game[data-scene=home] footer {\n  text-shadow: 0 1px 8px #fff;\n}\n@media (max-height: 740px) {\n  #reveal-copy {\n    top: 68%;\n  }\n  #reveal-copy h2 {\n    font-size: 27px;\n  }\n  #collection-dialog {\n    padding-top: 15px;\n  }\n  #collection-grid {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #reveal-copy.has-reveal {\n    animation: none;\n  }\n}\n#game[data-scene=home] .controls {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  right: 18px;\n  justify-content: flex-end;\n}\n#game[data-scene=home] .joystick-group,\n#game[data-scene=home] .control-label {\n  display: none;\n}\n#game[data-scene=home] #action-button {\n  width: 136px;\n  height: 48px;\n  border-radius: 25px;\n  display: flex;\n  flex-direction: row;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n}\n#game[data-scene=home] #action-icon {\n  font-size: 20px;\n  margin: 0;\n}\n#game[data-scene=home] #action-title {\n  font-size: 13px;\n  margin: 0;\n}\n#game[data-scene=home] #action-detail {\n  display: none;\n}\n#game[data-scene=home] #squish-friend {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  left: 18px;\n  min-width: 130px;\n  font-size: 14px;\n}\nbody:has(#game[data-scene=home]) .dev-launch {\n  top: 77px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] .room-title {\n    top: 83px;\n    left: 20px;\n    right: 88px;\n    text-align: left;\n  }\n  #game[data-scene=home] .room-title .eyebrow,\n  #game[data-scene=home] #day-label {\n    display: none;\n  }\n  #game[data-scene=home] .room-title h1 {\n    font-size: 20px;\n    margin: 2px 0 4px;\n  }\n  #game[data-scene=home] .room-title p {\n    margin: 0;\n    font-size: 10px;\n  }\n  #game[data-scene=home] #reveal-copy {\n    top: 64%;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    margin: 7px 0 3px;\n    font-size: 24px;\n  }\n  #game[data-scene=home] #reveal-copy small {\n    font-size: 10px;\n    padding: 4px 8px;\n  }\n  #game[data-scene=home] #reveal-copy p {\n    font-size: 10px;\n  }\n}\n#collection-actions {\n  position: sticky;\n  top: -1px;\n  z-index: 2;\n  background: #faf5fb;\n  padding: 4px 0;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 5px;\n}\n#collection-actions .loop-button {\n  font-size: 12px;\n  padding: 10px 5px;\n  margin: 0;\n  min-height: 44px;\n}\n#collection-actions #open-next {\n  grid-column: 1/-1;\n}\n#reveal-copy {\n  background: #fff9;\n  border-radius: 18px;\n  padding: 8px;\n  left: 8%;\n  width: 84%;\n}\n#home-vignette {\n  background:\n    linear-gradient(\n      #ede6f4a0,\n      transparent 25%,\n      transparent 70%,\n      #ede6f4a0);\n}\n#game[data-scene=home] #home-vignette {\n  background:\n    linear-gradient(\n      180deg,\n      #21112465,\n      transparent 27%,\n      transparent 65%,\n      #21112450);\n}\n#game[data-scene=home] .room-title,\n#game[data-scene=home] .topbar,\n#game[data-scene=home] footer {\n  color: #fff7ee;\n  text-shadow: 0 2px 5px #341c40;\n}\n#game[data-scene=home] #reveal-copy {\n  background: #fff8f0ed;\n  box-shadow: 0 5px 24px #49254920;\n}\n#game[data-scene=home] #reveal-copy {\n  top: auto;\n  bottom: 140px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] #reveal-copy {\n    top: auto;\n    bottom: 132px;\n    padding: 6px;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    font-size: 20px;\n    margin: 5px 0 3px;\n  }\n}\n#game[data-scene=home] #reveal-copy {\n  width: min(84%, 380px);\n  left: 50%;\n  translate: -50% 0;\n}\n@media (min-height: 651px) {\n  #game[data-scene=home] #reveal-copy {\n    bottom: 125px;\n  }\n}\n#fishing-panel {\n  position: absolute;\n  bottom: 22px;\n  left: 50%;\n  translate: -50% 0;\n  width: min(92%, 420px);\n  padding: 14px;\n  border-radius: 22px;\n  border: 2px solid #fff7;\n  background: #fff8eefa;\n  box-shadow: 0 5px 25px #35555130;\n  text-align: center;\n  color: #4e5f69;\n  z-index: 25;\n}\n#fishing-panel p {\n  font-size: 15px;\n  line-height: 1.4;\n  margin: 0 0 10px;\n  font-weight: 700;\n}\n#fishing-panel button {\n  border: 2px solid #fff;\n  border-radius: 20px;\n  background: #afd7ca;\n  color: #335a54;\n  font: 800 16px system-ui;\n  padding: 13px 22px;\n  min-height: 48px;\n  margin: 3px;\n  touch-action: manipulation;\n}\n#fishing-panel button:last-child {\n  background: #ede3ea;\n  font-size: 12px;\n  padding: 10px 14px;\n}\n#fishing-panel progress {\n  width: 80%;\n  display: block;\n  margin: 8px auto;\n  accent-color: #81b6a2;\n}\n#game[data-fishing=true] .controls,\n#game[data-fishing=true] .joystick-group,\n#game[data-fishing=true] footer,\n#game[data-fishing=true] .room-title {\n  visibility: hidden;\n}\n#game[data-scene=outdoors] .room-title {\n  pointer-events: none;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 22px;\n}\n#game[data-scene=outdoors] .room-title .eyebrow {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title {\n  top: 84px;\n  left: 20px;\n  right: 20px;\n  text-align: left;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 18px;\n  margin: 3px 0;\n}\n#game[data-scene=outdoors] #day-label {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title p {\n  font-size: 11px;\n}\nbody:has(#game[data-fishing=true]) .dev-launch {\n  top: 78px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n#game[data-fishing=true] #move-tip {\n  visibility: hidden;\n}\n#fishing-panel progress[hidden] {\n  display: none;\n}\n#fishing-panel {\n  padding: 12px 14px;\n  bottom: 14px;\n  max-width: 390px;\n}\n#fishing-panel .fish-status {\n  display: block;\n  text-transform: uppercase;\n  font: 800 10px system-ui;\n  letter-spacing: 1.5px;\n  color: #738b87;\n  margin-bottom: 5px;\n}\n#fishing-panel p {\n  margin: 0 0 8px;\n  min-height: 22px;\n}\n#fishing-panel .fish-gauges {\n  display: flex;\n  gap: 12px;\n  margin: 8px 0;\n}\n#fishing-panel label {\n  flex: 1;\n  text-align: left;\n  font: 700 11px system-ui;\n}\n#fishing-panel progress {\n  width: 100%;\n  height: 9px;\n  margin: 5px 0;\n  appearance: none;\n  border: 0;\n  border-radius: 8px;\n  overflow: hidden;\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-bar {\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-value {\n  background: #7eaf9c;\n  border-radius: 8px;\n  transition: width .12s;\n}\n#fishing-panel[data-warning=true] label:last-child progress::-webkit-progress-value {\n  background: #d67976;\n}\n#fishing-panel[data-warning=true] p {\n  color: #ad535a;\n}\n#fishing-panel .fish-controls {\n  display: flex;\n  align-items: stretch;\n  gap: 5px;\n}\n#fishing-panel .fish-controls button {\n  touch-action: none;\n  user-select: none;\n  margin: 0;\n  padding: 13px 8px;\n  flex: 1;\n  border-radius: 15px;\n  font: 800 12px system-ui;\n  min-height: 52px;\n  background: #eee6f0;\n  color: #635470;\n}\n#fishing-panel #fish-action {\n  flex: 1.55;\n  background: #b1dac7;\n  color: #335e51;\n  font-size: 15px;\n}\n#fishing-panel .fish-controls button[data-held=true] {\n  background: #80bfa7 !important;\n  box-shadow: inset 0 2px 4px #416a6133;\n}\n#fishing-panel .fish-controls button[data-cue=true] {\n  border-color: #b194cf;\n  background: #e3d5f0;\n}\n#fishing-panel .fish-tip {\n  display: block;\n  font: 11px system-ui;\n  line-height: 1.4;\n  color: #79857f;\n  margin: 7px 0 2px;\n}\n#fishing-panel > button:last-child {\n  min-height: 32px;\n  padding: 5px 12px;\n  margin: 0;\n  background: transparent;\n  color: #797e83;\n  font-size: 11px;\n}\n#fishing-panel [hidden] {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  #fishing-panel {\n    bottom: 8px;\n    padding: 8px 12px;\n  }\n  #fishing-panel .fish-status,\n  #fishing-panel .fish-tip {\n    display: none;\n  }\n  #fishing-panel .fish-controls button {\n    min-height: 44px;\n    padding: 9px 6px;\n  }\n}\n#fish-direction-cue {\n  position: absolute;\n  bottom: calc(var(--panel-height,230px) + 25px);\n  left: 50%;\n  translate: -50% 0;\n  z-index: 26;\n  pointer-events: none;\n  background: #fff9e7ee;\n  border: 3px solid #e8bc60;\n  border-radius: 20px;\n  padding: 2px 15px 8px;\n  min-width: 85px;\n  text-align: center;\n  color: #725d36;\n  box-shadow: 0 4px 14px #405c5230;\n}\n#fish-direction-cue[hidden] {\n  display: none;\n}\n#fish-direction-cue[data-side=left] {\n  left: 19%;\n}\n#fish-direction-cue[data-side=right] {\n  left: 81%;\n}\n#fish-direction-cue span {\n  display: block;\n  font: 900 46px/1 system-ui;\n  letter-spacing: -6px;\n  padding-right: 6px;\n}\n#fish-direction-cue b {\n  display: block;\n  font: 900 11px system-ui;\n  letter-spacing: .7px;\n}\n#fish-direction-cue[data-side=left] .fish-arrows {\n  animation: pull-left .65s ease-in-out infinite;\n}\n#fish-direction-cue[data-side=right] .fish-arrows {\n  animation: pull-right .65s ease-in-out infinite;\n}\n#fish-direction-cue[data-correct=true] {\n  border-color: #80b7a0;\n  color: #417761;\n}\n#fish-direction-cue[data-correct=true] span {\n  font-size: 35px;\n  letter-spacing: 0;\n}\n#fish-direction-cue[data-side=rest] {\n  border-color: #d99485;\n  color: #a1574f;\n}\n#fish-direction-cue .fish-hand {\n  font-size: 30px;\n  letter-spacing: 0;\n  margin: 4px;\n}\n#fishing-panel .fish-controls button[data-cue=true] {\n  border: 3px solid #e1b45b;\n  background: #ffedb7;\n  color: #624f31;\n  box-shadow: 0 0 0 3px #f7d78b60;\n}\n#fishing-panel .fish-controls[data-pull="-1"] #fish-right,\n#fishing-panel .fish-controls[data-pull="1"] #fish-left {\n  opacity: .55;\n}\n#fishing-panel .fish-controls[data-pull=rest] #fish-action {\n  background: #efd2c8;\n  color: #945c51;\n}\n@keyframes pull-left {\n  0%, 100% {\n    transform: translateX(4px);\n  }\n  50% {\n    transform: translateX(-7px);\n  }\n}\n@keyframes pull-right {\n  0%, 100% {\n    transform: translateX(-4px);\n  }\n  50% {\n    transform: translateX(7px);\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #fish-direction-cue .fish-arrows {\n    animation: none !important;\n  }\n}\n\n/* src/ui/house.css */\n#mission-picker {\n  display: flex;\n  gap: 5px;\n  justify-content: center;\n  margin: 9px auto 0;\n  pointer-events: auto;\n}\n#mission-picker button {\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  background: #f6f0f9db;\n  padding: 5px 10px;\n  color: #8c739d;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#mission-picker button[aria-pressed=true] {\n  color: #614d7c;\n  background: #d6c4e8;\n}\n#mission-picker button:disabled {\n  opacity: .65;\n  cursor: default;\n}\n#room-connections {\n  margin: 7px 12px 0;\n  font-size: 10px;\n  color: #816b90;\n}\n#house-doors {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n.door-label {\n  position: absolute;\n  left: 0;\n  top: 0;\n  white-space: nowrap;\n  padding: 3px 6px;\n  font-size: 9px;\n  font-weight: 700;\n  color: #756085;\n  background: #fff6e7dc;\n  border: 1px solid #fff8;\n  border-radius: 7px;\n}\n.room-title {\n  text-shadow: 0 1px 6px #ede6f4;\n}\n#game[data-mission=practice] #task-count {\n  font-size: 9px;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #mission-picker {\n    margin-top: 5px;\n  }\n  #mission-picker button {\n    padding: 4px 8px;\n    font-size: 9px;\n  }\n  #room-connections {\n    margin-top: 4px;\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #mission-picker {\n    justify-content: flex-start;\n    flex-wrap: wrap;\n    width: 180px;\n    margin-left: 0;\n  }\n  #room-connections {\n    max-width: 165px;\n    margin-left: 0;\n  }\n}\n#game[data-scene=cleanup] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border: 1px solid #fff9;\n  border-radius: 20px;\n  background: #fff9efed;\n  box-shadow: 0 4px 20px #66564412;\n}\n#game[data-scene=cleanup] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=cleanup] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=cleanup] .flower {\n  font-size: 34px;\n}\n#game[data-scene=cleanup] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=cleanup] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1.1px;\n  color: #5c6e52;\n}\n#game[data-scene=cleanup] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n  letter-spacing: -.6px;\n}\n#game[data-scene=cleanup] .task-list {\n  justify-content: flex-start;\n  background: #fff8efdc;\n  border-radius: 9px;\n  padding: 4px 7px;\n  width: max-content;\n  max-width: 100%;\n  height: auto;\n}\n#game[data-scene=cleanup] #mission-picker {\n  justify-content: flex-start;\n  margin: 7px 0 0;\n}\n#game[data-scene=cleanup] #room-connections {\n  display: none;\n}\n#game[data-scene=cleanup] .player-label {\n  font-size: 9px;\n  padding: 3px 7px;\n}\n#game[data-scene=cleanup] .controls {\n  bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px));\n  left: 20px;\n  right: 20px;\n}\n#game[data-scene=cleanup] .control-label {\n  color: #50624c;\n  text-shadow: 0 1px 3px #ffff;\n}\n#game[data-scene=cleanup] #cleanup-hint {\n  background: #fff9efed;\n  width: calc(100% - 32px);\n  left: 16px;\n  padding: 7px 10px;\n  border-radius: 12px;\n  color: #596651;\n  bottom: calc(max(40px, env(safe-area-inset-bottom)) + 150px);\n  font-size: 10px;\n}\n#game[data-scene=cleanup] footer {\n  left: 16px;\n  right: 16px;\n  background: #fff9efed;\n  padding: 5px 9px;\n  border-radius: 12px;\n  bottom: 8px;\n  color: #6c795e;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #game[data-scene=cleanup] .room-title {\n    top: 85px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] #mission-picker {\n    margin-top: 5px;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    bottom: calc(max(36px, env(safe-area-inset-bottom)) + 144px);\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=cleanup] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=cleanup] .room-title {\n    top: 95px;\n    width: 210px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] .task-list {\n    flex-wrap: wrap;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    width: 40%;\n    left: 30%;\n    bottom: 12px;\n  }\n  #game[data-scene=cleanup] footer {\n    display: flex;\n    flex-wrap: wrap;\n    top: 12px;\n    bottom: auto;\n    left: 270px;\n    right: 16px;\n    justify-content: flex-end;\n  }\n}\n.asset-credits {\n  color: inherit;\n  font-size: 9px;\n  text-decoration: none;\n  padding: 5px;\n}\n#day-label {\n  margin: 5px 0;\n  font-size: 11px;\n  font-weight: 700;\n  color: #667b5b;\n  text-transform: capitalize;\n}\n#mission-picker {\n  flex-wrap: wrap;\n}\n#game[data-mission=day] .task-list {\n  flex-wrap: wrap;\n  font-size: 9px;\n}\n#game[data-mission=day] #mission-clock {\n  font-size: 19px;\n  white-space: nowrap;\n}\n#school-transition {\n  position: absolute;\n  z-index: 30;\n  inset: 0;\n  background: #f6eafaed;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  color: #65517b;\n}\n#school-transition[hidden] {\n  display: none;\n}\n#school-transition span {\n  font-size: 64px;\n}\n.lilah-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  max-width: 165px;\n  padding: 7px 10px;\n  border-radius: 15px 15px 15px 3px;\n  background: #fff2ceeF;\n  color: #735978;\n  font-size: 12px;\n  font-weight: 700;\n  pointer-events: none;\n  box-shadow: 0 3px 12px #7c627525;\n  z-index: 5;\n  text-align: center;\n}\n.lilah-label[hidden] {\n  display: none;\n}\n.marc-label {\n  background: #e7f0e4ef;\n  color: #4f655c;\n}\n#player-label,\n#house-doors,\n#room-connections {\n  display: none !important;\n}\n#game[data-scene=cleanup] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border-radius: 20px;\n  background: #fff9efed;\n}\n#game[data-scene=store] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=store] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=store] .flower {\n  font-size: 34px;\n}\n#game[data-scene=store] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=store] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1px;\n}\n#game[data-scene=store] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n}\n#game[data-scene=store] #scene-subtitle {\n  font-size: 11px;\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=store] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=store] .room-title {\n    width: 210px;\n  }\n}\n#bedtime-fade {\n  position: absolute;\n  inset: 0;\n  background: #161325;\n  z-index: 80;\n  pointer-events: none;\n}\n#house-effects {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font: 700 10px "Trebuchet MS", sans-serif;\n  min-height: 36px;\n  cursor: pointer;\n  padding: 4px 6px;\n}\n\n/* src/dev/developer-panel.css */\n.dev-launch,\n.dev-inline {\n  font: 800 11px/1.2 system-ui, sans-serif !important;\n  letter-spacing: .08em;\n  background: #27263c !important;\n  color: #e6dcff !important;\n  border: 1px solid #b9a4e8 !important;\n  border-radius: 12px !important;\n  min-height: 44px;\n  min-width: 44px;\n  padding: 10px !important;\n  cursor: pointer;\n}\n.dev-launch {\n  position: fixed;\n  z-index: 90;\n  bottom: 64px;\n  left: 50%;\n  transform: translateX(-50%);\n  box-shadow: 0 4px 18px #29223a40;\n}\n.dev-launch {\n  bottom: calc(64px + env(safe-area-inset-bottom, 0px));\n}\n#developer-panel {\n  height: min(850px, calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));\n}\n.dev-inline {\n  margin: 6px;\n  flex-shrink: 0;\n}\n.pop-title .dev-inline {\n  font-size: 9px !important;\n  letter-spacing: 0;\n  margin: 0;\n  min-width: 38px;\n  padding: 5px !important;\n}\n#developer-panel {\n  width: min(720px, calc(100vw - 24px));\n  max-width: none;\n  max-height: none;\n  height: min(850px, calc(100dvh - 24px));\n  margin: auto;\n  padding: 0;\n  overflow: hidden;\n  border: 1px solid #b6a4d764;\n  border-radius: 24px;\n  background: #181926;\n  color: #eeeaf8;\n  box-shadow: 0 28px 100px #100c23a6;\n  font: 14px/1.45 system-ui, sans-serif;\n  text-align: left;\n}\n#developer-panel::backdrop {\n  background: #121020a6;\n  backdrop-filter: blur(5px);\n}\n#developer-panel * {\n  box-sizing: border-box;\n}\n#developer-panel [hidden] {\n  display: none !important;\n}\n#developer-panel .dev-shell {\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n}\n#developer-panel button {\n  font: 650 13px/1.35 system-ui, sans-serif;\n  cursor: pointer;\n  min-height: 44px;\n  border: 1px solid #494458;\n  background: #303043;\n  color: #f3efff;\n  border-radius: 12px;\n  padding: 11px 13px;\n  box-shadow: none;\n  text-transform: none;\n  letter-spacing: 0;\n  transition: background .12s;\n}\n#developer-panel button:hover {\n  background: #414057;\n}\n#developer-panel button:focus-visible,\n#developer-panel select:focus-visible {\n  outline: 3px solid #d1bcff;\n  outline-offset: 2px;\n}\n#developer-panel button:disabled {\n  opacity: .4;\n  cursor: not-allowed;\n}\n#developer-panel button[aria-pressed=true] {\n  background: #b5dccc;\n  color: #1d3830;\n  border-color: #b5dccc;\n}\n#developer-panel .dev-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n  padding: 24px 26px 16px;\n  background:\n    radial-gradient(\n      ellipse at 90% 10%,\n      #76588b45,\n      transparent 60%);\n}\n#developer-panel .dev-eyebrow {\n  color: #c0b7d5;\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: .16em;\n  display: flex;\n  align-items: center;\n  gap: 7px;\n}\n#developer-panel .dev-eyebrow i {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: #aaddc4;\n  box-shadow: 0 0 12px #aaddc440;\n}\n#developer-panel h2 {\n  color: #f5f0ff;\n  font-size: 29px;\n  letter-spacing: -1px;\n  margin: 5px 0 2px;\n  font-weight: 750;\n}\n#developer-panel h2 span {\n  color: #d9baf5;\n  margin-left: 10px;\n}\n#developer-panel .dev-header p {\n  color: #b7afc8;\n  margin: 0;\n  font-size: 12px;\n}\n#developer-panel .dev-close {\n  font-size: 25px;\n  padding: 2px;\n  width: 44px;\n  background: #ffffff08;\n  border-color: #ffffff20;\n}\n#developer-panel .dev-live {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 0 26px 16px;\n  color: #d2cddd;\n  font-size: 11px;\n}\n#developer-panel .dev-live span {\n  padding: 5px 9px;\n  border: 1px solid #ffffff15;\n  border-radius: 7px;\n  background: #ffffff05;\n}\n#developer-panel .dev-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 4px;\n  border-block: 1px solid #ffffff12;\n  padding: 6px 20px;\n  background: #20202e;\n}\n#developer-panel .dev-tabs button {\n  background: transparent;\n  border-color: transparent;\n  color: #aaa2bc;\n  border-radius: 9px;\n  padding: 10px 4px;\n  font-size: 12px;\n}\n#developer-panel .dev-tabs button[aria-selected=true] {\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-content {\n  overflow-y: auto;\n  min-height: 0;\n  padding: 20px 26px;\n  flex: 1;\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  scrollbar-color: #6b597f transparent;\n}\n#developer-panel .dev-hero {\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  width: 100%;\n  padding: 22px 18px;\n  text-align: left;\n  background:\n    linear-gradient(\n      120deg,\n      #d7c6f2,\n      #efc8da);\n  border: 0;\n  color: #392e4b;\n  margin-bottom: 16px;\n}\n#developer-panel .dev-hero:hover {\n  background:\n    linear-gradient(\n      120deg,\n      #e2d5f8,\n      #f6d8e5);\n}\n#developer-panel .dev-hero-icon {\n  font-size: 38px;\n  line-height: 1;\n}\n#developer-panel .dev-hero small {\n  display: block;\n  letter-spacing: .13em;\n  font-size: 9px;\n  font-weight: 800;\n  opacity: .75;\n}\n#developer-panel .dev-hero strong {\n  display: block;\n  font-size: 22px;\n  letter-spacing: -.6px;\n  margin: 3px 0;\n}\n#developer-panel .dev-hero span span {\n  display: block;\n  font-size: 11px;\n  font-weight: 500;\n}\n#developer-panel .dev-hero b {\n  font-size: 25px;\n  margin-left: auto;\n}\n#developer-panel .dev-card {\n  background: #232333;\n  border: 1px solid #ffffff10;\n  border-radius: 16px;\n  padding: 18px;\n  margin-bottom: 14px;\n}\n#developer-panel h3 {\n  font-size: 15px;\n  margin: 0 0 8px;\n  color: #f0eafa;\n  font-weight: 700;\n}\n#developer-panel p {\n  color: #b8b0c9;\n  font-size: 12px;\n  margin: 0 0 13px;\n  line-height: 1.55;\n}\n#developer-panel .dev-card > p:last-child {\n  margin: 12px 0 0;\n}\n#developer-panel .dev-grid {\n  display: grid;\n  grid-template-columns: repeat(2, minmax(0, 1fr));\n  gap: 8px;\n}\n#developer-panel .dev-grid button {\n  text-align: left;\n}\n#developer-panel .dev-select-label {\n  display: block;\n  font-size: 11px;\n  color: #b9b1ca;\n  margin: 15px 0 6px;\n}\n#developer-panel select {\n  display: block;\n  width: 100%;\n  border: 1px solid #58506b;\n  background: #181926;\n  color: #eeeaf8;\n  border-radius: 10px;\n  min-height: 44px;\n  padding: 10px;\n  margin-bottom: 8px;\n  font: 13px system-ui, sans-serif;\n}\n#developer-panel .dev-notice {\n  padding: 16px;\n  border-radius: 14px;\n  background: #30342f;\n  border: 1px solid #b8d4bb30;\n  margin-bottom: 14px;\n  color: #c8e5d1;\n}\n#developer-panel .dev-notice strong {\n  font-size: 12px;\n}\n#developer-panel .dev-notice p {\n  margin: 6px 0 0;\n  color: #b4c2b6;\n}\n#developer-panel .dev-resume {\n  width: 100%;\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-danger {\n  color: #ffc4bf;\n  border-color: #965e6455;\n}\n#developer-panel pre {\n  white-space: pre-wrap;\n  font: 11px/1.8 ui-monospace, monospace;\n  color: #bbb4cd;\n  margin: 16px 0 0;\n  overflow-wrap: anywhere;\n}\n#developer-panel .dev-bottom {\n  padding: 13px 26px 15px;\n  border-top: 1px solid #ffffff12;\n  background: #20202e;\n}\n#developer-panel .dev-bottom > span {\n  display: block;\n  font-size: 11px;\n  color: #bce1cd;\n}\n#developer-panel .dev-bottom small {\n  display: block;\n  font-size: 10px;\n  color: #aaa1bc;\n  margin-top: 3px;\n}\n#developer-panel [data-status] {\n  font-size: 11px;\n  color: #d6c4f3;\n  margin-top: 8px;\n}\n#developer-panel [data-status][data-error=true] {\n  color: #ffc1b7;\n}\n@media (max-width: 480px) {\n  #developer-panel {\n    width: calc(100vw - 12px);\n    height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));\n    border-radius: 18px;\n  }\n  #developer-panel .dev-header {\n    padding: 17px 16px 12px;\n  }\n  #developer-panel h2 {\n    font-size: 25px;\n  }\n  #developer-panel .dev-live {\n    padding: 0 16px 12px;\n    gap: 5px;\n  }\n  #developer-panel .dev-tabs {\n    padding: 5px 10px;\n  }\n  #developer-panel .dev-content {\n    padding: 14px;\n  }\n  #developer-panel .dev-card {\n    padding: 14px;\n  }\n  #developer-panel .dev-bottom {\n    padding: 11px 16px;\n  }\n  #developer-panel .dev-hero {\n    padding: 16px 13px;\n    gap: 10px;\n  }\n  #developer-panel .dev-hero strong {\n    font-size: 20px;\n  }\n  #developer-panel .dev-hero-icon {\n    font-size: 28px;\n  }\n  #developer-panel .dev-grid button {\n    font-size: 12px;\n    padding: 10px;\n  }\n  #developer-panel .dev-bottom small {\n    font-size: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #developer-panel button {\n    transition: none;\n  }\n}\n#developer-panel .dev-bottom {\n  position: static;\n  display: block;\n  flex-shrink: 0;\n  letter-spacing: 0;\n  pointer-events: auto;\n}\n#squishy-pop:has(.dev-inline) .pop-footer {\n  display: block;\n}\n#squishy-pop .pop-title .dev-inline {\n  background: #27263c !important;\n  color: #e6dcff !important;\n}\n';
 
 // src/editor/FullGame.ts
 async function startEditorGame(app) {

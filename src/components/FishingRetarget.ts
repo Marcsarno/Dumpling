@@ -1,3 +1,4 @@
+import {FISHING_TEMPO} from '../systems/FishingRound';
 import {AnimCurve,AnimData,AnimTrack,Entity,Quat,Vec3,INTERPOLATION_LINEAR,type GraphNode} from 'playcanvas';
 export interface FishingMotion {bones:string[];rest:number[][];clips:Record<string,{duration:number;fps:number;frames:number[][][];positions:number[][][]}>}
 /** Retarget CC0 KayKit world-space rotation deltas onto Arianna's original bind pose.
@@ -37,6 +38,6 @@ export function fishingTracks(model:Entity,idle:AnimTrack,data:FishingMotion){
    if(name==='Fishing_Left'||name==='Fishing_Right'){const spine=model.findByName('Spine01')!;spine.setLocalRotation(new Quat().mul2(spine.getLocalRotation(),new Quat().setFromEulerAngles(0,name==='Fishing_Left'?-6:6,name==='Fishing_Left'?7:-7)));}
    channels.forEach((c,i)=>{if(c.prop==='localRotation'){const q=c.node.getLocalRotation();output[i].push(q.x,q.y,q.z,q.w);}else output[i].push(...Array.from(c.values).slice(0,3));});
   }
-  return new AnimTrack(name,clip.duration,[new AnimData(1,clip.frames.map((_,i)=>Math.min(clip.duration,i/clip.fps)))],output.map((v,i)=>new AnimData(channels[i].prop==='localRotation'?4:3,v)),channels.map((c,i)=>new AnimCurve([c.path] as unknown as string[],0,i,INTERPOLATION_LINEAR)));
+  const tempo=name==='Fishing_Cast'?FISHING_TEMPO:1;return new AnimTrack(name,clip.duration/tempo,[new AnimData(1,clip.frames.map((_,i)=>Math.min(clip.duration,i/clip.fps)/tempo))],output.map((v,i)=>new AnimData(channels[i].prop==='localRotation'?4:3,v)),channels.map((c,i)=>new AnimCurve([c.path] as unknown as string[],0,i,INTERPOLATION_LINEAR)));
  });restore();return tracks;
 }

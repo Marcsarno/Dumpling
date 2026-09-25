@@ -1,4 +1,5 @@
 import {BoundingBox,Entity,Vec3,Mesh,MeshInstance,StandardMaterial,type Application,type RenderComponent} from 'playcanvas';
+import {outdoorSurface,gardenGround,meadowFringes} from './OutdoorGround';
 import type {Bedroom} from './bedroom';import {material,primitives} from './primitives';import {OutdoorArt} from './OutdoorArt';import {classroomSign} from './Classmates';import {crossingGuard} from './CrossingGuard';
 export const POND={stand:new Vec3(-4.1,.09,-10.0),bobber:new Vec3(-7.15,.12,-11.9),center:new Vec3(-8,0,-12)};
 export const SCHOOL_GATE=new Vec3(22,.09,-29.4);
@@ -7,14 +8,15 @@ export class Outdoors{
  readonly walkable=[{minX:-9,maxX:-3.3,minZ:-6,maxZ:9.8},{minX:-14,maxX:14,minZ:-19,maxZ:-4},{minX:-4,maxX:31,minZ:-19.5,maxZ:-16},{minX:20,maxX:24,minZ:-27,maxZ:-18},{minX:14,maxX:31,minZ:-33,maxZ:-26}];
  private guard?:Awaited<ReturnType<typeof crossingGuard>>;private time=0;private opened=false;readonly art:OutdoorArt;
  constructor(private app:Application,private house:Bedroom){
-  this.root=new Entity('Pond and school walk',app);app.root.addChild(this.root);const group=app.batcher.addGroup('Outdoor architecture',false,14),s=primitives(app,this.root,group.id),grass=material('Soft meadow','#9fb97a'),stone=material('Warm pathway','#ddceae'),edge=material('Limestone edges','#eadfc3'),soil=material('Pond bank','#a79b74'),road=material('Quiet street','#8994a0'),white=material('Crossing paint','#fff4d7'),wood=material('Honey garden oak','#b89570'),mint=material('School mint','#b3cbbc'),cream=material('School plaster','#f5dfb8'),pink=material('Roof clay','#cb8d88');
+  this.root=new Entity('Pond and school walk',app);app.root.addChild(this.root);const group=app.batcher.addGroup('Outdoor architecture',false,14),s=primitives(app,this.root,group.id),grass=outdoorSurface(app,'grass'),stone=outdoorSurface(app,'path'),edge=material('Limestone edges','#eadfc3'),soil=material('Pond bank','#a79b74'),road=material('Quiet street','#8994a0'),white=material('Crossing paint','#fff4d7'),wood=material('Honey garden oak','#b89570'),mint=material('School mint','#b3cbbc'),cream=material('School plaster','#f5dfb8'),pink=material('Roof clay','#cb8d88');
   this.art=new OutdoorArt(app,this.root);
   const box=(n:string,x:number,y:number,z:number,w:number,h:number,d:number,m=stone)=>s(n,'box',[x,y,z],[w,h,d],m);
   box('Back garden lawn',7,-.16,-16,54,.25,40,grass);box('Side garden lawn',-6.6,-.16,3,4.8,.25,14,grass);
+  gardenGround(app,this.root,grass,group.id);meadowFringes(app,this.root,group.id);
   // A continuous, winding path leading away from the existing side entry.
-  const path=(ax:number,az:number,bx:number,bz:number,w:number)=>{const e=box('Garden path',(ax+bx)/2,-.005,(az+bz)/2,w,.06,Math.hypot(bx-ax,bz-az)+.3);e.setLocalEulerAngles(0,Math.atan2(bx-ax,bz-az)*180/Math.PI,0);};
+  const path=(ax:number,az:number,bx:number,bz:number,w:number)=>{const e=box('Garden path',(ax+bx)/2,-.005,(az+bz)/2,w,.06,Math.hypot(bx-ax,bz-az));e.setLocalEulerAngles(0,Math.atan2(bx-ax,bz-az)*180/Math.PI,0);for(const [x,z] of [[ax,az],[bx,bz]])s('Soft path join','cylinder',[x,-.006,z],[w,.058,w],stone,false);};
   path(-3.8,8.25,-6.3,8.25,1.8);path(-6.3,8.25,-6.3,-4,1.8);path(-6.3,-4,-3.5,-7,2);path(-3.5,-7,-.5,-12,2);path(-.5,-12,6,-17.3,2.2);path(-.5,-10,-4.4,-10,1.5);for(const [x,z,w] of [[-6.3,-4,1.8],[-3.5,-7,2],[-.5,-12,2.1],[6,-17.3,2.2]])s('Rounded path corner','cylinder',[x,-.005,z],[w,.06,w],stone,false);
-  const pondLayer=(name:string,rx:number,rz:number,y:number,mat:StandardMaterial)=>{const e=new Entity(name,app),mesh=new Mesh(app.graphicsDevice),pos=[0,0,0],norm=[0,1,0],idx:number[]=[];for(let i=0;i<=80;i++){const a=i*Math.PI/40,k=1+.035*Math.sin(a*3)+.025*Math.cos(a*5);pos.push(Math.cos(a)*rx*k,0,Math.sin(a)*rz*k);norm.push(0,1,0);if(i<80)idx.push(0,i+2,i+1);}mesh.setPositions(pos);mesh.setNormals(norm);mesh.setIndices(idx);mesh.update();e.addComponent('render',{meshInstances:[new MeshInstance(mesh,mat)],castShadows:false});this.root.addChild(e);e.setLocalPosition(-8,y,-12);return e;};
+  const pondLayer=(name:string,rx:number,rz:number,y:number,mat:StandardMaterial)=>{const e=new Entity(name,app),mesh=new Mesh(app.graphicsDevice),pos=[0,0,0],norm=[0,1,0],idx:number[]=[];for(let i=0;i<=80;i++){const a=i*Math.PI/40,k=1+.035*Math.sin(a*3)+.025*Math.cos(a*5);pos.push(Math.cos(a)*rx*k,0,Math.sin(a)*rz*k);norm.push(0,1,0);if(i<80)idx.push(0,i+2,i+1);}mesh.setPositions(pos);mesh.setNormals(norm);mesh.setIndices(idx);if(name==='Pond water'){const colors=[.57,.78,.90,1];for(let i=0;i<=80;i++)colors.push(.96,1,.98,1);mesh.setColors(colors);mat.diffuseVertexColor=true;mat.update();}mesh.update();e.addComponent('render',{meshInstances:[new MeshInstance(mesh,mat)],castShadows:false});this.root.addChild(e);e.setLocalPosition(-8,y,-12);return e;};
   // Layered irregular-looking pond, clear east bank for casting.
   pondLayer('Grassy pond lip',3.95,3.25,.018,soil);
   pondLayer('Pond shallows',3.72,3.02,.055,material('Pond shallow turquoise','#a4d4c6'));
@@ -46,8 +48,12 @@ export class Outdoors{
   for(let x=-13;x<14;x+=1.15)if(x<4||x>8)this.art.add('Bush_Common',x,-18.7,.65,x*17);
   for(let z=-17;z<-4;z+=1.15)this.art.add('Bush_Common_Flowers',-13.4,z,.65,z*9);
   for(let z=-4;z<10;z+=1.15)this.art.add('Bush_Common',-8.7,z,.62,z*9);
-  for(let i=0;i<16;i++)this.art.add('Plant_1',-12+(i%8)*3.2,-5.4-Math.floor(i/8)*10.2,.35,i*40);
-  this.roof=new Entity('Outside cottage shell and roof',app);house.root.addChild(this.roof);const r=primitives(app,this.roof),roofMat=material('Cottage rose tiles','#bc8179');
+  for(const [x,z,h] of [[-11.8,-7.4,.55],[-11,-8.3,.40],[-12,-15.8,.6],[-8.9,-16.5,.5],[-1.4,-5.5,.45],[3.6,-7.8,.55],[4.5,-8.3,.4],[15.5,-31.4,.5],[28.9,-31,.6]])this.art.add('Plant_1',x,z,h,x*27);
+  for(const [x,z,h] of [[-12.1,-7.8,.8],[-10.7,-16.7,.8],[-9.3,-16.9,.55],[3.8,-8.5,.75],[4.8,-8.1,.55],[28.9,-31.9,.85]])this.art.add('Bush_Common_Flowers',x,z,h,z*21);
+  // A planted entrance court frames the destination, leaving the gate and crossing open.
+  for(const x of [16.5,28]){box('Bed front limestone',x,.13,-27.48,3.18,.35,.12,edge);for(const side of [-1,1])box('Bed side limestone',x+side*1.55,.13,-28.5,.12,.35,2.15,edge);}
+  for(const x of [20.8,23.2])for(let z=-31.4;z>-33.2;z-=.55)box('Entry court inset',x,.04,z,.55,.03,.40,edge);
+  this.roof=new Entity('Outside cottage shell and roof',app);house.root.addChild(this.roof);const r=primitives(app,this.roof),roofMat=outdoorSurface(app,'roof');
   for(const [x,z,w,d] of [[3.85,4.8,14.65,17.1],[-.35,14.7,6.4,3.8]]){r('Exterior upper wall','box',[x,1.8,z],[w,1.9,d],material('Exterior cottage cream','#ecd8b2'));r('Ivory eaves','box',[x,2.83,z],[w+.55,.16,d+.55],edge);const pitch=Math.atan2(1.3,w/2)*180/Math.PI;for(const side of [-1,1]){const e=r('Pitched cottage roof','box',[x+side*w*.25,3.60,z],[Math.hypot(w/2,1.3)+.5,.16,d+.75],roofMat);e.setLocalEulerAngles(0,0,-side*pitch);}r('Roof ridge','box',[x,4.28,z],[.20,.16,d+.85],pink);}
   for(const z of [-1.7,2.2,5.6,11.1]){r('Exterior window frame','box',[-3.51,1.70,z],[.10,1.18,1.25],edge);r('Exterior blue glass','box',[-3.57,1.70,z],[.05,.98,1.05],material('Cottage sky glass','#accacf'));r('Exterior window mullion','box',[-3.61,1.70,z],[.05,1.03,.06],edge);r('Exterior window ledge','box',[-3.65,1.08,z],[.3,.10,1.42],wood);}
   r('Chimney','box',[7,4.0,8],[.75,1.4,.75],cream);r('Chimney cap','box',[7,4.73,8],[.95,.14,.95],edge);this.roof.enabled=false;

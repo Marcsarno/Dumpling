@@ -1,4 +1,5 @@
 /** Short catch-and-release battles. Rewards still belong to ProgressStore. */
+export const FISHING_TEMPO=4/3;
 export type FishingPhase='idle'|'prepare'|'cast'|'wait'|'bite'|'reel'|'catch'|'release'|'miss';
 export type PullDirection=-1|0|1;
 const clamp=(v:number,min=0,max=1)=>Math.max(min,Math.min(max,v));
@@ -29,7 +30,7 @@ export class FishingRound{
  steer(side:PullDirection){this.direction=this.phase==='reel'?side:0;}
  tap(){if(this.phase==='prepare')this.step('cast');else if(this.phase==='bite'){this.step('reel');this.fightTime=0;}else if(this.phase==='miss')this.start(this.id);}
  update(dt:number){
-  if(this.phase==='idle')return;dt=clamp(dt,0,.05);this.elapsed+=dt;this.total+=dt;
+  if(this.phase==='idle')return;dt=clamp(dt,0,.05);const pace=this.phase==='bite'?1:FISHING_TEMPO;dt*=pace;this.elapsed+=dt;this.total+=dt;
   if(this.phase==='cast'&&this.elapsed>1.93)this.step('wait');
   else if(this.phase==='wait'&&this.elapsed>this.nextBite)this.step('bite');
   else if(this.phase==='bite'&&this.elapsed>3.6){this.missReason='That nibble got away. Cast again!';this.step('miss');}

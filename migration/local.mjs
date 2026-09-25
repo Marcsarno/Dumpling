@@ -1347,7 +1347,7 @@ function animateSquishy(model, time, strength = 0.012) {
 }
 
 // src/main.ts
-import { Application, Color as Color11, Entity as Entity40, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec340 } from "playcanvas";
+import { Application, Color as Color12, Entity as Entity41, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec340 } from "playcanvas";
 
 // src/game/house.ts
 import { BoundingBox as BoundingBox4, Entity as Entity7, Vec3 as Vec36 } from "playcanvas";
@@ -2587,6 +2587,133 @@ var CharacterGrounding = class {
   }
 };
 
+// src/systems/FishingRound.ts
+var FISHING_TEMPO = 4 / 3;
+var clamp = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
+var FISH_PERSONALITIES = [
+  { name: "Gentle", strength: 0.8, pace: 4.6, run: 1.8 },
+  { name: "Stubborn", strength: 1.02, pace: 5.2, run: 2.2 },
+  { name: "Darting", strength: 0.9, pace: 3.9, run: 1.8 },
+  { name: "Steady", strength: 1.08, pace: 5.5, run: 2.4 }
+];
+var FishingRound = class {
+  constructor(random = () => Math.random()) {
+    this.random = random;
+  }
+  random;
+  phase = "idle";
+  elapsed = 0;
+  total = 0;
+  nextBite = 0;
+  catchKind = "fish";
+  fishIndex = 0;
+  id = "";
+  distance = 0.88;
+  tension = 0.16;
+  energy = 1;
+  strain = 0;
+  reeling = false;
+  direction = 0;
+  pullSide = 0;
+  fightTime = 0;
+  missReason = "";
+  seed = 0;
+  get tired() {
+    return this.energy < 0.34;
+  }
+  get desiredDirection() {
+    return this.pullSide === 0 ? 0 : this.pullSide === 1 ? -1 : 1;
+  }
+  get matching() {
+    return this.pullSide !== 0 && this.direction === this.desiredDirection;
+  }
+  get progress() {
+    return clamp(1 - this.distance);
+  }
+  get warning() {
+    return this.tension >= 0.76;
+  }
+  start(id) {
+    this.phase = "prepare";
+    this.elapsed = 0;
+    this.total = 0;
+    this.id = id;
+    this.seed = clamp(this.random());
+    this.nextBite = 1.6 + this.seed * 2.2;
+    this.catchKind = this.random() < 0.12 ? "squishy" : "fish";
+    this.fishIndex = Math.min(3, Math.floor(this.random() * 4));
+    this.distance = 0.88;
+    this.tension = 0.16;
+    this.energy = 1;
+    this.strain = 0;
+    this.fightTime = 0;
+    this.pullSide = 0;
+    this.missReason = "";
+    this.releaseControls();
+  }
+  step(phase) {
+    this.phase = phase;
+    this.elapsed = 0;
+    if (phase !== "reel") this.releaseControls();
+  }
+  releaseControls() {
+    this.reeling = false;
+    this.direction = 0;
+  }
+  holdReel(held) {
+    this.reeling = this.phase === "reel" && held;
+  }
+  steer(side) {
+    this.direction = this.phase === "reel" ? side : 0;
+  }
+  tap() {
+    if (this.phase === "prepare") this.step("cast");
+    else if (this.phase === "bite") {
+      this.step("reel");
+      this.fightTime = 0;
+    } else if (this.phase === "miss") this.start(this.id);
+  }
+  update(dt) {
+    if (this.phase === "idle") return;
+    dt = clamp(dt, 0, 0.05);
+    const pace = this.phase === "bite" ? 1 : FISHING_TEMPO;
+    dt *= pace;
+    this.elapsed += dt;
+    this.total += dt;
+    if (this.phase === "cast" && this.elapsed > 1.93) this.step("wait");
+    else if (this.phase === "wait" && this.elapsed > this.nextBite) this.step("bite");
+    else if (this.phase === "bite" && this.elapsed > 3.6) {
+      this.missReason = "That nibble got away. Cast again!";
+      this.step("miss");
+    } else if (this.phase === "release" && this.elapsed > 1) this.step("idle");
+    else if (this.phase === "reel") this.battle(dt);
+  }
+  battle(dt) {
+    this.fightTime += dt;
+    const p = FISH_PERSONALITIES[this.fishIndex], cycle = Math.floor(this.fightTime / p.pace), beat = this.fightTime % p.pace;
+    const pulling = this.fightTime > 1.4 && beat > p.pace - p.run && !this.tired;
+    this.pullSide = pulling ? (cycle + Math.floor(this.seed * 9)) % 2 ? 1 : -1 : 0;
+    this.energy = clamp(this.energy - dt * (0.027 + (this.matching ? 0.06 : 0) + (this.reeling ? 0.014 : 0)));
+    const wrong = this.pullSide !== 0 && this.direction !== 0 && !this.matching;
+    const heat = this.tired ? 0.055 : pulling ? (this.matching ? 0.105 : 0.27) * p.strength : 0.115;
+    this.tension = clamp(this.tension + dt * (this.reeling ? heat + (wrong ? 0.09 : 0) : -0.37));
+    this.strain = this.tension > 0.97 ? this.strain + dt : Math.max(0, this.strain - dt * 2);
+    if (this.strain > 1.8) {
+      this.missReason = "The fish slipped free. Let go when the line turns coral.";
+      this.step("miss");
+      return;
+    }
+    const gain = this.tired ? 0.145 : pulling ? this.matching ? 0.07 : 0.012 : 0.1;
+    this.distance = clamp(this.distance + dt * (this.reeling ? -gain : pulling ? 0.038 : 0.012));
+    if (this.matching && !this.reeling) this.distance = clamp(this.distance - dt * 0.022);
+    if (this.distance <= 0.015 && this.fightTime > 4) this.step("catch");
+    else if (this.fightTime > 90) {
+      this.missReason = "This friend wants to stay in the pond. Try another cast!";
+      this.step("miss");
+    }
+  }
+};
+
 // src/components/FishingRetarget.ts
 import { AnimCurve as AnimCurve3, AnimData as AnimData3, AnimTrack as AnimTrack3, Quat as Quat3, Vec3 as Vec311, INTERPOLATION_LINEAR as INTERPOLATION_LINEAR3 } from "playcanvas";
 function fishingTracks(model, idle, data) {
@@ -2649,7 +2776,8 @@ function fishingTracks(model, idle, data) {
         } else output[i].push(...Array.from(c.values).slice(0, 3));
       });
     }
-    return new AnimTrack3(name, clip.duration, [new AnimData3(1, clip.frames.map((_, i) => Math.min(clip.duration, i / clip.fps)))], output.map((v, i) => new AnimData3(channels[i].prop === "localRotation" ? 4 : 3, v)), channels.map((c, i) => new AnimCurve3([c.path], 0, i, INTERPOLATION_LINEAR3)));
+    const tempo = name === "Fishing_Cast" ? FISHING_TEMPO : 1;
+    return new AnimTrack3(name, clip.duration / tempo, [new AnimData3(1, clip.frames.map((_, i) => Math.min(clip.duration, i / clip.fps) / tempo))], output.map((v, i) => new AnimData3(channels[i].prop === "localRotation" ? 4 : 3, v)), channels.map((c, i) => new AnimCurve3([c.path], 0, i, INTERPOLATION_LINEAR3)));
   });
   restore();
   return tracks2;
@@ -6116,9 +6244,9 @@ function squishPose(time, style) {
 }
 
 // src/game/SquishyMotion.ts
-var clamp = (n) => Math.max(0, Math.min(1, n));
+var clamp2 = (n) => Math.max(0, Math.min(1, n));
 var smooth = (n) => {
-  const x = clamp(n);
+  const x = clamp2(n);
   return x * x * (3 - 2 * x);
 };
 var SQUISHY_REVEAL_SECONDS = 2.85;
@@ -6129,7 +6257,7 @@ function squishyOpeningPose(seconds, intensity = 1) {
   const size = 0.51 + 0.49 * launch;
   const stretch = 1 + 0.17 * intensity * Math.sin(launch * Math.PI) - 0.16 * intensity * Math.sin(smooth((seconds - 2.12) / 0.5) * Math.PI);
   const lid = -112 * smooth((seconds - 0.76) / 0.4) - 9 * Math.sin(smooth((seconds - 1.16) / 0.35) * Math.PI);
-  const tension = clamp(seconds / 0.76);
+  const tension = clamp2(seconds / 0.76);
   return { lid, height: height + 0.02 * Math.sin(smooth((seconds - 2.21) / 0.64) * Math.PI), scale: [size / Math.sqrt(stretch), size * stretch, size / Math.sqrt(stretch)], wiggle: seconds < 0.76 ? Math.sin(seconds * 42) * tension * tension * 4 : 0 };
 }
 
@@ -6960,12 +7088,12 @@ var TradingUI = class {
 };
 
 // src/game/recess.ts
-import { Asset as Asset7, BoundingBox as BoundingBox14, Entity as Entity30, Vec3 as Vec328 } from "playcanvas";
+import { Asset as Asset6, BoundingBox as BoundingBox13, Entity as Entity30, Vec3 as Vec328 } from "playcanvas";
 
 // src/game/SchoolPerson.ts
 import { Asset as Asset5, AnimCurve as AnimCurve5, AnimData as AnimData5, AnimTrack as AnimTrack5, BoundingBox as BoundingBox12, Entity as Entity28, Quat as Quat5, Vec3 as Vec327, INTERPOLATION_LINEAR as INTERPOLATION_LINEAR5 } from "playcanvas";
 var assets = /* @__PURE__ */ new WeakMap();
-function seatedTrack(model, source, scale) {
+function seatedTrack(model, source, scale, student = false) {
   const channels = source.curves.flatMap((curve) => curve.paths.map((path) => ({ curve, path, node: model.findByName(path.entityPath.at(-1)) })));
   const output = channels.map(() => []), times = Array.from({ length: Math.ceil(source.duration * 24) + 1 }, (_, i) => Math.min(source.duration, i / 24));
   const sample = (time) => {
@@ -6997,6 +7125,18 @@ function seatedTrack(model, source, scale) {
       leg.foot.setPosition(leg.lower.getPosition().clone().add(new Vec327(0, -leg.length, 0.035)));
       leg.foot.setRotation(leg.rotation);
     }
+    if (student && source.name !== "Wave") for (const side of ["L", "R"]) {
+      const upper = model.findByName("UpperArm." + side), lower = model.findByName("LowerArm." + side), wrist = model.findByName("Wrist." + side), origin = upper.getPosition().clone(), a = origin.distance(lower.getPosition()), b = lower.getPosition().distance(wrist.getPosition());
+      const target = new Vec327((side === "L" ? 1 : -1) * 0.15 / scale, 0.81 / scale, 0.28 / scale), toward = target.clone().sub(origin), distance = Math.min(toward.length(), (a + b) * 0.98);
+      toward.normalize();
+      const pole = new Vec327(side === "L" ? 1 : -1, -1, 0), normal = pole.sub(toward.clone().mulScalar(pole.dot(toward))).normalize(), along = (a * a - b * b + distance * distance) / (2 * distance), elbow = origin.clone().add(toward.clone().mulScalar(along)).add(normal.mulScalar(Math.sqrt(Math.max(0, a * a - along * along))));
+      const rotate = (node, child, destination) => {
+        const from = child.getPosition().clone().sub(node.getPosition()).normalize(), to = destination.clone().sub(node.getPosition()).normalize();
+        node.setRotation(new Quat5().mul2(new Quat5().setFromDirections(from, to), node.getRotation()));
+      };
+      rotate(upper, lower, elbow);
+      rotate(lower, wrist, origin.add(toward.mulScalar(distance)));
+    }
     for (const [i, { path, node }] of channels.entries()) {
       const v = path.propertyPath[0] === "localRotation" ? node.getLocalRotation() : path.propertyPath[0] === "localScale" ? node.getLocalScale() : node.getLocalPosition();
       output[i].push(v.x, v.y, v.z);
@@ -7026,7 +7166,7 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
       first = false;
     } else bounds.add(m.aabb);
   }
-  if (seated) {
+  if (seated && !file.startsWith("student-")) {
     model.findByName("Head").setLocalScale(1.2, 1.2, 1.2);
     const palette = { jules: { Purple: "#9d88bf", LightBlue: "#587995", White: "#eee4d8" }, remy: { LightBrown: "#9dbda6", Red_Dark: "#6c8d78", LightBlue: "#567188" }, poppy: { White: "#ead2e6", Orange: "#b88aac", Grey: "#ede3d7" } };
     for (const render of model.findComponents("render")) for (const mesh of render.meshInstances) {
@@ -7039,7 +7179,7 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
       }
     }
   }
-  const scale = height / (bounds.halfExtents.y * 2), tracks2 = res.animations.map((a) => a.resource).map((t) => seated ? seatedTrack(model, t, scale) : t);
+  const scale = height / (file.startsWith("student-") ? 2.14 : bounds.halfExtents.y * 2), tracks2 = res.animations.map((a) => a.resource).map((t) => seated ? seatedTrack(model, t, scale, file.startsWith("student-")) : t);
   const root = new Entity28(name, app), sizing = new Entity28("Proportional size", app);
   parent.addChild(root);
   root.addChild(sizing);
@@ -7049,8 +7189,17 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
   model.addComponent("anim", { activate: true });
   for (const t of tracks2) model.anim.assignAnimation(t.name, t);
   model.anim.baseLayer.play("Idle_Neutral");
-  let waving = false, until = 0;
+  let waving = false, until = 0, lastBlink = -1;
+  const blinkOffset = file.includes("poppy") ? 1.2 : file.includes("remy") ? 2.6 : 0;
+  const morphs = model.findComponents("render").flatMap((r) => r.meshInstances.map((m) => m.morphInstance).filter((m) => m != null));
   return { root, model, height, scale, update(time, greeting = false) {
+    if (file.startsWith("student-")) {
+      const phase = (time + blinkOffset) % 4.6, blink = phase < 0.2 ? Math.sin(phase / 0.2 * Math.PI) : 0;
+      if (Math.abs(blink - lastBlink) > 1e-3) {
+        for (const m of morphs) m.setWeight(0, blink);
+        lastBlink = blink;
+      }
+    }
     if (greeting && !waving) {
       model.anim.baseLayer.transition("Wave", 0.22);
       until = time + (tracks2.find((t) => t.name === "Wave")?.duration ?? 2);
@@ -7126,8 +7275,8 @@ var Classmates = class {
       const x = placements?.[i].x ?? (i - 1) * 1.75, z = placements?.[i].z ?? -0.74;
       if (showNames) this.signs[i] = classroomSign(app, parent, t.name + " nameplate", t.name + "\n" + t.title, [x, 0.92, z + 1.12], 1, 0.24, t.color);
       try {
-        const person = await schoolPerson(app, parent, ["jules", "remy", "poppy"][i], t.name + " classmate", [1.38, 1.36, 1.34][i], true);
-        person.root.setLocalPosition(x, 0, z);
+        const person = await schoolPerson(app, parent, ["student-jules", "student-remy", "student-poppy"][i], t.name + " classmate", [1.38, 1.36, 1.34][i], true);
+        person.root.setLocalPosition(x, placements?.[i].y ?? 0, z);
         this.actors.push({ person, id: t.id, near: false });
         this.loaded++;
       } catch (e) {
@@ -7161,7 +7310,7 @@ var Classmates = class {
     }
   }
   snapshot() {
-    return { loaded: this.loaded, errors: [...this.errors], people: this.actors.map((a) => ({ id: a.id, height: a.person.height, source: "Quaternius modular" })) };
+    return { loaded: this.loaded, errors: [...this.errors], people: this.actors.map((a) => ({ id: a.id, height: a.person.height, source: "Original student sculpt on Quaternius rig" })) };
   }
 };
 
@@ -7189,7 +7338,7 @@ function createRecess(app) {
   let loaded2 = 0;
   const load = async (name, parent) => {
     try {
-      const a = new Asset7("School " + name, "container", { url: assetUrl(`/assets/school-kit/${name}.glb`) });
+      const a = new Asset6("School " + name, "container", { url: assetUrl(`/assets/school-kit/${name}.glb`) });
       app.assets.add(a);
       await new Promise((resolve, reject) => {
         a.once("load", resolve);
@@ -7206,7 +7355,7 @@ function createRecess(app) {
   };
   const desks = [{ x: -3.1, z: -1.75 }, { x: 2.65, z: -1.75 }, { x: 0, z: 1.5 }];
   const classmates = new Classmates(app, classroom, desks.map((p) => ({ x: p.x - 0.51, z: p.z - 0.8 })));
-  const lunchFriends = new Classmates(app, cafeteria, [{ x: -4.15, z: -2.58 }, { x: -1.85, z: -2.58 }, { x: 2.55, z: -2.58 }], false);
+  const lunchFriends = new Classmates(app, cafeteria, [{ x: -4.15, y: 0.085, z: -2.5 }, { x: -1.85, y: 0.085, z: -2.5 }, { x: 2.55, y: 0.085, z: -2.5 }], false);
   const offers = new Entity30("Today\u2019s trading squishies", app);
   classroom.addChild(offers);
   const display = new Entity30("Squishy friends display", app);
@@ -7221,7 +7370,7 @@ function createRecess(app) {
     const glow = primitives(app, classroom)("Trading spot", "cylinder", [anchor.x, 0.016, anchor.z], [0.82, 0.022, 0.82], material(trader.name + " cue", trader.color), false);
     return { id: trader.id, anchor, glow };
   });
-  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox14(new Vec328(...b.center), new Vec328(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox14(new Vec328(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec328(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox14(new Vec328(x, 0, -8), new Vec328(0.05, 1, 1.05)))];
+  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec328(...b.center), new Vec328(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec328(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec328(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec328(x, 0, -8), new Vec328(0.05, 1, 1.05)))];
   const room = { root, halfWidth: 12, halfDepth: 24, walkable: [{ minX: -5.9, maxX: 5.9, minZ: -6.96, maxZ: 6.9 }, { minX: 3.7, maxX: 5.5, minZ: -9.2, maxZ: -6.7 }, { minX: -1.3, maxX: 10.5, minZ: -22.9, maxZ: -9 }], obstacles, ready: Promise.all([load("classroom", classroom), load("cafeteria", cafeteria), classmates.ready, lunchFriends.ready, schoolCook(app, cafeteria).catch((e) => {
     errors.push("School cook");
     console.error(e);
@@ -8327,10 +8476,157 @@ var SquishyPopUI = class {
 };
 
 // src/game/Outdoors.ts
-import { BoundingBox as BoundingBox16, Entity as Entity33, Vec3 as Vec331, Mesh as Mesh3, MeshInstance as MeshInstance3 } from "playcanvas";
+import { BoundingBox as BoundingBox15, Entity as Entity34, Vec3 as Vec331, Mesh as Mesh4, MeshInstance as MeshInstance4 } from "playcanvas";
+
+// src/game/OutdoorGround.ts
+import { Color as Color10, Entity as Entity31, Mesh as Mesh3, MeshInstance as MeshInstance3, Texture as Texture4, ADDRESS_REPEAT as ADDRESS_REPEAT2, FILTER_LINEAR_MIPMAP_LINEAR as FILTER_LINEAR_MIPMAP_LINEAR2 } from "playcanvas";
+function outdoorSurface(app, kind) {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 256;
+  const ctx = canvas.getContext("2d");
+  let seed = 137;
+  const random = () => {
+    seed = Math.imul(seed, 1664525) + 1013904223 >>> 0;
+    return seed / 4294967296;
+  };
+  ctx.fillStyle = kind === "grass" ? "#8da46c" : kind === "path" ? "#d9c6a4" : "#bc8179";
+  ctx.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 1500; i++) {
+    const x = random() * 256, y = random() * 256, r = i < 90 ? 14 + random() * 27 : random() * 1.2 + 0.2;
+    ctx.filter = i < 90 ? "blur(10px)" : "none";
+    ctx.globalAlpha = i < 90 ? 0.22 : 0.65;
+    ctx.fillStyle = kind === "grass" ? i % 2 ? "rgba(75,105,59,.075)" : "rgba(226,219,159,.10)" : kind === "path" ? i % 2 ? "rgba(122,104,80,.12)" : "rgba(255,246,217,.22)" : i % 2 ? "rgba(129,71,68,.07)" : "rgba(245,189,151,.10)";
+    for (const dx of [-256, 0, 256]) for (const dy of [-256, 0, 256]) {
+      ctx.beginPath();
+      ctx.ellipse(x + dx, y + dy, r, r * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.filter = "none";
+  ctx.globalAlpha = 1;
+  if (kind === "roof") {
+    for (let y = 0; y < 256; y += 32) {
+      ctx.strokeStyle = "rgba(101,63,65,.27)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, y + 30);
+      ctx.lineTo(256, y + 30);
+      ctx.stroke();
+      for (let x = y / 32 % 2 * 32; x < 256; x += 64) {
+        ctx.strokeStyle = "rgba(101,63,65,.16)";
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x, y + 30);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = "rgba(246,190,165,.30)";
+      ctx.beginPath();
+      ctx.moveTo(0, y + 2);
+      ctx.lineTo(256, y + 2);
+      ctx.stroke();
+    }
+  }
+  const texture = new Texture4(app.graphicsDevice, { name: "Painted outdoor " + kind, width: 256, height: 256, mipmaps: true, addressU: ADDRESS_REPEAT2, addressV: ADDRESS_REPEAT2, minFilter: FILTER_LINEAR_MIPMAP_LINEAR2 });
+  texture.setSource(canvas);
+  const mat = material("Painted " + kind, "#ffffff");
+  mat.diffuseMap = texture;
+  mat.gloss = 0.05;
+  mat.specular.set(0.025, 0.025, 0.025);
+  if (kind === "roof") mat.diffuseMapTiling.set(2, 3);
+  mat.update();
+  return mat;
+}
+function gardenGround(app, parent, grass, group) {
+  const positions = [], normals = [], uv = [], colors = [], indices = [];
+  const patch = (x0, z0, w, d) => {
+    const nx = Math.ceil(w), nz = Math.ceil(d), start = positions.length / 3;
+    for (let z = 0; z <= nz; z++) for (let x = 0; x <= nx; x++) {
+      const wx = x0 + x * w / nx, wz = z0 + z * d / nz, v = 1 + 0.035 * Math.sin(wx * 0.37 + wz * 0.23) + 0.025 * Math.sin(wx * 0.89 - wz * 0.38);
+      positions.push(wx, -0.029, wz);
+      normals.push(0, 1, 0);
+      uv.push(wx / 5, wz / 5);
+      colors.push(v, v, 0.99 * v, 1);
+    }
+    for (let z = 0; z < nz; z++) for (let x = 0; x < nx; x++) {
+      const i = start + z * (nx + 1) + x;
+      indices.push(i, i + nx + 1, i + 1, i + 1, i + nx + 1, i + nx + 2);
+    }
+  };
+  patch(-20, -36, 54, 40);
+  patch(-9, 4, 4.8, 6);
+  const mesh = new Mesh3(app.graphicsDevice);
+  mesh.setPositions(positions);
+  mesh.setNormals(normals);
+  mesh.setUvs(0, uv);
+  mesh.setColors(colors);
+  mesh.setIndices(indices);
+  mesh.update();
+  grass.diffuseVertexColor = true;
+  grass.update();
+  const e = new Entity31("World painted meadow", app);
+  parent.addChild(e);
+  e.addComponent("render", { meshInstances: [new MeshInstance3(mesh, grass)], castShadows: false, batchGroupId: group });
+}
+function meadowFringes(app, parent, group) {
+  const p = [], n = [], c = [], idx = [];
+  let seed = 27;
+  const random = () => {
+    seed = Math.imul(seed, 1664525) + 1013904223 >>> 0;
+    return seed / 4294967296;
+  };
+  const palette = ["#758e55", "#899f60", "#aabd76", "#b4bd79"].map((h) => new Color10().fromString(h).linear());
+  for (const [cx, cz, rx, rz, count] of [[-11.7, -8, 1.3, 1.3, 80], [-11.5, -15, 1.5, 1.1, 90], [-8.6, -16.5, 2.3, 0.7, 90], [-1.5, -5.7, 1, 0.5, 50], [4, -8, 1.8, 1, 90], [-8.1, 4.5, 0.35, 2.3, 65], [15.3, -31.2, 1.4, 1, 70], [29, -30.7, 1.1, 1.3, 70]]) {
+    for (let i = 0; i < count; i++) {
+      const a = random() * Math.PI * 2, r = Math.sqrt(random()), x = cx + Math.cos(a) * rx * r, z = cz + Math.sin(a) * rz * r, color = palette[i % 4];
+      for (let j = 0; j < 3; j++) {
+        const angle = random() * Math.PI * 2, w = 0.025 + random() * 0.025, h = 0.1 + random() * 0.16, dx = Math.cos(angle) * w, dz = Math.sin(angle) * w, k = p.length / 3;
+        p.push(x - dx, 0.015, z - dz, x + dx, 0.015, z + dz, x + dx * 2, h, z + dz * 2);
+        for (let q = 0; q < 3; q++) {
+          n.push(0, 1, 0);
+          c.push(color.r, color.g, color.b, 1);
+        }
+        idx.push(k, k + 2, k + 1, k + 1, k + 2, k);
+      }
+    }
+  }
+  const petals = ["#f4df94", "#e9aebe", "#f7edce"].map((h) => new Color10().fromString(h).linear()), heart = new Color10().fromString("#cfa45a").linear();
+  const disc = (x, y, z, r, color) => {
+    const k = p.length / 3;
+    p.push(x, y + 8e-3, z);
+    n.push(0, 1, 0);
+    c.push(color.r, color.g, color.b, 1);
+    for (let j = 0; j <= 8; j++) {
+      const a = j * Math.PI / 4;
+      p.push(x + Math.cos(a) * r, y, z + Math.sin(a) * r);
+      n.push(0, 1, 0);
+      c.push(color.r, color.g, color.b, 1);
+      if (j < 8) idx.push(k, k + j + 2, k + j + 1);
+    }
+  };
+  for (const [cx, cz, count] of [[-11.1, -8.4, 7], [-10.5, -15.2, 8], [-1.3, -5.8, 6], [15.3, -30.7, 7], [28.4, -30.6, 7]]) for (let i = 0; i < count; i++) {
+    const a = i * 2.4, x = cx + Math.cos(a) * (0.2 + i * 0.07), z = cz + Math.sin(a) * (0.2 + i * 0.05), y = 0.17 + i % 3 * 0.045;
+    for (let k = 0; k < 4; k++) {
+      const a2 = k * Math.PI / 2;
+      disc(x + Math.cos(a2) * 0.045, y, z + Math.sin(a2) * 0.045, 0.04, petals[i % 3]);
+    }
+    disc(x, y + 0.014, z, 0.025, heart);
+  }
+  const mesh = new Mesh3(app.graphicsDevice);
+  mesh.setPositions(p);
+  mesh.setNormals(n);
+  mesh.setColors(c);
+  mesh.setIndices(idx);
+  mesh.update();
+  const mat = material("Meadow edge blades and flowers", "#ffffff");
+  mat.diffuseVertexColor = true;
+  mat.update();
+  const e = new Entity31("Composed meadow fringes", app);
+  parent.addChild(e);
+  e.addComponent("render", { meshInstances: [new MeshInstance3(mesh, mat)], castShadows: false, batchGroupId: group });
+}
 
 // src/game/OutdoorArt.ts
-import { Asset as Asset8, BoundingBox as BoundingBox15, Entity as Entity31, Color as Color10 } from "playcanvas";
+import { Asset as Asset7, BoundingBox as BoundingBox14, Entity as Entity32, Color as Color11 } from "playcanvas";
 var OutdoorArt = class {
   constructor(app, parent) {
     this.app = app;
@@ -8343,16 +8639,17 @@ var OutdoorArt = class {
   errors = [];
   cache = /* @__PURE__ */ new Map();
   group;
+  leaves = /* @__PURE__ */ new Map();
   add(file, x, z, height, yaw = 0) {
     if (!this.cache.has(file)) this.cache.set(file, new Promise((resolve, reject) => {
-      const a = new Asset8(file, "container", { url: assetUrl("assets/outdoors/" + file + ".glb") });
+      const a = new Asset7(file, "container", { url: assetUrl("assets/outdoors/" + file + ".glb") });
       a.once("load", () => resolve(a.resource));
       a.once("error", reject);
       this.app.assets.add(a);
       this.app.assets.load(a);
     }));
     const task = this.cache.get(file).then((r) => {
-      const e = r.instantiateRenderEntity({ castShadows: true }), box = new BoundingBox15();
+      const e = r.instantiateRenderEntity({ castShadows: true }), box = new BoundingBox14();
       let first = true;
       for (const c of e.findComponents("render")) for (const m of c.meshInstances) {
         if (first) {
@@ -8360,17 +8657,27 @@ var OutdoorArt = class {
           first = false;
         } else box.add(m.aabb);
         m.mask = 1;
-        const mat = m.material;
-        mat.diffuseVertexColor = false;
+        let mat = m.material;
         if (/Leaves/.test(mat.name)) {
-          mat.opacityMap = mat.opacityMap ?? mat.diffuseMap;
-          mat.opacityMapChannel = "a";
-          mat.diffuseMap = null;
-          mat.diffuse = new Color10().fromString(file.includes("Bush") ? "#81a364" : "#8dab69");
+          const variant = Math.abs(Math.round(yaw)) % 3, key = file + ":" + mat.name + ":" + variant;
+          let leaf = this.leaves.get(key);
+          if (!leaf) {
+            leaf = mat.clone();
+            leaf.diffuseVertexColor = false;
+            leaf.opacityMap = leaf.opacityMap ?? leaf.diffuseMap;
+            leaf.opacityMapChannel = "a";
+            leaf.diffuseMap = null;
+            leaf.diffuse = new Color11().fromString((file.includes("Bush") ? ["#71915e", "#7b9c68", "#88a170"] : ["#84a66e", "#8dab69", "#789666"])[variant]);
+            leaf.update();
+            this.leaves.set(key, leaf);
+          }
+          m.material = leaf;
+        } else {
+          mat.diffuseVertexColor = false;
+          mat.update();
         }
-        mat.update();
       }
-      const scale = height / (box.halfExtents.y * 2), anchor = new Entity31(file, this.app);
+      const scale = height / (box.halfExtents.y * 2), anchor = new Entity32(file, this.app);
       this.parent.addChild(anchor);
       anchor.addChild(e);
       e.setLocalScale(scale, scale, scale);
@@ -8391,11 +8698,11 @@ var OutdoorArt = class {
 };
 
 // src/game/CrossingGuard.ts
-import { Entity as Entity32, Texture as Texture4, StandardMaterial as StandardMaterial9, CULLFACE_NONE as CULLFACE_NONE4 } from "playcanvas";
+import { Entity as Entity33, Texture as Texture5, StandardMaterial as StandardMaterial10, CULLFACE_NONE as CULLFACE_NONE4 } from "playcanvas";
 async function crossingGuard(app, parent) {
   const person = await schoolPerson(app, parent, "crossing-guard", "Ms Maple crossing guard", 1.8);
   person.root.setLocalPosition(20, 0.09, -18);
-  const paddle = new Entity32("Handheld STOP paddle", app);
+  const paddle = new Entity33("Handheld STOP paddle", app);
   parent.addChild(paddle);
   const shape = primitives(app, paddle);
   shape("Paddle handle", "cylinder", [0, 0.12, 0], [0.026, 0.4, 0.026], material("Paddle handle", "#eee4d0"));
@@ -8418,16 +8725,16 @@ async function crossingGuard(app, parent) {
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillText("STOP", 128, 131);
-  const texture = new Texture4(app.graphicsDevice, { mipmaps: false });
+  const texture = new Texture5(app.graphicsDevice, { mipmaps: false });
   texture.setSource(canvas);
-  const mat = new StandardMaterial9();
+  const mat = new StandardMaterial10();
   mat.diffuseMap = texture;
   mat.opacityMap = texture;
   mat.opacityMapChannel = "a";
   mat.alphaTest = 0.5;
   mat.cull = CULLFACE_NONE4;
   mat.update();
-  const face = new Entity32("Octagonal STOP sign", app);
+  const face = new Entity33("Octagonal STOP sign", app);
   paddle.addChild(face);
   face.addComponent("render", { type: "plane", material: mat, castShadows: false });
   face.setLocalPosition(0, 0.4, 0);
@@ -8451,16 +8758,19 @@ var Outdoors = class {
   constructor(app, house) {
     this.app = app;
     this.house = house;
-    this.root = new Entity33("Pond and school walk", app);
+    this.root = new Entity34("Pond and school walk", app);
     app.root.addChild(this.root);
-    const group = app.batcher.addGroup("Outdoor architecture", false, 14), s = primitives(app, this.root, group.id), grass = material("Soft meadow", "#9fb97a"), stone = material("Warm pathway", "#ddceae"), edge = material("Limestone edges", "#eadfc3"), soil = material("Pond bank", "#a79b74"), road = material("Quiet street", "#8994a0"), white = material("Crossing paint", "#fff4d7"), wood = material("Honey garden oak", "#b89570"), mint = material("School mint", "#b3cbbc"), cream = material("School plaster", "#f5dfb8"), pink = material("Roof clay", "#cb8d88");
+    const group = app.batcher.addGroup("Outdoor architecture", false, 14), s = primitives(app, this.root, group.id), grass = outdoorSurface(app, "grass"), stone = outdoorSurface(app, "path"), edge = material("Limestone edges", "#eadfc3"), soil = material("Pond bank", "#a79b74"), road = material("Quiet street", "#8994a0"), white = material("Crossing paint", "#fff4d7"), wood = material("Honey garden oak", "#b89570"), mint = material("School mint", "#b3cbbc"), cream = material("School plaster", "#f5dfb8"), pink = material("Roof clay", "#cb8d88");
     this.art = new OutdoorArt(app, this.root);
     const box = (n, x, y, z, w, h, d, m = stone) => s(n, "box", [x, y, z], [w, h, d], m);
     box("Back garden lawn", 7, -0.16, -16, 54, 0.25, 40, grass);
     box("Side garden lawn", -6.6, -0.16, 3, 4.8, 0.25, 14, grass);
+    gardenGround(app, this.root, grass, group.id);
+    meadowFringes(app, this.root, group.id);
     const path = (ax, az, bx, bz, w) => {
-      const e = box("Garden path", (ax + bx) / 2, -5e-3, (az + bz) / 2, w, 0.06, Math.hypot(bx - ax, bz - az) + 0.3);
+      const e = box("Garden path", (ax + bx) / 2, -5e-3, (az + bz) / 2, w, 0.06, Math.hypot(bx - ax, bz - az));
       e.setLocalEulerAngles(0, Math.atan2(bx - ax, bz - az) * 180 / Math.PI, 0);
+      for (const [x, z] of [[ax, az], [bx, bz]]) s("Soft path join", "cylinder", [x, -6e-3, z], [w, 0.058, w], stone, false);
     };
     path(-3.8, 8.25, -6.3, 8.25, 1.8);
     path(-6.3, 8.25, -6.3, -4, 1.8);
@@ -8470,7 +8780,7 @@ var Outdoors = class {
     path(-0.5, -10, -4.4, -10, 1.5);
     for (const [x, z, w] of [[-6.3, -4, 1.8], [-3.5, -7, 2], [-0.5, -12, 2.1], [6, -17.3, 2.2]]) s("Rounded path corner", "cylinder", [x, -5e-3, z], [w, 0.06, w], stone, false);
     const pondLayer = (name, rx, rz, y, mat) => {
-      const e = new Entity33(name, app), mesh = new Mesh3(app.graphicsDevice), pos = [0, 0, 0], norm = [0, 1, 0], idx = [];
+      const e = new Entity34(name, app), mesh = new Mesh4(app.graphicsDevice), pos = [0, 0, 0], norm = [0, 1, 0], idx = [];
       for (let i = 0; i <= 80; i++) {
         const a = i * Math.PI / 40, k = 1 + 0.035 * Math.sin(a * 3) + 0.025 * Math.cos(a * 5);
         pos.push(Math.cos(a) * rx * k, 0, Math.sin(a) * rz * k);
@@ -8480,8 +8790,15 @@ var Outdoors = class {
       mesh.setPositions(pos);
       mesh.setNormals(norm);
       mesh.setIndices(idx);
+      if (name === "Pond water") {
+        const colors = [0.57, 0.78, 0.9, 1];
+        for (let i = 0; i <= 80; i++) colors.push(0.96, 1, 0.98, 1);
+        mesh.setColors(colors);
+        mat.diffuseVertexColor = true;
+        mat.update();
+      }
       mesh.update();
-      e.addComponent("render", { meshInstances: [new MeshInstance3(mesh, mat)], castShadows: false });
+      e.addComponent("render", { meshInstances: [new MeshInstance4(mesh, mat)], castShadows: false });
       this.root.addChild(e);
       e.setLocalPosition(-8, y, -12);
       return e;
@@ -8489,7 +8806,7 @@ var Outdoors = class {
     pondLayer("Grassy pond lip", 3.95, 3.25, 0.018, soil);
     pondLayer("Pond shallows", 3.72, 3.02, 0.055, material("Pond shallow turquoise", "#a4d4c6"));
     this.water = pondLayer("Pond water", 3.45, 2.77, 0.077, material("Pond blue", "#78bac5"));
-    this.obstacles.push(new BoundingBox16(new Vec331(-8, 0.5, -12), new Vec331(3.45, 2, 2.8)));
+    this.obstacles.push(new BoundingBox15(new Vec331(-8, 0.5, -12), new Vec331(3.45, 2, 2.8)));
     for (let i = 0; i < 15; i++) {
       const a = i * Math.PI * 2 / 15;
       if (a < 0.7 || a > 5.75) continue;
@@ -8555,15 +8872,21 @@ var Outdoors = class {
     const trees = [[-12, -6, 3.8], [-13, -16, 4.8], [-10, -18, 3.6], [0, -5.2, 3.8], [4, -7, 4.7], [10, -10, 4.5], [13, -15, 3.8], [28, -31, 4.5], [15, -31, 4.7], [30, -18, 4.1]];
     trees.forEach(([x, z, h], i) => {
       this.art.add(i % 2 ? "CommonTree_1" : "CommonTree_3", x, z, h, i * 67);
-      this.obstacles.push(new BoundingBox16(new Vec331(x, 1, z), new Vec331(0.38, 2, 0.38)));
+      this.obstacles.push(new BoundingBox15(new Vec331(x, 1, z), new Vec331(0.38, 2, 0.38)));
     });
     for (let x = -13; x < 14; x += 1.15) if (x < 4 || x > 8) this.art.add("Bush_Common", x, -18.7, 0.65, x * 17);
     for (let z = -17; z < -4; z += 1.15) this.art.add("Bush_Common_Flowers", -13.4, z, 0.65, z * 9);
     for (let z = -4; z < 10; z += 1.15) this.art.add("Bush_Common", -8.7, z, 0.62, z * 9);
-    for (let i = 0; i < 16; i++) this.art.add("Plant_1", -12 + i % 8 * 3.2, -5.4 - Math.floor(i / 8) * 10.2, 0.35, i * 40);
-    this.roof = new Entity33("Outside cottage shell and roof", app);
+    for (const [x, z, h] of [[-11.8, -7.4, 0.55], [-11, -8.3, 0.4], [-12, -15.8, 0.6], [-8.9, -16.5, 0.5], [-1.4, -5.5, 0.45], [3.6, -7.8, 0.55], [4.5, -8.3, 0.4], [15.5, -31.4, 0.5], [28.9, -31, 0.6]]) this.art.add("Plant_1", x, z, h, x * 27);
+    for (const [x, z, h] of [[-12.1, -7.8, 0.8], [-10.7, -16.7, 0.8], [-9.3, -16.9, 0.55], [3.8, -8.5, 0.75], [4.8, -8.1, 0.55], [28.9, -31.9, 0.85]]) this.art.add("Bush_Common_Flowers", x, z, h, z * 21);
+    for (const x of [16.5, 28]) {
+      box("Bed front limestone", x, 0.13, -27.48, 3.18, 0.35, 0.12, edge);
+      for (const side of [-1, 1]) box("Bed side limestone", x + side * 1.55, 0.13, -28.5, 0.12, 0.35, 2.15, edge);
+    }
+    for (const x of [20.8, 23.2]) for (let z = -31.4; z > -33.2; z -= 0.55) box("Entry court inset", x, 0.04, z, 0.55, 0.03, 0.4, edge);
+    this.roof = new Entity34("Outside cottage shell and roof", app);
     house.root.addChild(this.roof);
-    const r = primitives(app, this.roof), roofMat = material("Cottage rose tiles", "#bc8179");
+    const r = primitives(app, this.roof), roofMat = outdoorSurface(app, "roof");
     for (const [x, z, w, d] of [[3.85, 4.8, 14.65, 17.1], [-0.35, 14.7, 6.4, 3.8]]) {
       r("Exterior upper wall", "box", [x, 1.8, z], [w, 1.9, d], material("Exterior cottage cream", "#ecd8b2"));
       r("Ivory eaves", "box", [x, 2.83, z], [w + 0.55, 0.16, d + 0.55], edge);
@@ -8583,7 +8906,7 @@ var Outdoors = class {
     r("Chimney", "box", [7, 4, 8], [0.75, 1.4, 0.75], cream);
     r("Chimney cap", "box", [7, 4.73, 8], [0.95, 0.14, 0.95], edge);
     this.roof.enabled = false;
-    for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [16.5, -28.5, 1.5, 1], [28, -28.5, 1.5, 1], [17, -29.8, 3.05, 0.12], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox16(new Vec331(x, 0.6, z), new Vec331(hx, 1, hz)));
+    for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [16.5, -28.5, 1.5, 1], [28, -28.5, 1.5, 1], [17, -29.8, 3.05, 0.12], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox15(new Vec331(x, 0.6, z), new Vec331(hx, 1, hz)));
     this.ready = Promise.all([this.art.finish(), crossingGuard(app, this.root).then((g) => this.guard = g)]).then(() => {
       app.batcher.generate([group.id]);
     });
@@ -8627,7 +8950,7 @@ var Outdoors = class {
     for (const [a, b] of [[3.6, 7.6], [8.95, 9.5]]) {
       shapes("Open entry wall", "box", [-3.3, 1.325, (a + b) / 2], [0.14, 2.65, b - a], wall);
       shapes("Open entry skirting", "box", [-3.28, 0.12, (a + b) / 2], [0.16, 0.16, b - a], trim);
-      this.house.obstacles.push(new BoundingBox16(new Vec331(-3.3, 0.7, (a + b) / 2), new Vec331(0.07, 1.4, (b - a) / 2)));
+      this.house.obstacles.push(new BoundingBox15(new Vec331(-3.3, 0.7, (a + b) / 2), new Vec331(0.07, 1.4, (b - a) / 2)));
     }
     this.house.walkable.push(...this.walkable);
     this.house.obstacles.push(...this.obstacles);
@@ -8647,137 +8970,13 @@ var Outdoors = class {
 };
 
 // src/game/Fishing.ts
-import { Asset as Asset9, Entity as Entity35, Vec3 as Vec333, Quat as Quat7, BoundingBox as BoundingBox17 } from "playcanvas";
-
-// src/systems/FishingRound.ts
-var clamp2 = (v, min = 0, max = 1) => Math.max(min, Math.min(max, v));
-var FISH_PERSONALITIES = [
-  { name: "Gentle", strength: 0.8, pace: 4.6, run: 1.8 },
-  { name: "Stubborn", strength: 1.02, pace: 5.2, run: 2.2 },
-  { name: "Darting", strength: 0.9, pace: 3.9, run: 1.8 },
-  { name: "Steady", strength: 1.08, pace: 5.5, run: 2.4 }
-];
-var FishingRound = class {
-  constructor(random = () => Math.random()) {
-    this.random = random;
-  }
-  random;
-  phase = "idle";
-  elapsed = 0;
-  total = 0;
-  nextBite = 0;
-  catchKind = "fish";
-  fishIndex = 0;
-  id = "";
-  distance = 0.88;
-  tension = 0.16;
-  energy = 1;
-  strain = 0;
-  reeling = false;
-  direction = 0;
-  pullSide = 0;
-  fightTime = 0;
-  missReason = "";
-  seed = 0;
-  get tired() {
-    return this.energy < 0.34;
-  }
-  get desiredDirection() {
-    return this.pullSide === 0 ? 0 : this.pullSide === 1 ? -1 : 1;
-  }
-  get matching() {
-    return this.pullSide !== 0 && this.direction === this.desiredDirection;
-  }
-  get progress() {
-    return clamp2(1 - this.distance);
-  }
-  get warning() {
-    return this.tension >= 0.76;
-  }
-  start(id) {
-    this.phase = "prepare";
-    this.elapsed = 0;
-    this.total = 0;
-    this.id = id;
-    this.seed = clamp2(this.random());
-    this.nextBite = 1.6 + this.seed * 2.2;
-    this.catchKind = this.random() < 0.12 ? "squishy" : "fish";
-    this.fishIndex = Math.min(3, Math.floor(this.random() * 4));
-    this.distance = 0.88;
-    this.tension = 0.16;
-    this.energy = 1;
-    this.strain = 0;
-    this.fightTime = 0;
-    this.pullSide = 0;
-    this.missReason = "";
-    this.releaseControls();
-  }
-  step(phase) {
-    this.phase = phase;
-    this.elapsed = 0;
-    if (phase !== "reel") this.releaseControls();
-  }
-  releaseControls() {
-    this.reeling = false;
-    this.direction = 0;
-  }
-  holdReel(held) {
-    this.reeling = this.phase === "reel" && held;
-  }
-  steer(side) {
-    this.direction = this.phase === "reel" ? side : 0;
-  }
-  tap() {
-    if (this.phase === "prepare") this.step("cast");
-    else if (this.phase === "bite") {
-      this.step("reel");
-      this.fightTime = 0;
-    } else if (this.phase === "miss") this.start(this.id);
-  }
-  update(dt) {
-    if (this.phase === "idle") return;
-    dt = clamp2(dt, 0, 0.05);
-    this.elapsed += dt;
-    this.total += dt;
-    if (this.phase === "cast" && this.elapsed > 1.93) this.step("wait");
-    else if (this.phase === "wait" && this.elapsed > this.nextBite) this.step("bite");
-    else if (this.phase === "bite" && this.elapsed > 3.6) {
-      this.missReason = "That nibble got away. Cast again!";
-      this.step("miss");
-    } else if (this.phase === "release" && this.elapsed > 1) this.step("idle");
-    else if (this.phase === "reel") this.battle(dt);
-  }
-  battle(dt) {
-    this.fightTime += dt;
-    const p = FISH_PERSONALITIES[this.fishIndex], cycle = Math.floor(this.fightTime / p.pace), beat = this.fightTime % p.pace;
-    const pulling = this.fightTime > 1.4 && beat > p.pace - p.run && !this.tired;
-    this.pullSide = pulling ? (cycle + Math.floor(this.seed * 9)) % 2 ? 1 : -1 : 0;
-    this.energy = clamp2(this.energy - dt * (0.027 + (this.matching ? 0.06 : 0) + (this.reeling ? 0.014 : 0)));
-    const wrong = this.pullSide !== 0 && this.direction !== 0 && !this.matching;
-    const heat = this.tired ? 0.055 : pulling ? (this.matching ? 0.105 : 0.27) * p.strength : 0.115;
-    this.tension = clamp2(this.tension + dt * (this.reeling ? heat + (wrong ? 0.09 : 0) : -0.37));
-    this.strain = this.tension > 0.97 ? this.strain + dt : Math.max(0, this.strain - dt * 2);
-    if (this.strain > 1.8) {
-      this.missReason = "The fish slipped free. Let go when the line turns coral.";
-      this.step("miss");
-      return;
-    }
-    const gain = this.tired ? 0.145 : pulling ? this.matching ? 0.07 : 0.012 : 0.1;
-    this.distance = clamp2(this.distance + dt * (this.reeling ? -gain : pulling ? 0.038 : 0.012));
-    if (this.matching && !this.reeling) this.distance = clamp2(this.distance - dt * 0.022);
-    if (this.distance <= 0.015 && this.fightTime > 4) this.step("catch");
-    else if (this.fightTime > 90) {
-      this.missReason = "This friend wants to stay in the pond. Try another cast!";
-      this.step("miss");
-    }
-  }
-};
+import { Asset as Asset8, Entity as Entity36, Vec3 as Vec333, Quat as Quat6, BoundingBox as BoundingBox16, AnimData as AnimData6, AnimTrack as AnimTrack6 } from "playcanvas";
 
 // src/game/FishingRod.ts
-import { Entity as Entity34, Mat4 as Mat43, Mesh as Mesh4, MeshInstance as MeshInstance4, Vec3 as Vec332 } from "playcanvas";
+import { Entity as Entity35, Mat4 as Mat43, Mesh as Mesh5, MeshInstance as MeshInstance5, Vec3 as Vec332 } from "playcanvas";
 function flexibleRod(app, root, source) {
   const inverse = new Mat43().copy(root.getWorldTransform()).invert(), parts = [];
-  const output = new Entity34("Flexible rod mesh", app);
+  const output = new Entity35("Flexible rod mesh", app);
   root.addChild(output);
   const instances = [];
   for (const render of source.findComponents("render")) {
@@ -8793,13 +8992,13 @@ function flexibleRod(app, root, source) {
         positions.splice(i, 3, p.x, p.y, p.z);
         normals.splice(i, 3, n.x, n.y, n.z);
       }
-      const mesh = new Mesh4(app.graphicsDevice);
+      const mesh = new Mesh5(app.graphicsDevice);
       mesh.setPositions(positions);
       mesh.setNormals(normals);
       if (uv.length) mesh.setUvs(0, uv);
       mesh.setIndices(indices);
       mesh.update();
-      instances.push(new MeshInstance4(mesh, original.material, output));
+      instances.push(new MeshInstance5(mesh, original.material, output));
       parts.push({ mesh, positions, normals });
     }
     render.enabled = false;
@@ -8828,6 +9027,21 @@ function flexibleRod(app, root, source) {
 // src/game/Fishing.ts
 init_collection();
 var FISH = [["goldfish", "Golden Gill"], ["puffer", "Pudding Puffer"], ["betta", "Ribbon Betta"], ["armoredcatfish", "Pebble Catfish"]];
+function uprightCatch(source, swim) {
+  const output = [...source.outputs];
+  for (const curve of source.curves) {
+    const paths = curve.paths, path = paths[0];
+    if (path?.entityPath.at(-1) !== "Main1" || !["localRotation", "localPosition"].includes(path.propertyPath[0])) continue;
+    const rest = swim.curves.find((c) => {
+      const p = c.paths[0];
+      return p?.entityPath.at(-1) === "Main1" && p.propertyPath[0] === path.propertyPath[0];
+    });
+    if (!rest) continue;
+    const data = source.outputs[curve.output], base = swim.outputs[rest.output].data;
+    output[curve.output] = new AnimData6(data.components, Array.from(data.data, (_, i) => base[i % data.components]));
+  }
+  return new AnimTrack6(source.name + " upright", source.duration, source.inputs, output, source.curves);
+}
 var Fishing = class {
   constructor(app, parent, character, camera, save) {
     this.app = app;
@@ -8836,10 +9050,10 @@ var Fishing = class {
     this.save = save;
     this.splash = new Audio(assetUrl("assets/outdoors/pond-splash.mp3"));
     this.splash.preload = "auto";
-    this.root = new Entity35("Pond fishing presentation", app);
+    this.root = new Entity36("Pond fishing presentation", app);
     parent.addChild(this.root);
     const shape = primitives(app, this.root), wood = material("Fishing rod cork", "#ac8762"), red = material("Bobber coral", "#f1958c"), cream = material("Fishing cream", "#fff1d7");
-    this.rod = new Entity35("Hand fitted fishing rod", app);
+    this.rod = new Entity36("Hand fitted fishing rod", app);
     this.root.addChild(this.rod);
     const r = primitives(app, this.rod);
     r("Cork grip", "cylinder", [0, 0.12, 0], [0.07, 0.24, 0.07], wood);
@@ -8854,7 +9068,7 @@ var Fishing = class {
     this.root.enabled = false;
     this.setupControls();
     const rodReady = this.load("fishingrod_lvl1").then((res) => {
-      const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity35("Rod normalization", app);
+      const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity36("Rod normalization", app);
       this.rod.addChild(pivot);
       pivot.addChild(e);
       pivot.setLocalScale(scale, scale, scale);
@@ -8863,9 +9077,9 @@ var Fishing = class {
       for (const name of ["Cork grip", "Slender rod", "Reel"]) this.rod.findByName(name).enabled = false;
     });
     this.ready = Promise.all(FISH.map(async ([file], i) => {
-      const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity35(file, app);
+      const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity36(file, app);
       this.root.addChild(anchor);
-      const normalization = new Entity35("Fish size and origin", app);
+      const normalization = new Entity36("Fish size and origin", app);
       anchor.addChild(normalization);
       normalization.addChild(e);
       const scale = 0.8 / Math.max(bounds.halfExtents.x * 2, bounds.halfExtents.y * 2, bounds.halfExtents.z * 2);
@@ -8873,8 +9087,10 @@ var Fishing = class {
       normalization.setLocalPosition(-bounds.center.x * scale, -bounds.center.y * scale, -bounds.center.z * scale);
       const tracks2 = res.animations.map((a) => a.resource);
       e.addComponent("anim", { activate: true });
-      e.anim.assignAnimation("Swim", tracks2.find((a) => /swim/i.test(a.name)) ?? tracks2[0]);
-      e.anim.assignAnimation("Caught", tracks2.find((a) => a.name.includes("Out_Of_Water")) ?? tracks2[0]);
+      e.anim.assignAnimation("Swim", tracks2.find((a) => a.name.includes("Swimming_Normal")) ?? tracks2[0]);
+      e.anim.assignAnimation("Dart", tracks2.find((a) => a.name.includes("Swimming_Fast")) ?? tracks2[0]);
+      e.anim.assignAnimation("Kick", tracks2.find((a) => a.name.includes("Swimming_Impulse")) ?? tracks2[0]);
+      e.anim.assignAnimation("Caught", uprightCatch(tracks2.find((a) => a.name.includes("Out_Of_Water")) ?? tracks2[0], tracks2.find((a) => a.name.includes("Swimming_Normal")) ?? tracks2[0]));
       e.anim.baseLayer.play("Swim");
       this.fishModels[i] = e;
       anchor.enabled = false;
@@ -8915,6 +9131,9 @@ var Fishing = class {
   lastFish = POND.bobber.clone();
   landingPoint = POND.bobber.clone();
   events = new AbortController();
+  cue = document.createElement("div");
+  catchTime = 0;
+  fishClip = "";
   heldClick = false;
   panel = document.createElement("section");
   cancel = document.createElement("button");
@@ -8937,7 +9156,7 @@ var Fishing = class {
   }
   load(file) {
     return new Promise((resolve, reject) => {
-      const a = new Asset9(file, "container", { url: assetUrl("assets/outdoors/" + file + ".glb") });
+      const a = new Asset8(file, "container", { url: assetUrl("assets/outdoors/" + file + ".glb") });
       a.once("load", () => resolve(a.resource));
       a.once("error", reject);
       this.app.assets.add(a);
@@ -8945,7 +9164,7 @@ var Fishing = class {
     });
   }
   bounds(e) {
-    const b = new BoundingBox17();
+    const b = new BoundingBox16();
     let first = true;
     for (const r of e.findComponents("render")) for (const m of r.meshInstances) {
       if (first) {
@@ -8984,7 +9203,10 @@ var Fishing = class {
     this.right.setAttribute("aria-label", "Hold to pull right");
     this.controls.append(this.left, this.button, this.right);
     this.panel.append(this.status, this.copy, this.gauges, this.controls, this.tip, this.cancel);
-    document.querySelector("#game").append(this.panel);
+    this.cue.id = "fish-direction-cue";
+    this.cue.hidden = true;
+    this.cue.setAttribute("aria-hidden", "true");
+    document.querySelector("#game").append(this.panel, this.cue);
     const signal = this.events.signal, release = () => this.round.releaseControls();
     this.button.addEventListener("click", () => {
       if (this.heldClick) {
@@ -9038,7 +9260,8 @@ var Fishing = class {
     this.round.start(saveId());
     this.root.enabled = true;
     this.panel.hidden = false;
-    this.prev = this.lastClip = "";
+    this.prev = this.lastClip = this.fishClip = "";
+    this.catchTime = 0;
     this.settle = 0;
     this.side = 0;
     this.heldClick = false;
@@ -9097,6 +9320,7 @@ var Fishing = class {
         });
       }
       if (r.phase === "catch") {
+        this.catchTime = 0;
         this.landingPoint.copy(this.fishPoint);
         this.fishModels[r.fishIndex]?.anim.baseLayer.play("Caught");
         this.catchReward();
@@ -9107,6 +9331,18 @@ var Fishing = class {
     if (clip !== this.lastClip) {
       this.lastClip = clip;
       this.character.animator.setWorkClip(clip, POND.bobber);
+    }
+    if (r.phase === "catch") this.catchTime += dt;
+    if (r.phase === "reel") {
+      const desired = r.pullSide ? "Dart" : r.tired ? "Swim" : "Kick";
+      if (this.fishClip !== desired) {
+        this.fishClip = desired;
+        this.fishModels[r.fishIndex]?.anim.baseLayer.transition(desired, 0.15);
+      }
+    }
+    if (r.phase === "release" && this.fishClip !== "Release") {
+      this.fishClip = "Release";
+      this.fishModels[r.fishIndex]?.anim.baseLayer.transition("Dart", 0.12);
     }
     this.updatePanel();
     this.present(dt);
@@ -9126,8 +9362,24 @@ var Fishing = class {
     this.tension.value = r.tension;
     this.panel.dataset.warning = String(r.warning);
     this.button.dataset.held = String(r.reeling);
-    this.left.dataset.cue = String(r.desiredDirection === -1);
-    this.right.dataset.cue = String(r.desiredDirection === 1);
+    this.left.dataset.cue = String(!r.warning && r.desiredDirection === -1);
+    this.right.dataset.cue = String(!r.warning && r.desiredDirection === 1);
+    this.controls.dataset.pull = r.warning ? "rest" : String(r.desiredDirection);
+    this.cue.hidden = r.phase !== "reel" || !r.pullSide && !r.warning;
+    this.cue.dataset.side = r.warning ? "rest" : r.desiredDirection < 0 ? "left" : "right";
+    this.cue.dataset.correct = String(r.matching && !r.warning);
+    const cueKey = this.cue.dataset.side + ":" + this.cue.dataset.correct;
+    if (this.cue.dataset.key !== cueKey) {
+      this.cue.dataset.key = cueKey;
+      this.cue.innerHTML = r.warning ? "<span class=fish-hand>\u270B</span><b>LET GO</b>" : r.matching ? "<span>\u2713</span><b>Good pull!</b>" : r.desiredDirection < 0 ? "<span class=fish-arrows>\u2039\u2039\u2039</span><b>THIS WAY</b>" : "<span class=fish-arrows>\u203A\u203A\u203A</span><b>THIS WAY</b>";
+    }
+    const panelHeight = this.panel.offsetHeight, game = this.panel.parentElement, layoutKey = this.cue.dataset.side + ":" + panelHeight + ":" + game.clientWidth + ":" + game.clientHeight;
+    if (this.cue.dataset.layout !== layoutKey) {
+      this.cue.dataset.layout = layoutKey;
+      this.cue.style.setProperty("--panel-height", panelHeight + "px");
+      const control = (r.warning ? this.button : r.desiredDirection < 0 ? this.left : this.right).getBoundingClientRect();
+      this.cue.style.left = control.left + control.width / 2 - game.getBoundingClientRect().left + "px";
+    }
     this.left.dataset.held = String(r.direction === -1);
     this.right.dataset.held = String(r.direction === 1);
     this.tip.textContent = r.phase === "reel" ? "Hold to reel \u2022 Pull against the fish \u2022 Let go to relax" : r.phase === "prepare" ? "Tap to cast, then tap when a fish bites." : "";
@@ -9153,7 +9405,7 @@ var Fishing = class {
       this.rod.setPosition(hand);
       const tip = new Vec333().lerp(hand, this.fishPoint, 0.58);
       tip.y += 1.35 + (r.phase === "cast" ? Math.sin(r.elapsed / 1.93 * Math.PI) * 0.7 : 0);
-      this.rod.setRotation(new Quat7().setFromDirections(Vec333.UP, tip.sub(hand).normalize()));
+      this.rod.setRotation(new Quat6().setFromDirections(Vec333.UP, tip.sub(hand).normalize()));
     }
     this.flexible?.update(r.phase === "reel" ? r.tension * 0.3 + (r.pullSide ? Math.sin(r.total * 18) * 0.018 : 0) : 0.015, dt);
     this.rod.enabled = !["catch", "release"].includes(r.phase);
@@ -9185,7 +9437,7 @@ var Fishing = class {
     });
     const delta = bob.clone().sub(rodTip);
     this.line.setPosition(new Vec333().lerp(bob, rodTip, 0.5));
-    this.line.setRotation(new Quat7().setFromDirections(Vec333.UP, delta.clone().normalize()));
+    this.line.setRotation(new Quat6().setFromDirections(Vec333.UP, delta.clone().normalize()));
     this.line.setLocalScale(8e-3, delta.length(), 8e-3);
     this.line.enabled = !["catch", "release"].includes(r.phase);
     const reward = this.receipt ? this.reward : this.fishes[r.fishIndex];
@@ -9198,13 +9450,24 @@ var Fishing = class {
       if (move.lengthSq() > 1e-6) fish.setEulerAngles(0, Math.atan2(move.x, move.z) * 180 / Math.PI, Math.sin(r.total * 7) * 6);
     }
     if (reward && ["catch", "release"].includes(r.phase)) {
-      const t = Math.min(1, r.elapsed / (r.phase === "release" ? 1 : 1.2)), from = r.phase === "release" ? POND.bobber : this.landingPoint, to = new Vec333(-5.55, 1.55, -10.65);
-      if (!this.receipt) reward.setLocalScale(1, 1, 1);
-      reward.setPosition(new Vec333().lerp(r.phase === "release" ? to : from, r.phase === "release" ? from : to, t));
-      reward.rotateLocal(0, dt * 35, 0);
+      const landing = new Vec333(-5.55, 1.55, -10.65), release = r.phase === "release", t = Math.min(1, release ? r.elapsed / 0.95 : this.catchTime / 0.8), ease = t * t * (3 - 2 * t), point = new Vec333().lerp(release ? landing : this.landingPoint, release ? POND.bobber : landing, ease);
       if (this.receipt) {
-        this.vfx.root.setPosition(to.x, to.y + 0.4, to.z - 0.3);
-        this.vfx.update(r.elapsed, false);
+        reward.setPosition(point);
+        reward.rotateLocal(0, dt * 24, 0);
+        this.vfx.root.setPosition(landing.x, landing.y + 0.4, landing.z - 0.3);
+        this.vfx.update(this.catchTime, false);
+      } else {
+        const personality = [{ pace: 7, tilt: 13, bounce: 0.055 }, { pace: 4.5, tilt: 8, bounce: 0.075 }, { pace: 5.7, tilt: 17, bounce: 0.035 }, { pace: 3.5, tilt: 9, bounce: 0.028 }][r.fishIndex], time = this.catchTime, burst = Math.pow(Math.max(0, Math.sin(time * 2.1 + r.fishIndex)), 3), wiggle = Math.sin(time * personality.pace) * (1 + burst * 0.65);
+        if (release) {
+          point.y += Math.sin(t * Math.PI) * 0.45;
+          reward.setEulerAngles(-12 + Math.sin(t * Math.PI) * 25, -110 + t * 28, Math.sin(t * 10) * 8);
+        } else {
+          point.y += Math.sin(t * Math.PI) * 0.35 + Math.sin(time * personality.pace * 0.7) * personality.bounce * t;
+          point.x += Math.sin(time * 2.8) * 0.045 * t;
+          reward.setEulerAngles(wiggle * personality.tilt * 0.45, 85 + Math.sin(time * 2.2) * 12, wiggle * personality.tilt);
+        }
+        reward.setLocalScale(1, 1, 1);
+        reward.setPosition(point);
       }
     }
   }
@@ -9230,6 +9493,7 @@ var Fishing = class {
   end() {
     this.round.step("idle");
     this.panel.hidden = true;
+    this.cue.hidden = true;
     this.root.enabled = false;
     this.vfx.hide();
     this.audio.stop();
@@ -9246,6 +9510,7 @@ var Fishing = class {
     this.events.abort();
     this.end();
     this.panel.remove();
+    this.cue.remove();
     this.vfx.destroy();
     this.root.destroy();
     this.audio.destroy();
@@ -10254,22 +10519,22 @@ var HouseNavigation = class {
 };
 
 // src/game/Lilah.ts
-import { Asset as Asset10, BoundingBox as BoundingBox18, Entity as Entity36, Vec3 as Vec336 } from "playcanvas";
+import { Asset as Asset9, BoundingBox as BoundingBox17, Entity as Entity37, Vec3 as Vec336 } from "playcanvas";
 var Lilah = class {
   constructor(app, house, daily) {
     this.app = app;
     this.house = house;
     this.daily = daily;
-    this.root = new Entity36("Lilah \xB7 age 2", app);
+    this.root = new Entity37("Lilah \xB7 age 2", app);
     app.root.addChild(this.root);
     this.root.setPosition(1, 0.09, 0.7);
-    this.visual = new Entity36("Lilah visual", app);
+    this.visual = new Entity37("Lilah visual", app);
     this.root.addChild(this.visual);
-    const placeholder = new Entity36("Lilah loading", app);
+    const placeholder = new Entity37("Lilah loading", app);
     this.visual.addChild(placeholder);
     this.animator = new CharacterAnimator(this.visual, placeholder);
     this.planner = new HousePath(house);
-    this.socket = new Entity36("Lilah toy grip", app);
+    this.socket = new Entity37("Lilah toy grip", app);
     this.visual.addChild(this.socket);
     this.animator.bindCarrySocket(this.socket);
     this.toy = primitives(app, this.socket)("Favorite block", "box", [0, 0, 0], [0.13, 0.13, 0.13], material("Lilah favorite block", "#edb867"));
@@ -10377,7 +10642,7 @@ var Lilah = class {
       if (separation < 0.43 && separation <= previousSeparation) {
         job.blocked += dt;
         if (job.blocked > 0.45) {
-          const obstacle = new BoundingBox18(new Vec336(arianna.x, 0, arianna.z), new Vec336(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec336(p.x, 0, p.z);
+          const obstacle = new BoundingBox17(new Vec336(arianna.x, 0, arianna.z), new Vec336(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec336(p.x, 0, p.z);
           let path = planner.route(start, job.point);
           if (!path.length) {
             for (let i = 0; i < 16; i++) {
@@ -10423,7 +10688,7 @@ var Lilah = class {
   async load() {
     const config = await (await fetch(assetUrl(`${"/"}assets/characters/arianna/character.json`))).json();
     this.height = config.height * 0.625;
-    const asset = new Asset10("Lilah Meshy review", "container", { url: assetUrl(`${"/"}assets/characters/lilah/lilah.glb`) });
+    const asset = new Asset9("Lilah Meshy review", "container", { url: assetUrl(`${"/"}assets/characters/lilah/lilah.glb`) });
     await new Promise((resolve, reject) => {
       asset.once("load", resolve);
       asset.once("error", reject);
@@ -10443,7 +10708,7 @@ var Lilah = class {
       walk_playback: 1
     };
     for (const required of ["Idle", "Walk", "CarryIdle", "CarryWalk", "PickUp", "PutDown", "Celebrate"]) if (!tracks2.some((t) => t.name === required)) throw new Error("Missing Lilah clip " + required);
-    const alignment = new Entity36("Lilah ground alignment", this.app);
+    const alignment = new Entity37("Lilah ground alignment", this.app);
     this.visual.addChild(alignment);
     alignment.addChild(model);
     model.setLocalScale(this.height / 1.03, this.height / 1.03, this.height / 1.03);
@@ -10631,7 +10896,7 @@ var Lilah = class {
 };
 
 // src/game/LilahTornado.ts
-import { Entity as Entity37, Vec3 as Vec337 } from "playcanvas";
+import { Entity as Entity38, Vec3 as Vec337 } from "playcanvas";
 
 // src/systems/TornadoRules.ts
 var TORNADO_SECONDS = 55;
@@ -10878,7 +11143,7 @@ var LilahTornado = class {
   }
   spawn(point, type, special) {
     if (this.messes.length >= 3) return;
-    const root = new Entity37("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
+    const root = new Entity38("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
     this.props.root.addChild(root);
     root.setPosition(point.x, 0.06, point.z);
     const shape = primitives(this.app, root), n = special === "basket" ? 12 : type === 3 ? 5 : 6;
@@ -11100,7 +11365,7 @@ var LilahTornado = class {
 };
 
 // src/game/FamilyDinner.ts
-import { Asset as Asset11, BoundingBox as BoundingBox19, Entity as Entity38, Vec3 as Vec338 } from "playcanvas";
+import { Asset as Asset10, BoundingBox as BoundingBox18, Entity as Entity39, Vec3 as Vec338 } from "playcanvas";
 var FamilyDinner = class {
   constructor(app, house, daily, root, visual, animator, say) {
     this.app = app;
@@ -11111,22 +11376,22 @@ var FamilyDinner = class {
     this.animator = animator;
     this.say = say;
     this.planner = new HousePath(house, 0.25);
-    this.socket = new Entity38("Dad serving hands", app);
+    this.socket = new Entity39("Dad serving hands", app);
     visual.addChild(this.socket);
     animator.bindCarrySocket(this.socket);
-    this.tray = new Entity38("Family dinner", app);
+    this.tray = new Entity39("Family dinner", app);
     house.root.addChild(this.tray);
     this.tray.enabled = false;
     primitives(app, this.tray)("Dinner platter", "cylinder", [0, 0, 0], [0.72, 0.025, 0.58], material("Dinner china", "#fff2d9"), false);
     void Promise.all(["pizza", "taco", "turkey"].map(async (name) => {
-      const a = new Asset11("Family " + name, "container", { url: assetUrl(`/assets/food/${name}.glb`) });
+      const a = new Asset10("Family " + name, "container", { url: assetUrl(`/assets/food/${name}.glb`) });
       app.assets.add(a);
       await new Promise((resolve, reject) => {
         a.once("load", resolve);
         a.once("error", reject);
         app.assets.load(a);
       });
-      const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox19();
+      const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox18();
       let first = true;
       for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
         if (first) {
@@ -11317,7 +11582,7 @@ var FamilyDinner = class {
 };
 
 // src/game/Marc.ts
-import { Asset as Asset12, AnimData as AnimData6, AnimTrack as AnimTrack6, Entity as Entity39, Quat as Quat8, Vec3 as Vec339 } from "playcanvas";
+import { Asset as Asset11, AnimData as AnimData7, AnimTrack as AnimTrack7, Entity as Entity40, Quat as Quat7, Vec3 as Vec339 } from "playcanvas";
 var SEAT = new Vec339(4.5, 0, 7.35);
 var YAW = -35;
 var FORWARD = new Vec339(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
@@ -11330,12 +11595,12 @@ var Marc = class {
     this.app = app;
     this.house = house;
     this.daily = daily;
-    this.root = new Entity39("Marc", app);
+    this.root = new Entity40("Marc", app);
     app.root.addChild(this.root);
     this.root.setPosition(3.5, 0.09, 6.2);
-    this.visual = new Entity39("Marc visual", app);
+    this.visual = new Entity40("Marc visual", app);
     this.root.addChild(this.visual);
-    const placeholder = new Entity39("Marc loading", app);
+    const placeholder = new Entity40("Marc loading", app);
     this.visual.addChild(placeholder);
     this.animator = new CharacterAnimator(this.visual, placeholder);
     this.planner = new HousePath(house, 0.25);
@@ -11346,7 +11611,7 @@ var Marc = class {
     document.querySelector("#game").append(this.label);
     const colors = ["#cda678", "#c5d9dd", "#b8c39d"];
     for (let i = 0; i < 3; i++) {
-      const tool = new Entity39(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
+      const tool = new Entity40(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
       this.root.addChild(tool);
       const shape = primitives(app, tool);
       shape("Dad cleanup tool", "box", [0, 0, 0], i === 0 ? [0.25, 0.16, 0.23] : i === 1 ? [0.3, 0.025, 0.23] : [0.3, 0.07, 0.13], material("Dad tool " + i, colors[i]));
@@ -11393,7 +11658,7 @@ var Marc = class {
   async load() {
     const config = await (await fetch(assetUrl(`${"/"}assets/characters/arianna/character.json`))).json();
     this.height = config.height * 1.3;
-    const asset = new Asset12("Marc animation v2", "container", { url: assetUrl(`${"/"}assets/characters/marc/marc.glb`) });
+    const asset = new Asset11("Marc animation v2", "container", { url: assetUrl(`${"/"}assets/characters/marc/marc.glb`) });
     await new Promise((resolve, reject) => {
       asset.once("load", resolve);
       asset.once("error", reject);
@@ -11409,16 +11674,16 @@ var Marc = class {
     };
     for (const name of ["SitDown", "SitIdle", "StandUp", "Idle", "Walk_Basic"]) required(name);
     const walk = required("Walk_Basic"), idle = required("Idle");
-    const tracks2 = [...source, new AnimTrack6("Walk", walk.duration, walk.inputs, walk.outputs, walk.curves)];
-    const carry = required("CarryWalk"), carryOutputs = carry.outputs.map((o) => new AnimData6(o.components, Array.from(o.data, (v, i) => o.data[i % o.components])));
-    tracks2.push(new AnimTrack6("CarryIdle", carry.duration, carry.inputs, carryOutputs, carry.curves));
-    const outputs = idle.outputs.map((o) => new AnimData6(o.components, Array.from(o.data)));
+    const tracks2 = [...source, new AnimTrack7("Walk", walk.duration, walk.inputs, walk.outputs, walk.curves)];
+    const carry = required("CarryWalk"), carryOutputs = carry.outputs.map((o) => new AnimData7(o.components, Array.from(o.data, (v, i) => o.data[i % o.components])));
+    tracks2.push(new AnimTrack7("CarryIdle", carry.duration, carry.inputs, carryOutputs, carry.curves));
+    const outputs = idle.outputs.map((o) => new AnimData7(o.components, Array.from(o.data)));
     for (const curve of idle.curves) {
       const paths = curve.paths;
       if (paths.some((p) => p.entityPath.at(-1) === "Spine02" && p.propertyPath[0] === "localRotation")) {
         const data = outputs[curve.output].data;
         for (let i = 0; i < data.length; i += 4) {
-          const q = new Quat8(data[i], data[i + 1], data[i + 2], data[i + 3]).mul(new Quat8().setFromEulerAngles(24, 0, 0));
+          const q = new Quat7(data[i], data[i + 1], data[i + 2], data[i + 3]).mul(new Quat7().setFromEulerAngles(24, 0, 0));
           data[i] = q.x;
           data[i + 1] = q.y;
           data[i + 2] = q.z;
@@ -11426,9 +11691,9 @@ var Marc = class {
         }
       }
     }
-    tracks2.push(new AnimTrack6("Cleaning", idle.duration, idle.inputs, outputs, idle.curves));
+    tracks2.push(new AnimTrack7("Cleaning", idle.duration, idle.inputs, outputs, idle.curves));
     const manifest = { animations: tracks2.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: !["SitDown", "StandUp"].includes(t.name) })), locomotion: { Walk: { travel_speed_mps: 1.2 }, CarryWalk: { travel_speed_mps: 1.05 } }, interaction_events: {}, scale: { rest_height_m: 1.8 }, hand_joints: ["LeftHand", "RightHand"], walk_playback: 1 };
-    const alignment = new Entity39("Marc ground alignment", this.app);
+    const alignment = new Entity40("Marc ground alignment", this.app);
     this.visual.addChild(alignment);
     alignment.addChild(model);
     model.setLocalScale(this.height / 1.8, this.height / 1.8, this.height / 1.8);
@@ -11649,12 +11914,12 @@ async function startGame(editorApp) {
   app.setCanvasFillMode(FILLMODE_NONE);
   app.setCanvasResolution(RESOLUTION_AUTO);
   await loadSquishyArt(app);
-  const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color11(0.72, 0.68, 0.77);
+  const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color12(0.72, 0.68, 0.77);
   app.scene.ambientLight = ambientBase.clone();
-  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity40("Soft afternoon sunlight", app);
+  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity41("Soft afternoon sunlight", app);
   if (!sun.light) sun.addComponent("light", {
     type: "directional",
-    color: new Color11(1, 0.92, 0.83),
+    color: new Color12(1, 0.92, 0.83),
     intensity: 1.2,
     castShadows: true,
     shadowResolution: 1024,

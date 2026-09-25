@@ -3523,6 +3523,100 @@ body:has(#game[data-fishing=true]) .dev-launch {
     padding: 9px 6px;
   }
 }
+#fish-direction-cue {
+  position: absolute;
+  bottom: calc(var(--panel-height,230px) + 25px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 26;
+  pointer-events: none;
+  background: #fff9e7ee;
+  border: 3px solid #e8bc60;
+  border-radius: 20px;
+  padding: 2px 15px 8px;
+  min-width: 85px;
+  text-align: center;
+  color: #725d36;
+  box-shadow: 0 4px 14px #405c5230;
+}
+#fish-direction-cue[hidden] {
+  display: none;
+}
+#fish-direction-cue[data-side=left] {
+  left: 19%;
+}
+#fish-direction-cue[data-side=right] {
+  left: 81%;
+}
+#fish-direction-cue span {
+  display: block;
+  font: 900 46px/1 system-ui;
+  letter-spacing: -6px;
+  padding-right: 6px;
+}
+#fish-direction-cue b {
+  display: block;
+  font: 900 11px system-ui;
+  letter-spacing: .7px;
+}
+#fish-direction-cue[data-side=left] .fish-arrows {
+  animation: pull-left .65s ease-in-out infinite;
+}
+#fish-direction-cue[data-side=right] .fish-arrows {
+  animation: pull-right .65s ease-in-out infinite;
+}
+#fish-direction-cue[data-correct=true] {
+  border-color: #80b7a0;
+  color: #417761;
+}
+#fish-direction-cue[data-correct=true] span {
+  font-size: 35px;
+  letter-spacing: 0;
+}
+#fish-direction-cue[data-side=rest] {
+  border-color: #d99485;
+  color: #a1574f;
+}
+#fish-direction-cue .fish-hand {
+  font-size: 30px;
+  letter-spacing: 0;
+  margin: 4px;
+}
+#fishing-panel .fish-controls button[data-cue=true] {
+  border: 3px solid #e1b45b;
+  background: #ffedb7;
+  color: #624f31;
+  box-shadow: 0 0 0 3px #f7d78b60;
+}
+#fishing-panel .fish-controls[data-pull="-1"] #fish-right,
+#fishing-panel .fish-controls[data-pull="1"] #fish-left {
+  opacity: .55;
+}
+#fishing-panel .fish-controls[data-pull=rest] #fish-action {
+  background: #efd2c8;
+  color: #945c51;
+}
+@keyframes pull-left {
+  0%, 100% {
+    transform: translateX(4px);
+  }
+  50% {
+    transform: translateX(-7px);
+  }
+}
+@keyframes pull-right {
+  0%, 100% {
+    transform: translateX(-4px);
+  }
+  50% {
+    transform: translateX(7px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #fish-direction-cue .fish-arrows {
+    animation: none !important;
+  }
+}
 
 /* src/ui/house.css */
 #mission-picker {
