@@ -9,6 +9,7 @@ export function classroomSign(app:Application,parent:Entity,name:string,text:str
  const texture=new Texture(app.graphicsDevice,{mipmaps:false});texture.setSource(canvas);
  const material=new StandardMaterial();material.diffuseMap=texture;material.emissiveMap=texture;material.emissive.set(.45,.45,.45);material.cull=CULLFACE_NONE;material.update();
  const sign=new Entity(name,app);parent.addChild(sign);sign.addComponent('render',{type:'plane',material,castShadows:false});sign.setLocalPosition(...position);sign.setLocalEulerAngles(90,0,0);sign.setLocalScale(width,1,height);
+ sign.once('destroy',()=>{texture.destroy();material.destroy();});
  const paint=(words:string)=>{const c=canvas.getContext('2d')!;c.fillStyle='#fff6df';c.fillRect(0,0,768,256);c.strokeStyle=color;c.lineWidth=16;c.strokeRect(10,10,748,236);c.fillStyle='#514365';c.textAlign='center';c.textBaseline='middle';c.font='bold 56px Trebuchet MS';words.split('\n').forEach((line,i,a)=>c.fillText(line,384,128+(i-(a.length-1)/2)*76,720));texture.upload();};paint(text);return paint;
 }
 

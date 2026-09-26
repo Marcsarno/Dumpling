@@ -1,12 +1,17 @@
-import { Entity, Keyboard, Vec2, Vec3, KEY_A, KEY_D, KEY_S, KEY_W, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT } from 'playcanvas';
+import { Entity, Keyboard, Vec2, Vec3, KEY_A, KEY_D, KEY_S, KEY_W, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, type BoundingBox } from 'playcanvas';
 import type { Bedroom } from '../game/bedroom';
 import { RUN_SPEED } from './MovementPace';
+import {ScooterDynamics} from '../systems/ScooterDynamics';
 
 export class PlayerController {
   enabled = true;
+  riding=false;
+  readonly scooter=new ScooterDynamics();
   readonly input = new Vec2();
   readonly velocity = new Vec3();
   readonly radius = 0.24;
+  dynamicObstacles:BoundingBox[]=[];
+  moveContact:((x:number,z:number,dx:number,dz:number)=>void)|null=null;
   speed = RUN_SPEED;
   private readonly right: Vec3;
   private readonly forward: Vec3;
@@ -79,8 +84,10 @@ export class PlayerController {
         this.input.set(delta.dot(this.right)*magnitude, delta.dot(this.forward)*magnitude);
       }
     }
-    const dx = (this.right.x * this.input.x + this.forward.x * this.input.y) * this.speed * dt;
-    const dz = (this.right.z * this.input.x + this.forward.z * this.input.y) * this.speed * dt;
+    const ix=this.right.x*this.input.x+this.forward.x*this.input.y,iz=this.right.z*this.input.x+this.forward.z*this.input.y;
+    if(this.riding)this.scooter.step(dt,ix,iz);
+    const dx = (this.riding?this.scooter.vx:ix*this.speed)*dt;
+    const dz = (this.riding?this.scooter.vz:iz*this.speed)*dt;
     const start = this.entity.getPosition();
     const oldX = start.x, oldZ = start.z;
     this.candidate.copy(start);
@@ -89,13 +96,16 @@ export class PlayerController {
     for (let i = 0; i < steps; i++) {
       const x = this.candidate.x;
       this.candidate.x = Math.max(-this.room.halfWidth + this.radius, Math.min(this.room.halfWidth - this.radius, x + dx / steps));
+      this.moveContact?.(x,this.candidate.z,this.candidate.x-x,0);
       if (this.blocked()) this.candidate.x = x;
       const z = this.candidate.z;
       this.candidate.z = Math.max(-this.room.halfDepth + this.radius, Math.min(this.room.halfDepth - this.radius, z + dz / steps));
+      this.moveContact?.(this.candidate.x,z,0,this.candidate.z-z);
       if (this.blocked()) this.candidate.z = z;
     }
     this.entity.setPosition(this.candidate);
     this.velocity.set((this.candidate.x - oldX) / Math.max(dt, 0.001), 0, (this.candidate.z - oldZ) / Math.max(dt, 0.001));
+    if(this.riding){this.scooter.vx=this.velocity.x;this.scooter.vz=this.velocity.z;}
     this.keyboard.update();
   }
   private blocked() {
@@ -107,9 +117,11 @@ export class PlayerController {
         }
       }
     }
-    return this.bounds.some(box => box.containsPoint(this.candidate));
+    return this.bounds.some(box => box.containsPoint(this.candidate))||this.dynamicObstacles.some(box=>
+      Math.abs(this.candidate.x-box.center.x)<box.halfExtents.x+this.radius&&Math.abs(this.candidate.z-box.center.z)<box.halfExtents.z+this.radius);
   }
   reset = () => {
+    this.scooter.reset(this.scooter.heading);
     const pending = this.approach; this.approach = null; pending?.cancelled();
     this.keyboard.detach();
     this.keyboard.attach(window);

@@ -27,7 +27,9 @@ import './ui/house.css';
 export async function startGame(editorApp?:Application) {
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
   const app = editorApp ?? new Application(canvas, { graphicsDeviceOptions: { alpha: false, antialias: true, powerPreference: 'low-power' } });
-  app.graphicsDevice.maxPixelRatio = Math.min(window.devicePixelRatio || 1, 1.75);
+  // Arianna must remain at native display resolution. Optimize scenery/loading,
+  // never lower the shared render resolution to save cost on her presentation.
+  app.graphicsDevice.maxPixelRatio = window.devicePixelRatio || 1;
   app.setCanvasFillMode(FILLMODE_NONE);
   app.setCanvasResolution(RESOLUTION_AUTO);
   await loadSquishyArt(app);
@@ -60,6 +62,7 @@ export async function startGame(editorApp?:Application) {
   const headPoint = new Vec3();
   const viewport = document.querySelector<HTMLElement>('#game')!;
   const resize = () => {
+    app.graphicsDevice.maxPixelRatio = window.devicePixelRatio || 1;
     // resizeCanvas writes inline dimensions; measure the containing viewport, not the canvas.
     const { width, height } = viewport.getBoundingClientRect();
     app.resizeCanvas(width, height);
@@ -78,7 +81,7 @@ export async function startGame(editorApp?:Application) {
     if(loop.developerPaused){loop.developerTick(now,elapsed);return;}
     loop.beforeMovement(now);
     if(loop.popUI.isOpen)return;
-    const bulky = cleanup.carry.item?.carryPace === 'walk';
+    const bulky = cleanup.carry.item?.carryPace === 'walk'||loop.dailyPlay.carrying;
     controller.speed = bulky ? WALK_SPEED * (['vacuum','scooper'].includes(cleanup.carry.item?.id??'') ? 1.5 : 1) : RUN_SPEED;
     character.animator.setCarryPace(bulky ? 'walk' : 'run');
     const night=cleanup.mode==='day'&&props.daily!.clock.state.phase==='night'&&loop.mode==='cleanup';
@@ -97,8 +100,10 @@ export async function startGame(editorApp?:Application) {
     dogRoaming.update(dt,loop.mode==='cleanup'&&!tornado.active&&!!props.pet?.loaded,[character.player.getPosition(),lilah.root.getPosition(),marc.root.getPosition()]);
     props.pet?.dogAnimator?.update(dt);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === 'cleanup', cleanup.mode);
+    if(loop.mode==='outdoors'&&!controller.riding&&character.grounding){const p=character.player.getPosition();character.grounding.surfaceHeight=p.x<-9||p.z<-16?.075:.03;}
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
+    loop.scooter.update(dt,loop.mode==='outdoors',!loop.fishing.active&&!loop.huntUI.dialog.open&&!loop.dailyPlay.occupied,loop.encounters.hop);
     lilah.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day'&&!cleanup.movementLocked,character.player.getPosition(),camera.entity);
     marc.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day'&&!tornado.active,character.player.getPosition(),lilah.root.getPosition(),cleanup.activeInteractionId,camera.entity);
     headPoint.copy(character.player.getPosition());
@@ -108,7 +113,7 @@ export async function startGame(editorApp?:Application) {
     label.style.transform = `translate(${screenPoint.x - label.offsetWidth / 2}px, ${screenPoint.y - label.offsetHeight - 5}px)`;
   });
   await captureWorld(app,room,props,loop,!!editorApp);
-  await Promise.all([loop.outdoors.ready,loop.fishing.ready]);loop.outdoors.installDoor();
+  await Promise.all([loop.outdoors.ready,loop.fishing.ready]);loop.outdoors.installDoor();loop.neighborhood.install();
   props.daily!.refresh();
   controller.setRoom(loop.mode==='store'?loop.store:loop.mode==='recess'?loop.recess:room);
   // A saved store visit starts before the authored layout is loaded. Reposition

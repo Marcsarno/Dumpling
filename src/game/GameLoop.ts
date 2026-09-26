@@ -21,6 +21,10 @@ import { TRADERS } from '../data/trading';
 import { SquishyPopUI } from '../ui/SquishyPopUI';
 import { starLevel } from '../data/squishyPop';
 import {Outdoors,POND,SCHOOL_GATE} from './Outdoors';
+import {Scooter} from './Scooter';
+import {Neighborhood,SHOP_STOPS,SHOP_DOOR_Z} from './Neighborhood';
+import {OutdoorEncounters} from './OutdoorEncounters';
+import {DailyPlay} from './DailyPlay';
 import {Fishing} from './Fishing';
 import {TicketShop} from '../ui/TicketShop';
 
@@ -37,7 +41,8 @@ export class GameLoop {
   readonly popUI: SquishyPopUI;
   readonly ticketShop:TicketShop;
   private nextStore=document.createElement('button');
-  readonly recess;readonly outdoors:Outdoors;readonly fishing:Fishing;private outsideLast=0;private recessFromGate=false;
+  readonly recess;readonly outdoors:Outdoors;readonly fishing:Fishing;readonly scooter:Scooter;readonly neighborhood:Neighborhood;readonly encounters:OutdoorEncounters;private outsideLast=0;private recessFromGate=false;
+  readonly dailyPlay:DailyPlay;
   private recessFromSchool = false;
   private travelUntil=0;
   private inspecting: {site:number;until:number}|null=null;
@@ -55,6 +60,7 @@ export class GameLoop {
   private markerPoint = new Vec3();
   developerPaused=false;
   private developerClockFrozen=false;
+  private destination='';private arrivedByRoute=false;
   constructor(app: Application, private readonly camera: IsometricCamera,
     private readonly character: ReturnType<typeof createCharacter>, private readonly room: Bedroom,
     private readonly props: CleanupProps, private readonly cleanup: CleanupGame,
@@ -68,7 +74,9 @@ export class GameLoop {
       if(open){this.action.enabled=false;this.huntUI.panel.hidden=true;}else{this.action.enabled=true;this.findCopy='';this.wallet();}
     },()=>!this.save.data.pop?.tutorialSeen,()=>({bestScore:this.save.data.pop?.bestScore??0,tickets:this.save.data.pop?.tickets??0,levels:this.save.data.pop?.levels??{}}));
     this.recess=createRecess(app);
-    this.outdoors=new Outdoors(app,room);this.fishing=new Fishing(app,this.outdoors.root,character,camera,this.save);this.fishing.onReward=()=>this.wallet();this.fishing.onFinish=()=>{this.joystick.reset();this.controller.reset();};
+    this.outdoors=new Outdoors(app,room);this.scooter=new Scooter(app,character,controller);this.neighborhood=new Neighborhood(app,room);this.fishing=new Fishing(app,this.outdoors.root,character,camera,this.save);this.fishing.onReward=()=>this.wallet();this.fishing.onFinish=()=>{this.joystick.reset();this.controller.reset();};
+    this.encounters=new OutdoorEncounters(app,character,controller,s=>this.message(s));
+    this.dailyPlay=new DailyPlay(app,character,controller,camera,s=>this.message(s));
     this.popUI.onPrizes=()=>{void this.ticketShop.open();this.controller.reset();};
     const prizes=document.createElement('button');prizes.className='loop-button';prizes.textContent='🎟 Spend tickets · Squishy prize shelf';prizes.onclick=()=>{el<HTMLDialogElement>('#collection-dialog').close();void this.ticketShop.open();};el('#collection-actions').append(prizes);
     this.nextStore.id='travel-next-store';this.nextStore.textContent='Travel to next store →';this.nextStore.hidden=true;this.nextStore.onclick=()=>this.attempt(()=>this.chooseStore());el('#game').append(this.nextStore);
@@ -138,6 +146,13 @@ export class GameLoop {
   private visit(id:string){
     const daily=this.props.daily!;
     if(!daily.clock.canShop||(daily.clock.state.phase==='afternoon'&&!daily.clock.ready))throw Error('Shopping starts after your afternoon helping.');
+    if(this.mode==='outdoors'||this.mode==='store'){
+      const stop=SHOP_STOPS.find(s=>s.id===id)!;
+      if(this.mode==='store'){const from=SHOP_STOPS.find(s=>s.id===this.activeStoreId)!;this.enterOutdoors();this.character.player.setPosition(from.x,.09,SHOP_DOOR_Z);this.controller.setRoom(this.room);}
+      const p=this.character.player.getPosition();
+      if(Math.hypot(p.x-stop.x,p.z-SHOP_DOOR_Z)>2){this.destination=id;this.huntUI.dialog.close();this.message(stop.name+' is along Maple Lane. Walk or ride your scooter.');return;}
+      this.arrivedByRoute=true;
+    }
     const minutes=this.save.visitStore(id,daily.clock.state.day,daily.clock.state.minutes);
     daily.clock.state.minutes=minutes;daily.save();this.activeStoreId=id;
     this.huntUI.showTravel(storeById(id).name);this.travelUntil=performance.now()+1100;
@@ -167,6 +182,10 @@ export class GameLoop {
     el('#collection-button').textContent = `Collection · ${discovered} / ${DUMPLINGS.length}${data.boxes.length ? ` · 🎁 ${data.boxes.length}` : ''}`;
   }
   private transition(mode: typeof this.mode,continuous=false) {
+    if(this.mode==='outdoors'&&mode!=='outdoors')this.dailyPlay.leave();
+    if(this.mode==='outdoors'&&mode!=='outdoors'&&this.character.grounding)this.character.grounding.surfaceHeight=null;
+    if(this.mode==='recess'&&mode!=='recess'){this.recess.root.enabled=false;this.recess.sleep();}
+    if(mode!=='outdoors'&&this.controller.riding)this.scooter.dismount();
     if (this.mode === 'cleanup' && mode !== 'cleanup') {
       this.props.reset(); this.cleanup.carry.item = null; this.character.animator.reset();
     }
@@ -174,7 +193,7 @@ export class GameLoop {
     if(!continuous)this.camera.reset();
     if(this.fishing?.active)this.fishing.end();
     if(!continuous){this.joystick.reset();this.controller.reset();}this.opening.hide();
-    this.room.root.enabled = mode === 'cleanup'||mode==='outdoors';this.outdoors.root.enabled=mode==='cleanup'||mode==='outdoors'; this.props.root.enabled = mode === 'cleanup';
+    this.room.root.enabled = mode === 'cleanup'||mode==='outdoors';this.outdoors.root.enabled=mode==='outdoors'; this.props.root.enabled = mode === 'cleanup';
     this.recess.root.enabled=mode==='recess';this.tradingUI.leave.hidden=mode!=='recess';this.tradingUI.close();
     for(const store of this.stores)store.root.enabled=mode==='store'&&store.definition.id===this.activeStoreId;
     this.huntUI.panel.hidden=true;this.huntUI.dialog.close();this.findCopy='';this.inspecting=null;
@@ -278,11 +297,13 @@ export class GameLoop {
         if(!slot.discovered){this.inspecting={site,until:performance.now()+HUNT_RULES.inspectMilliseconds};this.joystick.reset();this.controller.reset();}
         else {this.save.purchaseStock(site);this.store.sync(this.save.data.hunt!.stores[this.activeStoreId]);this.wallet();this.message('A sealed surprise, tucked into your bag!');}
       }
-      else if (this.focus === 'go-home') { this.save.goHome(); this.enterHome(); }
+      else if (this.focus === 'go-home') { this.save.goHome();const stop=SHOP_STOPS.find(s=>s.id===this.activeStoreId)!;this.enterOutdoors();this.character.player.setPosition(stop.x,.09,SHOP_DOOR_Z);this.message('Head home along Maple Lane, or visit another shop.'); }
     } else if(this.mode==='outdoors'){
-      if(this.focus==='pond-fish'){this.controller.reset();this.joystick.reset();this.fishing.start();}
+      if(this.focus==='daily-play'){this.dailyPlay.press();return;}
+      if(this.focus==='pond-fish'){if(this.controller.riding)this.scooter.dismount();this.controller.reset();this.joystick.reset();this.fishing.start();}
       if(this.focus==='school-gate'){const daily=this.props.daily!;const school=daily.clock.goSchool();daily.save();this.recessFromGate=true;this.enterRecess(school);this.tradingUI.leave.textContent=school?'Finish school · walk home →':'Back to the school gate →';}
       if(this.focus==='outdoor-shops')this.chooseStore();
+      if(this.focus.startsWith('neighborhood-shop-'))this.visit(this.focus.slice('neighborhood-shop-'.length));
     } else if (this.mode === 'home') {
       if (this.opening.phase !== 'opening' && this.save.data.boxes.length) {
         if(this.opening.phase==='revealed'){this.save.finishReveal();this.opening.show(null);}
@@ -301,9 +322,15 @@ export class GameLoop {
   beforeMovement(now: number) {
     const outdoorDt=this.outsideLast?Math.min(.04,(now-this.outsideLast)/1000):0;this.outsideLast=now;
     const p=this.character.player.getPosition();
+    if(this.mode==='outdoors')this.room.root.enabled=p.x>-36&&p.z>-35;
     if(this.mode==='cleanup'&&p.x<-3.5&&p.z>7.5&&p.z<9.1){if(this.cleanup.carry.item){this.character.player.setPosition(-3.05,p.y,p.z);this.message('Put your things away before heading outside.');}else this.enterOutdoors();}
-    else if(this.mode==='outdoors'&&p.x>-3.25&&p.z>7.5&&p.z<9.1){this.transition('cleanup',true);this.controller.setRoom(this.room);el('h1').textContent='Home, sweet home.';el('#scene-kicker').textContent='ONE COZY MINUTE';}
-    this.outdoors.update(outdoorDt,p,this.mode==='cleanup'||this.mode==='outdoors');
+    else if(this.mode==='outdoors'&&p.x>-3.25&&p.z>7.5&&p.z<9.1){if(this.arrivedByRoute&&this.save.data.boxes.length){this.arrivedByRoute=false;this.enterHome();}else{this.transition('cleanup',true);this.controller.setRoom(this.room);el('h1').textContent='Home, sweet home.';el('#scene-kicker').textContent='ONE COZY MINUTE';}}
+    if(this.controller.riding&&p.x>18&&p.z<-27){this.scooter.dismount();this.message('Park here for the school walk. Your scooter will wait.');}
+    this.outdoors.update(outdoorDt,p,this.mode==='outdoors');
+    this.neighborhood.update(p,this.mode==='outdoors');
+    const playAvailable=!this.fishing.active&&!this.huntUI.dialog.open&&!this.popUI.isOpen&&!el<HTMLDialogElement>('#collection-dialog').open;
+    this.dailyPlay.update(document.hidden?0:outdoorDt,this.mode==='outdoors',playAvailable,this.props.daily!.clock.state.day);
+    this.encounters.update(document.hidden?0:outdoorDt,this.mode==='outdoors',playAvailable&&!this.dailyPlay.occupied,this.props.daily!.clock.state.day);
     this.fishing.update(document.hidden?0:outdoorDt);el('#game').dataset.fishing=String(this.fishing.active);
     if(this.fishing.active){this.props.daily!.pause(now);this.controller.enabled=false;return;}
     const daily=this.props.daily!;daily.shoppingDone=this.save.data.hunt?.day===daily.clock.state.day&&Object.values(this.save.data.hunt.stores).filter(s=>s.visited).length>=2;
@@ -316,7 +343,8 @@ export class GameLoop {
     const school=this.cleanup.mode==='day'&&this.props.daily!.clock.state.phase==='school';
     el('#school-transition').hidden=!school||this.mode==='recess';
     if (this.mode === 'cleanup') this.cleanup.mission.tick(now);
-    this.controller.enabled = (!school||this.mode==='recess')&&!this.ticketShop.dialog.open&&!this.tradingUI.dialog.open&&!this.travelUntil&&!this.inspecting&&!this.huntUI.dialog.open&&(this.mode === 'outdoors'||this.mode === 'recess'||this.mode === 'store' || (this.mode === 'cleanup' && this.cleanup.mission.state !== 'finished' && !this.cleanup.movementLocked)) && !el<HTMLDialogElement>('#collection-dialog').open;
+    this.controller.enabled = (!school||this.mode==='recess')&&(this.mode!=='recess'||this.recess.isReady)&&!this.ticketShop.dialog.open&&!this.tradingUI.dialog.open&&!this.travelUntil&&!this.inspecting&&!this.huntUI.dialog.open&&(this.mode === 'outdoors'||this.mode === 'recess'||this.mode === 'store' || (this.mode === 'cleanup' && this.cleanup.mission.state !== 'finished' && !this.cleanup.movementLocked)) && !el<HTMLDialogElement>('#collection-dialog').open;
+    if(this.mode==='outdoors'&&this.dailyPlay.movementLocked)this.controller.enabled=false;
   }
   update(now: number) {
     this.nextStore.hidden=this.mode!=='store'||this.popUI.isOpen||!!this.travelUntil||Object.values(this.save.data.hunt?.stores??{}).filter(s=>s.visited).length>=2;
@@ -355,8 +383,14 @@ export class GameLoop {
     let title = 'Action', detail = 'Come closer', icon = '✋', enabled = false;
     if(this.mode==='outdoors'){
       const p=this.character.player.getPosition();this.focus=p.distance(POND.stand)<1.25?'pond-fish':p.distance(SCHOOL_GATE)<1.8?'school-gate':p.distance(new Vec3(-6.3,.09,8.25))<1.2&&clock.canShop?'outdoor-shops':'';
+      const stop=SHOP_STOPS.find(s=>Math.hypot(s.x-p.x,p.z-SHOP_DOOR_Z)<1.7);if(stop)this.focus='neighborhood-shop-'+stop.id;
       title=this.focus==='pond-fish'?'FISH':this.focus==='school-gate'?'Enter school':this.focus==='outdoor-shops'?'Visit shops':'Explore';detail=this.focus==='pond-fish'?'Catch & release':'Follow the garden path';icon=this.focus==='pond-fish'?'🐟':'🌿';enabled=!!this.focus&&!this.fishing.active;
+      if(stop){title=clock.canShop?'Enter shop':'Opens after school';detail=stop.name;icon='🛍';enabled=clock.canShop;}
+      const play=this.dailyPlay.focus;if(play){this.focus='daily-play';title=play.title;detail=play.detail;icon=play.icon;enabled=play.enabled;}
+      el('h1').textContent=this.controller.riding?'A little scooter adventure.':p.x<-9?'A walk down Maple Lane.':'A little walk outside.';
+      const destination=SHOP_STOPS.find(s=>s.id===this.destination);el('#scene-subtitle').textContent=destination?`${destination.name} · ${Math.round(Math.hypot(p.x-destination.x,p.z-SHOP_DOOR_Z))} steps away`:'School path ↑ · three little shops ←';
       el('#cleanup-hint').textContent=p.z<-16?'Follow the sidewalk. Cross at the stripes with Ms Maple.':'The pond is up the garden path. Walk back through the cottage door to go inside.';
+      if(p.x<-9)el('#cleanup-hint').textContent='Explore the lane · five little play gardens today · shops across the street';
     }else if(this.mode==='recess'){
       const p=this.character.player.getPosition();const seat=this.recess.seats.filter(s=>p.distance(s.anchor)<1.05).sort((a,b)=>p.distance(a.anchor)-p.distance(b.anchor))[0];
       this.focus=seat?.id??'';this.recess.update(now,this.focus,p);el('h1').textContent=this.recess.area;el('#scene-kicker').textContent=this.recess.area==='Cafeteria'?'GOOD FOOD · BRIGHT DAYS':'CLASSROOM · TRADING CLUB';this.recess.seats.forEach(s=>s.glow.enabled=s===seat);
@@ -454,7 +488,7 @@ export class GameLoop {
   }
   resized() { this.baseZoom = this.camera.exploreHeight; if (this.mode === 'home')this.opening.frame(this.camera.entity,el('#game').clientWidth,el('#game').clientHeight); }
   snapshot() { return { mode: this.mode, balance: this.save.data.balance, boxes: this.save.data.boxes.length, purchases: this.save.data.trip.purchases, collection: { ...this.save.data.collection }, phase: this.opening.phase, reveal: this.save.data.reveal ? { ...this.save.data.reveal } : null, focus: this.focus,
-    outdoors:this.outdoors.snapshot(),fishing:this.fishing.snapshot(),opening:this.opening.snapshot(),pop:this.popUI.snapshot(),popSave:this.save.data.pop,trading:this.save.data.trading, recess:this.mode==='recess'?{area:this.recess.area,door:this.recess.door.toArray(),cafeteriaCenter:this.recess.cafeteriaCenter.toArray(),walkable:this.recess.walkable,obstacles:this.recess.obstacles.map(b=>({center:b.center.toArray(),halfExtents:b.halfExtents.toArray()})),seats:this.recess.seats.map(s=>({id:s.id,position:s.anchor.toArray()})),art:this.recess.artStats?.()}:null,
+    dailyPlay:this.dailyPlay.snapshot(),neighborhood:this.neighborhood.snapshot(),encounters:this.encounters.snapshot(),outdoors:this.outdoors.snapshot(),scooter:this.scooter.snapshot(),fishing:this.fishing.snapshot(),opening:this.opening.snapshot(),pop:this.popUI.snapshot(),popSave:this.save.data.pop,trading:this.save.data.trading, recess:this.mode==='recess'?{area:this.recess.area,door:this.recess.door.toArray(),cafeteriaCenter:this.recess.cafeteriaCenter.toArray(),walkable:this.recess.walkable,obstacles:this.recess.obstacles.map(b=>({center:b.center.toArray(),halfExtents:b.halfExtents.toArray()})),seats:this.recess.seats.map(s=>({id:s.id,position:s.anchor.toArray()})),art:this.recess.artStats?.()}:null,
     hunt:this.save.data.hunt,store:this.mode==='store'?{id:this.activeStoreId,sites:this.store.sites.map(s=>({id:s.id,position:s.anchor.toArray()})),exit:this.store.exitAnchor.toArray(),walkable:this.store.walkable,obstacles:this.store.obstacles.map(b=>({center:b.center.toArray(),halfExtents:b.halfExtents.toArray()})),art:this.store.artStats?.()}:null }; }
-  destroy() {this.fishing.destroy(); this.popUI.destroy();this.abort.abort();document.querySelector('#squishy-pop-shortcut')?.remove(); this.action.destroy(); this.opening.destroy(); this.huntUI.destroy(); this.tradingUI.destroy(); }
+  destroy() {this.dailyPlay.destroy();this.neighborhood.destroy();this.encounters.destroy();this.scooter.destroy();this.fishing.destroy(); this.popUI.destroy();this.abort.abort();document.querySelector('#squishy-pop-shortcut')?.remove(); this.action.destroy(); this.opening.destroy(); this.huntUI.destroy(); this.tradingUI.destroy(); }
 }

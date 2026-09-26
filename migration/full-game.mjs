@@ -2520,6 +2520,154 @@ var init_RestingPose = __esm({
   }
 });
 
+// src/components/JourneyPose.ts
+import { AnimCurve as AnimCurve5, AnimData as AnimData5, AnimTrack as AnimTrack5, Quat as Quat5, Vec3 as Vec313, INTERPOLATION_LINEAR as INTERPOLATION_LINEAR5 } from "playcanvas";
+function scooterTracks(model, idle) {
+  const channels = idle.curves.flatMap((c) => c.paths.map((path) => ({ path, node: model.findByName(path.entityPath.at(-1)), data: idle.outputs[c.output], prop: path.propertyPath[0] })));
+  const saved = channels.map((c) => ({ p: c.node.getLocalPosition().clone(), q: c.node.getLocalRotation().clone(), s: c.node.getLocalScale().clone() }));
+  const neutral = () => channels.forEach((c) => {
+    const v = c.data.data;
+    if (c.prop === "localRotation") c.node.setLocalRotation(v[0], v[1], v[2], v[3]);
+    else if (c.prop === "localPosition") c.node.setLocalPosition(v[0], v[1], v[2]);
+  });
+  const bone = (n) => model.findByName(n);
+  const scale = 1.1499067266;
+  const aim = (node, child, p) => {
+    const a = child.getPosition().clone().sub(node.getPosition()).normalize(), b = p.clone().sub(node.getPosition()).normalize();
+    node.setRotation(new Quat5().mul2(new Quat5().setFromDirections(a, b), node.getRotation()));
+  };
+  function ik(upper, lower, tip, target, pole) {
+    const origin = upper.getPosition().clone(), a = origin.distance(lower.getPosition()), b = lower.getPosition().distance(tip.getPosition()), dir = target.clone().sub(origin), d = Math.max(1e-3, Math.min(dir.length(), a + b - 5e-4));
+    dir.normalize();
+    pole.sub(dir.clone().mulScalar(pole.dot(dir))).normalize();
+    const along = (a * a - b * b + d * d) / (2 * d), elbow = origin.clone().add(dir.clone().mulScalar(along)).add(pole.mulScalar(Math.sqrt(Math.max(0, a * a - along * along))));
+    aim(upper, lower, elbow);
+    aim(lower, tip, origin.add(dir.mulScalar(d)));
+  }
+  const tracks2 = ["ScooterCoast", "ScooterPush"].map((name) => {
+    const duration = name === "ScooterPush" ? 1.15 : 2.4, times = Array.from({ length: Math.ceil(duration * 30) + 1 }, (_, i) => Math.min(duration, i / 30)), output = channels.map(() => []);
+    for (const time of times) {
+      neutral();
+      const feet = ["Left", "Right"].map((side) => ({ side, foot: bone(side + "Foot"), q: bone(side + "Foot").getRotation().clone(), y: bone(side + "Foot").getPosition().y }));
+      const hips = bone("Hips"), p = hips.getLocalPosition().clone();
+      p.y -= 0.075 / scale;
+      p.z += 0.012 / scale;
+      hips.setLocalPosition(p);
+      const spine = bone("Spine02");
+      spine.setLocalRotation(new Quat5().mul2(spine.getLocalRotation(), new Quat5().setFromEulerAngles(5, 0, 0)));
+      const kick = name === "ScooterPush" ? Math.max(0, Math.sin(time / duration * Math.PI * 2)) : 0;
+      for (const f of feet) {
+        const left = f.side === "Left", target = new Vec313((left ? 0.065 : -0.065) / scale, f.y - (left ? 5e-3 : 0.014) / scale, (left ? 0.12 : -0.18) / scale);
+        if (!left && kick) {
+          target.x -= kick * 0.15 / scale;
+          target.y -= kick * 0.14 / scale;
+          target.z -= kick * 0.18 / scale;
+        }
+        ik(bone(f.side + "UpLeg"), bone(f.side + "Leg"), f.foot, target, new Vec313(0, 0, 1));
+        f.foot.setRotation(f.q);
+      }
+      for (const side of ["Left", "Right"]) {
+        const sign = side === "Left" ? 1 : -1, hand = bone(side + "Hand"), q = hand.getRotation().clone();
+        ik(bone(side + "Arm"), bone(side + "ForeArm"), hand, new Vec313(sign * 0.209 / scale, 0.838 / scale, 0.245 / scale), new Vec313(sign * 0.65, -1, -0.3));
+        const tip = bone(side + "Hand_End");
+        if (tip) aim(hand, tip, hand.getPosition().clone().add(new Vec313(0, -0.022, 0.07)));
+        else hand.setRotation(q);
+      }
+      channels.forEach((c, i) => {
+        const v = c.prop === "localRotation" ? c.node.getLocalRotation() : c.prop === "localScale" ? c.node.getLocalScale() : c.node.getLocalPosition();
+        output[i].push(v.x, v.y, v.z);
+        if (v instanceof Quat5) output[i].push(v.w);
+      });
+    }
+    return new AnimTrack5(name, duration, [new AnimData5(1, times)], output.map((v, i) => new AnimData5(channels[i].prop === "localRotation" ? 4 : 3, v)), channels.map((c, i) => new AnimCurve5([c.path], 0, i, INTERPOLATION_LINEAR5)));
+  });
+  channels.forEach((c, i) => {
+    c.node.setLocalPosition(saved[i].p);
+    c.node.setLocalRotation(saved[i].q);
+    c.node.setLocalScale(saved[i].s);
+  });
+  return tracks2;
+}
+var init_JourneyPose = __esm({
+  "src/components/JourneyPose.ts"() {
+    "use strict";
+  }
+});
+
+// src/components/PlayMotion.ts
+import { AnimCurve as AnimCurve6, AnimData as AnimData6, AnimTrack as AnimTrack6, Quat as Quat6, INTERPOLATION_LINEAR as INTERPOLATION_LINEAR6 } from "playcanvas";
+function playTracks(model, idle, data) {
+  const channels = idle.curves.flatMap((c) => c.paths.map((path) => ({ path, node: model.findByName(path.entityPath.at(-1)), prop: path.propertyPath[0], v: idle.outputs[c.output].data })));
+  const saved = channels.map((c) => ({ p: c.node.getLocalPosition().clone(), q: c.node.getLocalRotation().clone(), s: c.node.getLocalScale().clone() }));
+  const neutral = () => channels.forEach((c) => {
+    if (c.prop === "localRotation") c.node.setLocalRotation(c.v[0], c.v[1], c.v[2], c.v[3]);
+    else if (c.prop === "localPosition") c.node.setLocalPosition(c.v[0], c.v[1], c.v[2]);
+    else c.node.setLocalScale(c.v[0], c.v[1], c.v[2]);
+  });
+  neutral();
+  const map = [["spine", "Spine02"], ["chest", "Spine"], ["head", "Head"], ["upperarm.l", "LeftArm"], ["lowerarm.l", "LeftForeArm"], ["wrist.l", "LeftHand"], ["upperarm.r", "RightArm"], ["lowerarm.r", "RightForeArm"], ["wrist.r", "RightHand"], ["upperleg.l", "LeftUpLeg"], ["lowerleg.l", "LeftLeg"], ["foot.l", "LeftFoot"], ["upperleg.r", "RightUpLeg"], ["lowerleg.r", "RightLeg"], ["foot.r", "RightFoot"]];
+  const targets = map.map(([source, name]) => ({ node: model.findByName(name), index: data.bones.indexOf(source), q: model.findByName(name).getRotation().clone() }));
+  const arms = ["Left", "Right"].map((side) => {
+    const upper = model.findByName(side + "Arm"), lower = model.findByName(side + "ForeArm"), hand = model.findByName(side + "Hand");
+    return { upper, lower, hand, elbowX: Math.abs(lower.getPosition().x - upper.getPosition().x), handX: Math.abs(hand.getPosition().x) };
+  });
+  const left = model.findByName("LeftFoot"), right = model.findByName("RightFoot"), hips = model.findByName("Hips"), ground = Math.min(left.getPosition().y, right.getPosition().y);
+  const variants = [["PlayInteract", "Interact"], ["PlayReach", "PickUp"], ["PlayThrow", "Throw"], ["PlayRoll", "Throw"], ["PlayUse", "Use_Item"], ["PlayKick", "Melee_Unarmed_Attack_Kick"], ["PlayWave", "Waving"], ["PlayJump", "Jump_Full_Short"]];
+  const result = [];
+  try {
+    for (const [name, source] of variants) {
+      const clip = data.clips[source], output = channels.map(() => []);
+      for (const [index, frame] of clip.frames.entries()) {
+        neutral();
+        for (const t of targets) {
+          const delta = new Quat6().mul2(new Quat6(...frame[t.index]), new Quat6(...data.reference[t.index]).invert());
+          const limb = t.node.name;
+          const arm = /^(Left|Right)Arm$/.test(limb), distal = /^(Left|Right)(ForeArm|Hand)$/.test(limb);
+          const amount = (name === "PlayRoll" ? 0.35 : 1) * (arm ? 0.22 : distal ? 0.65 : 1);
+          const q = new Quat6().mul2(new Quat6().slerp(Quat6.IDENTITY, delta, amount), t.q);
+          t.node.setRotation(q);
+        }
+        for (const a of arms) {
+          const from = a.lower.getPosition().clone().sub(a.upper.getPosition()), to = from.clone(), limit = a.elbowX + 6e-3;
+          const excess = Math.max(0, Math.abs(to.x) - limit);
+          to.x = Math.max(-limit, Math.min(limit, to.x));
+          to.z += excess;
+          a.upper.setRotation(new Quat6().mul2(new Quat6().setFromDirections(from.normalize(), to.normalize()), a.upper.getRotation()));
+          const hand = a.hand.getPosition().clone(), origin = a.lower.getPosition().clone(), max = a.handX + 0.012;
+          const target = hand.clone();
+          target.x = Math.max(-max, Math.min(max, target.x));
+          target.z += Math.abs(hand.x - target.x);
+          a.lower.setRotation(new Quat6().mul2(new Quat6().setFromDirections(hand.sub(origin).normalize(), target.sub(origin).normalize()), a.lower.getRotation()));
+        }
+        const footY = Math.min(left.getPosition().y, right.getPosition().y);
+        const pose = clip.positions[index], start = clip.positions[0], l = data.bones.indexOf("foot.l"), r = data.bones.indexOf("foot.r");
+        const lift = name === "PlayJump" ? (pose[l][1] + pose[r][1] - (start[l][1] + start[r][1])) * 0.9 : 0;
+        const p = hips.getPosition().clone();
+        p.y += ground + lift - footY;
+        hips.setPosition(p);
+        channels.forEach((c, i) => {
+          const v = c.prop === "localRotation" ? c.node.getLocalRotation() : c.prop === "localScale" ? c.node.getLocalScale() : c.node.getLocalPosition();
+          output[i].push(v.x, v.y, v.z);
+          if (v instanceof Quat6) output[i].push(v.w);
+        });
+      }
+      result.push(new AnimTrack6(name, clip.duration, [new AnimData6(1, clip.frames.map((_, i) => Math.min(clip.duration, i / clip.fps)))], output.map((v, i) => new AnimData6(channels[i].prop === "localRotation" ? 4 : 3, v)), channels.map((c, i) => new AnimCurve6([c.path], 0, i, INTERPOLATION_LINEAR6))));
+    }
+  } finally {
+    channels.forEach((c, i) => {
+      c.node.setLocalPosition(saved[i].p);
+      c.node.setLocalRotation(saved[i].q);
+      c.node.setLocalScale(saved[i].s);
+    });
+  }
+  return result;
+}
+var init_PlayMotion = __esm({
+  "src/components/PlayMotion.ts"() {
+    "use strict";
+  }
+});
+
 // src/components/CharacterVisual.ts
 import { Asset as Asset3, BoundingBox as BoundingBox5, Entity as Entity14 } from "playcanvas";
 function createCharacter(app) {
@@ -2578,6 +2726,13 @@ async function loadArianna(app, character, resolveAsset = (path) => assetUrl(`${
   const fishing = fishingTracks(model, tracks2.find((t) => t.name === "Idle"), await fishingResponse.json());
   tracks2.push(...fishing);
   manifest.animations.push(...fishing.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: ["Fishing_Idle", "Fishing_Reeling", "Fishing_Left", "Fishing_Right"].includes(t.name) })));
+  const scooter = scooterTracks(model, tracks2.find((t) => t.name === "Idle"));
+  tracks2.push(...scooter);
+  manifest.animations.push(...scooter.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: true })));
+  const play = playTracks(model, tracks2.find((t) => t.name === "Idle"), await (await fetch(resolveAsset("assets/outdoors/play-motion.json"))).json());
+  tracks2.push(...play);
+  manifest.animations.push(...play.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: false })));
+  for (const [name, time] of Object.entries({ PlayKick: 0.32, PlayRoll: 0.6, PlayThrow: 0.58, PlayInteract: 0.45, PlayReach: 0.45, PlayUse: 0.6, PlayJump: 0.48, PlayWave: 0.75 })) manifest.interaction_events[name] = [{ time_seconds: time, event: "toy-contact" }];
   const bounds = new BoundingBox5();
   let first = true;
   for (const render of model.findComponents("render")) {
@@ -2618,16 +2773,57 @@ var init_CharacterVisual = __esm({
     init_CharacterGrounding();
     init_FishingRetarget();
     init_RestingPose();
+    init_JourneyPose();
+    init_PlayMotion();
+  }
+});
+
+// src/systems/ScooterDynamics.ts
+var ScooterDynamics;
+var init_ScooterDynamics = __esm({
+  "src/systems/ScooterDynamics.ts"() {
+    "use strict";
+    ScooterDynamics = class {
+      vx = 0;
+      vz = 0;
+      heading = 0;
+      lean = 0;
+      steer = 0;
+      reset(heading = 0) {
+        this.vx = this.vz = this.lean = this.steer = 0;
+        this.heading = heading;
+      }
+      step(dt, x, z) {
+        dt = Math.max(0, Math.min(dt, 0.05));
+        const input = Math.min(1, Math.hypot(x, z)), speed = Math.hypot(this.vx, this.vz);
+        const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+        const delta = input > 0.06 ? wrap(Math.atan2(x, z) - this.heading) : 0;
+        const turn = Math.max(-1, Math.min(1, delta * 1.8));
+        const rate = 3.6 / (1 + speed * 0.17);
+        this.heading = wrap(this.heading + Math.max(-rate * dt, Math.min(rate * dt, delta)));
+        this.steer += (turn * 0.4 - this.steer) * (1 - Math.exp(-10 * dt));
+        this.lean += (turn * Math.min(0.17, speed * 0.035) - this.lean) * (1 - Math.exp(-7 * dt));
+        const fX = Math.sin(this.heading), fZ = Math.cos(this.heading), rX = fZ, rZ = -fX;
+        let forward = this.vx * fX + this.vz * fZ, lateral = this.vx * rX + this.vz * rZ;
+        const target = input > 0.06 ? 4.8 * input * Math.max(0.25, Math.cos(delta * 0.5)) : 0;
+        forward += (target - forward) * (1 - Math.exp(-(input > 0.06 ? 3.2 : 6.5) * dt));
+        lateral *= Math.exp(-5.5 * dt);
+        this.vx = fX * forward + rX * lateral;
+        this.vz = fZ * forward + rZ * lateral;
+        if (input <= 0.06 && Math.hypot(this.vx, this.vz) < 0.025) this.vx = this.vz = 0;
+      }
+    };
   }
 });
 
 // src/components/PlayerController.ts
-import { Keyboard, Vec2, Vec3 as Vec313, KEY_A, KEY_D, KEY_S, KEY_W, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT } from "playcanvas";
+import { Keyboard, Vec2, Vec3 as Vec315, KEY_A, KEY_D, KEY_S, KEY_W, KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT } from "playcanvas";
 var PlayerController;
 var init_PlayerController = __esm({
   "src/components/PlayerController.ts"() {
     "use strict";
     init_MovementPace();
+    init_ScooterDynamics();
     PlayerController = class {
       constructor(entity, camera, room, joystick) {
         this.entity = entity;
@@ -2652,13 +2848,17 @@ var init_PlayerController = __esm({
       room;
       joystick;
       enabled = true;
+      riding = false;
+      scooter = new ScooterDynamics();
       input = new Vec2();
-      velocity = new Vec313();
+      velocity = new Vec315();
       radius = 0.24;
+      dynamicObstacles = [];
+      moveContact = null;
       speed = RUN_SPEED;
       right;
       forward;
-      candidate = new Vec313();
+      candidate = new Vec315();
       bounds = [];
       keyboard;
       abort = new AbortController();
@@ -2675,11 +2875,11 @@ var init_PlayerController = __esm({
         };
         const clear = (p) => {
           const count = Math.ceil(start.distance(p) / 0.06);
-          for (let i = 1; i <= count; i++) if (!free(new Vec313().lerp(start, p, i / count))) return false;
+          for (let i = 1; i <= count; i++) if (!free(new Vec315().lerp(start, p, i / count))) return false;
           return true;
         };
         for (let radius = 0.32; radius <= 1.8; radius += 0.06) for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 24) {
-          const p = new Vec313(point.x + Math.sin(angle) * radius, start.y, point.z + Math.cos(angle) * radius);
+          const p = new Vec315(point.x + Math.sin(angle) * radius, start.y, point.z + Math.cos(angle) * radius);
           if (p.distance(start) < 2.2 && free(p) && clear(p)) candidates.push(p);
         }
         candidates.sort((a, b) => Math.hypot(a.x - point.x, a.z - point.z) * 3 + a.distance(start) - Math.hypot(b.x - point.x, b.z - point.z) * 3 - b.distance(start));
@@ -2733,8 +2933,10 @@ var init_PlayerController = __esm({
             this.input.set(delta.dot(this.right) * magnitude, delta.dot(this.forward) * magnitude);
           }
         }
-        const dx = (this.right.x * this.input.x + this.forward.x * this.input.y) * this.speed * dt;
-        const dz = (this.right.z * this.input.x + this.forward.z * this.input.y) * this.speed * dt;
+        const ix = this.right.x * this.input.x + this.forward.x * this.input.y, iz = this.right.z * this.input.x + this.forward.z * this.input.y;
+        if (this.riding) this.scooter.step(dt, ix, iz);
+        const dx = (this.riding ? this.scooter.vx : ix * this.speed) * dt;
+        const dz = (this.riding ? this.scooter.vz : iz * this.speed) * dt;
         const start = this.entity.getPosition();
         const oldX = start.x, oldZ = start.z;
         this.candidate.copy(start);
@@ -2742,13 +2944,19 @@ var init_PlayerController = __esm({
         for (let i = 0; i < steps; i++) {
           const x = this.candidate.x;
           this.candidate.x = Math.max(-this.room.halfWidth + this.radius, Math.min(this.room.halfWidth - this.radius, x + dx / steps));
+          this.moveContact?.(x, this.candidate.z, this.candidate.x - x, 0);
           if (this.blocked()) this.candidate.x = x;
           const z = this.candidate.z;
           this.candidate.z = Math.max(-this.room.halfDepth + this.radius, Math.min(this.room.halfDepth - this.radius, z + dz / steps));
+          this.moveContact?.(this.candidate.x, z, 0, this.candidate.z - z);
           if (this.blocked()) this.candidate.z = z;
         }
         this.entity.setPosition(this.candidate);
         this.velocity.set((this.candidate.x - oldX) / Math.max(dt, 1e-3), 0, (this.candidate.z - oldZ) / Math.max(dt, 1e-3));
+        if (this.riding) {
+          this.scooter.vx = this.velocity.x;
+          this.scooter.vz = this.velocity.z;
+        }
         this.keyboard.update();
       }
       blocked() {
@@ -2759,9 +2967,10 @@ var init_PlayerController = __esm({
             }
           }
         }
-        return this.bounds.some((box) => box.containsPoint(this.candidate));
+        return this.bounds.some((box) => box.containsPoint(this.candidate)) || this.dynamicObstacles.some((box) => Math.abs(this.candidate.x - box.center.x) < box.halfExtents.x + this.radius && Math.abs(this.candidate.z - box.center.z) < box.halfExtents.z + this.radius);
       }
       reset = () => {
+        this.scooter.reset(this.scooter.heading);
         const pending = this.approach;
         this.approach = null;
         pending?.cancelled();
@@ -2845,7 +3054,7 @@ var init_VirtualJoystick = __esm({
 });
 
 // src/game/cleanupProps.ts
-import { BoundingBox as BoundingBox6, Entity as Entity16, Vec3 as Vec314 } from "playcanvas";
+import { BoundingBox as BoundingBox6, Entity as Entity16, Vec3 as Vec316 } from "playcanvas";
 function createCleanupProps(app, room) {
   const root = new Entity16("Cleanup props", app);
   app.root.addChild(root);
@@ -2908,7 +3117,7 @@ function createCleanupProps(app, room) {
   fixed("Laundry hamper", "cylinder", [-2.55, 0.33, 1], [0.67, 0.64, 0.67], m.cream);
   fixed("Hamper opening", "cylinder", [-2.55, 0.655, 1], [0.53, 0.013, 0.53], m.purple, false);
   for (const y of [0.14, 0.28, 0.42, 0.56]) fixed("Hamper weave", "cylinder", [-2.55, y, 1], [0.69, 0.025, 0.69], m.muzzle);
-  room.obstacles.push(new BoundingBox6(new Vec314(...hamperPosition), new Vec314(0.35, 1, 0.35)));
+  room.obstacles.push(new BoundingBox6(new Vec316(...hamperPosition), new Vec316(0.35, 1, 0.35)));
   const crayonMess = new Entity16("Scattered crayons", app);
   root.addChild(crayonMess);
   crayonMess.setLocalPosition(2.23, 1.2, 0.97);
@@ -2938,16 +3147,16 @@ function createCleanupProps(app, room) {
     icon: item2.icon,
     kind: "pickup",
     item: item2.id,
-    anchor: new Vec314(...item2.home),
-    marker: new Vec314(item2.home[0], item2.home[1] + (item2.id === "vacuum" ? 0.82 : 0.62), item2.home[2]),
+    anchor: new Vec316(...item2.home),
+    marker: new Vec316(item2.home[0], item2.home[1] + (item2.id === "vacuum" ? 0.82 : 0.62), item2.home[2]),
     range: 0.85
   }));
   interactions.push(
-    { id: "toy-chest", name: "Toy chest", icon: "\u{1F9F8}", kind: "place", item: "teddy", task: "teddy", anchor: new Vec314(2.48, 0, -0.79), marker: new Vec314(2.48, 1.45, -1.55), range: 1.1, placement: [2.48, 0.85, -1.55] },
-    { id: "hamper", name: "Laundry hamper", icon: "\u{1F455}", kind: "place", item: "shirt", task: "shirt", anchor: new Vec314(-2.55, 0, 1), marker: new Vec314(-2.55, 1.04, 1), range: 1.05, placement: [-2.55, 0.69, 1] },
-    { id: "bookshelf", name: "Bookshelf", icon: "\u{1F4D8}", kind: "place", item: "book", task: "book", anchor: new Vec314(1.12, 0, -2.55), marker: new Vec314(1.12, 2.35, -3.05), range: 1.05, placement: [1.51, 0.79, -2.99] },
-    { id: "crayons", name: "Crayons", icon: "\u{1F58D}", kind: "crayons", task: "crayons", anchor: new Vec314(1.6, 0, 1.05), marker: new Vec314(2.15, 1.68, 1.04), range: 0.88 },
-    { id: "dirt", name: "Dirt pile", icon: "\u2726", kind: "vacuum", item: "vacuum", task: "dirt", anchor: new Vec314(-1.4, 0, 2.65), marker: new Vec314(-1.4, 0.55, 2.65), range: 1 }
+    { id: "toy-chest", name: "Toy chest", icon: "\u{1F9F8}", kind: "place", item: "teddy", task: "teddy", anchor: new Vec316(2.48, 0, -0.79), marker: new Vec316(2.48, 1.45, -1.55), range: 1.1, placement: [2.48, 0.85, -1.55] },
+    { id: "hamper", name: "Laundry hamper", icon: "\u{1F455}", kind: "place", item: "shirt", task: "shirt", anchor: new Vec316(-2.55, 0, 1), marker: new Vec316(-2.55, 1.04, 1), range: 1.05, placement: [-2.55, 0.69, 1] },
+    { id: "bookshelf", name: "Bookshelf", icon: "\u{1F4D8}", kind: "place", item: "book", task: "book", anchor: new Vec316(1.12, 0, -2.55), marker: new Vec316(1.12, 2.35, -3.05), range: 1.05, placement: [1.51, 0.79, -2.99] },
+    { id: "crayons", name: "Crayons", icon: "\u{1F58D}", kind: "crayons", task: "crayons", anchor: new Vec316(1.6, 0, 1.05), marker: new Vec316(2.15, 1.68, 1.04), range: 0.88 },
+    { id: "dirt", name: "Dirt pile", icon: "\u2726", kind: "vacuum", item: "vacuum", task: "dirt", anchor: new Vec316(-1.4, 0, 2.65), marker: new Vec316(-1.4, 0.55, 2.65), range: 1 }
   );
   const reset = () => {
     for (const item2 of items) {
@@ -3013,7 +3222,7 @@ var init_ImportedProp = __esm({
 });
 
 // src/game/DogAnimator.ts
-import { BoundingBox as BoundingBox8, Vec3 as Vec315 } from "playcanvas";
+import { BoundingBox as BoundingBox8, Vec3 as Vec317 } from "playcanvas";
 var DogAnimator;
 var init_DogAnimator = __esm({
   "src/game/DogAnimator.ts"() {
@@ -3038,7 +3247,7 @@ var init_DogAnimator = __esm({
       }
       root;
       model;
-      previous = new Vec315();
+      previous = new Vec317();
       state = "Idle";
       speed = 0;
       height = 0;
@@ -3063,7 +3272,7 @@ var init_DogAnimator = __esm({
 });
 
 // src/game/PetCleanup.ts
-import { Entity as Entity18, Vec3 as Vec316 } from "playcanvas";
+import { Entity as Entity18, Vec3 as Vec318 } from "playcanvas";
 var PET_TASKS, PetCleanup;
 var init_PetCleanup = __esm({
   "src/game/PetCleanup.ts"() {
@@ -3115,10 +3324,10 @@ var init_PetCleanup = __esm({
         const bubble = primitives(app, this.bubbles);
         for (let i = 0; i < 8; i++) bubble("Soap bubble", "sphere", [Math.sin(i * 2) * 0.17, i % 3 * 0.065, Math.cos(i * 2) * 0.12], [0.08, 0.08, 0.08], mint, false);
         props.interactions.push(
-          { id: "pickup-scooper", name: "Scooper", icon: "\u{1F944}", kind: "pickup", item: "scooper", task: "pet-care", anchor: new Vec316(...this.tool.home), marker: new Vec316(3.8, 1, 3), range: 0.85, available: (carried) => this.loaded && this.stage === "tool" && !carried },
-          { id: "scoop-poop", name: "Dog poop", icon: "\u{1F4A9}", kind: "pet", actionLabel: "Scoop", task: "pet-care", item: "scooper", anchor: new Vec316(3.7, 0, 5.3), marker: new Vec316(3.7, 0.55, 5.3), range: 0.9, available: (carried) => this.stage === "scoop" && carried === "scooper" },
-          { id: "flush-poop", name: "Toilet", icon: "\u{1F6BD}", kind: "pet", actionLabel: "Flush", task: "pet-care", item: "scooper", anchor: new Vec316(5.15, 0, -0.38), marker: new Vec316(5.87, 1, -0.38), range: 0.85, available: (carried) => this.stage === "flush" && carried === "scooper" },
-          { id: "wash-hands", name: "Wash your hands", icon: "\u{1FAE7}", kind: "pet", actionLabel: "Wash hands", task: "pet-care", anchor: new Vec316(4.12, 0, -2.35), marker: new Vec316(4.1, 1.45, -3.08), range: 0.9, available: (carried) => this.stage === "wash" && !carried }
+          { id: "pickup-scooper", name: "Scooper", icon: "\u{1F944}", kind: "pickup", item: "scooper", task: "pet-care", anchor: new Vec318(...this.tool.home), marker: new Vec318(3.8, 1, 3), range: 0.85, available: (carried) => this.loaded && this.stage === "tool" && !carried },
+          { id: "scoop-poop", name: "Dog poop", icon: "\u{1F4A9}", kind: "pet", actionLabel: "Scoop", task: "pet-care", item: "scooper", anchor: new Vec318(3.7, 0, 5.3), marker: new Vec318(3.7, 0.55, 5.3), range: 0.9, available: (carried) => this.stage === "scoop" && carried === "scooper" },
+          { id: "flush-poop", name: "Toilet", icon: "\u{1F6BD}", kind: "pet", actionLabel: "Flush", task: "pet-care", item: "scooper", anchor: new Vec318(5.15, 0, -0.38), marker: new Vec318(5.87, 1, -0.38), range: 0.85, available: (carried) => this.stage === "flush" && carried === "scooper" },
+          { id: "wash-hands", name: "Wash your hands", icon: "\u{1FAE7}", kind: "pet", actionLabel: "Wash hands", task: "pet-care", anchor: new Vec318(4.12, 0, -2.35), marker: new Vec318(4.1, 1.45, -3.08), range: 0.9, available: (carried) => this.stage === "wash" && !carried }
         );
         this.reset(false);
       }
@@ -3324,7 +3533,7 @@ var init_DailyClock = __esm({
 });
 
 // src/game/LilahMesses.ts
-import { Entity as Entity19, Vec3 as Vec317 } from "playcanvas";
+import { Entity as Entity19, Vec3 as Vec319 } from "playcanvas";
 var LilahMesses;
 var init_LilahMesses = __esm({
   "src/game/LilahMesses.ts"() {
@@ -3359,8 +3568,8 @@ var init_LilahMesses = __esm({
             name: ["Lilah\u2019s toy trail", "Lilah\u2019s juice spill", "Lilah\u2019s crumbs"][i],
             icon: ["\u{1F9F8}", "\u{1F9FB}", "\u2726"][i],
             actionLabel: ["Tidy Lilah\u2019s toys", "Hold to wipe", "Hold to vacuum"][i],
-            anchor: new Vec317(),
-            marker: new Vec317(),
+            anchor: new Vec319(),
+            marker: new Vec319(),
             range: 1,
             duration: i === 0 ? 600 : 1200,
             hold: i !== 0,
@@ -3450,7 +3659,7 @@ var init_LilahMesses = __esm({
 });
 
 // src/game/DailyLife.ts
-import { BoundingBox as BoundingBox9, Entity as Entity20, Vec3 as Vec318 } from "playcanvas";
+import { BoundingBox as BoundingBox9, Entity as Entity20, Vec3 as Vec320 } from "playcanvas";
 var SAVE_KEY, DailyLife;
 var init_DailyLife = __esm({
   "src/game/DailyLife.ts"() {
@@ -3476,7 +3685,7 @@ var init_DailyLife = __esm({
         props.root.addChild(this.root);
         this.lilahMesses = new LilahMesses(app, this.root, props, () => this.active && this.clock.state.phase !== "school");
         this.lilahMesses.syncDay(this.clock.state.day);
-        this.lilahTarget = { id: "play-lilah", name: "Play with Lilah", actionLabel: "Play with Lilah", icon: "\u{1F495}", kind: "daily", anchor: new Vec318(), marker: new Vec318(), range: 1.1, duration: 650, available: (h) => this.active && this.lilahAvailable && !h };
+        this.lilahTarget = { id: "play-lilah", name: "Play with Lilah", actionLabel: "Play with Lilah", icon: "\u{1F495}", kind: "daily", anchor: new Vec320(), marker: new Vec320(), range: 1.1, duration: 650, available: (h) => this.active && this.lilahAvailable && !h };
         props.interactions.push(this.lilahTarget);
         const shape = primitives(app, this.root), m = house.materials;
         const item = (id, name, icon, home) => {
@@ -3494,7 +3703,7 @@ var init_DailyLife = __esm({
         const art = new HouseArt(app, this.root);
         art.add("furniture", "sideTableDrawers", [-0.7, 0.025, 3.05], 0.85, 180);
         void art.finish();
-        house.obstacles.push(new BoundingBox9(new Vec318(-0.7, 0.5, 3.05), new Vec318(0.35, 1, 0.35)));
+        house.obstacles.push(new BoundingBox9(new Vec320(-0.7, 0.5, 3.05), new Vec320(0.35, 1, 0.35)));
         this.towel = item("paper-towel", "Paper towel", "\u{1F9FB}", [-2.65, 1.02, 10.5]);
         void importProp(app, this.towel.entity, "paper", 0.23);
         this.egg = item("breakfast-egg", "Egg", "\u{1F95A}", [-2.68, 1.15, 14.55]);
@@ -3543,7 +3752,7 @@ var init_DailyLife = __esm({
         shape("Toothbrush", "box", [4.4, 1.15, -3.04], [0.025, 0.24, 0.025], m.pink);
         shape("Toothbrush bristles", "box", [4.4, 1.28, -3.02], [0.035, 0.065, 0.04], m.trim);
         const target = (id, name, icon, anchor, marker, available, duration = 650, task, hold = false, mess) => {
-          props.interactions.push({ id, name, icon, kind: "daily", actionLabel: name, anchor: new Vec318(...anchor), marker: new Vec318(...marker), range: 1, task, duration, hold, mess, available: (carried) => this.active && available(carried) });
+          props.interactions.push({ id, name, icon, kind: "daily", actionLabel: name, anchor: new Vec320(...anchor), marker: new Vec320(...marker), range: 1, task, duration, hold, mess, available: (carried) => this.active && available(carried) });
         };
         const phase = () => this.clock.state.phase, notDone = (id) => !this.clock.state.done.includes(id);
         shape("Puppy bowl", "cylinder", [4.95, 0.1, 8.55], [0.48, 0.16, 0.48], m.blue);
@@ -3910,7 +4119,7 @@ var init_DailyLife = __esm({
 });
 
 // src/game/RoundMesses.ts
-import { Vec3 as Vec319 } from "playcanvas";
+import { Vec3 as Vec321 } from "playcanvas";
 var RoundMesses;
 var init_RoundMesses = __esm({
   "src/game/RoundMesses.ts"() {
@@ -3946,7 +4155,7 @@ var init_RoundMesses = __esm({
         const living = [[1.2, 5.2], [3.3, 6.1], [1.1, 7.2], [0.5, 8.2], [3.5, 8.7]];
         const pools = { bedroom, living, kitchen: [[0.2, 10.6], [1.5, 11.4], [-0.6, 11.6], [0.15, 12]], laundry: [[4.55, 10.5], [4.65, 11.8], [5.35, 11.65]], hall: [[4.4, 2.4], [4.5, 1.5], [5.3, 1.8]], bath: [[4.6, -1.4], [4.6, -2.15], [5.1, -0.7]] };
         const choose = (id, pool) => {
-          const candidates = pool.map(([x, z]) => new Vec319(x, 0, z)).filter((p2) => this.planner.free(p2.x, p2.z) && used.every((q) => q.distance(p2) > 0.65) && this.planner.route(new Vec319(0, 0, 0.9), p2).length);
+          const candidates = pool.map(([x, z]) => new Vec321(x, 0, z)).filter((p2) => this.planner.free(p2.x, p2.z) && used.every((q) => q.distance(p2) > 0.65) && this.planner.route(new Vec321(0, 0, 0.9), p2).length);
           const fresh2 = candidates.filter((p2) => p2.x + "," + p2.z !== this.previous.get(id)), options = fresh2.length ? fresh2 : candidates;
           const p = options[Math.floor(random() * options.length)];
           if (p) {
@@ -3989,7 +4198,7 @@ var init_RoundMesses = __esm({
 });
 
 // src/game/houseProps.ts
-import { Entity as Entity21, Vec3 as Vec320 } from "playcanvas";
+import { Entity as Entity21, Vec3 as Vec322 } from "playcanvas";
 function createHouseProps(app, house) {
   const props = createCleanupProps(app, house), m = house.materials, extras = [];
   let active = [];
@@ -4025,8 +4234,8 @@ function createHouseProps(app, house) {
       for (let i = 0; i < 3; i++) shape("Crumpled paper", "box", [(i - 1) * 0.09, 0.07 + i * 0.025, 0], [0.16, 0.13, 0.16], i % 2 ? m.pinkLight : m.trim);
     }
     props.interactions.push(
-      { id: `pickup-${id}`, name, icon, kind: "pickup", item: id, task: id, anchor: new Vec320(...home), marker: new Vec320(home[0], home[1] + 0.6, home[2]), range: 0.85 },
-      { id: `place-${id}`, name: destination, icon, kind: "place", item: id, task: id, anchor: new Vec320(...anchor), marker: new Vec320(placement[0], placement[1] + 0.65, placement[2]), range, placement, placedStyle: id === "bath-towel" ? "hang" : ["kitchen-trash", "laundry-clothes"].includes(id) ? "hide" : void 0 }
+      { id: `pickup-${id}`, name, icon, kind: "pickup", item: id, task: id, anchor: new Vec322(...home), marker: new Vec322(home[0], home[1] + 0.6, home[2]), range: 0.85 },
+      { id: `place-${id}`, name: destination, icon, kind: "place", item: id, task: id, anchor: new Vec322(...anchor), marker: new Vec322(placement[0], placement[1] + 0.65, placement[2]), range, placement, placedStyle: id === "bath-towel" ? "hang" : ["kitchen-trash", "laundry-clothes"].includes(id) ? "hide" : void 0 }
     );
   }
   pair("hall-shoes", "Shoes", "\u{1F45F}", [4.45, 0.09, 2.25], "Shoe bench", [5.15, 0, 2.5], [5.85, 0.58, 2.5], "shoes");
@@ -4216,7 +4425,7 @@ var init_ChoreAudio = __esm({
 });
 
 // src/components/CarrySystem.ts
-import { BoundingBox as BoundingBox10, Entity as Entity22, Mat4 as Mat42, Vec3 as Vec321 } from "playcanvas";
+import { BoundingBox as BoundingBox10, Entity as Entity22, Mat4 as Mat42, Vec3 as Vec323 } from "playcanvas";
 var CarrySystem;
 var init_CarrySystem = __esm({
   "src/components/CarrySystem.ts"() {
@@ -4240,7 +4449,7 @@ var init_CarrySystem = __esm({
             first = false;
           } else bounds.add(mesh.aabb);
         }
-        const center = item.carryGrip ? new Vec321(...item.carryGrip) : first ? new Vec321() : new Mat42().copy(item.entity.getWorldTransform()).invert().transformPoint(bounds.center);
+        const center = item.carryGrip ? new Vec323(...item.carryGrip) : first ? new Vec323() : new Mat42().copy(item.entity.getWorldTransform()).invert().transformPoint(bounds.center);
         item.entity.reparent(this.socket);
         const scale = item.carriedScale ?? 1;
         item.entity.setLocalScale(scale, scale, scale);
@@ -4473,7 +4682,7 @@ var init_InteractionGuidance = __esm({
 });
 
 // src/ui/CleanupFeedback.ts
-import { Entity as Entity23, Mesh, MeshInstance, TorusGeometry, Vec3 as Vec322 } from "playcanvas";
+import { Entity as Entity23, Mesh, MeshInstance, TorusGeometry, Vec3 as Vec324 } from "playcanvas";
 var CleanupFeedback;
 var init_CleanupFeedback = __esm({
   "src/ui/CleanupFeedback.ts"() {
@@ -4508,7 +4717,7 @@ var init_CleanupFeedback = __esm({
       markers = [];
       mesh;
       glow;
-      screen = new Vec322();
+      screen = new Vec324();
       popups = [];
       reward(point, text, now) {
         const element = document.createElement("div");
@@ -4742,20 +4951,20 @@ var init_saveId = __esm({
 });
 
 // src/components/BedEntry.ts
-import { Vec3 as Vec323 } from "playcanvas";
+import { Vec3 as Vec325 } from "playcanvas";
 function bedEntry(start, startYaw, crib, progress) {
-  const end = crib ? new Vec323(9.8, 0.09, -1.7) : new Vec323(-2.05, 0.09, -1.85), yaw = crib ? 90 : 0;
+  const end = crib ? new Vec325(9.8, 0.09, -1.7) : new Vec325(-2.05, 0.09, -1.85), yaw = crib ? 90 : 0;
   const keys = crib ? [
     { t: 0, p: start, h: 0.027, y: startYaw },
-    { t: 0.2, p: new Vec323(8.55, 0.09, -1.3), h: 0.12, y: 90 },
-    { t: 0.43, p: new Vec323(8.76, 0.09, -1.5), h: 1.22, y: 90 },
-    { t: 0.65, p: new Vec323(9.45, 0.09, -1.7), h: 1.22, y: 90 },
+    { t: 0.2, p: new Vec325(8.55, 0.09, -1.3), h: 0.12, y: 90 },
+    { t: 0.43, p: new Vec325(8.76, 0.09, -1.5), h: 1.22, y: 90 },
+    { t: 0.65, p: new Vec325(9.45, 0.09, -1.7), h: 1.22, y: 90 },
     { t: 1, p: end, h: 0.65, y: yaw }
   ] : [
     { t: 0, p: start, h: 0.027, y: startYaw },
-    { t: 0.2, p: new Vec323(-1, 0.09, -1.75), h: 0.08, y: 90 },
-    { t: 0.43, p: new Vec323(-1.35, 0.09, -1.85), h: 0.91, y: 90 },
-    { t: 0.65, p: new Vec323(-1.8, 0.09, -1.85), h: 0.91, y: 35 },
+    { t: 0.2, p: new Vec325(-1, 0.09, -1.75), h: 0.08, y: 90 },
+    { t: 0.43, p: new Vec325(-1.35, 0.09, -1.85), h: 0.91, y: 90 },
+    { t: 0.65, p: new Vec325(-1.8, 0.09, -1.85), h: 0.91, y: 35 },
     { t: 1, p: end, h: 0.91, y: yaw }
   ];
   const space = crib ? "crib" : "bed";
@@ -4765,7 +4974,7 @@ function bedEntry(start, startYaw, crib, progress) {
     keys[i2].y = propYaw(space, keys[i2].y);
   }
   const t = Math.max(0, Math.min(1, progress)), b = keys.findIndex((k) => k.t >= t), i = Math.max(1, b), a = keys[i - 1], z = keys[i], raw = (t - a.t) / (z.t - a.t), u = raw * raw * (3 - 2 * raw), delta = (z.y - a.y + 540) % 360 - 180;
-  return { position: new Vec323().lerp(a.p, z.p, u), height: a.h + (z.h - a.h) * u, yaw: a.y + delta * u };
+  return { position: new Vec325().lerp(a.p, z.p, u), height: a.h + (z.h - a.h) * u, yaw: a.y + delta * u };
 }
 var BED_ENTRY_SECONDS;
 var init_BedEntry = __esm({
@@ -4777,7 +4986,7 @@ var init_BedEntry = __esm({
 });
 
 // src/game/CleanupGame.ts
-import { Vec3 as Vec324 } from "playcanvas";
+import { Vec3 as Vec326 } from "playcanvas";
 var CleanupGame;
 var init_CleanupGame = __esm({
   "src/game/CleanupGame.ts"() {
@@ -4870,7 +5079,7 @@ var init_CleanupGame = __esm({
         this.mission.start(now);
         {
           this.aligning = target;
-          const point = target.placement ? new Vec324(...target.placement) : target.kind === "pickup" ? this.props.items.find((item) => item.id === target.item).entity.getPosition() : target.marker;
+          const point = target.placement ? new Vec326(...target.placement) : target.kind === "pickup" ? this.props.items.find((item) => item.id === target.item).entity.getPosition() : target.marker;
           this.controller.approachProp(point, () => {
             this.aligning = null;
             this.mission.tick(performance.now());
@@ -4885,7 +5094,7 @@ var init_CleanupGame = __esm({
         const now = performance.now();
         this.workingId = target.id;
         this.audio.start(target.id);
-        const facing = target.placement ? new Vec324(...target.placement) : target.marker;
+        const facing = target.placement ? new Vec326(...target.placement) : target.marker;
         if (target.kind === "daily") {
           if (["school-door", "shop-door"].includes(target.id)) {
             this.props.daily.perform(target, this.carry);
@@ -4919,11 +5128,11 @@ var init_CleanupGame = __esm({
             if (target.id === "eat-breakfast") {
               this.seatReturn = this.character.player.getPosition().clone();
               this.controller.reset();
-              this.character.player.setPosition(propPoint("dining", new Vec324(0.55, 0.09, 12.49)));
+              this.character.player.setPosition(propPoint("dining", new Vec326(0.55, 0.09, 12.49)));
               this.character.visual.setLocalEulerAngles(0, propYaw("dining", 0), 0);
               this.character.animator.setCarrying(false);
               if (this.character.grounding) this.character.grounding.surfaceHeight = 0.07;
-              this.character.animator.setWorkClip("EatSit", propPoint("dining", new Vec324(0.55, 1, 13.85)));
+              this.character.animator.setWorkClip("EatSit", propPoint("dining", new Vec326(0.55, 1, 13.85)));
               return;
             }
             if (target.id.startsWith("wipe-") || target.id === "lilah-mess-1") this.character.animator.setWorkClip("Wipe", facing);
@@ -5473,8 +5682,8 @@ var init_squishyPop = __esm({
         return { removed, effects };
       }
       preview() {
-        const valid = this.chain.length >= 3 || this.chain.length === 1 && ["bomb", "mega"].includes(this.pieces[this.chain[0]].power ?? "");
-        return { valid, created: powerForChain(this.chain.length), ...this.affected(valid ? this.chain : []) };
+        const valid2 = this.chain.length >= 3 || this.chain.length === 1 && ["bomb", "mega"].includes(this.pieces[this.chain[0]].power ?? "");
+        return { valid: valid2, created: powerForChain(this.chain.length), ...this.affected(valid2 ? this.chain : []) };
       }
       finale(now = 0) {
         const powers = this.pieces.flatMap((p, i) => p.power ? [i] : []);
@@ -6177,7 +6386,7 @@ var init_dumplingVisual = __esm({
 });
 
 // src/game/store.ts
-import { BoundingBox as BoundingBox11, Color as Color7, Entity as Entity25, Vec3 as Vec325 } from "playcanvas";
+import { BoundingBox as BoundingBox11, Color as Color7, Entity as Entity25, Vec3 as Vec327 } from "playcanvas";
 function createStore(app, definition2) {
   const root = new Entity25(definition2.name, app);
   app.root.addChild(root);
@@ -6197,7 +6406,7 @@ function createStore(app, definition2) {
   for (let x = -3; x <= 3; x += 2) art.add("building", "floor", [x, -0.08, depth + 1], 2, 0, "width");
   art.add("nature", "tree_oak", [-width - 1.8, -0.07, depth + 2.3], 3.5);
   art.add("nature", "tree_oak", [width + 2, -0.07, depth + 1.2], 3.8);
-  const exitAnchor = new Vec325(0, 0, depth - 0.65);
+  const exitAnchor = new Vec327(0, 0, depth - 0.65);
   shape("Welcome mat", "box", [0, 0.012, exitAnchor.z], [1.75, 0.025, 0.95], rug, false);
   shape("Center rug", "box", [0.1, 0.014, -0.2], [2.5, 0.025, 3], rug, false);
   art.add("building", "wall-window-wide-round", [-width + 0.06, 0.02, -1.9], 2.55, 0, "height");
@@ -6218,7 +6427,7 @@ function createStore(app, definition2) {
     const sizes = [2.05, 1.35, 1, 0.46, 1.05, 1.5];
     art.add(market ? "market" : "furniture", site.kind, site.fixture, sizes[i], i === 1 ? 90 : i === 4 ? -90 : 0, i === 5 ? "width" : "height", { carpet: accent, wood: accent, woodDark: secondary, metal: ivory }, false, 0, "paint");
     const half = i === 0 ? [0.48, 0.3] : i === 1 ? [0.3, 0.55] : i === 2 ? [0.53, 0.55] : i === 3 ? [0.36, 0.4] : i === 4 ? [0.34, 0.53] : [0.76, definition2.layout === 2 ? 0.88 : 0.46];
-    obstacles.push(new BoundingBox11(new Vec325(site.fixture[0], 0, site.fixture[2]), new Vec325(half[0], 1, half[1])));
+    obstacles.push(new BoundingBox11(new Vec327(site.fixture[0], 0, site.fixture[2]), new Vec327(half[0], 1, half[1])));
     boxes.push([0, 1].map((n) => {
       const box = createBlindBox(app, root, true).root;
       box.name = `${STOCK_SITES[i]} surprise ${n}`;
@@ -6236,23 +6445,23 @@ function createStore(app, definition2) {
   }
   art.add("market", "cash-register", [2.3, 1.03, depth - 2.65], 0.3, 90);
   art.add("market", "shopping-cart", [-width + 0.6, 0.02, 1.35], 0.85, 180);
-  obstacles.push(new BoundingBox11(new Vec325(-width + 0.6, 0, 1.35), new Vec325(0.38, 1, 0.55)));
+  obstacles.push(new BoundingBox11(new Vec327(-width + 0.6, 0, 1.35), new Vec327(0.38, 1, 0.55)));
   art.add("market", "shelf-bags", [-width + 0.48, 0.02, -depth + 2.2], 1.1, 90);
-  obstacles.push(new BoundingBox11(new Vec325(-width + 0.48, 0, -depth + 2.2), new Vec325(0.32, 1, 0.65)));
+  obstacles.push(new BoundingBox11(new Vec327(-width + 0.48, 0, -depth + 2.2), new Vec327(0.32, 1, 0.65)));
   art.add("furniture", "bear", [-1.65, 1.43, -depth + 0.62], 0.3);
   art.add("furniture", "plantSmall1", [2.56, 1.03, depth - 2.1], 0.27);
   art.add("furniture", "pottedPlant", [width - 0.45, 0.02, -0.2], 1.05);
-  obstacles.push(new BoundingBox11(new Vec325(width - 0.45, 0, -0.2), new Vec325(0.33, 1, 0.33)));
+  obstacles.push(new BoundingBox11(new Vec327(width - 0.45, 0, -0.2), new Vec327(0.33, 1, 0.33)));
   art.add("furniture", "lampRoundFloor", [-0.2, 0.02, -depth + 0.45], 1.9);
   if (definition2.layout === 1) {
     art.add("furniture", "bear", [2.5, 1.08, -depth + 2.1], 0.42);
     art.add("furniture", "benchCushion", [0.8, 0.02, -depth + 1], 0.75, 0, "height", { carpet: accent });
-    obstacles.push(new BoundingBox11(new Vec325(0.8, 0, -depth + 1), new Vec325(0.65, 1, 0.42)));
+    obstacles.push(new BoundingBox11(new Vec327(0.8, 0, -depth + 1), new Vec327(0.65, 1, 0.42)));
     art.add("furniture", "bookcaseOpen", [-3.3, 0.02, -4.3], 1.8, 90);
-    obstacles.push(new BoundingBox11(new Vec325(-3.3, 0, -4.3), new Vec325(0.3, 1, 0.5)));
+    obstacles.push(new BoundingBox11(new Vec327(-3.3, 0, -4.3), new Vec327(0.3, 1, 0.5)));
     art.add("furniture", "bear", [-3.3, 0.68, -4.2], 0.38);
     art.add("furniture", "benchCushion", [3.3, 0.02, 1.9], 0.6, 90, "height", { carpet: accent });
-    obstacles.push(new BoundingBox11(new Vec325(3.3, 0, 1.9), new Vec325(0.35, 1, 0.6)));
+    obstacles.push(new BoundingBox11(new Vec327(3.3, 0, 1.9), new Vec327(0.35, 1, 0.6)));
   }
   if (definition2.layout === 2) art.add("furniture", "plantSmall2", [0.65, 0.8, 0.08 - offset], 0.3);
   const room = { root, obstacles, halfWidth: width, halfDepth: depth, walkable: [{ minX: -width, maxX: width, minZ: -depth, maxZ: depth }], ready: art.finish(), artStats: () => art.snapshot() };
@@ -6280,7 +6489,7 @@ function createStore(app, definition2) {
       });
     }
   };
-  return { ...room, definition: definition2, sites: sites.map((s, i) => ({ id: i, name: STOCK_SITES[i], anchor: new Vec325(...s.point), marker: new Vec325(s.box[0], s.box[1] + 0.6, s.box[2]) })), boxes, glows, exitAnchor, sync };
+  return { ...room, definition: definition2, sites: sites.map((s, i) => ({ id: i, name: STOCK_SITES[i], anchor: new Vec327(...s.point), marker: new Vec327(s.box[0], s.box[1] + 0.6, s.box[2]) })), boxes, glows, exitAnchor, sync };
 }
 var init_store = __esm({
   "src/game/store.ts"() {
@@ -6566,7 +6775,7 @@ var init_SquishyRevealAudio = __esm({
 });
 
 // src/game/OpeningSequence.ts
-import { Entity as Entity27, Color as Color9, Vec3 as Vec326, StandardMaterial as StandardMaterial5, CULLFACE_NONE as CULLFACE_NONE2, TONEMAP_ACES } from "playcanvas";
+import { Entity as Entity27, Color as Color9, Vec3 as Vec328, StandardMaterial as StandardMaterial5, CULLFACE_NONE as CULLFACE_NONE2, TONEMAP_ACES } from "playcanvas";
 var OpeningSequence;
 var init_OpeningSequence = __esm({
   "src/game/OpeningSequence.ts"() {
@@ -6681,7 +6890,7 @@ var init_OpeningSequence = __esm({
         this.cameraHeight = Math.max(1.85, (compact ? 1.3 : 1.12) / (width / height));
         camera.camera.orthoHeight = this.cameraHeight;
         camera.setPosition(-0.25, 2.35, 6.9);
-        camera.lookAt(new Vec326(-0.25, compact ? 1.05 : width > height ? 1.1 : 1.35, 0.4));
+        camera.lookAt(new Vec328(-0.25, compact ? 1.05 : width > height ? 1.1 : 1.35, 0.4));
         if (this.backdrop.parent !== camera) {
           this.backdrop.reparent(camera);
           this.backdrop.setLocalPosition(0, 0, -35);
@@ -7212,7 +7421,17 @@ var init_TradingUI = __esm({
 });
 
 // src/game/SchoolPerson.ts
-import { Asset as Asset5, AnimCurve as AnimCurve5, AnimData as AnimData5, AnimTrack as AnimTrack5, BoundingBox as BoundingBox12, Entity as Entity28, Quat as Quat5, Vec3 as Vec327, INTERPOLATION_LINEAR as INTERPOLATION_LINEAR5 } from "playcanvas";
+import { Asset as Asset5, AnimCurve as AnimCurve7, AnimData as AnimData7, AnimTrack as AnimTrack7, BoundingBox as BoundingBox12, Entity as Entity28, Quat as Quat7, Vec3 as Vec329, INTERPOLATION_LINEAR as INTERPOLATION_LINEAR7 } from "playcanvas";
+function releaseSchoolStudents(app) {
+  const records2 = studentAssets.get(app);
+  if (!records2) return;
+  for (const [file, a] of records2) {
+    a.unload();
+    app.assets.remove(a);
+    assets.get(app)?.delete(file);
+  }
+  records2.clear();
+}
 function seatedTrack(model, source, scale, student = false) {
   const channels = source.curves.flatMap((curve) => curve.paths.map((path) => ({ curve, path, node: model.findByName(path.entityPath.at(-1)) })));
   const output = channels.map(() => []), times = Array.from({ length: Math.ceil(source.duration * 24) + 1 }, (_, i) => Math.min(source.duration, i / 24));
@@ -7222,13 +7441,13 @@ function seatedTrack(model, source, scale, student = false) {
       let a = 0;
       while (a < input.length - 2 && input[a + 1] <= time) a++;
       const b = Math.min(a + 1, input.length - 1), t = input[b] === input[a] ? 0 : Math.max(0, Math.min(1, (time - input[a]) / (input[b] - input[a]))), v = data.data;
-      if (path.propertyPath[0] === "localRotation") node.setLocalRotation(new Quat5().slerp(new Quat5(v[a * n], v[a * n + 1], v[a * n + 2], v[a * n + 3]), new Quat5(v[b * n], v[b * n + 1], v[b * n + 2], v[b * n + 3]), t));
+      if (path.propertyPath[0] === "localRotation") node.setLocalRotation(new Quat7().slerp(new Quat7(v[a * n], v[a * n + 1], v[a * n + 2], v[a * n + 3]), new Quat7(v[b * n], v[b * n + 1], v[b * n + 2], v[b * n + 3]), t));
       else if (path.propertyPath[0] === "localPosition") node.setLocalPosition(v[a * n] * (1 - t) + v[b * n] * t, v[a * n + 1] * (1 - t) + v[b * n + 1] * t, v[a * n + 2] * (1 - t) + v[b * n + 2] * t);
     }
   };
   const aim = (node, to) => {
-    const from = node.getRotation().transformVector(Vec327.UP);
-    node.setRotation(new Quat5().mul2(new Quat5().setFromDirections(from, to.clone().normalize()), node.getRotation()));
+    const from = node.getRotation().transformVector(Vec329.UP);
+    node.setRotation(new Quat7().mul2(new Quat7().setFromDirections(from, to.clone().normalize()), node.getRotation()));
   };
   for (const time of times) {
     sample(time);
@@ -7240,19 +7459,19 @@ function seatedTrack(model, source, scale, student = false) {
     p.y += 0.52 / scale - legs[0].upper.getPosition().y;
     body.setPosition(p);
     for (const leg of legs) {
-      aim(leg.upper, new Vec327(0, -0.08, 1));
-      aim(leg.lower, new Vec327(0, -1, 0));
-      leg.foot.setPosition(leg.lower.getPosition().clone().add(new Vec327(0, -leg.length, 0.035)));
+      aim(leg.upper, new Vec329(0, -0.08, 1));
+      aim(leg.lower, new Vec329(0, -1, 0));
+      leg.foot.setPosition(leg.lower.getPosition().clone().add(new Vec329(0, -leg.length, 0.035)));
       leg.foot.setRotation(leg.rotation);
     }
     if (student && source.name !== "Wave") for (const side of ["L", "R"]) {
       const upper = model.findByName("UpperArm." + side), lower = model.findByName("LowerArm." + side), wrist = model.findByName("Wrist." + side), origin = upper.getPosition().clone(), a = origin.distance(lower.getPosition()), b = lower.getPosition().distance(wrist.getPosition());
-      const target = new Vec327((side === "L" ? 1 : -1) * 0.15 / scale, 0.81 / scale, 0.28 / scale), toward = target.clone().sub(origin), distance = Math.min(toward.length(), (a + b) * 0.98);
+      const target = new Vec329((side === "L" ? 1 : -1) * 0.15 / scale, 0.81 / scale, 0.28 / scale), toward = target.clone().sub(origin), distance = Math.min(toward.length(), (a + b) * 0.98);
       toward.normalize();
-      const pole = new Vec327(side === "L" ? 1 : -1, -1, 0), normal = pole.sub(toward.clone().mulScalar(pole.dot(toward))).normalize(), along = (a * a - b * b + distance * distance) / (2 * distance), elbow = origin.clone().add(toward.clone().mulScalar(along)).add(normal.mulScalar(Math.sqrt(Math.max(0, a * a - along * along))));
+      const pole = new Vec329(side === "L" ? 1 : -1, -1, 0), normal = pole.sub(toward.clone().mulScalar(pole.dot(toward))).normalize(), along = (a * a - b * b + distance * distance) / (2 * distance), elbow = origin.clone().add(toward.clone().mulScalar(along)).add(normal.mulScalar(Math.sqrt(Math.max(0, a * a - along * along))));
       const rotate = (node, child, destination) => {
         const from = child.getPosition().clone().sub(node.getPosition()).normalize(), to = destination.clone().sub(node.getPosition()).normalize();
-        node.setRotation(new Quat5().mul2(new Quat5().setFromDirections(from, to), node.getRotation()));
+        node.setRotation(new Quat7().mul2(new Quat7().setFromDirections(from, to), node.getRotation()));
       };
       rotate(upper, lower, elbow);
       rotate(lower, wrist, origin.add(toward.mulScalar(distance)));
@@ -7260,10 +7479,10 @@ function seatedTrack(model, source, scale, student = false) {
     for (const [i, { path, node }] of channels.entries()) {
       const v = path.propertyPath[0] === "localRotation" ? node.getLocalRotation() : path.propertyPath[0] === "localScale" ? node.getLocalScale() : node.getLocalPosition();
       output[i].push(v.x, v.y, v.z);
-      if (v instanceof Quat5) output[i].push(v.w);
+      if (v instanceof Quat7) output[i].push(v.w);
     }
   }
-  return new AnimTrack5(source.name, source.duration, [new AnimData5(1, times)], output.map((v, i) => new AnimData5(channels[i].path.propertyPath[0] === "localRotation" ? 4 : 3, v)), channels.map((c, i) => new AnimCurve5([c.path], 0, i, INTERPOLATION_LINEAR5)));
+  return new AnimTrack7(source.name, source.duration, [new AnimData7(1, times)], output.map((v, i) => new AnimData7(channels[i].path.propertyPath[0] === "localRotation" ? 4 : 3, v)), channels.map((c, i) => new AnimCurve7([c.path], 0, i, INTERPOLATION_LINEAR7)));
 }
 async function schoolPerson(app, parent, file, name, height = 1.38, seated = false) {
   let cache = assets.get(app);
@@ -7273,6 +7492,14 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
   }
   if (!cache.has(file)) cache.set(file, new Promise((resolve, reject) => {
     const a = new Asset5(name, "container", { url: assetUrl("assets/people/" + file + ".glb") });
+    if (file.startsWith("student-")) {
+      let map = studentAssets.get(app);
+      if (!map) {
+        map = /* @__PURE__ */ new Map();
+        studentAssets.set(app, map);
+      }
+      map.set(file, a);
+    }
     a.once("load", () => resolve(a.resource));
     a.once("error", reject);
     app.assets.add(a);
@@ -7331,12 +7558,13 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
     }
   } };
 }
-var assets;
+var assets, studentAssets;
 var init_SchoolPerson = __esm({
   "src/game/SchoolPerson.ts"() {
     "use strict";
     init_AssetUrls();
     assets = /* @__PURE__ */ new WeakMap();
+    studentAssets = /* @__PURE__ */ new WeakMap();
   }
 });
 
@@ -7386,6 +7614,10 @@ function classroomSign(app, parent, name, text, position, width = 1, height = 0.
   sign.setLocalPosition(...position);
   sign.setLocalEulerAngles(90, 0, 0);
   sign.setLocalScale(width, 1, height);
+  sign.once("destroy", () => {
+    texture.destroy();
+    material2.destroy();
+  });
   const paint = (words) => {
     const c = canvas.getContext("2d");
     c.fillStyle = "#fff6df";
@@ -7475,15 +7707,15 @@ var init_cafeteria_collision = __esm({
 });
 
 // src/game/recess.ts
-import { Asset as Asset6, BoundingBox as BoundingBox13, Entity as Entity30, Vec3 as Vec328 } from "playcanvas";
-function createRecess(app) {
+import { Asset as Asset6, BoundingBox as BoundingBox13, Entity as Entity30, Vec3 as Vec330 } from "playcanvas";
+function buildRecess(app) {
   const root = new Entity30("Classroom trading club", app);
   app.root.addChild(root);
   const classroom = new Entity30("Reference classroom", app), cafeteria = new Entity30("Reference cafeteria", app);
   root.addChild(classroom);
   root.addChild(cafeteria);
   cafeteria.setLocalPosition(4.6, 0, -16);
-  const errors = [];
+  const errors = [], modelAssets = [];
   const cream = material("School corridor plaster", "#f6ebd4"), floor = material("School corridor tile", "#e8dfce");
   const corridor = new Entity30("School connecting doorway", app);
   root.addChild(corridor);
@@ -7494,6 +7726,7 @@ function createRecess(app) {
   const load = async (name, parent) => {
     try {
       const a = new Asset6("School " + name, "container", { url: assetUrl(`/assets/school-kit/${name}.glb`) });
+      modelAssets.push(a);
       app.assets.add(a);
       await new Promise((resolve, reject) => {
         a.once("load", resolve);
@@ -7521,11 +7754,11 @@ function createRecess(app) {
     model.setLocalPosition(1.82 + i * 0.49, 0.855, 4.55);
   }
   const seats = TRADERS.map((trader, i) => {
-    const d = desks[i], anchor = new Vec328(d.x, 0, d.z + 1.55);
+    const d = desks[i], anchor = new Vec330(d.x, 0, d.z + 1.55);
     const glow = primitives(app, classroom)("Trading spot", "cylinder", [anchor.x, 0.016, anchor.z], [0.82, 0.022, 0.82], material(trader.name + " cue", trader.color), false);
     return { id: trader.id, anchor, glow };
   });
-  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec328(...b.center), new Vec328(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec328(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec328(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec328(x, 0, -8), new Vec328(0.05, 1, 1.05)))];
+  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec330(...b.center), new Vec330(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec330(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec330(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec330(x, 0, -8), new Vec330(0.05, 1, 1.05)))];
   const room = { root, halfWidth: 12, halfDepth: 24, walkable: [{ minX: -5.9, maxX: 5.9, minZ: -6.96, maxZ: 6.9 }, { minX: 3.7, maxX: 5.5, minZ: -9.2, maxZ: -6.7 }, { minX: -1.3, maxX: 10.5, minZ: -22.9, maxZ: -9 }], obstacles, ready: Promise.all([load("classroom", classroom), load("cafeteria", cafeteria), classmates.ready, lunchFriends.ready, schoolCook(app, cafeteria).catch((e) => {
     errors.push("School cook");
     console.error(e);
@@ -7545,7 +7778,14 @@ function createRecess(app) {
       });
     });
   };
-  return { ...room, usesReferenceLayout: true, seats, sync, bindLayout: (_group) => {
+  return { ...room, dispose() {
+    root.destroy();
+    for (const a of modelAssets) {
+      a.unload();
+      app.assets.remove(a);
+    }
+    releaseSchoolStudents(app);
+  }, usesReferenceLayout: true, seats, sync, bindLayout: (_group) => {
   }, get area() {
     return area;
   }, update: (now, focus, p) => {
@@ -7554,7 +7794,53 @@ function createRecess(app) {
     cafeteria.enabled = p.z < -5.8;
     classmates.update(now, focus);
     lunchFriends.update(now, "");
-  }, door: new Vec328(4.6, 0, -8), cafeteriaCenter: new Vec328(4.6, 0, -15) };
+  }, door: new Vec330(4.6, 0, -8), cafeteriaCenter: new Vec330(4.6, 0, -15) };
+}
+function createRecess(app) {
+  const root = new Entity30("Classroom trading club", app);
+  app.root.addChild(root);
+  root.enabled = false;
+  let actual = null, pending = null, day = null, ready = false, error = "";
+  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec330(...b.center), new Vec330(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec330(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec330(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec330(x, 0, -8), new Vec330(0.05, 1, 1.05)))];
+  const ensure = () => {
+    if (pending) return pending;
+    actual = buildRecess(app);
+    actual.root.reparent(root);
+    actual.root.enabled = true;
+    pending = actual.ready.then(() => {
+      ready = true;
+      if (day) actual.sync(day);
+    }).catch((e) => {
+      error = String(e);
+      console.error("School visit loading", e);
+    });
+    return pending;
+  };
+  return { root, halfWidth: 12, halfDepth: 24, walkable: [{ minX: -5.9, maxX: 5.9, minZ: -6.96, maxZ: 6.9 }, { minX: 3.7, maxX: 5.5, minZ: -9.2, maxZ: -6.7 }, { minX: -1.3, maxX: 10.5, minZ: -22.9, maxZ: -9 }], obstacles, ready: Promise.resolve(), usesReferenceLayout: true, ensure, get isReady() {
+    return ready;
+  }, get seats() {
+    return actual?.seats ?? [];
+  }, get area() {
+    return actual?.area ?? "Opening school\u2026";
+  }, sync(value) {
+    day = value;
+    void ensure().then(() => {
+      if (day) actual?.sync(day);
+    });
+  }, update(now, focus, p) {
+    if (ready) actual?.update(now, focus, p);
+  }, bindLayout: (_group) => {
+  }, door: new Vec330(4.6, 0, -8), cafeteriaCenter: new Vec330(4.6, 0, -15), artStats: () => actual?.artStats?.() ?? { loaded: 0, models: 0, errors: error ? [error] : [] }, sleep() {
+    const previous = actual;
+    void pending?.then(() => {
+      if (actual === previous && !root.enabled) {
+        actual?.dispose();
+        actual = null;
+        pending = null;
+        ready = false;
+      }
+    });
+  } };
 }
 var init_recess = __esm({
   "src/game/recess.ts"() {
@@ -7563,6 +7849,7 @@ var init_recess = __esm({
     init_trading();
     init_SchoolCook();
     init_Classmates();
+    init_SchoolPerson();
     init_dumplingVisual();
     init_primitives();
     init_classroom_collision();
@@ -8820,18 +9107,65 @@ var init_OutdoorGround = __esm({
   }
 });
 
+// src/game/ContainerLease.ts
+import { Asset as Asset7 } from "playcanvas";
+function leaseContainer(app, url, name) {
+  let registry = registries.get(app);
+  if (!registry) {
+    registry = /* @__PURE__ */ new Map();
+    registries.set(app, registry);
+  }
+  let entry = registry.get(url);
+  if (!entry) {
+    const asset = new Asset7(name, "container", { url });
+    entry = { asset, refs: 0, promise: new Promise((resolve, reject) => {
+      asset.once("load", () => resolve(asset.resource));
+      asset.once("error", reject);
+    }) };
+    registry.set(url, entry);
+    app.assets.add(asset);
+    app.assets.load(asset);
+  }
+  entry.refs++;
+  let released = false;
+  const current = entry, owners = registry;
+  return { asset: current.asset, ready: current.promise, release() {
+    if (released) return;
+    released = true;
+    current.refs--;
+    const dispose = () => {
+      if (current.refs === 0 && owners.get(url) === current) {
+        owners.delete(url);
+        current.asset.unload();
+        app.assets.remove(current.asset);
+      }
+    };
+    if (current.asset.loaded) dispose();
+    else void current.promise.then(dispose, dispose);
+  } };
+}
+var registries;
+var init_ContainerLease = __esm({
+  "src/game/ContainerLease.ts"() {
+    "use strict";
+    registries = /* @__PURE__ */ new WeakMap();
+  }
+});
+
 // src/game/OutdoorArt.ts
-import { Asset as Asset7, BoundingBox as BoundingBox14, Entity as Entity32, Color as Color11 } from "playcanvas";
+import { BoundingBox as BoundingBox14, Entity as Entity32, Color as Color11 } from "playcanvas";
 var OutdoorArt;
 var init_OutdoorArt = __esm({
   "src/game/OutdoorArt.ts"() {
     "use strict";
     init_AssetUrls();
+    init_ContainerLease();
     OutdoorArt = class {
-      constructor(app, parent) {
+      constructor(app, parent, lazy = false) {
         this.app = app;
         this.parent = parent;
         this.group = app.batcher.addGroup("Garden plants", false, 14);
+        this.active = !lazy;
       }
       app;
       parent;
@@ -8840,15 +9174,25 @@ var init_OutdoorArt = __esm({
       cache = /* @__PURE__ */ new Map();
       group;
       leaves = /* @__PURE__ */ new Map();
+      leases = [];
+      disposed = false;
+      generation = 0;
+      active;
+      placements = [];
+      anchors = [];
       add(file, x, z, height, yaw = 0) {
-        if (!this.cache.has(file)) this.cache.set(file, new Promise((resolve, reject) => {
-          const a = new Asset7(file, "container", { url: assetUrl("assets/outdoors/" + file + ".glb") });
-          a.once("load", () => resolve(a.resource));
-          a.once("error", reject);
-          this.app.assets.add(a);
-          this.app.assets.load(a);
-        }));
+        this.placements.push([file, x, z, height, yaw]);
+        if (this.active) this.load(file, x, z, height, yaw);
+      }
+      load(file, x, z, height, yaw) {
+        const generation = this.generation;
+        if (!this.cache.has(file)) {
+          const lease = leaseContainer(this.app, assetUrl("assets/outdoors/" + file + ".glb"), file);
+          this.leases.push(lease);
+          this.cache.set(file, lease.ready);
+        }
         const task = this.cache.get(file).then((r) => {
+          if (this.disposed || generation !== this.generation) return;
           const e = r.instantiateRenderEntity({ castShadows: true }), box = new BoundingBox14();
           let first = true;
           for (const c of e.findComponents("render")) for (const m of c.meshInstances) {
@@ -8878,6 +9222,7 @@ var init_OutdoorArt = __esm({
             }
           }
           const scale = height / (box.halfExtents.y * 2), anchor = new Entity32(file, this.app);
+          this.anchors.push(anchor);
           this.parent.addChild(anchor);
           anchor.addChild(e);
           e.setLocalScale(scale, scale, scale);
@@ -8892,8 +9237,35 @@ var init_OutdoorArt = __esm({
         this.tasks.push(task);
       }
       async finish() {
+        if (this.disposed) return;
+        if (!this.active) {
+          this.active = true;
+          for (const p of this.placements) this.load(...p);
+        }
+        const generation = this.generation;
         await Promise.all(this.tasks);
-        this.app.batcher.generate([this.group.id]);
+        if (!this.disposed && generation === this.generation) this.app.batcher.generate([this.group.id]);
+      }
+      unload() {
+        if (!this.active) return;
+        this.active = false;
+        this.generation++;
+        this.app.batcher.removeGroup(this.group.id);
+        for (const e of this.anchors) e.destroy();
+        this.anchors = [];
+        for (const m of this.leaves.values()) m.destroy();
+        this.leases.forEach((l) => l.release());
+        this.cache.clear();
+        this.leaves.clear();
+        this.leases = [];
+        this.tasks.length = 0;
+        this.group = this.app.batcher.addGroup("Garden plants", false, 14);
+      }
+      dispose() {
+        this.unload();
+        this.disposed = true;
+        this.app.batcher.removeGroup(this.group.id);
+        this.placements = [];
       }
     };
   }
@@ -8961,7 +9333,7 @@ var init_CrossingGuard = __esm({
 });
 
 // src/game/Outdoors.ts
-import { BoundingBox as BoundingBox15, Entity as Entity34, Vec3 as Vec331, Mesh as Mesh4, MeshInstance as MeshInstance4 } from "playcanvas";
+import { BoundingBox as BoundingBox15, Entity as Entity34, Vec3 as Vec332, Mesh as Mesh4, MeshInstance as MeshInstance4 } from "playcanvas";
 var POND, SCHOOL_GATE, Outdoors;
 var init_Outdoors = __esm({
   "src/game/Outdoors.ts"() {
@@ -8971,8 +9343,8 @@ var init_Outdoors = __esm({
     init_OutdoorArt();
     init_Classmates();
     init_CrossingGuard();
-    POND = { stand: new Vec331(-4.1, 0.09, -10), bobber: new Vec331(-7.15, 0.12, -11.9), center: new Vec331(-8, 0, -12) };
-    SCHOOL_GATE = new Vec331(22, 0.09, -29.4);
+    POND = { stand: new Vec332(-4.1, 0.09, -10), bobber: new Vec332(-7.15, 0.12, -11.9), center: new Vec332(-8, 0, -12) };
+    SCHOOL_GATE = new Vec332(22, 0.09, -29.4);
     Outdoors = class {
       constructor(app, house) {
         this.app = app;
@@ -8980,7 +9352,7 @@ var init_Outdoors = __esm({
         this.root = new Entity34("Pond and school walk", app);
         app.root.addChild(this.root);
         const group = app.batcher.addGroup("Outdoor architecture", false, 14), s = primitives(app, this.root, group.id), grass = outdoorSurface(app, "grass"), stone = outdoorSurface(app, "path"), edge = material("Limestone edges", "#eadfc3"), soil = material("Pond bank", "#a79b74"), road = material("Quiet street", "#8994a0"), white = material("Crossing paint", "#fff4d7"), wood = material("Honey garden oak", "#b89570"), mint = material("School mint", "#b3cbbc"), cream = material("School plaster", "#f5dfb8"), pink = material("Roof clay", "#cb8d88");
-        this.art = new OutdoorArt(app, this.root);
+        this.art = new OutdoorArt(app, this.root, true);
         const box = (n, x, y, z, w, h, d, m = stone) => s(n, "box", [x, y, z], [w, h, d], m);
         box("Back garden lawn", 7, -0.16, -16, 54, 0.25, 40, grass);
         box("Side garden lawn", -6.6, -0.16, 3, 4.8, 0.25, 14, grass);
@@ -9025,7 +9397,7 @@ var init_Outdoors = __esm({
         pondLayer("Grassy pond lip", 3.95, 3.25, 0.018, soil);
         pondLayer("Pond shallows", 3.72, 3.02, 0.055, material("Pond shallow turquoise", "#a4d4c6"));
         this.water = pondLayer("Pond water", 3.45, 2.77, 0.077, material("Pond blue", "#78bac5"));
-        this.obstacles.push(new BoundingBox15(new Vec331(-8, 0.5, -12), new Vec331(3.45, 2, 2.8)));
+        this.obstacles.push(new BoundingBox15(new Vec332(-8, 0.5, -12), new Vec332(3.45, 2, 2.8)));
         for (let i = 0; i < 15; i++) {
           const a = i * Math.PI * 2 / 15;
           if (a < 0.7 || a > 5.75) continue;
@@ -9091,7 +9463,7 @@ var init_Outdoors = __esm({
         const trees = [[-12, -6, 3.8], [-13, -16, 4.8], [-10, -18, 3.6], [0, -5.2, 3.8], [4, -7, 4.7], [10, -10, 4.5], [13, -15, 3.8], [28, -31, 4.5], [15, -31, 4.7], [30, -18, 4.1]];
         trees.forEach(([x, z, h], i) => {
           this.art.add(i % 2 ? "CommonTree_1" : "CommonTree_3", x, z, h, i * 67);
-          this.obstacles.push(new BoundingBox15(new Vec331(x, 1, z), new Vec331(0.38, 2, 0.38)));
+          this.obstacles.push(new BoundingBox15(new Vec332(x, 1, z), new Vec332(0.38, 2, 0.38)));
         });
         for (let x = -13; x < 14; x += 1.15) if (x < 4 || x > 8) this.art.add("Bush_Common", x, -18.7, 0.65, x * 17);
         for (let z = -17; z < -4; z += 1.15) this.art.add("Bush_Common_Flowers", -13.4, z, 0.65, z * 9);
@@ -9125,10 +9497,10 @@ var init_Outdoors = __esm({
         r("Chimney", "box", [7, 4, 8], [0.75, 1.4, 0.75], cream);
         r("Chimney cap", "box", [7, 4.73, 8], [0.95, 0.14, 0.95], edge);
         this.roof.enabled = false;
-        for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [16.5, -28.5, 1.5, 1], [28, -28.5, 1.5, 1], [17, -29.8, 3.05, 0.12], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox15(new Vec331(x, 0.6, z), new Vec331(hx, 1, hz)));
-        this.ready = Promise.all([this.art.finish(), crossingGuard(app, this.root).then((g) => this.guard = g)]).then(() => {
-          app.batcher.generate([group.id]);
-        });
+        for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [16.5, -28.5, 1.5, 1], [28, -28.5, 1.5, 1], [17, -29.8, 3.05, 0.12], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox15(new Vec332(x, 0.6, z), new Vec332(hx, 1, hz)));
+        app.batcher.generate([group.id]);
+        this.root.enabled = false;
+        this.ready = Promise.resolve();
       }
       app;
       house;
@@ -9141,13 +9513,15 @@ var init_Outdoors = __esm({
       halfDepth = 45;
       walkable = [{ minX: -9, maxX: -3.3, minZ: -6, maxZ: 9.8 }, { minX: -14, maxX: 14, minZ: -19, maxZ: -4 }, { minX: -4, maxX: 31, minZ: -19.5, maxZ: -16 }, { minX: 20, maxX: 24, minZ: -27, maxZ: -18 }, { minX: 14, maxX: 31, minZ: -33, maxZ: -26 }];
       guard;
+      guardLoading = false;
+      visible = false;
       time = 0;
       opened = false;
       art;
       installDoor() {
         if (this.opened) return;
         this.opened = true;
-        const shapes = primitives(this.app, this.root), wall = material("Entry plaster repair", "#f3dfca"), trim = material("Entry ivory repair", "#f5e9d6");
+        const shapes = primitives(this.app, this.house.root), wall = material("Entry plaster repair", "#f3dfca"), trim = material("Entry ivory repair", "#f5e9d6");
         for (const r of this.house.root.findComponents("render")) {
           const n = r.entity, p = n.getPosition();
           if (["Painted cottage wall", "Ivory wall cap", "Cottage skirting"].includes(n.name) && Math.abs(p.x + 3.3) < 0.2 && p.z > 5.8 && p.z < 7.4 || ["Front door timber", "Front door inset", "Door brass handle"].includes(n.name)) {
@@ -9169,7 +9543,7 @@ var init_Outdoors = __esm({
         for (const [a, b] of [[3.6, 7.6], [8.95, 9.5]]) {
           shapes("Open entry wall", "box", [-3.3, 1.325, (a + b) / 2], [0.14, 2.65, b - a], wall);
           shapes("Open entry skirting", "box", [-3.28, 0.12, (a + b) / 2], [0.16, 0.16, b - a], trim);
-          this.house.obstacles.push(new BoundingBox15(new Vec331(-3.3, 0.7, (a + b) / 2), new Vec331(0.07, 1.4, (b - a) / 2)));
+          this.house.obstacles.push(new BoundingBox15(new Vec332(-3.3, 0.7, (a + b) / 2), new Vec332(0.07, 1.4, (b - a) / 2)));
         }
         this.house.walkable.push(...this.walkable);
         this.house.obstacles.push(...this.obstacles);
@@ -9178,10 +9552,21 @@ var init_Outdoors = __esm({
         this.app.batcher.generate();
       }
       update(dt, p, enabled) {
-        this.root.enabled = enabled;
-        this.time += dt;
-        this.roof.enabled = enabled && (p.x < -5.2 || p.z < -5);
-        this.guard?.update(this.time, p);
+        const camera = this.app.root.findByTag("migration.camera")[0];
+        const near = enabled && (p.x > -42 || !!camera?.camera?.frustum.containsAabb(new BoundingBox15(new Vec332(7, 2, -13), new Vec332(31, 8, 29))));
+        this.root.enabled = near;
+        this.roof.enabled = near && (p.x < -5.2 || p.z < -5);
+        if (near && !this.visible) void this.art.finish().catch((e) => console.error("Outdoor plants", e));
+        if (!near && this.visible) this.art.unload();
+        this.visible = near;
+        if (near && p.z < -12 && !this.guardLoading) {
+          this.guardLoading = true;
+          void crossingGuard(this.app, this.root).then((g) => this.guard = g).catch((e) => console.error("Crossing guard", e));
+        }
+        if (near) {
+          this.time += dt;
+          this.guard?.update(this.time, p);
+        }
       }
       snapshot() {
         return { ready: !this.art.errors.length, roof: this.roof.enabled, stand: POND.stand.toArray(), gate: SCHOOL_GATE.toArray(), walkable: this.house.walkable, obstacles: this.house.obstacles.map((b) => ({ center: b.center.toArray(), halfExtents: b.halfExtents.toArray() })) };
@@ -9190,11 +9575,1358 @@ var init_Outdoors = __esm({
   }
 });
 
+// src/game/Scooter.ts
+import { Asset as Asset9, Entity as Entity35, Quat as Quat8, Vec3 as Vec333 } from "playcanvas";
+var Scooter;
+var init_Scooter = __esm({
+  "src/game/Scooter.ts"() {
+    "use strict";
+    init_AssetUrls();
+    Scooter = class {
+      constructor(app, character, controller) {
+        this.app = app;
+        this.character = character;
+        this.controller = controller;
+        this.root = new Entity35("Arianna\u2019s maple scooter", app);
+        app.root.addChild(this.root);
+        this.root.setPosition(-6.5, 0.03, 7.1);
+        this.root.setEulerAngles(0, -90, 0);
+        this.root.enabled = false;
+        this.button.id = "scooter-toggle";
+        this.button.className = "journey-button";
+        this.button.textContent = "\u{1F6F4} Ride scooter";
+        this.button.hidden = true;
+        this.stop.id = "scooter-brake";
+        this.stop.className = "journey-button";
+        this.stop.textContent = "\u270B Brake";
+        this.stop.hidden = true;
+        const game = document.querySelector("#game");
+        game.append(this.button, this.stop);
+        this.button.onclick = () => this.toggle();
+        this.stop.onpointerdown = () => {
+          controller.reset();
+          this.character.animator.setWorkClip("ScooterCoast");
+        };
+        const style = document.createElement("style");
+        style.textContent = ".journey-button{position:absolute;z-index:30;bottom:162px;right:18px;min-height:48px;padding:10px 18px;border:2px solid #fff8ed;border-radius:24px;background:#dcebe1;color:#46534d;box-shadow:0 3px 12px #39463325;font:bold 14px system-ui;touch-action:none}.journey-button[hidden]{display:none}#scooter-brake{right:180px;background:#eee3f5}";
+        game.append(style);
+        app.on("prerender", this.fitHands, this);
+      }
+      app;
+      character;
+      controller;
+      root;
+      ready = false;
+      error = "";
+      loading = false;
+      model;
+      steering;
+      wheels = [];
+      roll = 0;
+      time = 0;
+      button = document.createElement("button");
+      stop = document.createElement("button");
+      async load() {
+        if (this.loading || this.ready) return;
+        this.loading = true;
+        try {
+          const asset = new Asset9("Maple kick scooter", "container", { url: assetUrl("assets/outdoors/maple-scooter.glb") });
+          this.app.assets.add(asset);
+          await new Promise((resolve, reject) => {
+            asset.once("load", resolve);
+            asset.once("error", reject);
+            this.app.assets.load(asset);
+          });
+          this.model = asset.resource.instantiateRenderEntity();
+          this.root.addChild(this.model);
+          this.steering = this.model.findByName("Steering pivot");
+          this.wheels = ["Rear wheel", "Front wheel"].map((n) => this.model.findByName(n));
+          this.ready = true;
+        } catch (e) {
+          this.error = String(e);
+          console.error("Scooter failed to load", e);
+        } finally {
+          this.loading = false;
+        }
+      }
+      toggle() {
+        if (!this.ready || this.character.placeholder.enabled) return;
+        if (this.controller.riding) {
+          this.dismount();
+          return;
+        }
+        const p = this.character.player.getPosition();
+        if (p.distance(this.root.getPosition()) > 1.6) return;
+        this.controller.reset();
+        this.controller.riding = true;
+        this.controller.scooter.reset(-Math.PI / 2);
+        this.time = 0;
+        this.character.animator.setWorkClip("ScooterCoast");
+      }
+      dismount() {
+        this.controller.riding = false;
+        this.controller.reset();
+        this.character.animator.setWorkClip(null);
+        this.character.visual.setLocalEulerAngles(0, this.controller.scooter.heading * 180 / Math.PI, 0);
+        this.character.grounding.surfaceHeight = null;
+      }
+      update(dt, outside, available = true, hop = 0) {
+        if (outside) void this.load();
+        if (!outside && this.controller.riding) this.dismount();
+        this.root.enabled = outside && this.ready;
+        const riding = this.controller.riding, p = this.character.player.getPosition();
+        this.button.hidden = !outside || !available || !this.ready || !riding && p.distance(this.root.getPosition()) > 1.6;
+        this.button.textContent = riding ? "\u{1F6B6} Walk instead" : "\u{1F6F4} Ride scooter";
+        this.stop.hidden = !riding || !available;
+        if (!riding) return;
+        const sim = this.controller.scooter;
+        this.time += dt;
+        const ground = (p.z < -16 || p.x < -9 ? 0.08 : 0.03) + hop;
+        this.character.grounding.surfaceHeight = ground + 0.192;
+        const yaw = sim.heading * 180 / Math.PI, lean = sim.lean * 180 / Math.PI;
+        this.root.setPosition(p.x, ground, p.z);
+        this.root.setEulerAngles(0, yaw, -lean);
+        this.character.visual.setLocalEulerAngles(0, yaw, -lean);
+        this.steering?.setLocalEulerAngles(0, sim.steer * 180 / Math.PI, 0);
+        this.roll += Math.hypot(sim.vx, sim.vz) * dt / 0.113 * 180 / Math.PI;
+        for (const wheel of this.wheels) wheel.setLocalEulerAngles(this.roll, 0, 0);
+        const pushing = this.controller.input.length() > 0.3 && Math.hypot(sim.vx, sim.vz) < 3;
+        this.character.animator.setWorkClip(pushing ? "ScooterPush" : "ScooterCoast");
+      }
+      fitHands() {
+        if (!this.controller.riding || !this.steering) return;
+        const model = this.character.visual.findComponents("anim")[0]?.entity;
+        if (!model) return;
+        const rotate = (a, b, target) => a.setRotation(new Quat8().mul2(new Quat8().setFromDirections(b.getPosition().clone().sub(a.getPosition()).normalize(), target.clone().sub(a.getPosition()).normalize()), a.getRotation()));
+        for (const side of ["Left", "Right"]) {
+          const sign = side === "Left" ? 1 : -1, arm = model.findByName(side + "Arm"), fore = model.findByName(side + "ForeArm"), hand = model.findByName(side + "Hand"), wrist = hand.getRotation().clone();
+          const target = this.steering.getWorldTransform().transformPoint(new Vec333(sign * 0.209, 0.913, -0.185)), origin = arm.getPosition().clone(), a = origin.distance(fore.getPosition()), b = fore.getPosition().distance(hand.getPosition()), dir = target.clone().sub(origin), d = Math.min(dir.length(), a + b - 1e-3);
+          dir.normalize();
+          const pole = this.root.getRotation().transformVector(new Vec333(sign * 0.65, -1, -0.3));
+          pole.sub(dir.clone().mulScalar(pole.dot(dir))).normalize();
+          const along = (a * a - b * b + d * d) / (2 * d);
+          const elbow = origin.clone().add(dir.clone().mulScalar(along)).add(pole.mulScalar(Math.sqrt(Math.max(0, a * a - along * along))));
+          rotate(arm, fore, elbow);
+          rotate(fore, hand, origin.add(dir.mulScalar(d)));
+          hand.setRotation(wrist);
+        }
+      }
+      snapshot() {
+        return { ready: this.ready, error: this.error, riding: this.controller.riding, position: this.root.getPosition().toArray(), heading: this.controller.scooter.heading, lean: this.controller.scooter.lean, steer: this.controller.scooter.steer, speed: Math.hypot(this.controller.scooter.vx, this.controller.scooter.vz) };
+      }
+      destroy() {
+        this.app.off("prerender", this.fitHands, this);
+        this.root.destroy();
+        this.button.remove();
+        this.stop.remove();
+      }
+    };
+  }
+});
+
+// src/game/Neighborhood.ts
+import { Entity as Entity36, Vec3 as Vec334, BoundingBox as BoundingBox16 } from "playcanvas";
+var ROAD_Z, SHOP_DOOR_Z, PLAY_SPOTS, SHOP_STOPS, Neighborhood;
+var init_Neighborhood = __esm({
+  "src/game/Neighborhood.ts"() {
+    "use strict";
+    init_AssetUrls();
+    init_primitives();
+    init_OutdoorArt();
+    init_Classmates();
+    init_OutdoorGround();
+    init_ContainerLease();
+    ROAD_Z = -22.5;
+    SHOP_DOOR_Z = -30.1;
+    PLAY_SPOTS = [-17, -30, -43, -56, -69].map((x) => ({ x, z: -15.3 }));
+    SHOP_STOPS = [{ id: "corner", x: -26, name: "Clover Corner" }, { id: "toys", x: -50, name: "Peachy Playroom" }, { id: "collector", x: -74, name: "Moonbeam Finds" }];
+    Neighborhood = class {
+      constructor(app, house) {
+        this.app = app;
+        this.house = house;
+      }
+      app;
+      house;
+      sections = /* @__PURE__ */ new Map();
+      maxSections = 4;
+      install() {
+        this.house.walkable.push({ minX: -100, maxX: 31, minZ: -27.5, maxZ: -16.3 });
+        this.house.halfWidth = 110;
+        for (const shop of SHOP_STOPS) this.house.walkable.push({ minX: shop.x - 6, maxX: shop.x + 6, minZ: -30.8, maxZ: -25.8 });
+        for (const p of PLAY_SPOTS) this.house.walkable.push({ minX: p.x - 3, maxX: p.x + 3, minZ: -18.2, maxZ: -12.6 });
+      }
+      update(p, outside) {
+        for (let i = 0; i < this.maxSections; i++) {
+          const center = -16 - i * 24, camera = this.app.root.findByTag("migration.camera")[0], near = outside && (Math.abs(p.x - center) < 30 || !!camera?.camera?.frustum.containsAabb(new BoundingBox16(new Vec334(center, 2, -23), new Vec334(16, 8, 16))));
+          if (near && !this.sections.has(i)) this.sections.set(i, this.create(i));
+          if (!near && this.sections.has(i)) {
+            const s = this.sections.get(i);
+            s.root.enabled = false;
+            this.app.batcher.removeGroup(s.group);
+            s.root.destroy();
+            s.art.dispose();
+            s.materials.forEach((m) => {
+              m.diffuseMap?.destroy();
+              m.destroy();
+            });
+            s.leases.forEach((l) => l.release());
+            this.sections.delete(i);
+          }
+        }
+      }
+      create(index) {
+        const center = -16 - index * 24, root = new Entity36("Neighborhood section " + index, this.app);
+        this.app.root.addChild(root);
+        const group = this.app.batcher.addGroup("Lane section " + index, false, 18), s = primitives(this.app, root, group.id), materials = [], leases = [];
+        const m = (name, color) => {
+          const v = material(name, color);
+          materials.push(v);
+          return v;
+        };
+        const lawn = outdoorSurface(this.app, "grass");
+        lawn.diffuseMapTiling.set(5, 8);
+        materials.push(lawn);
+        const road = m("Warm slate road", "#8994a0"), paving = m("Cream sidewalk", "#eadfc3"), curb = m("Pale limestone curb", "#f2e7cc"), soil = m("Rich planting earth", "#a8977b"), wood = m("Warm cedar fence", "#b59976"), white = m("Road markings", "#f5e9cc"), blue = m("Chalk blue", "#b0cbd0");
+        s("North neighborhood meadow", "box", [center, -0.16, -28.5], [24, 0.25, 18], lawn, false);
+        if (index > 0) s("South lane meadow", "box", [center, -0.16, 0], [24, 0.25, 40], lawn, false);
+        else s("West garden meadow", "box", [-24, -0.16, 0], [8, 0.25, 40], lawn, false);
+        s("Connected street", "box", [center, -0.025, ROAD_Z], [24, 0.1, 6.4], road, false);
+        s("Connected garden sidewalk", "box", [center, 0.015, -17.75], [24, 0.12, 2.6], paving, false);
+        s("Connected far sidewalk", "box", [center, 0.015, -26.65], [24, 0.12, 1.7], paving, false);
+        for (let x = center - 11; x < center + 12; x += 2) {
+          s("Paving seam", "box", [x, 0.08, -17.75], [0.025, 0.01, 2.6], soil, false);
+          s("Road dash", "box", [x, 0.033, ROAD_Z], [1, 0.015, 0.13], white, false);
+        }
+        const crossing = SHOP_STOPS[index]?.x;
+        if (crossing !== void 0) for (let z = -25.3; z <= -19.7; z += 0.7) s("Shop crossing stripe", "box", [crossing, 0.04, z], [3.2, 0.018, 0.4], white, false);
+        const art = new OutdoorArt(this.app, root);
+        let seed = 821 + index * 47;
+        const rand = () => {
+          seed = Math.imul(seed, 1664525) + 1013904223 >>> 0;
+          return seed / 4294967296;
+        };
+        for (let k = 0; k < 5; k++) {
+          const x = center - 10 + k * 4.4;
+          art.add(k % 2 ? "CommonTree_1" : "CommonTree_3", x, -36 - rand() * 1.5, 3.1 + rand() * 1.2, rand() * 360);
+          art.add("Bush_Common_Flowers", x, -35, 0.6, rand() * 360);
+          if (k % 2 === 0) art.add("Rock_Medium_1", x + 1, -35.8, 0.45, rand() * 360);
+        }
+        for (const p of PLAY_SPOTS.filter((p2) => p2.x >= center - 12 && p2.x < center + 12)) {
+          s("Play alcove paving", "box", [p.x, 0.015, p.z], [5.5, 0.12, 5.1], paving, false);
+          for (const dx of [-2.8, 2.8]) art.add("Bush_Common_Flowers", p.x + dx, -13.4, 0.65, rand() * 360);
+          art.add("CommonTree_1", p.x - 4, -12.2, 3.2 + rand() * 0.6, rand() * 360);
+          art.add("Rock_Medium_1", p.x - 3.5, -11.5, 0.48, rand() * 360);
+          art.add("Bush_Common_Flowers", p.x + 3.2, -11.9, 0.8, rand() * 360);
+          for (let i = 0; i < 3; i++) s("Garden stepping stone", "cylinder", [p.x + 3.5 + i * 0.65, 0.02, -14.3 + Math.sin(i) * 0.35], [0.5, 0.07, 0.4], curb, false);
+        }
+        const shop = SHOP_STOPS[index];
+        if (shop) {
+          s("Three-space shop forecourt", "box", [shop.x, 0.025, -28.3], [12, 0.09, 4.5], road, false);
+          for (const dx of [-5.5, -1.8, 1.8, 5.5]) s("Parking bay stripe", "box", [shop.x + dx, 0.077, -28.2], [0.07, 0.01, 3.2], white, false);
+          for (const dx of [-3.6, 0, 3.6]) s("Parking wheel stop", "box", [shop.x + dx, 0.12, -30], [1.2, 0.18, 0.2], curb, false);
+          s("Store entrance walk", "box", [shop.x, 0.045, -30.3], [12, 0.12, 0.65], paving, false);
+          const lease = leaseContainer(this.app, assetUrl("assets/outdoors/shop-" + ["clover", "peachy", "moonbeam"][index] + ".glb"), "Neighborhood storefront " + shop.id);
+          leases.push(lease);
+          void lease.ready.then((resource) => {
+            if (!root.enabled) return;
+            const model = resource.instantiateRenderEntity({ castShadows: true });
+            root.addChild(model);
+            model.setLocalPosition(shop.x, 0.075, -33.1);
+            for (const r of model.findComponents("render")) r.batchGroupId = group.id;
+            this.app.batcher.generate([group.id]);
+          }).catch((e) => console.error("Storefront load", e));
+          classroomSign(this.app, root, shop.name + " exterior sign", shop.name.toUpperCase(), [shop.x, 3.6, -30.72], index === 1 ? 5.7 : 4.3, 0.43);
+          for (const dx of [-8, 7.4]) {
+            art.add("CommonTree_3", shop.x + dx, -36.1, 3.7 + rand(), rand() * 360);
+            art.add("Bush_Common_Flowers", shop.x + dx, -32.2, 0.8, rand() * 360);
+          }
+          if (index === 1) {
+            for (let k = 0; k < 5; k++) {
+              const flag = s("Playroom bunting", "cone", [shop.x - 3 + k * 1.5, 3.22, -30.05], [0.4, 0.35, 0.035], k % 2 ? blue : white, false);
+              flag.setLocalEulerAngles(0, 0, 180);
+            }
+          }
+        }
+        void art.finish().catch((e) => console.error("Neighborhood plants", e));
+        this.app.batcher.generate([group.id]);
+        return { root, art, group: group.id, materials, leases };
+      }
+      destroy() {
+        this.update(new Vec334(), false);
+      }
+      snapshot() {
+        return { loadedSections: [...this.sections.keys()], totalSections: this.maxSections, roadZ: ROAD_Z, joinX: -4 };
+      }
+    };
+  }
+});
+
+// src/game/OutdoorEncounters.ts
+import { Entity as Entity37 } from "playcanvas";
+var OutdoorEncounters;
+var init_OutdoorEncounters = __esm({
+  "src/game/OutdoorEncounters.ts"() {
+    "use strict";
+    init_primitives();
+    OutdoorEncounters = class {
+      constructor(app, character, controller, say) {
+        this.app = app;
+        this.character = character;
+        this.controller = controller;
+        this.say = say;
+        this.button.id = "journey-jump";
+        this.button.className = "journey-button";
+        this.button.textContent = "\u21A5 Jump";
+        this.button.style.bottom = "220px";
+        this.button.hidden = true;
+        document.querySelector("#game").append(this.button);
+        this.button.onclick = () => this.jump();
+        window.addEventListener("keydown", (e) => {
+          if (e.code === "KeyJ" && !this.button.hidden && !e.repeat) this.jump();
+        }, { signal: this.abort.signal });
+      }
+      app;
+      character;
+      controller;
+      say;
+      encounters = /* @__PURE__ */ new Map();
+      time = 0;
+      seed = 0;
+      cooldown = 0;
+      jumping = 0;
+      previousOutside = false;
+      button = document.createElement("button");
+      abort = new AbortController();
+      hop = 0;
+      jump() {
+        if (this.button.hidden || this.jumping > 0 || !this.controller.enabled || this.character.placeholder.enabled) return;
+        this.jumping = this.controller.riding ? 0.72 : 1.1667;
+        if (!this.controller.riding) this.character.animator.playAction("PlayJump", 1.1667);
+      }
+      get airborne() {
+        return this.jumping > 0.16;
+      }
+      locations() {
+        return [[-23, -17.8], [-36, -17.8], [-49, -17.8], [-62, -17.8], [-80, -17.8]];
+      }
+      update(dt, outside, available, day) {
+        this.button.hidden = !outside || !available;
+        if (outside && !this.previousOutside) {
+          this.seed = Math.random() * 1e5 | 0;
+        }
+        this.previousOutside = outside;
+        if (!outside) {
+          for (const e of this.encounters.values()) this.remove(e);
+          this.encounters.clear();
+          this.jumping = 0;
+          this.hop = 0;
+          return;
+        }
+        if (!available || dt <= 0) return;
+        this.time += dt;
+        this.cooldown = Math.max(0, this.cooldown - dt);
+        this.jumping = Math.max(0, this.jumping - dt);
+        this.hop = this.controller.riding ? Math.sin(Math.PI * (1 - this.jumping / 0.72)) * 0.23 : 0;
+        if (!this.jumping) this.hop = 0;
+        const p = this.character.player.getPosition();
+        this.locations().forEach(([x, z], i) => {
+          const distance = Math.hypot(p.x - x, p.z - z), close = distance < 16 && this.controller.riding;
+          if (close && !this.encounters.has(i)) {
+            const kinds = ["ball", "puddle", "crate"];
+            this.encounters.set(i, this.create(x, z, kinds[(i + day + this.seed) % 3], (i * 1.73 + this.seed) % 7));
+          }
+          if ((distance > 23 || !this.controller.riding) && this.encounters.has(i)) {
+            this.remove(this.encounters.get(i));
+            this.encounters.delete(i);
+          }
+        });
+        for (const e of this.encounters.values()) {
+          const t = this.time + e.phase;
+          if (e.kind === "ball") {
+            const wave = Math.sin(t * 0.56);
+            e.root.setPosition(e.x, 0.26, e.z + wave * 1.25);
+            e.root.setEulerAngles(wave * 300, t * 35, 0);
+          }
+          const ep = e.root.getPosition(), distance = Math.hypot(p.x - ep.x, p.z - ep.z);
+          if (e.kind === "crate" && distance < 0.9 && this.controller.input.length() > 0.15 && e.moved < 1.5) {
+            const delta = Math.min(dt * 0.8, 1.5 - e.moved);
+            e.moved += delta;
+            e.root.setPosition(e.x, 0.34, e.z - e.moved);
+            if (!this.controller.riding) {
+              this.character.animator.setWorkClip("CarryIdle");
+            }
+            if (!this.cooldown) {
+              this.say("A little push\u2026 room to pass!");
+              this.cooldown = 2;
+            }
+          } else if (e.kind !== "crate" && distance < (e.kind === "puddle" ? 0.62 : 0.48) && !this.airborne && !this.cooldown) {
+            this.cooldown = 2.5;
+            this.controller.scooter.vx *= 0.45;
+            this.controller.scooter.vz *= 0.45;
+            this.say(e.kind === "puddle" ? "Splish! Jump or scoot around the puddle." : "Boing! A runaway ball.");
+          }
+        }
+        if (!this.controller.riding && this.character.animator.currentState === "CarryIdle" && ![...this.encounters.values()].some((e) => e.kind === "crate" && e.moved < 1.5 && p.distance(e.root.getPosition()) < 1.1)) this.character.animator.setWorkClip(null);
+      }
+      create(x, z, kind, phase) {
+        const root = new Entity37("Encounter " + kind, this.app);
+        this.app.root.addChild(root);
+        root.setPosition(x, kind === "ball" ? 0.26 : kind === "crate" ? 0.34 : 0.08, z);
+        const s = primitives(this.app, root), materials = [];
+        const m = (n, c) => {
+          const v = material(n, c);
+          materials.push(v);
+          return v;
+        };
+        const e = { root, x, z, kind, phase, moved: 0, materials };
+        if (kind === "ball") {
+          s("Coral ball", "sphere", [0, 0, 0], [0.4, 0.4, 0.4], m("Ball coral", "#e3a084"));
+          const stripe = s("Cream equator", "cylinder", [0, 0, 0], [0.406, 0.07, 0.406], m("Ball stripe", "#fff0c9"));
+          stripe.setLocalEulerAngles(0, 0, 24);
+        } else if (kind === "puddle") {
+          const water = m("Sky puddle", "#8db8c4"), rim = m("Damp paving", "#b8aea1");
+          s("Damp oval", "cylinder", [0, -8e-3, 0], [1.4, 0.01, 0.85], rim, false);
+          s("Puddle", "cylinder", [0, 0, 0], [1.18, 0.012, 0.72], water, false);
+          s("Puddle shine", "box", [0.14, 9e-3, 0.08], [0.36, 4e-3, 0.035], m("Puddle glint", "#d2e4d9"), false);
+        } else if (kind === "crate") {
+          const wood = m("Peach delivery crate", "#d6b483"), band = m("Crate straps", "#f5e1b5");
+          s("Rounded delivery box", "box", [0, 0, 0], [0.6, 0.52, 0.56], wood);
+          for (const a of [-0.22, 0.22]) s("Crate stripe", "box", [a, 6e-3, 0], [0.05, 0.54, 0.58], band);
+          s("Leaf decal", "sphere", [0, 0.27, 0], [0.26, 0.02, 0.15], m("Leaf green", "#82a477"));
+        }
+        return e;
+      }
+      remove(e) {
+        e.root.destroy();
+        e.materials.forEach((m) => m.destroy());
+      }
+      snapshot() {
+        return { jumping: this.jumping, hop: this.hop, encounters: [...this.encounters.values()].map((e) => ({ kind: e.kind, position: e.root.getPosition().toArray(), moved: e.moved })) };
+      }
+      destroy() {
+        this.abort.abort();
+        this.button.remove();
+        for (const e of this.encounters.values()) this.remove(e);
+      }
+    };
+  }
+});
+
+// src/data/dailyPlay.ts
+function selectDailyPlay(seed, day) {
+  let state = (seed ^ Math.imul(Math.floor((Math.max(1, day) - 1) / 3) + 1, 2654435769)) >>> 0;
+  const random = () => {
+    state = state + 1831565813 >>> 0;
+    let n = Math.imul(state ^ state >>> 15, 1 | state);
+    n ^= n + Math.imul(n ^ n >>> 7, 61 | n);
+    return ((n ^ n >>> 14) >>> 0) / 4294967296;
+  };
+  const bag = PLAY_ACTIVITIES.map((a) => a.id);
+  for (let i = bag.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [bag[i], bag[j]] = [bag[j], bag[i]];
+  }
+  const offset = (Math.max(1, day) - 1) % 3 * 5;
+  return bag.slice(offset, offset + 5);
+}
+var PLAY_ACTIVITIES, playDefinition;
+var init_dailyPlay = __esm({
+  "src/data/dailyPlay.ts"() {
+    "use strict";
+    PLAY_ACTIVITIES = [
+      { id: "goal", name: "Backyard champion", icon: "\u26BD", hint: "Kick the ball into the little goal.", verb: "Kick", clip: "PlayKick" },
+      { id: "bowling", name: "Wobbly bowling", icon: "\u{1F3B3}", hint: "Roll the ball and topple the wobbling pins.", verb: "Roll", clip: "PlayRoll" },
+      { id: "cans", name: "Tin-can tumble", icon: "\u{1F96B}", hint: "Pick up the beanbag, then toss it at the cans.", verb: "Pick up", clip: "PlayReach" },
+      { id: "cart", name: "Special delivery", icon: "\u{1F4E6}", hint: "Push the trolley into its yellow delivery bay.", verb: "Push", clip: "CarryIdle" },
+      { id: "boat", name: "Captain Paperboat", icon: "\u26F5", hint: "Carry the paper boat to the little water trough.", verb: "Pick up", clip: "PlayReach" },
+      { id: "duck", name: "Waddle parade", icon: "\u{1F986}", hint: "Wind the duck three times. Watch who follows!", verb: "Wind", clip: "PlayInteract" },
+      { id: "bubbles", name: "Bubble trouble", icon: "\u{1FAE7}", hint: "Make bubbles, then walk into them to pop them.", verb: "Make bubbles", clip: "PlayUse" },
+      { id: "flower", name: "The sneezing flower", icon: "\u{1F33C}", hint: "Bring the watering can to the droopy flower.", verb: "Pick up", clip: "PlayReach" },
+      { id: "pinwheel", name: "Whirlwind wishes", icon: "\u{1F4A8}", hint: "Blow three times and send the ribbons flying.", verb: "Blow", clip: "PlayInteract" },
+      { id: "jack", name: "Surprise, ribbit!", icon: "\u{1F438}", hint: "Turn the handle three times. Who is inside?", verb: "Turn handle", clip: "PlayInteract" },
+      { id: "puddles", name: "Puddle piano", icon: "\u{1F3B5}", hint: "Step in all four puddles to play a little tune.", verb: "Splash", clip: "PlayJump" },
+      { id: "leaves", name: "Leaf-pile surprise", icon: "\u{1F342}", hint: "Jump into the leaves. Something is hiding!", verb: "Jump in", clip: "PlayJump" },
+      { id: "plane", name: "Loop-de-loop post", icon: "\u2708\uFE0F", hint: "Pick up the paper plane and send it through the hoops.", verb: "Pick up", clip: "PlayReach" },
+      { id: "flamingo", name: "A very fancy flamingo", icon: "\u{1F3A9}", hint: "Give the garden flamingo a splendid hat.", verb: "Pick up", clip: "PlayReach" },
+      { id: "picnic", name: "Teddy is hungry", icon: "\u{1F9F8}", hint: "Bring three treats from the basket to Teddy\u2019s plates.", verb: "Pick up", clip: "PlayReach" }
+    ];
+    playDefinition = (id) => PLAY_ACTIVITIES.find((a) => a.id === id);
+  }
+});
+
+// src/systems/DailyPlayStore.ts
+var valid, DailyPlayStore;
+var init_DailyPlayStore = __esm({
+  "src/systems/DailyPlayStore.ts"() {
+    "use strict";
+    init_dailyPlay();
+    init_SaveNamespace();
+    valid = (id) => PLAY_ACTIVITIES.some((a) => a.id === id);
+    DailyPlayStore = class {
+      constructor(storage = localStorage) {
+        this.storage = storage;
+        let seed = Math.random() * 4294967296 >>> 0;
+        this.data = { version: 1, seed, day: 0, ids: [], progress: {} };
+        try {
+          const raw = storage.getItem(saveKey("daily-play.v1"));
+          if (raw) {
+            const v = JSON.parse(raw);
+            if (v.version === 1 && Number.isInteger(v.seed) && Number.isInteger(v.day) && Array.isArray(v.ids) && v.ids.length === 5 && new Set(v.ids).size === 5 && v.ids.every(valid)) {
+              this.data = { version: 1, seed: v.seed >>> 0, day: v.day, ids: v.ids, progress: {} };
+              for (const id of v.ids) {
+                const p = v.progress?.[id];
+                this.data.progress[id] = { step: Number.isInteger(p?.step) ? Math.max(0, Math.min(31, p.step)) : 0, done: p?.done === true };
+              }
+            }
+          }
+        } catch {
+          this.problem = "Today\u2019s play could not be read. Your other saves are safe.";
+        }
+      }
+      storage;
+      data;
+      problem = "";
+      ensure(day) {
+        if (this.data.day === day) return false;
+        this.data = { version: 1, seed: this.data.seed, day, ids: selectDailyPlay(this.data.seed, day), progress: {} };
+        this.flush();
+        return true;
+      }
+      progress(id) {
+        return this.data.progress[id] ?? { step: 0, done: false };
+      }
+      update(id, step, done = false) {
+        if (!this.data.ids.includes(id)) return;
+        this.data.progress[id] = { step, done: done || this.progress(id).done };
+        this.flush();
+      }
+      flush() {
+        try {
+          this.storage.setItem(saveKey("daily-play.v1"), JSON.stringify(this.data));
+          this.problem = "";
+          return true;
+        } catch {
+          this.problem = "Play is still available, but today\u2019s progress could not be saved.";
+          return false;
+        }
+      }
+    };
+  }
+});
+
+// src/systems/PlayPhysics.ts
+function stepToy(b, dt, floor, bounds = 2.25) {
+  const steps = Math.max(1, Math.ceil(dt / 0.012));
+  for (let n = 0; n < steps; n++) {
+    const h = dt / steps;
+    b.vy -= 9.8 * h;
+    b.x += b.vx * h;
+    b.y += b.vy * h;
+    b.z += b.vz * h;
+    if (b.y < floor + b.radius) {
+      b.y = floor + b.radius;
+      b.vy = Math.abs(b.vy) > 0.55 ? -b.vy * 0.38 : 0;
+      const drag = Math.exp(-1 * h);
+      b.vx *= drag;
+      b.vz *= drag;
+    }
+    for (const axis of ["x", "z"]) {
+      const v = axis === "x" ? "vx" : "vz", edge = bounds - b.radius;
+      if (Math.abs(b[axis]) > edge) {
+        b[axis] = Math.sign(b[axis]) * edge;
+        b[v] *= -0.55;
+      }
+    }
+  }
+}
+function touchesCircle(a, b, radius) {
+  return Math.hypot(a.x - b.x, a.z - b.z) < radius;
+}
+var init_PlayPhysics = __esm({
+  "src/systems/PlayPhysics.ts"() {
+    "use strict";
+  }
+});
+
+// src/ui/PlayAudio.ts
+var PlayAudio;
+var init_PlayAudio = __esm({
+  "src/ui/PlayAudio.ts"() {
+    "use strict";
+    init_AudioSettings();
+    init_SaveNamespace();
+    PlayAudio = class {
+      context = null;
+      unlock() {
+        this.context ??= new AudioContext();
+        void this.context.resume().catch(() => {
+        });
+      }
+      tone(frequency = 440, duration = 0.18, type = "sine", bend = 0.6) {
+        let muted = false;
+        try {
+          muted = localStorage.getItem(saveKey("house-effects.muted")) === "true";
+        } catch {
+        }
+        if (muted || document.hidden || !this.context) return;
+        const c = this.context, t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+        o.type = type;
+        o.frequency.setValueAtTime(frequency, t);
+        o.frequency.exponentialRampToValueAtTime(Math.max(35, frequency * bend), t + duration);
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.09 * audioLevel("effects"), t + 0.01);
+        g.gain.exponentialRampToValueAtTime(1e-3, t + duration);
+        o.connect(g).connect(c.destination);
+        o.start();
+        o.stop(t + duration + 0.01);
+        o.onended = () => {
+          o.disconnect();
+          g.disconnect();
+        };
+      }
+      pop() {
+        this.tone(850, 0.1, "sine", 0.35);
+      }
+      honk() {
+        this.tone(260, 0.35, "triangle", 1.3);
+      }
+      win() {
+        this.tone(523, 0.5, "triangle", 1.5);
+      }
+      destroy() {
+        void this.context?.close();
+      }
+    };
+  }
+});
+
+// src/game/DailyPlay.ts
+import { BoundingBox as BoundingBox17, Entity as Entity38, Vec3 as Vec335 } from "playcanvas";
+var goalCopy, DailyPlay;
+var init_DailyPlay = __esm({
+  "src/game/DailyPlay.ts"() {
+    "use strict";
+    init_AssetUrls();
+    init_Neighborhood();
+    init_ContainerLease();
+    init_Classmates();
+    init_DailyPlayStore();
+    init_dailyPlay();
+    init_PlayPhysics();
+    init_PlayAudio();
+    goalCopy = { goal: "GOOOAL! The tiny crowd goes wild!", bowling: "A very wobbly strike!", cans: "Clatter, rattle, tumble!", cart: "Special delivery\u2026 a bouncing surprise!", boat: "Captain Paperboat is off on a tiny voyage.", duck: "One duck\u2026 two ducks\u2026 a whole waddle parade!", bubbles: "Pop! Even the last bubble got a giggle.", flower: "A-a-a-CHOO! That is one happy flower.", pinwheel: "Whoosh! A little wind makes a big whirl.", jack: "Surprise! It is a very springy frog.", puddles: "Splish, splash\u2026 you made a puddle song!", leaves: "HONK! A duck was hiding in the leaves.", plane: "Three hoops! A perfect paper delivery.", flamingo: "A splendid hat. A very polite bow.", picnic: "Teddy says: thank you, chef!" };
+    DailyPlay = class {
+      constructor(app, character, controller, camera, say) {
+        this.app = app;
+        this.character = character;
+        this.controller = controller;
+        this.camera = camera;
+        this.say = say;
+        this.button.id = "daily-play-open";
+        this.button.className = "journey-button";
+        this.button.textContent = "Today\u2019s play";
+        this.button.hidden = true;
+        this.button.onclick = () => {
+          this.audio.unlock();
+          this.renderJournal();
+          this.controller.reset();
+          this.journal.showModal();
+          this.journal.scrollTop = 0;
+          this.journal.querySelector("h2").focus({ preventScroll: true });
+        };
+        this.drop.id = "daily-play-drop";
+        this.drop.className = "journey-button";
+        this.drop.textContent = "Put back";
+        this.drop.hidden = true;
+        this.drop.onclick = () => this.putBack();
+        this.journal.id = "daily-play-journal";
+        this.journal.setAttribute("aria-label", "Today\u2019s play");
+        this.journal.className = "daily-play-journal";
+        document.querySelector("#game").append(this.button, this.drop, this.journal);
+        this.journal.addEventListener("close", () => this.controller.reset(), { signal: this.abort.signal });
+        app.on("prerender", this.attachHeld, this);
+      }
+      app;
+      character;
+      controller;
+      camera;
+      say;
+      save = new DailyPlayStore();
+      stations = /* @__PURE__ */ new Map();
+      holding = null;
+      pushing = null;
+      active = false;
+      available = false;
+      pending = false;
+      actionStation = null;
+      framed = false;
+      audio = new PlayAudio();
+      journal = document.createElement("dialog");
+      button = document.createElement("button");
+      drop = document.createElement("button");
+      selected = null;
+      abort = new AbortController();
+      staticBoxes = [];
+      get busy() {
+        return this.pending || this.journal.open || !!this.character.animator.busy;
+      }
+      get occupied() {
+        return this.pending || !!this.holding || !!this.pushing || this.journal.open;
+      }
+      get carrying() {
+        return !!this.holding;
+      }
+      get movementLocked() {
+        return this.journal.open || this.holding?.station.phase === "watering" || this.character.animator.busy && !["JourneyJump", "PlayJump"].includes(this.character.animator.actionName ?? "");
+      }
+      renderJournal() {
+        this.journal.replaceChildren();
+        const back = document.createElement("button");
+        back.className = "daily-play-close";
+        back.textContent = "\xD7";
+        back.setAttribute("aria-label", "Close today\u2019s play");
+        back.onclick = () => this.journal.close();
+        const h = document.createElement("h2");
+        h.textContent = "Five little adventures";
+        h.tabIndex = -1;
+        const intro = document.createElement("p");
+        intro.textContent = "Today on Maple Lane. Follow the street left from the school path. Play in any order, and play again whenever you like.";
+        this.journal.append(back, h, intro);
+        for (const [i, id] of this.save.data.ids.entries()) {
+          const def = playDefinition(id), card = document.createElement("div");
+          card.className = "daily-play-card";
+          const title = document.createElement("strong");
+          title.textContent = `${this.save.progress(id).done ? "\u2713" : def.icon} ${def.name}`;
+          const hint = document.createElement("p");
+          hint.textContent = def.hint;
+          const distance = document.createElement("small");
+          distance.textContent = `Little garden ${i + 1} \xB7 ${Math.round(Math.abs(this.character.player.getPosition().x - PLAY_SPOTS[i].x))} steps along the lane`;
+          card.append(title, hint, distance);
+          this.journal.append(card);
+        }
+        const close = document.createElement("button");
+        close.textContent = "Let\u2019s play";
+        close.onclick = () => this.journal.close();
+        this.journal.append(close);
+      }
+      update(dt, outside, available, day) {
+        if (this.save.ensure(day)) {
+          this.leave();
+          for (const s of this.stations.values()) this.remove(s);
+          this.stations.clear();
+        }
+        this.active = outside && !this.controller.riding;
+        this.available = available && !this.journal.open;
+        if (!this.character.animator.busy) this.actionStation = null;
+        this.button.hidden = !this.active || !available;
+        this.button.textContent = `\u273F Today\u2019s play \xB7 ${this.save.data.ids.filter((id) => this.save.progress(id).done).length}/5`;
+        if (!this.active) {
+          this.leave();
+          for (const s of this.stations.values()) this.remove(s);
+          this.stations.clear();
+          this.selected = null;
+          return;
+        }
+        const p = this.character.player.getPosition();
+        for (const [i, id] of this.save.data.ids.entries()) {
+          const spot = PLAY_SPOTS[i], d = Math.hypot(spot.x - p.x, spot.z - p.z);
+          if (d < 20 && !this.stations.has(i)) this.stations.set(i, this.create(id, i));
+          if (d > 26 && this.stations.has(i)) {
+            const s = this.stations.get(i);
+            if (this.holding?.station === s || this.pushing === s) this.putBack();
+            this.remove(s);
+            this.stations.delete(i);
+          }
+        }
+        this.staticBoxes = [];
+        for (const s of this.stations.values()) if (s.ready) {
+          this.staticBoxes.push(...s.solids);
+          if (s.cartBox) this.staticBoxes.push(s.cartBox);
+          if (this.available && dt > 0) this.tick(s, Math.min(dt, 0.04));
+        }
+        this.controller.dynamicObstacles = this.staticBoxes;
+        this.controller.moveContact = this.contact;
+        this.selected = this.holding?.station ?? this.pushing ?? [...this.stations.values()].filter((s) => s.ready && this.distance(s, p) < 3.3).sort((a, b) => this.distance(a, p) - this.distance(b, p))[0] ?? null;
+        this.drop.hidden = !available || !this.holding && !this.pushing;
+        this.drop.textContent = this.pushing ? "Let go" : "Put back";
+        if (this.selected && this.available) {
+          this.camera.beginChore(p, this.world(this.selected));
+          this.framed = true;
+        } else if (this.framed) {
+          this.camera.endChore();
+          this.framed = false;
+        }
+        if (this.pushing) this.character.animator.setWorkClip(this.controller.velocity.length() > 0.02 ? "CarryWalk" : "CarryIdle", this.part(this.pushing, "Cart").entity.getPosition());
+      }
+      distance(s, p) {
+        return Math.hypot(p.x - PLAY_SPOTS[s.index].x, p.z - PLAY_SPOTS[s.index].z);
+      }
+      world(s, x = 0, y = 0.075, z = 0) {
+        const p = PLAY_SPOTS[s.index];
+        return new Vec335(p.x + x, y, p.z + z);
+      }
+      localPlayer(s) {
+        const p = this.character.player.getPosition(), spot = PLAY_SPOTS[s.index];
+        return { x: p.x - spot.x, z: p.z - spot.z };
+      }
+      part(s, name) {
+        const p = s.parts.get(name);
+        if (!p) throw Error("Missing toy part " + s.id + "/" + name);
+        return p;
+      }
+      create(id, index) {
+        const root = new Entity38("Daily play " + id, this.app);
+        this.app.root.addChild(root);
+        root.setPosition(PLAY_SPOTS[index].x, 0.075, PLAY_SPOTS[index].z);
+        const lease = leaseContainer(this.app, assetUrl("assets/outdoors/play-" + id + ".glb"), "Daily toy " + id);
+        const s = { id, index, root, lease, parts: /* @__PURE__ */ new Map(), ready: false, error: "", time: 0, phase: "ready", clock: 0, count: 0, bits: 0, body: null, fallen: [], bubblePopped: /* @__PURE__ */ new Set(), lastPuddle: -1, cartBox: null, solids: [] };
+        void lease.ready.then((resource) => {
+          if (!root.enabled) return;
+          const model = resource.instantiateRenderEntity({ castShadows: true });
+          root.addChild(model);
+          const visit = (e) => {
+            s.parts.set(e.name, { entity: e, p: e.getLocalPosition().clone(), q: e.getLocalRotation().clone() });
+            for (const child of e.children) visit(child);
+          };
+          visit(model);
+          classroomSign(this.app, root, "Play garden label", `${index + 1} \xB7 ${playDefinition(id).name}`, [0, 0.48, 2.12], 2.15, 0.32);
+          this.resetStation(s);
+          s.ready = true;
+        }).catch((error) => {
+          s.error = String(error);
+          console.error("Daily play prop load", error);
+        });
+        return s;
+      }
+      solid(s, x, z, hx, hz) {
+        const b = new BoundingBox17(this.world(s, x, 0.5, z), new Vec335(hx, 1, hz));
+        s.solids.push(b);
+        return b;
+      }
+      resetStation(s) {
+        for (const p of s.parts.values()) {
+          p.entity.setLocalPosition(p.p);
+          p.entity.setLocalRotation(p.q);
+          p.entity.enabled = true;
+        }
+        s.time = 0;
+        s.clock = 0;
+        s.phase = "ready";
+        s.count = 0;
+        s.bits = 0;
+        s.body = null;
+        s.fallen = [];
+        s.bubblePopped.clear();
+        s.lastPuddle = -1;
+        s.solids = [];
+        s.cartBox = null;
+        if (s.id === "goal" || s.id === "bowling") {
+          const p = this.part(s, "Ball").p;
+          s.body = { x: p.x, y: p.y, z: p.z, vx: 0, vy: 0, vz: 0, radius: s.id === "goal" ? 0.19 : 0.17 };
+        }
+        if (s.id === "duck") for (let i = 0; i < 3; i++) this.part(s, "Duckling" + i).entity.enabled = false;
+        if (s.id === "bubbles") for (let i = 0; i < 10; i++) this.part(s, "Bubble" + i).entity.enabled = false;
+        if (s.id === "jack") {
+          this.part(s, "Frog").entity.enabled = false;
+          this.solid(s, 0, 0, 0.34, 0.29);
+        }
+        if (s.id === "leaves") this.part(s, "HiddenDuck").entity.enabled = false;
+        if (s.id === "flower") {
+          this.part(s, "Flower").entity.setLocalEulerAngles(0, 0, 48);
+          for (let i = 0; i < 8; i++) this.part(s, "Droplet" + i).entity.enabled = false;
+          this.solid(s, 0, -0.45, 0.3, 0.3);
+          this.solid(s, 1.3, 0.65, 0.33, 0.28);
+        }
+        if (s.id === "cans") {
+          this.solid(s, 0, -0.8, 0.68, 0.33);
+          this.solid(s, -1, 0.85, 0.33, 0.28);
+        }
+        if (s.id === "boat") {
+          this.solid(s, 0, -0.35, 0.78, 1.22);
+          this.solid(s, 1.45, 0.8, 0.33, 0.28);
+        }
+        if (s.id === "plane") this.solid(s, 1.3, 0.85, 0.33, 0.28);
+        if (s.id === "flamingo") {
+          this.solid(s, -1, 0.75, 0.33, 0.28);
+          this.solid(s, 0.45, -0.6, 0.32, 0.32);
+        }
+        if (s.id === "bubbles") this.solid(s, 0, 0.65, 0.33, 0.28);
+        if (s.id === "cart") {
+          s.cartBox = new BoundingBox17(this.world(s, 0, 0.5, 0.6), new Vec335(0.4, 1, 0.4));
+          this.part(s, "Surprise").entity.enabled = false;
+        }
+        if (["duck", "pinwheel", "jack", "picnic"].includes(s.id) && !this.save.progress(s.id).done) s.count = this.save.progress(s.id).step;
+        if (s.id === "picnic") for (let i = 0; i < s.count; i++) this.part(s, "Treat" + i).entity.setLocalPosition(...this.plate(i));
+        if (s.id === "puddles" && !this.save.progress(s.id).done) s.bits = this.save.progress(s.id).step;
+      }
+      plate(i) {
+        return [[-0.55, 0.14, -0.1], [0.55, 0.14, -0.1], [0, 0.14, 0.55]][i];
+      }
+      target(s) {
+        const def = playDefinition(s.id), p = (n) => this.part(s, n).entity.getPosition().clone();
+        if (this.pushing === s) return { point: p("Cart"), verb: "Let go", clip: "", hint: "Push toward the yellow outline." };
+        if (s.phase === "finished") return { point: this.world(s, 0, 0.09, 1.45), verb: "Play again", clip: "", hint: def.name };
+        if (this.holding?.station === s) {
+          const mapping = { cans: [this.world(s, 0, 0.7, -0.8), "Toss", "PlayThrow", "Aim the beanbag at the cans."], boat: [this.world(s, 1.05, 0.3, -0.5), "Launch", "PlayInteract", "Float the boat in the little trough."], flower: [this.world(s, 0.55, 0.9, -0.3), "Water", "PlayUse", "A drink for the droopy flower."], plane: [this.world(s, 0, 0.8, 1.05), "Throw", "PlayThrow", "Send it through the three hoops."], flamingo: [this.world(s, 0.45, 1.48, -0.6), "Dress up", "PlayInteract", "A hat for a very fancy bird."], picnic: [this.world(s, ...this.plate(Math.min(2, s.count))), "Serve", "PlayInteract", "Teddy is waiting at the picnic blanket."] };
+          const v = mapping[s.id];
+          return { point: v[0], verb: v[1], clip: v[2], hint: v[3] };
+        }
+        const names = { goal: "Ball", bowling: "Ball", cans: "Beanbag", cart: "Cart", boat: "Boat", duck: "Key", bubbles: "Bottle", flower: "Can", pinwheel: "Wheel", jack: "Crank", plane: "Plane", flamingo: "Hat", picnic: "Treat" + Math.min(2, s.count) };
+        const name = names[s.id], point = name ? p(name) : this.world(s, 0, 0.09, 0);
+        if (s.id === "cart") {
+          point.z += 0.55;
+          point.y = 0.85;
+        }
+        return { point, verb: def.verb, clip: ["cans", "boat", "flower", "plane", "flamingo", "picnic"].includes(s.id) ? "PlayInteract" : def.clip, hint: def.hint };
+      }
+      get focus() {
+        const s = this.selected;
+        if (!s || !this.active || !this.available) return null;
+        const t = this.target(s);
+        const inProgress = !["ready", "finished", "bubbles"].includes(s.phase) && this.pushing !== s;
+        return { title: inProgress ? "Watch\u2026" : t.verb, detail: inProgress ? playDefinition(s.id).name : t.hint, icon: playDefinition(s.id).icon, enabled: !inProgress && !this.busy, id: s.id };
+      }
+      press() {
+        const s = this.selected;
+        if (!s || !this.focus?.enabled) return;
+        this.audio.unlock();
+        if (this.pushing === s) {
+          this.putBack();
+          return;
+        }
+        if (s.phase === "finished") {
+          this.resetStation(s);
+          this.say("Ready for another go!");
+          return;
+        }
+        if (s.id === "bubbles" && s.phase === "bubbles") {
+          const p = this.localPlayer(s), near = [...s.parts.entries()].find(([name, part]) => name.startsWith("Bubble") && part.entity.enabled && Math.hypot(part.entity.getLocalPosition().x - p.x, part.entity.getLocalPosition().z - p.z) < 1.2);
+          if (near) this.popBubble(s, Number(near[0].slice(6)));
+          else this.say("Walk into a floating bubble. Pop!");
+          return;
+        }
+        const t = this.target(s), player = this.character.player.getPosition();
+        const act = () => {
+          this.pending = false;
+          if (!this.active || !s.root.enabled) return;
+          this.controller.reset();
+          this.actionStation = s;
+          this.character.animator.playAction(t.clip || "PlayInteract", 1.3, () => {
+            if (this.active && s.root.enabled) this.commit(s);
+          }, t.point);
+        };
+        const distance = Math.hypot(player.x - t.point.x, player.z - t.point.z);
+        const reach = this.holding?.station === s && s.id === "cans" ? 2.4 : s.id === "leaves" || s.id === "puddles" ? 0.65 : 0.85;
+        if (distance > reach) {
+          this.pending = true;
+          this.controller.approachProp(t.point, act, () => {
+            this.pending = false;
+            this.say("Come a little closer to " + playDefinition(s.id).name.toLowerCase() + ".");
+          });
+        } else act();
+      }
+      commit(s) {
+        const held = this.holding?.station === s ? this.holding : null;
+        if (held) {
+          this.holding = null;
+          this.character.animator.setCarrying(false);
+          s.clock = 0;
+          if (s.id === "cans") {
+            const pos = held.part.entity.getLocalPosition();
+            s.body = { x: pos.x, y: pos.y, z: pos.z, vx: -pos.x * 2.4, vy: 3.3, vz: (-0.8 - pos.z) * 2.4, radius: 0.11 };
+            s.phase = "toss";
+          }
+          if (s.id === "boat") {
+            held.part.entity.setLocalPosition(0, 0.37, 0.55);
+            s.phase = "sailing";
+          }
+          if (s.id === "flower") {
+            this.holding = held;
+            this.character.animator.setCarrying(true);
+            s.phase = "watering";
+          }
+          if (s.id === "plane") {
+            held.part.entity.setLocalPosition(0, 0.85, 1.05);
+            s.phase = "flying";
+          }
+          if (s.id === "flamingo") {
+            held.part.entity.setLocalPosition(0.48, 1.48, -0.53);
+            s.phase = "bowing";
+          }
+          if (s.id === "picnic") {
+            held.part.entity.setLocalPosition(...this.plate(s.count));
+            s.count++;
+            this.progress(s, s.count);
+            this.audio.pop();
+            if (s.count === 3) {
+              s.phase = "picnic";
+            }
+          }
+          return;
+        }
+        const pick = { cans: "Beanbag", boat: "Boat", flower: "Can", plane: "Plane", flamingo: "Hat", picnic: "Treat" + s.count };
+        if (pick[s.id]) {
+          this.holding = { station: s, part: this.part(s, pick[s.id]), name: pick[s.id] };
+          this.character.animator.setCarrying(true);
+          this.character.animator.setCarryPace("walk");
+          this.say(this.target(s).hint);
+          return;
+        }
+        if (s.id === "goal" || s.id === "bowling") {
+          const b = s.body, p = this.localPlayer(s), targetZ = s.id === "goal" ? -1.6 : -1.3, speed = s.id === "goal" ? 3.8 : 4.2, d = Math.hypot(b.x, b.z - targetZ), from = Math.max(0.01, Math.hypot(b.x - p.x, b.z - p.z)), ux = (b.x - p.x) / from, uz = (b.z - p.z) / from, gx = -b.x / d, gz = (targetZ - b.z) / d, assist = ux * gx + uz * gz > 0.5 ? 0.8 : 0;
+          b.vx = (ux * (1 - assist) + gx * assist) * speed;
+          b.vz = (uz * (1 - assist) + gz * assist) * speed;
+          b.vy = s.id === "goal" ? 0.65 : 0;
+          s.phase = "rolling";
+          s.clock = 0;
+          this.audio.tone(180, 0.13, "triangle", 0.5);
+        } else if (s.id === "cart") {
+          this.pushing = s;
+          this.character.animator.setWorkClip("CarryIdle", this.part(s, "Cart").entity.getPosition());
+          this.say("Hands on the handle. Push the trolley into the yellow outline.");
+        } else if (["duck", "jack", "pinwheel"].includes(s.id)) {
+          s.count++;
+          this.progress(s, s.count);
+          this.audio.tone(320 + s.count * 80, 0.13, "triangle", 1.2);
+          s.clock = 0;
+          if (s.count >= 3) s.phase = s.id === "duck" ? "parade" : s.id === "jack" ? "surprise" : "spinning";
+          else this.say(["One little turn\u2026", "One more\u2026"][s.count - 1]);
+        } else if (s.id === "bubbles") {
+          s.phase = "bubbles";
+          s.clock = 0;
+          for (let i = 0; i < 10; i++) this.part(s, "Bubble" + i).entity.enabled = true;
+          this.say("Walk into the bubbles to pop them!");
+        } else if (s.id === "leaves") {
+          s.phase = "burst";
+          s.clock = 0;
+          this.part(s, "HiddenDuck").entity.enabled = true;
+          this.audio.honk();
+        } else if (s.id === "puddles") {
+          const p = this.localPlayer(s);
+          let best = 0, d = Infinity;
+          for (let i = 0; i < 4; i++) {
+            const q = this.part(s, "Puddle" + i).p, n = Math.hypot(p.x - q.x, p.z - q.z);
+            if (n < d) {
+              d = n;
+              best = i;
+            }
+          }
+          this.splash(s, best);
+        }
+      }
+      progress(s, n) {
+        this.save.update(s.id, n);
+        if (this.save.problem) this.say(this.save.problem);
+      }
+      complete(s) {
+        if (s.phase === "finished") return;
+        s.phase = "finished";
+        this.save.update(s.id, s.count, true);
+        this.audio.win();
+        this.say(this.save.problem || goalCopy[s.id]);
+      }
+      attachHeld() {
+        if (!this.holding) return;
+        const model = this.character.player.findComponents("anim")[0]?.entity;
+        if (!model) return;
+        const l = model.findByName("LeftHand"), r = model.findByName("RightHand");
+        if (!l || !r) return;
+        const position = new Vec335().add2(l.getPosition(), r.getPosition()).mulScalar(0.5), forward = this.character.visual.getWorldTransform().transformVector(new Vec335(0, 0, 0.055));
+        position.add(forward);
+        this.holding.part.entity.setPosition(position);
+        this.holding.part.entity.setRotation(this.character.visual.getRotation());
+        if (this.holding.station.phase === "watering") this.holding.part.entity.rotateLocal(0, 0, -30);
+      }
+      putBack() {
+        if (!this.holding && !this.pushing) {
+          this.drop.hidden = true;
+          return;
+        }
+        if (this.holding) {
+          const { part, station } = this.holding;
+          part.entity.setLocalPosition(part.p);
+          part.entity.setLocalRotation(part.q);
+          if (station.phase === "watering") this.resetStation(station);
+          this.holding = null;
+        }
+        if (this.pushing) {
+          this.pushing = null;
+          this.character.animator.setWorkClip(null);
+        }
+        this.character.animator.setCarrying(false);
+        this.drop.hidden = true;
+      }
+      contact = (x, z, dx, dz) => {
+        const s = this.pushing;
+        if (!s?.cartBox || !this.available) return;
+        const box = s.cartBox;
+        if (Math.abs(x + dx - box.center.x) > box.halfExtents.x + 0.26 || Math.abs(z + dz - box.center.z) > box.halfExtents.z + 0.26) return;
+        if (z < box.center.z + 0.18 || dz > 0) return;
+        const cart = this.part(s, "Cart").entity, p = cart.getLocalPosition().clone();
+        p.x = Math.max(-1.7, Math.min(1.7, p.x + dx * 0.72));
+        if (dz < 0 && Math.abs(p.x) < 0.65) p.x *= 0.96;
+        p.z = Math.max(-1.6, Math.min(1.6, p.z + dz * 0.72));
+        cart.setLocalPosition(p);
+        box.center.copy(cart.getPosition());
+      };
+      splash(s, i) {
+        this.audio.tone([262, 330, 392, 523][i], 0.4, "sine", 1);
+        s.bits |= 1 << i;
+        s.lastPuddle = i;
+        s.clock = 0;
+        this.progress(s, s.bits);
+        if (s.bits === 15) this.complete(s);
+      }
+      popBubble(s, i) {
+        if (s.bubblePopped.has(i)) return;
+        s.bubblePopped.add(i);
+        this.part(s, "Bubble" + i).entity.enabled = false;
+        this.audio.pop();
+        if (s.bubblePopped.size >= 6) this.complete(s);
+      }
+      tick(s, dt) {
+        s.time += dt;
+        s.clock += dt;
+        const t = s.clock, p = this.localPlayer(s), part = (n) => this.part(s, n).entity;
+        if (s.body) {
+          const b = s.body, oldX = b.x, oldZ = b.z;
+          stepToy(b, dt, 0);
+          const e = part(s.id === "cans" ? "Beanbag" : "Ball");
+          e.setLocalPosition(b.x, b.y, b.z);
+          e.rotateLocal((b.z - oldZ) * 180 / Math.PI / b.radius, 0, -(b.x - oldX) * 180 / Math.PI / b.radius);
+          if (s.id === "goal" && s.phase === "rolling" && Math.abs(b.x) < 0.7 && b.z < -1.3) {
+            b.vx = 0;
+            b.vz = 0;
+            this.complete(s);
+          }
+          if (s.id === "bowling" && s.phase === "rolling") for (let i = 0; i < 6; i++) {
+            const pin = this.part(s, "Pin" + i);
+            if (!s.fallen.includes(i) && touchesCircle(b, pin.p, 0.4)) {
+              s.fallen.push(i);
+              this.audio.tone(170 + i * 35, 0.18, "triangle", 0.45);
+              b.vx *= 0.8;
+              b.vz *= 0.9;
+            }
+          }
+          if (s.id === "cans" && s.phase === "toss") for (let i = 0; i < 6; i++) {
+            const can = this.part(s, "Can" + i);
+            if (!s.fallen.includes(i) && Math.hypot(b.x - can.p.x, b.y - can.p.y, b.z - can.p.z) < 0.38) {
+              for (let j = 0; j < 6; j++) if (!s.fallen.includes(j)) s.fallen.push(j);
+              s.clock = 0;
+              b.vz *= -0.35;
+              b.vy = 1;
+              this.audio.tone(580, 0.4, "triangle", 0.2);
+            }
+          }
+          if (s.id === "bowling" && s.fallen.length) {
+            for (let i = 0; i < 6; i++) if (!s.fallen.includes(i) && s.fallen.some((j) => this.part(s, "Pin" + i).p.distance(this.part(s, "Pin" + j).p) < 0.55)) {
+              s.fallen.push(i);
+              this.audio.tone(240, 0.12, "triangle", 0.6);
+            }
+          }
+          if (["bowling", "cans"].includes(s.id)) {
+            for (const i of s.fallen) {
+              const e2 = part((s.id === "bowling" ? "Pin" : "Can") + i), q = e2.getLocalEulerAngles();
+              e2.setLocalEulerAngles(Math.max(-86, q.x - dt * 190), 0, (i % 2 ? 1 : -1) * 12);
+              if (s.id === "cans") {
+                const start = this.part(s, "Can" + i).p;
+                const f = Math.min(1, s.clock * 0.8);
+                e2.setLocalPosition(start.x + (i % 2 ? 1 : -1) * 0.6 * f, Math.max(0.14, start.y * (1 - f) + 0.14 * f + Math.sin(f * Math.PI) * 0.35), start.z + (0.75 + i * 0.045) * f);
+              }
+            }
+            if (s.fallen.length === 6 && t > 1.8) this.complete(s);
+          }
+          if (["rolling", "toss"].includes(s.phase) && t > 5) {
+            s.phase = "ready";
+            this.say("Another go? The ball is ready.");
+            if (s.id === "cans") this.resetStation(s);
+          }
+          if (s.phase === "ready" && !this.holding && touchesCircle(p, b, 0.4) && this.controller.velocity.length() > 0.05) {
+            b.vx = this.controller.velocity.x * 0.7;
+            b.vz = this.controller.velocity.z * 0.7;
+          }
+        }
+        if (s.id === "cart") {
+          if (this.pushing === s && this.distance(s, this.character.player.getPosition()) > 3.8) this.putBack();
+          const c = part("Cart").getLocalPosition();
+          if (s.phase === "ready" && Math.abs(c.x) < 0.32 && Math.abs(c.z + 1.1) < 0.28) {
+            this.putBack();
+            part("Surprise").enabled = true;
+            s.phase = "delivery";
+            s.clock = 0;
+            this.audio.honk();
+          }
+          if (s.phase === "delivery") {
+            part("Surprise").setLocalPosition(c.x, 0.85 + Math.abs(Math.sin(t * 5)) * 0.5, c.z);
+            if (t > 2) this.complete(s);
+          }
+        }
+        if (s.id === "boat" && s.phase === "sailing") {
+          const a = Math.min(t / 5, 1) * Math.PI * 2;
+          part("Boat").setLocalPosition(Math.sin(a) * 0.43, 0.37 + Math.sin(t * 4) * 0.014, 0.55 - Math.sin(a / 2) * 1.7);
+          part("Boat").setLocalEulerAngles(0, a * 180 / Math.PI, Math.sin(t * 3) * 5);
+          if (t > 5) this.complete(s);
+        }
+        if (s.id === "duck") {
+          part("Key").setLocalEulerAngles(s.count * 120 + (s.phase === "parade" ? t * 240 : 0), 0, 0);
+          if (s.phase === "parade") {
+            for (let i = -1; i < 3; i++) {
+              const e = part(i === -1 ? "Duck" : "Duckling" + i);
+              e.enabled = true;
+              const a = t * 1.35 - i * 0.48;
+              e.setLocalPosition(Math.sin(a) * 0.95, Math.abs(Math.sin(t * 12 - i)) * 0.045, Math.cos(a) * 0.7);
+              e.setLocalEulerAngles(0, a * 180 / Math.PI + 90, Math.sin(t * 9 - i) * 7);
+            }
+            if (t > 5) {
+              this.audio.honk();
+              this.complete(s);
+            }
+          }
+        }
+        if (s.id === "bubbles" && (s.phase === "bubbles" || s.phase === "finished")) for (let i = 0; i < 10; i++) {
+          const e = part("Bubble" + i);
+          if (s.bubblePopped.has(i)) {
+            e.enabled = false;
+            continue;
+          }
+          const a = t * 0.35 + i * 2.4;
+          e.setLocalPosition(Math.sin(a) * (1 + i % 3 * 0.25), 0.68 + Math.sin(t * 0.7 + i) * 0.19, Math.cos(a) * 1.3);
+          e.setLocalEulerAngles(0, -25, 0);
+          if (touchesCircle(p, e.getLocalPosition(), 0.48)) this.popBubble(s, i);
+        }
+        if (s.id === "flower" && s.phase === "watering") {
+          const can = part("Can").getLocalPosition();
+          for (let i = 0; i < 8; i++) {
+            const d = part("Droplet" + i), u = (t * 1.8 + i / 8) % 1;
+            d.enabled = t < 2.4;
+            d.setLocalPosition((can.x - 0.16) * (1 - u), (can.y + 0.12) * (1 - u) + 0.6 * u, can.z * (1 - u) - 0.45 * u);
+          }
+          part("Flower").setLocalEulerAngles(0, 0, Math.max(0, 48 - t * 30) + (t > 1.8 ? Math.sin(t * 26) * Math.max(0, 12 - (t - 1.8) * 15) : 0));
+          if (t > 2.6) {
+            const can2 = this.part(s, "Can");
+            can2.entity.setLocalPosition(can2.p);
+            can2.entity.setLocalRotation(can2.q);
+            this.holding = null;
+            this.character.animator.setCarrying(false);
+            this.audio.honk();
+            this.complete(s);
+          }
+        }
+        if (s.id === "pinwheel") {
+          const speed = s.phase === "spinning" ? Math.max(0, 1050 - t * 180) : s.phase === "finished" ? Math.max(0, 210 - (t - 4) * 160) : s.count * 70;
+          part("Wheel").rotateLocal(0, 0, dt * speed);
+          for (let i = 0; i < 8; i++) {
+            const r = this.part(s, "Ribbon" + i), f = s.phase === "spinning" ? Math.min(1, t) : 0;
+            r.entity.setLocalPosition(r.p.x + Math.sin(t * 8 + i) * 0.08, r.p.y + Math.sin(t * 5 + i) * 0.06 * f, r.p.z - f * 0.4);
+            r.entity.setLocalEulerAngles(Math.sin(t * 6 + i) * 40 * f, 0, 0);
+          }
+          if (s.phase === "spinning" && t > 4) this.complete(s);
+        }
+        if (s.id === "jack") {
+          part("Crank").setLocalEulerAngles(0, 0, s.count * 150);
+          if (s.phase === "surprise") {
+            part("Lid").setLocalEulerAngles(-Math.min(115, t * 400), 0, 0);
+            part("Frog").enabled = true;
+            part("Frog").setLocalPosition(0, 0.45 + Math.abs(Math.sin(t * 8)) * Math.exp(-t * 0.7) * 0.7, 0);
+            if (t < 0.04) this.audio.honk();
+            if (t > 2.5) this.complete(s);
+          }
+        }
+        if (s.id === "puddles") {
+          let over = -1;
+          for (let i = 0; i < 4; i++) {
+            const q = this.part(s, "Puddle" + i);
+            if (touchesCircle(p, q.p, 0.45)) over = i;
+            const pulse = i === s.lastPuddle ? 1 + Math.sin(Math.min(t, 1) * Math.PI) * 0.18 : 1;
+            q.entity.setLocalScale(pulse, 1, pulse);
+          }
+          if (over !== -1 && over !== s.lastPuddle) this.splash(s, over);
+          else if (over === -1 && t > 0.6) s.lastPuddle = -1;
+        }
+        if (s.id === "leaves" && s.phase === "burst") {
+          for (let i = 0; i < 32; i++) {
+            const leaf = this.part(s, "Leaf" + i), a = i * 2.4, f = Math.min(t, 1.5);
+            leaf.entity.setLocalPosition(leaf.p.x + Math.sin(a) * f * 0.6, Math.max(0.04, leaf.p.y + f * 2.4 - f * f * 1.9), leaf.p.z + Math.cos(a) * f * 0.6);
+            leaf.entity.setLocalEulerAngles(f * 160 * (i % 2 ? 1 : -1), f * 75, 0);
+          }
+          if (t > 2) this.complete(s);
+        }
+        if (s.id === "plane" && s.phase === "flying") {
+          if (t < 2) {
+            part("Plane").setLocalPosition(0, 0.85 + Math.sin(t * 7) * 0.025, 1.05 - t * 1.5);
+            part("Plane").setLocalEulerAngles(0, 180, Math.sin(t * 5) * 4);
+          } else {
+            const u = Math.min(1, (t - 2) / 2), a = u * Math.PI;
+            part("Plane").setLocalPosition(Math.sin(a) * 1.2, 0.85 + Math.sin(a) * 0.5, -1.95 + u * 2.8);
+            part("Plane").setLocalEulerAngles(-Math.sin(a) * 20, 180 - u * 180, Math.sin(a) * 25);
+          }
+          if (t > 4) {
+            const plane = this.part(s, "Plane");
+            plane.entity.setLocalPosition(plane.p);
+            plane.entity.setLocalRotation(plane.q);
+            this.complete(s);
+          }
+        }
+        if (s.id === "flamingo" && s.phase === "bowing") {
+          const a = Math.sin(Math.min(1, t / 2) * Math.PI) * 18;
+          part("Bird").setLocalEulerAngles(a, 0, 0);
+          const q = part("Bird").getLocalRotation(), v = q.transformVector(new Vec335(0.03, 1.48, 0.07));
+          part("Hat").setLocalPosition(0.45 + v.x, v.y, -0.6 + v.z);
+          part("Hat").setLocalEulerAngles(a, 0, Math.sin(t * 15) * 3);
+          if (t > 2.5) this.complete(s);
+        }
+        if (s.id === "picnic" && s.phase === "picnic") {
+          part("Teddy").setLocalEulerAngles(Math.sin(t * 8) * 8, Math.sin(t * 5) * 5, 0);
+          if (t > 2) {
+            part("Teddy").setLocalEulerAngles(0, 0, 0);
+            this.complete(s);
+          }
+        }
+      }
+      leave() {
+        if (this.framed) {
+          this.camera.endChore();
+          this.framed = false;
+        }
+        if (this.actionStation) {
+          this.character.animator.cancelAction();
+          this.actionStation = null;
+        }
+        this.pending = false;
+        this.putBack();
+        this.controller.dynamicObstacles = [];
+        this.controller.moveContact = null;
+        this.journal.close();
+        this.drop.hidden = true;
+      }
+      remove(s) {
+        s.root.enabled = false;
+        s.root.destroy();
+        s.lease.release();
+      }
+      destroy() {
+        this.leave();
+        for (const s of this.stations.values()) this.remove(s);
+        this.stations.clear();
+        this.app.off("prerender", this.attachHeld, this);
+        this.audio.destroy();
+        this.abort.abort();
+        this.button.remove();
+        this.drop.remove();
+        this.journal.remove();
+      }
+      snapshot() {
+        return { day: this.save.data.day, ids: this.save.data.ids, progress: this.save.data.progress, holding: this.holding?.name ?? null, pushing: this.pushing?.id ?? null, focus: this.focus, stations: [...this.stations.values()].map((s) => ({ id: s.id, index: s.index, position: s.root.getPosition().toArray(), ready: s.ready, error: s.error, phase: s.phase, count: s.count, body: s.body, fallen: s.fallen, cart: s.cartBox?.center.toArray(), target: s.ready ? this.target(s).point.toArray() : null, parts: s.ready ? [...s.parts].filter(([name]) => /^(Ball|Cart|Treat\d|Puddle\d|Bubble\d)$/.test(name)).map(([name, p]) => ({ name, position: p.entity.getPosition().toArray(), enabled: p.entity.enabled })) : [] })) };
+      }
+    };
+  }
+});
+
 // src/game/FishingRod.ts
-import { Entity as Entity35, Mat4 as Mat43, Mesh as Mesh5, MeshInstance as MeshInstance5, Vec3 as Vec332 } from "playcanvas";
+import { Entity as Entity39, Mat4 as Mat43, Mesh as Mesh5, MeshInstance as MeshInstance5, Vec3 as Vec336 } from "playcanvas";
 function flexibleRod(app, root, source) {
   const inverse = new Mat43().copy(root.getWorldTransform()).invert(), parts = [];
-  const output = new Entity35("Flexible rod mesh", app);
+  const output = new Entity39("Flexible rod mesh", app);
   root.addChild(output);
   const instances = [];
   for (const render of source.findComponents("render")) {
@@ -9206,7 +10938,7 @@ function flexibleRod(app, root, source) {
       original.mesh.getUvs(0, uv);
       const transform = new Mat43().mul2(inverse, original.node.getWorldTransform());
       for (let i = 0; i < positions.length; i += 3) {
-        const p = transform.transformPoint(new Vec332(positions[i], positions[i + 1], positions[i + 2])), n = transform.transformVector(new Vec332(normals[i], normals[i + 1], normals[i + 2])).normalize();
+        const p = transform.transformPoint(new Vec336(positions[i], positions[i + 1], positions[i + 2])), n = transform.transformVector(new Vec336(normals[i], normals[i + 1], normals[i + 2])).normalize();
         positions.splice(i, 3, p.x, p.y, p.z);
         normals.splice(i, 3, n.x, n.y, n.z);
       }
@@ -9230,7 +10962,7 @@ function flexibleRod(app, root, source) {
       for (let i = 0; i < positions.length; i += 3) {
         const t = Math.max(0, Math.min(1, (positions[i + 1] - 0.35) / 1.47));
         positions[i + 2] += bend * t * t;
-        const n = new Vec332(normals[i], normals[i + 1] - 2 * bend * t / 1.47 * normals[i + 2], normals[i + 2]).normalize();
+        const n = new Vec336(normals[i], normals[i + 1] - 2 * bend * t / 1.47 * normals[i + 2], normals[i + 2]).normalize();
         normals[i] = n.x;
         normals[i + 1] = n.y;
         normals[i + 2] = n.z;
@@ -9239,7 +10971,7 @@ function flexibleRod(app, root, source) {
       p.mesh.setNormals(normals);
       p.mesh.update();
     }
-  }, tip: () => root.getWorldTransform().transformPoint(new Vec332(0, 1.82, bend)) };
+  }, tip: () => root.getWorldTransform().transformPoint(new Vec336(0, 1.82, bend)) };
 }
 var init_FishingRod = __esm({
   "src/game/FishingRod.ts"() {
@@ -9248,7 +10980,7 @@ var init_FishingRod = __esm({
 });
 
 // src/game/Fishing.ts
-import { Asset as Asset8, Entity as Entity36, Vec3 as Vec333, Quat as Quat6, BoundingBox as BoundingBox16, AnimData as AnimData6, AnimTrack as AnimTrack6 } from "playcanvas";
+import { Asset as Asset10, Entity as Entity40, Vec3 as Vec337, Quat as Quat10, BoundingBox as BoundingBox18, AnimData as AnimData8, AnimTrack as AnimTrack8 } from "playcanvas";
 function uprightCatch(source, swim) {
   const output = [...source.outputs];
   for (const curve of source.curves) {
@@ -9260,9 +10992,9 @@ function uprightCatch(source, swim) {
     });
     if (!rest) continue;
     const data = source.outputs[curve.output], base = swim.outputs[rest.output].data;
-    output[curve.output] = new AnimData6(data.components, Array.from(data.data, (_, i) => base[i % data.components]));
+    output[curve.output] = new AnimData8(data.components, Array.from(data.data, (_, i) => base[i % data.components]));
   }
-  return new AnimTrack6(source.name + " upright", source.duration, source.inputs, output, source.curves);
+  return new AnimTrack8(source.name + " upright", source.duration, source.inputs, output, source.curves);
 }
 var FISH, Fishing;
 var init_Fishing = __esm({
@@ -9289,10 +11021,10 @@ var init_Fishing = __esm({
         this.save = save;
         this.splash = new Audio(assetUrl("assets/outdoors/pond-splash.mp3"));
         this.splash.preload = "auto";
-        this.root = new Entity36("Pond fishing presentation", app);
+        this.root = new Entity40("Pond fishing presentation", app);
         parent.addChild(this.root);
         const shape = primitives(app, this.root), wood = material("Fishing rod cork", "#ac8762"), red = material("Bobber coral", "#f1958c"), cream = material("Fishing cream", "#fff1d7");
-        this.rod = new Entity36("Hand fitted fishing rod", app);
+        this.rod = new Entity40("Hand fitted fishing rod", app);
         this.root.addChild(this.rod);
         const r = primitives(app, this.rod);
         r("Cork grip", "cylinder", [0, 0.12, 0], [0.07, 0.24, 0.07], wood);
@@ -9307,7 +11039,7 @@ var init_Fishing = __esm({
         this.root.enabled = false;
         this.setupControls();
         const rodReady = this.load("fishingrod_lvl1").then((res) => {
-          const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity36("Rod normalization", app);
+          const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity40("Rod normalization", app);
           this.rod.addChild(pivot);
           pivot.addChild(e);
           pivot.setLocalScale(scale, scale, scale);
@@ -9316,9 +11048,9 @@ var init_Fishing = __esm({
           for (const name of ["Cork grip", "Slender rod", "Reel"]) this.rod.findByName(name).enabled = false;
         });
         this.ready = Promise.all(FISH.map(async ([file], i) => {
-          const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity36(file, app);
+          const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity40(file, app);
           this.root.addChild(anchor);
-          const normalization = new Entity36("Fish size and origin", app);
+          const normalization = new Entity40("Fish size and origin", app);
           anchor.addChild(normalization);
           normalization.addChild(e);
           const scale = 0.8 / Math.max(bounds.halfExtents.x * 2, bounds.halfExtents.y * 2, bounds.halfExtents.z * 2);
@@ -9362,7 +11094,7 @@ var init_Fishing = __esm({
       prev = "";
       lastClip = "";
       settle = 0;
-      startPoint = new Vec333();
+      startPoint = new Vec337();
       caught = false;
       saveError = "";
       side = 0;
@@ -9395,7 +11127,7 @@ var init_Fishing = __esm({
       }
       load(file) {
         return new Promise((resolve, reject) => {
-          const a = new Asset8(file, "container", { url: assetUrl("assets/outdoors/" + file + ".glb") });
+          const a = new Asset10(file, "container", { url: assetUrl("assets/outdoors/" + file + ".glb") });
           a.once("load", () => resolve(a.resource));
           a.once("error", reject);
           this.app.assets.add(a);
@@ -9403,7 +11135,7 @@ var init_Fishing = __esm({
         });
       }
       bounds(e) {
-        const b = new BoundingBox16();
+        const b = new BoundingBox18();
         let first = true;
         for (const r of e.findComponents("render")) for (const m of r.meshInstances) {
           if (first) {
@@ -9542,7 +11274,7 @@ var init_Fishing = __esm({
         }
         this.settle += dt;
         const blend = Math.min(1, this.settle / 0.7), ease = blend * blend * (3 - 2 * blend);
-        this.character.player.setPosition(new Vec333().lerp(this.startPoint, POND.stand, ease));
+        this.character.player.setPosition(new Vec337().lerp(this.startPoint, POND.stand, ease));
         this.round.update(dt);
         const r = this.round;
         if (!this.active) {
@@ -9628,7 +11360,7 @@ var init_Fishing = __esm({
         this.lastFish.copy(this.fishPoint);
         this.fishPoint.copy(POND.bobber);
         if (r.phase === "reel") {
-          const near = new Vec333(-4.85, 0.16, -10.35), far = POND.bobber;
+          const near = new Vec337(-4.85, 0.16, -10.35), far = POND.bobber;
           this.fishPoint.lerp(near, far, r.distance);
           const target = r.pullSide * 0.68 + Math.sin(r.fightTime * 2) * 0.13;
           this.side += (target - this.side) * Math.min(1, dt * 3);
@@ -9640,22 +11372,22 @@ var init_Fishing = __esm({
         }
         const hands = this.character.animator.snapshot().hands;
         if (hands.length === 2) {
-          const hand = new Vec333(...hands[1]);
+          const hand = new Vec337(...hands[1]);
           this.rod.setPosition(hand);
-          const tip = new Vec333().lerp(hand, this.fishPoint, 0.58);
+          const tip = new Vec337().lerp(hand, this.fishPoint, 0.58);
           tip.y += 1.35 + (r.phase === "cast" ? Math.sin(r.elapsed / 1.93 * Math.PI) * 0.7 : 0);
-          this.rod.setRotation(new Quat6().setFromDirections(Vec333.UP, tip.sub(hand).normalize()));
+          this.rod.setRotation(new Quat10().setFromDirections(Vec337.UP, tip.sub(hand).normalize()));
         }
         this.flexible?.update(r.phase === "reel" ? r.tension * 0.3 + (r.pullSide ? Math.sin(r.total * 18) * 0.018 : 0) : 0.015, dt);
         this.rod.enabled = !["catch", "release"].includes(r.phase);
-        const rodTip = this.flexible?.tip() ?? this.rod.getWorldTransform().transformPoint(new Vec333(0, 1.82, 0));
+        const rodTip = this.flexible?.tip() ?? this.rod.getWorldTransform().transformPoint(new Vec337(0, 1.82, 0));
         let bob = this.fishPoint.clone();
         if (r.phase === "wait") {
           const twitch = Math.max(0, 1 - Math.abs(r.elapsed - 1.05) / 0.22);
           bob.y -= twitch * 0.035;
         }
         bob.y += r.phase === "bite" ? -0.08 + Math.sin(r.elapsed * 24) * 0.04 : Math.sin(r.total * 3) * 0.025;
-        if (r.phase === "prepare") bob.copy(rodTip).add(new Vec333(0, -0.35, 0));
+        if (r.phase === "prepare") bob.copy(rodTip).add(new Vec337(0, -0.35, 0));
         if (r.phase === "cast") {
           const t = Math.min(1, r.elapsed / 1.5);
           bob.lerp(rodTip, bob, t);
@@ -9675,8 +11407,8 @@ var init_Fishing = __esm({
           w.setLocalScale(s, s * 0.7, s);
         });
         const delta = bob.clone().sub(rodTip);
-        this.line.setPosition(new Vec333().lerp(bob, rodTip, 0.5));
-        this.line.setRotation(new Quat6().setFromDirections(Vec333.UP, delta.clone().normalize()));
+        this.line.setPosition(new Vec337().lerp(bob, rodTip, 0.5));
+        this.line.setRotation(new Quat10().setFromDirections(Vec337.UP, delta.clone().normalize()));
         this.line.setLocalScale(8e-3, delta.length(), 8e-3);
         this.line.enabled = !["catch", "release"].includes(r.phase);
         const reward = this.receipt ? this.reward : this.fishes[r.fishIndex];
@@ -9689,7 +11421,7 @@ var init_Fishing = __esm({
           if (move.lengthSq() > 1e-6) fish.setEulerAngles(0, Math.atan2(move.x, move.z) * 180 / Math.PI, Math.sin(r.total * 7) * 6);
         }
         if (reward && ["catch", "release"].includes(r.phase)) {
-          const landing = new Vec333(-5.55, 1.55, -10.65), release = r.phase === "release", t = Math.min(1, release ? r.elapsed / 0.95 : this.catchTime / 0.8), ease = t * t * (3 - 2 * t), point = new Vec333().lerp(release ? landing : this.landingPoint, release ? POND.bobber : landing, ease);
+          const landing = new Vec337(-5.55, 1.55, -10.65), release = r.phase === "release", t = Math.min(1, release ? r.elapsed / 0.95 : this.catchTime / 0.8), ease = t * t * (3 - 2 * t), point = new Vec337().lerp(release ? landing : this.landingPoint, release ? POND.bobber : landing, ease);
           if (this.receipt) {
             reward.setPosition(point);
             reward.rotateLocal(0, dt * 24, 0);
@@ -9827,7 +11559,7 @@ var init_TicketShop = __esm({
 });
 
 // src/game/GameLoop.ts
-import { Vec3 as Vec334 } from "playcanvas";
+import { Vec3 as Vec338 } from "playcanvas";
 var el, GameLoop;
 var init_GameLoop = __esm({
   "src/game/GameLoop.ts"() {
@@ -9847,6 +11579,10 @@ var init_GameLoop = __esm({
     init_SquishyPopUI();
     init_squishyPop();
     init_Outdoors();
+    init_Scooter();
+    init_Neighborhood();
+    init_OutdoorEncounters();
+    init_DailyPlay();
     init_Fishing();
     init_TicketShop();
     el = (id) => document.querySelector(id);
@@ -9881,12 +11617,16 @@ var init_GameLoop = __esm({
         }, () => !this.save.data.pop?.tutorialSeen, () => ({ bestScore: this.save.data.pop?.bestScore ?? 0, tickets: this.save.data.pop?.tickets ?? 0, levels: this.save.data.pop?.levels ?? {} }));
         this.recess = createRecess(app);
         this.outdoors = new Outdoors(app, room);
+        this.scooter = new Scooter(app, character, controller);
+        this.neighborhood = new Neighborhood(app, room);
         this.fishing = new Fishing(app, this.outdoors.root, character, camera, this.save);
         this.fishing.onReward = () => this.wallet();
         this.fishing.onFinish = () => {
           this.joystick.reset();
           this.controller.reset();
         };
+        this.encounters = new OutdoorEncounters(app, character, controller, (s) => this.message(s));
+        this.dailyPlay = new DailyPlay(app, character, controller, camera, (s) => this.message(s));
         this.popUI.onPrizes = () => {
           void this.ticketShop.open();
           this.controller.reset();
@@ -10014,8 +11754,12 @@ var init_GameLoop = __esm({
       recess;
       outdoors;
       fishing;
+      scooter;
+      neighborhood;
+      encounters;
       outsideLast = 0;
       recessFromGate = false;
+      dailyPlay;
       recessFromSchool = false;
       travelUntil = 0;
       inspecting = null;
@@ -10029,10 +11773,12 @@ var init_GameLoop = __esm({
       messageUntil = 0;
       pendingCredit = null;
       baseZoom = 9;
-      screen = new Vec334();
-      markerPoint = new Vec334();
+      screen = new Vec338();
+      markerPoint = new Vec338();
       developerPaused = false;
       developerClockFrozen = false;
+      destination = "";
+      arrivedByRoute = false;
       chooseStore() {
         const daily = this.props.daily;
         if (!daily.clock.canShop) {
@@ -10053,6 +11799,23 @@ var init_GameLoop = __esm({
       visit(id) {
         const daily = this.props.daily;
         if (!daily.clock.canShop || daily.clock.state.phase === "afternoon" && !daily.clock.ready) throw Error("Shopping starts after your afternoon helping.");
+        if (this.mode === "outdoors" || this.mode === "store") {
+          const stop = SHOP_STOPS.find((s) => s.id === id);
+          if (this.mode === "store") {
+            const from = SHOP_STOPS.find((s) => s.id === this.activeStoreId);
+            this.enterOutdoors();
+            this.character.player.setPosition(from.x, 0.09, SHOP_DOOR_Z);
+            this.controller.setRoom(this.room);
+          }
+          const p = this.character.player.getPosition();
+          if (Math.hypot(p.x - stop.x, p.z - SHOP_DOOR_Z) > 2) {
+            this.destination = id;
+            this.huntUI.dialog.close();
+            this.message(stop.name + " is along Maple Lane. Walk or ride your scooter.");
+            return;
+          }
+          this.arrivedByRoute = true;
+        }
         const minutes = this.save.visitStore(id, daily.clock.state.day, daily.clock.state.minutes);
         daily.clock.state.minutes = minutes;
         daily.save();
@@ -10097,6 +11860,13 @@ var init_GameLoop = __esm({
         el("#collection-button").textContent = `Collection \xB7 ${discovered} / ${DUMPLINGS.length}${data.boxes.length ? ` \xB7 \u{1F381} ${data.boxes.length}` : ""}`;
       }
       transition(mode, continuous = false) {
+        if (this.mode === "outdoors" && mode !== "outdoors") this.dailyPlay.leave();
+        if (this.mode === "outdoors" && mode !== "outdoors" && this.character.grounding) this.character.grounding.surfaceHeight = null;
+        if (this.mode === "recess" && mode !== "recess") {
+          this.recess.root.enabled = false;
+          this.recess.sleep();
+        }
+        if (mode !== "outdoors" && this.controller.riding) this.scooter.dismount();
         if (this.mode === "cleanup" && mode !== "cleanup") {
           this.props.reset();
           this.cleanup.carry.item = null;
@@ -10114,7 +11884,7 @@ var init_GameLoop = __esm({
         }
         this.opening.hide();
         this.room.root.enabled = mode === "cleanup" || mode === "outdoors";
-        this.outdoors.root.enabled = mode === "cleanup" || mode === "outdoors";
+        this.outdoors.root.enabled = mode === "outdoors";
         this.props.root.enabled = mode === "cleanup";
         this.recess.root.enabled = mode === "recess";
         this.tradingUI.leave.hidden = mode !== "recess";
@@ -10323,10 +12093,18 @@ var init_GameLoop = __esm({
             }
           } else if (this.focus === "go-home") {
             this.save.goHome();
-            this.enterHome();
+            const stop = SHOP_STOPS.find((s) => s.id === this.activeStoreId);
+            this.enterOutdoors();
+            this.character.player.setPosition(stop.x, 0.09, SHOP_DOOR_Z);
+            this.message("Head home along Maple Lane, or visit another shop.");
           }
         } else if (this.mode === "outdoors") {
+          if (this.focus === "daily-play") {
+            this.dailyPlay.press();
+            return;
+          }
           if (this.focus === "pond-fish") {
+            if (this.controller.riding) this.scooter.dismount();
             this.controller.reset();
             this.joystick.reset();
             this.fishing.start();
@@ -10340,6 +12118,7 @@ var init_GameLoop = __esm({
             this.tradingUI.leave.textContent = school ? "Finish school \xB7 walk home \u2192" : "Back to the school gate \u2192";
           }
           if (this.focus === "outdoor-shops") this.chooseStore();
+          if (this.focus.startsWith("neighborhood-shop-")) this.visit(this.focus.slice("neighborhood-shop-".length));
         } else if (this.mode === "home") {
           if (this.opening.phase !== "opening" && this.save.data.boxes.length) {
             if (this.opening.phase === "revealed") {
@@ -10363,18 +12142,32 @@ var init_GameLoop = __esm({
         const outdoorDt = this.outsideLast ? Math.min(0.04, (now - this.outsideLast) / 1e3) : 0;
         this.outsideLast = now;
         const p = this.character.player.getPosition();
+        if (this.mode === "outdoors") this.room.root.enabled = p.x > -36 && p.z > -35;
         if (this.mode === "cleanup" && p.x < -3.5 && p.z > 7.5 && p.z < 9.1) {
           if (this.cleanup.carry.item) {
             this.character.player.setPosition(-3.05, p.y, p.z);
             this.message("Put your things away before heading outside.");
           } else this.enterOutdoors();
         } else if (this.mode === "outdoors" && p.x > -3.25 && p.z > 7.5 && p.z < 9.1) {
-          this.transition("cleanup", true);
-          this.controller.setRoom(this.room);
-          el("h1").textContent = "Home, sweet home.";
-          el("#scene-kicker").textContent = "ONE COZY MINUTE";
+          if (this.arrivedByRoute && this.save.data.boxes.length) {
+            this.arrivedByRoute = false;
+            this.enterHome();
+          } else {
+            this.transition("cleanup", true);
+            this.controller.setRoom(this.room);
+            el("h1").textContent = "Home, sweet home.";
+            el("#scene-kicker").textContent = "ONE COZY MINUTE";
+          }
         }
-        this.outdoors.update(outdoorDt, p, this.mode === "cleanup" || this.mode === "outdoors");
+        if (this.controller.riding && p.x > 18 && p.z < -27) {
+          this.scooter.dismount();
+          this.message("Park here for the school walk. Your scooter will wait.");
+        }
+        this.outdoors.update(outdoorDt, p, this.mode === "outdoors");
+        this.neighborhood.update(p, this.mode === "outdoors");
+        const playAvailable = !this.fishing.active && !this.huntUI.dialog.open && !this.popUI.isOpen && !el("#collection-dialog").open;
+        this.dailyPlay.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors", playAvailable, this.props.daily.clock.state.day);
+        this.encounters.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors", playAvailable && !this.dailyPlay.occupied, this.props.daily.clock.state.day);
         this.fishing.update(document.hidden ? 0 : outdoorDt);
         el("#game").dataset.fishing = String(this.fishing.active);
         if (this.fishing.active) {
@@ -10400,7 +12193,8 @@ var init_GameLoop = __esm({
         const school = this.cleanup.mode === "day" && this.props.daily.clock.state.phase === "school";
         el("#school-transition").hidden = !school || this.mode === "recess";
         if (this.mode === "cleanup") this.cleanup.mission.tick(now);
-        this.controller.enabled = (!school || this.mode === "recess") && !this.ticketShop.dialog.open && !this.tradingUI.dialog.open && !this.travelUntil && !this.inspecting && !this.huntUI.dialog.open && (this.mode === "outdoors" || this.mode === "recess" || this.mode === "store" || this.mode === "cleanup" && this.cleanup.mission.state !== "finished" && !this.cleanup.movementLocked) && !el("#collection-dialog").open;
+        this.controller.enabled = (!school || this.mode === "recess") && (this.mode !== "recess" || this.recess.isReady) && !this.ticketShop.dialog.open && !this.tradingUI.dialog.open && !this.travelUntil && !this.inspecting && !this.huntUI.dialog.open && (this.mode === "outdoors" || this.mode === "recess" || this.mode === "store" || this.mode === "cleanup" && this.cleanup.mission.state !== "finished" && !this.cleanup.movementLocked) && !el("#collection-dialog").open;
+        if (this.mode === "outdoors" && this.dailyPlay.movementLocked) this.controller.enabled = false;
       }
       update(now) {
         this.nextStore.hidden = this.mode !== "store" || this.popUI.isOpen || !!this.travelUntil || Object.values(this.save.data.hunt?.stores ?? {}).filter((s) => s.visited).length >= 2;
@@ -10449,12 +12243,32 @@ var init_GameLoop = __esm({
         let title = "Action", detail = "Come closer", icon = "\u270B", enabled = false;
         if (this.mode === "outdoors") {
           const p = this.character.player.getPosition();
-          this.focus = p.distance(POND.stand) < 1.25 ? "pond-fish" : p.distance(SCHOOL_GATE) < 1.8 ? "school-gate" : p.distance(new Vec334(-6.3, 0.09, 8.25)) < 1.2 && clock.canShop ? "outdoor-shops" : "";
+          this.focus = p.distance(POND.stand) < 1.25 ? "pond-fish" : p.distance(SCHOOL_GATE) < 1.8 ? "school-gate" : p.distance(new Vec338(-6.3, 0.09, 8.25)) < 1.2 && clock.canShop ? "outdoor-shops" : "";
+          const stop = SHOP_STOPS.find((s) => Math.hypot(s.x - p.x, p.z - SHOP_DOOR_Z) < 1.7);
+          if (stop) this.focus = "neighborhood-shop-" + stop.id;
           title = this.focus === "pond-fish" ? "FISH" : this.focus === "school-gate" ? "Enter school" : this.focus === "outdoor-shops" ? "Visit shops" : "Explore";
           detail = this.focus === "pond-fish" ? "Catch & release" : "Follow the garden path";
           icon = this.focus === "pond-fish" ? "\u{1F41F}" : "\u{1F33F}";
           enabled = !!this.focus && !this.fishing.active;
+          if (stop) {
+            title = clock.canShop ? "Enter shop" : "Opens after school";
+            detail = stop.name;
+            icon = "\u{1F6CD}";
+            enabled = clock.canShop;
+          }
+          const play = this.dailyPlay.focus;
+          if (play) {
+            this.focus = "daily-play";
+            title = play.title;
+            detail = play.detail;
+            icon = play.icon;
+            enabled = play.enabled;
+          }
+          el("h1").textContent = this.controller.riding ? "A little scooter adventure." : p.x < -9 ? "A walk down Maple Lane." : "A little walk outside.";
+          const destination = SHOP_STOPS.find((s) => s.id === this.destination);
+          el("#scene-subtitle").textContent = destination ? `${destination.name} \xB7 ${Math.round(Math.hypot(p.x - destination.x, p.z - SHOP_DOOR_Z))} steps away` : "School path \u2191 \xB7 three little shops \u2190";
           el("#cleanup-hint").textContent = p.z < -16 ? "Follow the sidewalk. Cross at the stripes with Ms Maple." : "The pond is up the garden path. Walk back through the cottage door to go inside.";
+          if (p.x < -9) el("#cleanup-hint").textContent = "Explore the lane \xB7 five little play gardens today \xB7 shops across the street";
         } else if (this.mode === "recess") {
           const p = this.character.player.getPosition();
           const seat = this.recess.seats.filter((s) => p.distance(s.anchor) < 1.05).sort((a, b) => p.distance(a.anchor) - p.distance(b.anchor))[0];
@@ -10726,7 +12540,11 @@ var init_GameLoop = __esm({
           phase: this.opening.phase,
           reveal: this.save.data.reveal ? { ...this.save.data.reveal } : null,
           focus: this.focus,
+          dailyPlay: this.dailyPlay.snapshot(),
+          neighborhood: this.neighborhood.snapshot(),
+          encounters: this.encounters.snapshot(),
           outdoors: this.outdoors.snapshot(),
+          scooter: this.scooter.snapshot(),
           fishing: this.fishing.snapshot(),
           opening: this.opening.snapshot(),
           pop: this.popUI.snapshot(),
@@ -10738,6 +12556,10 @@ var init_GameLoop = __esm({
         };
       }
       destroy() {
+        this.dailyPlay.destroy();
+        this.neighborhood.destroy();
+        this.encounters.destroy();
+        this.scooter.destroy();
         this.fishing.destroy();
         this.popUI.destroy();
         this.abort.abort();
@@ -10752,7 +12574,7 @@ var init_GameLoop = __esm({
 });
 
 // src/ui/HouseNavigation.ts
-import { Vec3 as Vec335 } from "playcanvas";
+import { Vec3 as Vec339 } from "playcanvas";
 var HouseNavigation;
 var init_HouseNavigation = __esm({
   "src/ui/HouseNavigation.ts"() {
@@ -10761,8 +12583,8 @@ var init_HouseNavigation = __esm({
     HouseNavigation = class {
       current = "bedroom";
       root = document.querySelector("#house-doors");
-      point = new Vec335();
-      screen = new Vec335();
+      point = new Vec339();
+      screen = new Vec339();
       labels = HOUSE_DOORS.map((door) => {
         const label = document.createElement("span");
         label.className = "door-label";
@@ -10799,7 +12621,7 @@ var init_HouseNavigation = __esm({
 });
 
 // src/game/Lilah.ts
-import { Asset as Asset9, BoundingBox as BoundingBox17, Entity as Entity37, Vec3 as Vec336 } from "playcanvas";
+import { Asset as Asset11, BoundingBox as BoundingBox19, Entity as Entity41, Vec3 as Vec340 } from "playcanvas";
 var Lilah;
 var init_Lilah = __esm({
   "src/game/Lilah.ts"() {
@@ -10817,16 +12639,16 @@ var init_Lilah = __esm({
         this.app = app;
         this.house = house;
         this.daily = daily;
-        this.root = new Entity37("Lilah \xB7 age 2", app);
+        this.root = new Entity41("Lilah \xB7 age 2", app);
         app.root.addChild(this.root);
         this.root.setPosition(1, 0.09, 0.7);
-        this.visual = new Entity37("Lilah visual", app);
+        this.visual = new Entity41("Lilah visual", app);
         this.root.addChild(this.visual);
-        const placeholder = new Entity37("Lilah loading", app);
+        const placeholder = new Entity41("Lilah loading", app);
         this.visual.addChild(placeholder);
         this.animator = new CharacterAnimator(this.visual, placeholder);
         this.planner = new HousePath(house);
-        this.socket = new Entity37("Lilah toy grip", app);
+        this.socket = new Entity41("Lilah toy grip", app);
         this.visual.addChild(this.socket);
         this.animator.bindCarrySocket(this.socket);
         this.toy = primitives(app, this.socket)("Favorite block", "box", [0, 0, 0], [0.13, 0.13, 0.13], material("Lilah favorite block", "#edb867"));
@@ -10923,7 +12745,7 @@ var init_Lilah = __esm({
         const job = this.job;
         if (!job || this.animator.busy) return;
         if (this.route.length) {
-          const p = this.root.getPosition(), next = this.route[0], delta = new Vec336(next.x - p.x, 0, next.z - p.z), distance = delta.length();
+          const p = this.root.getPosition(), next = this.route[0], delta = new Vec340(next.x - p.x, 0, next.z - p.z), distance = delta.length();
           if (distance < 0.035) {
             this.route.shift();
             return;
@@ -10934,11 +12756,11 @@ var init_Lilah = __esm({
           if (separation < 0.43 && separation <= previousSeparation) {
             job.blocked += dt;
             if (job.blocked > 0.45) {
-              const obstacle = new BoundingBox17(new Vec336(arianna.x, 0, arianna.z), new Vec336(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec336(p.x, 0, p.z);
+              const obstacle = new BoundingBox19(new Vec340(arianna.x, 0, arianna.z), new Vec340(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec340(p.x, 0, p.z);
               let path = planner.route(start, job.point);
               if (!path.length) {
                 for (let i = 0; i < 16; i++) {
-                  const angle = i * Math.PI / 8, escape = new Vec336(p.x + Math.sin(angle) * 0.65, 0, p.z + Math.cos(angle) * 0.65);
+                  const angle = i * Math.PI / 8, escape = new Vec340(p.x + Math.sin(angle) * 0.65, 0, p.z + Math.cos(angle) * 0.65);
                   if (Math.hypot(escape.x - arianna.x, escape.z - arianna.z) < 0.55 || (escape.x - p.x) * (p.x - arianna.x) + (escape.z - p.z) * (p.z - arianna.z) <= 0 || !this.planner.line(start, escape)) continue;
                   const rest = planner.route(escape, job.point);
                   if (rest.length) {
@@ -10956,7 +12778,7 @@ var init_Lilah = __esm({
             this.root.setPosition(q);
             velocity.copy(delta).mulScalar(1.05);
           } else {
-            this.route = this.planner.route(new Vec336(p.x, 0, p.z), job.point);
+            this.route = this.planner.route(new Vec340(p.x, 0, p.z), job.point);
           }
         } else {
           if (!job.wait) {
@@ -10974,13 +12796,13 @@ var init_Lilah = __esm({
             this.job = null;
             job.drop();
             this.say(job.icon === "\u{1F9FA}" ? "Oops! ALL the toys!" : "Ta-da! Your turn, Ari!");
-          }, new Vec336(job.point.x, 0.1, job.point.z + 0.3));
+          }, new Vec340(job.point.x, 0.1, job.point.z + 0.3));
         }
       }
       async load() {
         const config = await (await fetch(assetUrl(`${"/"}assets/characters/arianna/character.json`))).json();
         this.height = config.height * 0.625;
-        const asset = new Asset9("Lilah Meshy review", "container", { url: assetUrl(`${"/"}assets/characters/lilah/lilah.glb`) });
+        const asset = new Asset11("Lilah Meshy review", "container", { url: assetUrl(`${"/"}assets/characters/lilah/lilah.glb`) });
         await new Promise((resolve, reject) => {
           asset.once("load", resolve);
           asset.once("error", reject);
@@ -11000,7 +12822,7 @@ var init_Lilah = __esm({
           walk_playback: 1
         };
         for (const required of ["Idle", "Walk", "CarryIdle", "CarryWalk", "PickUp", "PutDown", "Celebrate"]) if (!tracks2.some((t) => t.name === required)) throw new Error("Missing Lilah clip " + required);
-        const alignment = new Entity37("Lilah ground alignment", this.app);
+        const alignment = new Entity41("Lilah ground alignment", this.app);
         this.visual.addChild(alignment);
         alignment.addChild(model);
         model.setLocalScale(this.height / 1.03, this.height / 1.03, this.height / 1.03);
@@ -11057,17 +12879,17 @@ var init_Lilah = __esm({
           this.carrying = false;
           this.toy.enabled = false;
           this.animator.setCarrying(false);
-          this.go(propPoint("crib", new Vec336(8.55, 0, -1.3)), "bedtime");
+          this.go(propPoint("crib", new Vec340(8.55, 0, -1.3)), "bedtime");
           this.nextDecision = this.time + 30;
           return;
         }
         if (Math.random() < 0.55) {
-          for (const [x, z] of [[0.9, 0.7], [-0.9, 0.7], [0.9, -0.7], [-0.9, -0.7]]) if (this.go(new Vec336(arianna.x + x, 0, arianna.z + z), "follow")) break;
+          for (const [x, z] of [[0.9, 0.7], [-0.9, 0.7], [0.9, -0.7], [-0.9, -0.7]]) if (this.go(new Vec340(arianna.x + x, 0, arianna.z + z), "follow")) break;
           this.state = "following";
           this.say(["Ari! Wait for me!", "I do it too!", "Whatcha doing?"][Math.floor(Math.random() * 3)]);
         } else {
           const spots = [[1.1, 1.3], [3.8, 2], [1.4, 5.6], [0.5, 10.8], [4.3, 11.4], [8.4, 0.5]], p = spots[Math.floor(Math.random() * spots.length)];
-          this.go(new Vec336(p[0], 0, p[1]), "explore");
+          this.go(new Vec340(p[0], 0, p[1]), "explore");
           this.state = "exploring";
           this.say("Ooh! What\u2019s that?");
         }
@@ -11092,12 +12914,12 @@ var init_Lilah = __esm({
           this.carrying = false;
           this.toy.enabled = false;
           if (this.grounding) this.grounding.surfaceHeight = null;
-          if (this.state === "sleeping" || this.bedStart) this.root.setPosition(propPoint("crib", new Vec336(8.55, 0.09, -1.3)));
+          if (this.state === "sleeping" || this.bedStart) this.root.setPosition(propPoint("crib", new Vec340(8.55, 0.09, -1.3)));
           this.bedStart = null;
           this.state = "watching";
         }
         if ((this.state === "sleeping" || this.bedStart) && !this.daily.clock.state.lilahAsleep && this.daily.clock.state.minutes < 1095) {
-          this.root.setPosition(propPoint("crib", new Vec336(8.55, 0.09, -1.3)));
+          this.root.setPosition(propPoint("crib", new Vec340(8.55, 0.09, -1.3)));
           this.state = "watching";
           this.bedStart = null;
           this.animator.setWorkClip(null);
@@ -11111,7 +12933,7 @@ var init_Lilah = __esm({
           this.animator.cancelAction();
           this.decide(arianna);
         }
-        const velocity = new Vec336();
+        const velocity = new Vec340();
         if (this.scripted) this.updateTornado(dt, arianna, velocity);
         else if (this.bedStart) {
           const entry = this.bedStart;
@@ -11149,7 +12971,7 @@ var init_Lilah = __esm({
         this.animator.update(dt, velocity, elapsed);
         const p = this.root.getPosition();
         this.visited.add(p.z < 3 ? "bedroom" : p.z < 9 ? "living" : "kitchen");
-        const screen = camera.camera.worldToScreen(new Vec336(p.x, p.y + this.height + 0.12, p.z));
+        const screen = camera.camera.worldToScreen(new Vec340(p.x, p.y + this.height + 0.12, p.z));
         const viewport = document.querySelector("#game").getBoundingClientRect();
         this.label.hidden = performance.now() > this.speechUntil || screen.x < 10 || screen.x > viewport.width - 10 || screen.y < 130 || screen.y > viewport.height - 130;
         this.label.style.transform = `translate(${Math.max(4, Math.min(viewport.width - this.label.offsetWidth - 4, screen.x - this.label.offsetWidth / 2))}px,${screen.y - this.label.offsetHeight}px)`;
@@ -11225,7 +13047,7 @@ var init_TornadoRules = __esm({
 });
 
 // src/game/LilahTornado.ts
-import { Entity as Entity38, Vec3 as Vec337 } from "playcanvas";
+import { Entity as Entity42, Vec3 as Vec341 } from "playcanvas";
 var roomOf, TYPES, get, LilahTornado;
 var init_LilahTornado = __esm({
   "src/game/LilahTornado.ts"() {
@@ -11366,7 +13188,7 @@ var init_LilahTornado = __esm({
         this.action.enabled = true;
         this.notice = "Follow Lilah\u2019s thought bubbles. Tap Action near a mess!";
         this.noticeUntil = 6;
-        this.spots = [[1.1, 2.1], [1.1, 4.8], [0.7, 8.1], [0.5, 10.3], [1.8, 11.3], [4.8, 11.5], [3.7, 6.4], [3.8, 2], [8.4, 0.8], [8.1, 7]].map(([x, z]) => new Vec337(x, 0, z)).filter((p) => this.planner.free(p.x, p.z) && this.planner.route(new Vec337(this.character.player.getPosition().x, 0, this.character.player.getPosition().z), p).length > 0);
+        this.spots = [[1.1, 2.1], [1.1, 4.8], [0.7, 8.1], [0.5, 10.3], [1.8, 11.3], [4.8, 11.5], [3.7, 6.4], [3.8, 2], [8.4, 0.8], [8.1, 7]].map(([x, z]) => new Vec341(x, 0, z)).filter((p) => this.planner.free(p.x, p.z) && this.planner.route(new Vec341(this.character.player.getPosition().x, 0, this.character.player.getPosition().z), p).length > 0);
         this.lilah.beginTornado();
         void this.audio.unlock();
         this.audio.pause(false);
@@ -11451,7 +13273,7 @@ var init_LilahTornado = __esm({
       }
       spawn(point, type, special) {
         if (this.messes.length >= 3) return;
-        const root = new Entity38("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
+        const root = new Entity42("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
         this.props.root.addChild(root);
         root.setPosition(point.x, 0.06, point.z);
         const shape = primitives(this.app, root), n = special === "basket" ? 12 : type === 3 ? 5 : 6;
@@ -11480,7 +13302,7 @@ var init_LilahTornado = __esm({
       }
       focus() {
         const p = this.character.player.getPosition();
-        return this.messes.filter((m) => Math.hypot(p.x - m.point.x, p.z - m.point.z) < 1.15 && this.sight.line(new Vec337(p.x, 0, p.z), m.point)).sort((a, b) => a.point.distance(p) - b.point.distance(p))[0];
+        return this.messes.filter((m) => Math.hypot(p.x - m.point.x, p.z - m.point.z) < 1.15 && this.sight.line(new Vec341(p.x, 0, p.z), m.point)).sort((a, b) => a.point.distance(p) - b.point.distance(p))[0];
       }
       clean() {
         if (!this.playing || this.cleaning || this.character.animator.busy) return;
@@ -11518,7 +13340,7 @@ var init_LilahTornado = __esm({
         if (!pet.loaded) return;
         const p = pet.dog.getPosition(), point = this.spots.filter((v) => !this.messes.some((m) => m.point.distance(v) < 1)).sort((a, b) => a.distance(p) - b.distance(p))[0];
         if (!point) return;
-        const path = this.planner.route(new Vec337(p.x, 0, p.z), point);
+        const path = this.planner.route(new Vec341(p.x, 0, p.z), point);
         if (!path.length) {
           this.specialStarted = true;
           return;
@@ -11533,7 +13355,7 @@ var init_LilahTornado = __esm({
         if (!dog || dog.wait < 0 && !dog.route.length) return;
         const root = this.props.pet.dog;
         if (dog.route.length) {
-          const p = root.getPosition(), next = dog.route[0], delta = new Vec337(next.x - p.x, 0, next.z - p.z), distance = delta.length();
+          const p = root.getPosition(), next = dog.route[0], delta = new Vec341(next.x - p.x, 0, next.z - p.z), distance = delta.length();
           if (distance < 0.04) {
             dog.route.shift();
             return;
@@ -11547,7 +13369,7 @@ var init_LilahTornado = __esm({
             root.setPosition(dog.point.x, 0.04, dog.point.z);
             this.spawn(dog.point, 0, "dog");
             dog.wait = -1;
-            dog.route = this.planner.route(dog.point, new Vec337(dog.home.x, 0, dog.home.z));
+            dog.route = this.planner.route(dog.point, new Vec341(dog.home.x, 0, dog.home.z));
           }
         }
       }
@@ -11573,7 +13395,7 @@ var init_LilahTornado = __esm({
         set("[data-notice]", this.elapsed < this.noticeUntil ? this.notice : this.messes.length === 3 ? "Lilah takes a breather. Pick any mess!" : "\u{1F463} Follow Lilah \xB7 \u2728 Tap Action to tidy");
         const bounds = get("#game").getBoundingClientRect();
         for (const m of this.messes) {
-          const p = this.camera.entity.camera.worldToScreen(new Vec337(m.point.x, 0.4, m.point.z)), x = Math.max(24, Math.min(bounds.width - 24, p.x)), y = Math.max(this.hud.offsetTop + this.hud.offsetHeight + 40, Math.min(bounds.height - 180, p.y));
+          const p = this.camera.entity.camera.worldToScreen(new Vec341(m.point.x, 0.4, m.point.z)), x = Math.max(24, Math.min(bounds.width - 24, p.x)), y = Math.max(this.hud.offsetTop + this.hud.offsetHeight + 40, Math.min(bounds.height - 180, p.y));
           m.label.classList.toggle("near", m === nearest);
           m.label.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
           m.label.classList.toggle("edge", x !== p.x || y !== p.y);
@@ -11675,7 +13497,7 @@ var init_LilahTornado = __esm({
 });
 
 // src/game/FamilyDinner.ts
-import { Asset as Asset10, BoundingBox as BoundingBox18, Entity as Entity39, Vec3 as Vec338 } from "playcanvas";
+import { Asset as Asset12, BoundingBox as BoundingBox20, Entity as Entity43, Vec3 as Vec342 } from "playcanvas";
 var FamilyDinner;
 var init_FamilyDinner = __esm({
   "src/game/FamilyDinner.ts"() {
@@ -11694,22 +13516,22 @@ var init_FamilyDinner = __esm({
         this.animator = animator;
         this.say = say;
         this.planner = new HousePath(house, 0.25);
-        this.socket = new Entity39("Dad serving hands", app);
+        this.socket = new Entity43("Dad serving hands", app);
         visual.addChild(this.socket);
         animator.bindCarrySocket(this.socket);
-        this.tray = new Entity39("Family dinner", app);
+        this.tray = new Entity43("Family dinner", app);
         house.root.addChild(this.tray);
         this.tray.enabled = false;
         primitives(app, this.tray)("Dinner platter", "cylinder", [0, 0, 0], [0.72, 0.025, 0.58], material("Dinner china", "#fff2d9"), false);
         void Promise.all(["pizza", "taco", "turkey"].map(async (name) => {
-          const a = new Asset10("Family " + name, "container", { url: assetUrl(`/assets/food/${name}.glb`) });
+          const a = new Asset12("Family " + name, "container", { url: assetUrl(`/assets/food/${name}.glb`) });
           app.assets.add(a);
           await new Promise((resolve, reject) => {
             a.once("load", resolve);
             a.once("error", reject);
             app.assets.load(a);
           });
-          const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox18();
+          const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox20();
           let first = true;
           for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
             if (first) {
@@ -11743,7 +13565,7 @@ var init_FamilyDinner = __esm({
       day = 0;
       stage = "idle";
       route = [];
-      goal = new Vec338();
+      goal = new Vec342();
       timer = 0;
       blocked = 0;
       retry = 0;
@@ -11751,14 +13573,14 @@ var init_FamilyDinner = __esm({
       serving = "pizza";
       table() {
         this.tray.reparent(this.house.root);
-        this.tray.setPosition(propPoint("dining", new Vec338(0.55, 0.99, 14.35)));
+        this.tray.setPosition(propPoint("dining", new Vec342(0.55, 0.99, 14.35)));
         this.tray.setEulerAngles(0, propYaw("dining", 0), 0);
         this.tray.enabled = true;
       }
       go(p, stage) {
         const at = this.root.getPosition();
         this.goal.copy(p);
-        this.route = this.planner.route(new Vec338(at.x, 0, at.z), p);
+        this.route = this.planner.route(new Vec342(at.x, 0, at.z), p);
         this.stage = stage;
         this.blocked = 0;
         return this.route.length > 0;
@@ -11796,7 +13618,7 @@ var init_FamilyDinner = __esm({
         if (this.stage === "idle") {
           if (s.dinnerServed && !this.tray.enabled) this.table();
           if (!canStart || !this.due()) return false;
-          if (!this.go(propPoint("fridge", new Vec338(-1.65, 0, 14.55)), "fetch")) {
+          if (!this.go(propPoint("fridge", new Vec342(-1.65, 0, 14.55)), "fetch")) {
             this.finish();
             return false;
           }
@@ -11805,13 +13627,13 @@ var init_FamilyDinner = __esm({
         if (["fetch", "carry", "seat"].includes(this.stage)) {
           const p = this.root.getPosition(), next = this.route[0];
           if (next) {
-            const delta = new Vec338(next.x - p.x, 0, next.z - p.z), distance = delta.length(), step = Math.min(distance, dt * 1.05);
+            const delta = new Vec342(next.x - p.x, 0, next.z - p.z), distance = delta.length(), step = Math.min(distance, dt * 1.05);
             delta.normalize();
             const q = p.clone().add(delta.clone().mulScalar(step));
             if (people.some((v) => Math.hypot(v.x - q.x, v.z - q.z) < 0.6) || !this.planner.free(q.x, q.z)) {
               this.blocked += dt;
               if (this.blocked > 3) {
-                this.route = this.planner.route(new Vec338(p.x, 0, p.z), this.goal);
+                this.route = this.planner.route(new Vec342(p.x, 0, p.z), this.goal);
                 this.blocked = 0;
               }
               return true;
@@ -11830,11 +13652,11 @@ var init_FamilyDinner = __esm({
             this.stage = "pickup";
             this.timer = 1.4;
             this.animator.setIdleClip("Cleaning");
-            this.animator.faceTowards(propPoint("fridge", new Vec338(-2.65, 1, 14.55)));
+            this.animator.faceTowards(propPoint("fridge", new Vec342(-2.65, 1, 14.55)));
           } else if (this.stage === "carry") {
             this.stage = "place";
             this.timer = 1.1;
-            this.animator.faceTowards(propPoint("dining", new Vec338(0.55, 1, 13.85)));
+            this.animator.faceTowards(propPoint("dining", new Vec342(0.55, 1, 13.85)));
           } else {
             this.stage = "sitting";
             this.timer = 1.3;
@@ -11846,7 +13668,7 @@ var init_FamilyDinner = __esm({
           this.timer -= dt;
           if (this.stage === "sitting" || this.stage === "standing") {
             const down = this.stage === "sitting", t = Math.max(0, Math.min(1, 1 - this.timer / (down ? 1.3 : 1.2))), z = down ? 15.65 - 0.55 * t : 15.1 + 0.55 * t;
-            this.root.setPosition(propPoint("dining", new Vec338(0.55, 0.09, z)));
+            this.root.setPosition(propPoint("dining", new Vec342(0.55, 0.09, z)));
           }
           if (this.timer > 0) return true;
           if (this.stage === "pickup") {
@@ -11857,7 +13679,7 @@ var init_FamilyDinner = __esm({
             this.tray.setLocalPosition(0, 0.035, 0.06);
             this.tray.setLocalEulerAngles(0, 0, 0);
             this.tray.enabled = true;
-            if (!this.go(propPoint("dining", new Vec338(0.55, 0, 15.65)), "carry")) {
+            if (!this.go(propPoint("dining", new Vec342(0.55, 0, 15.65)), "carry")) {
               this.tray.enabled = false;
               this.finish();
             }
@@ -11876,14 +13698,14 @@ var init_FamilyDinner = __esm({
           } else if (this.stage === "sitting") {
             this.stage = "seated";
             this.timer = 12 + s.day % 4 * 2;
-            this.root.setPosition(propPoint("dining", new Vec338(0.55, 0.09, 15.1)));
+            this.root.setPosition(propPoint("dining", new Vec342(0.55, 0.09, 15.1)));
           } else if (this.stage === "seated") {
             this.stage = "standing";
             this.timer = 1.2;
             this.animator.setIdleClip("Idle");
             this.animator.playAction("StandUp", 1.2);
           } else if (this.stage === "standing") {
-            this.root.setPosition(propPoint("dining", new Vec338(0.55, 0.09, 15.65)));
+            this.root.setPosition(propPoint("dining", new Vec342(0.55, 0.09, 15.65)));
             this.finish();
             return false;
           }
@@ -11902,7 +13724,7 @@ var init_FamilyDinner = __esm({
 });
 
 // src/game/Marc.ts
-import { Asset as Asset11, AnimData as AnimData7, AnimTrack as AnimTrack7, Entity as Entity40, Quat as Quat7, Vec3 as Vec339 } from "playcanvas";
+import { Asset as Asset13, AnimData as AnimData9, AnimTrack as AnimTrack9, Entity as Entity44, Quat as Quat11, Vec3 as Vec343 } from "playcanvas";
 var SEAT, YAW, FORWARD, ENTRY, SEATED, PATROL, REMARKS, Marc;
 var init_Marc = __esm({
   "src/game/Marc.ts"() {
@@ -11915,9 +13737,9 @@ var init_Marc = __esm({
     init_HousePath();
     init_house();
     init_primitives();
-    SEAT = new Vec339(4.5, 0, 7.35);
+    SEAT = new Vec343(4.5, 0, 7.35);
     YAW = -35;
-    FORWARD = new Vec339(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
+    FORWARD = new Vec343(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
     ENTRY = SEAT.clone().add(FORWARD.clone().mulScalar(1.02));
     SEATED = SEAT.clone().add(FORWARD.clone().mulScalar(0.28));
     PATROL = [[8.4, 0.5], [8.1, 9.6], [0.4, 11.2], [3.8, 2], [1.25, 5.6]];
@@ -11927,12 +13749,12 @@ var init_Marc = __esm({
         this.app = app;
         this.house = house;
         this.daily = daily;
-        this.root = new Entity40("Marc", app);
+        this.root = new Entity44("Marc", app);
         app.root.addChild(this.root);
         this.root.setPosition(3.5, 0.09, 6.2);
-        this.visual = new Entity40("Marc visual", app);
+        this.visual = new Entity44("Marc visual", app);
         this.root.addChild(this.visual);
-        const placeholder = new Entity40("Marc loading", app);
+        const placeholder = new Entity44("Marc loading", app);
         this.visual.addChild(placeholder);
         this.animator = new CharacterAnimator(this.visual, placeholder);
         this.planner = new HousePath(house, 0.25);
@@ -11943,7 +13765,7 @@ var init_Marc = __esm({
         document.querySelector("#game").append(this.label);
         const colors = ["#cda678", "#c5d9dd", "#b8c39d"];
         for (let i = 0; i < 3; i++) {
-          const tool = new Entity40(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
+          const tool = new Entity44(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
           this.root.addChild(tool);
           const shape = primitives(app, tool);
           shape("Dad cleanup tool", "box", [0, 0, 0], i === 0 ? [0.25, 0.16, 0.23] : i === 1 ? [0.3, 0.025, 0.23] : [0.3, 0.07, 0.13], material("Dad tool " + i, colors[i]));
@@ -11984,13 +13806,13 @@ var init_Marc = __esm({
       standCount = 0;
       sitCount = 0;
       visited = /* @__PURE__ */ new Set();
-      velocity = new Vec339();
+      velocity = new Vec343();
       blockedFor = 0;
       nextScan = 0;
       async load() {
         const config = await (await fetch(assetUrl(`${"/"}assets/characters/arianna/character.json`))).json();
         this.height = config.height * 1.3;
-        const asset = new Asset11("Marc animation v2", "container", { url: assetUrl(`${"/"}assets/characters/marc/marc.glb`) });
+        const asset = new Asset13("Marc animation v2", "container", { url: assetUrl(`${"/"}assets/characters/marc/marc.glb`) });
         await new Promise((resolve, reject) => {
           asset.once("load", resolve);
           asset.once("error", reject);
@@ -12006,16 +13828,16 @@ var init_Marc = __esm({
         };
         for (const name of ["SitDown", "SitIdle", "StandUp", "Idle", "Walk_Basic"]) required(name);
         const walk = required("Walk_Basic"), idle = required("Idle");
-        const tracks2 = [...source, new AnimTrack7("Walk", walk.duration, walk.inputs, walk.outputs, walk.curves)];
-        const carry = required("CarryWalk"), carryOutputs = carry.outputs.map((o) => new AnimData7(o.components, Array.from(o.data, (v, i) => o.data[i % o.components])));
-        tracks2.push(new AnimTrack7("CarryIdle", carry.duration, carry.inputs, carryOutputs, carry.curves));
-        const outputs = idle.outputs.map((o) => new AnimData7(o.components, Array.from(o.data)));
+        const tracks2 = [...source, new AnimTrack9("Walk", walk.duration, walk.inputs, walk.outputs, walk.curves)];
+        const carry = required("CarryWalk"), carryOutputs = carry.outputs.map((o) => new AnimData9(o.components, Array.from(o.data, (v, i) => o.data[i % o.components])));
+        tracks2.push(new AnimTrack9("CarryIdle", carry.duration, carry.inputs, carryOutputs, carry.curves));
+        const outputs = idle.outputs.map((o) => new AnimData9(o.components, Array.from(o.data)));
         for (const curve of idle.curves) {
           const paths = curve.paths;
           if (paths.some((p) => p.entityPath.at(-1) === "Spine02" && p.propertyPath[0] === "localRotation")) {
             const data = outputs[curve.output].data;
             for (let i = 0; i < data.length; i += 4) {
-              const q = new Quat7(data[i], data[i + 1], data[i + 2], data[i + 3]).mul(new Quat7().setFromEulerAngles(24, 0, 0));
+              const q = new Quat11(data[i], data[i + 1], data[i + 2], data[i + 3]).mul(new Quat11().setFromEulerAngles(24, 0, 0));
               data[i] = q.x;
               data[i + 1] = q.y;
               data[i + 2] = q.z;
@@ -12023,9 +13845,9 @@ var init_Marc = __esm({
             }
           }
         }
-        tracks2.push(new AnimTrack7("Cleaning", idle.duration, idle.inputs, outputs, idle.curves));
+        tracks2.push(new AnimTrack9("Cleaning", idle.duration, idle.inputs, outputs, idle.curves));
         const manifest = { animations: tracks2.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: !["SitDown", "StandUp"].includes(t.name) })), locomotion: { Walk: { travel_speed_mps: 1.2 }, CarryWalk: { travel_speed_mps: 1.05 } }, interaction_events: {}, scale: { rest_height_m: 1.8 }, hand_joints: ["LeftHand", "RightHand"], walk_playback: 1 };
-        const alignment = new Entity40("Marc ground alignment", this.app);
+        const alignment = new Entity44("Marc ground alignment", this.app);
         this.visual.addChild(alignment);
         alignment.addChild(model);
         model.setLocalScale(this.height / 1.8, this.height / 1.8, this.height / 1.8);
@@ -12059,7 +13881,7 @@ var init_Marc = __esm({
         if (!m) return false;
         const p = this.root.getPosition(), candidates = [];
         for (const radius of [0.65, 0.85]) for (let i = 0; i < 12; i++) {
-          const a = i * Math.PI / 6, v = new Vec339(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
+          const a = i * Math.PI / 6, v = new Vec343(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
           if (this.planner.free(v.x, v.z)) candidates.push(v);
         }
         candidates.sort((a, b) => a.distance(p) - b.distance(p));
@@ -12087,7 +13909,7 @@ var init_Marc = __esm({
         this.label.hidden = true;
         if (!this.root.enabled || document.hidden) return;
         if (!active) {
-          this.animator.update(0, new Vec339(), Math.max(elapsed, 1e-3));
+          this.animator.update(0, new Vec343(), Math.max(elapsed, 1e-3));
           return;
         }
         this.time += dt;
@@ -12156,7 +13978,7 @@ var init_Marc = __esm({
                       this.until = this.time + 3;
                       this.animator.setIdleClip("Cleaning");
                       const mess = this.mess();
-                      this.animator.faceTowards(new Vec339(mess.x, 0, mess.z));
+                      this.animator.faceTowards(new Vec343(mess.x, 0, mess.z));
                       this.say(["These blocks are plotting against my feet.", "Ah, floor juice. My least favorite flavor.", "Crumbs: the glitter of snack time."][Number(mess.id.at(-1))]);
                     } else {
                       this.state = "idle";
@@ -12177,7 +13999,7 @@ var init_Marc = __esm({
             }
           } else if (this.state === "sitting-down" || this.state === "standing-up") {
             const down = this.state === "sitting-down", t = Math.min(1, (this.time - this.transitionStart) / (down ? 1.3 : 1)), smooth2 = t * t * (3 - 2 * t);
-            const p2 = new Vec339().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
+            const p2 = new Vec343().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
             this.root.setPosition(p2.x, 0.09, p2.z);
             this.visual.setLocalEulerAngles(0, propYaw("marc-seat", YAW), 0);
             if (this.time >= this.until && !this.animator.busy) {
@@ -12209,7 +14031,7 @@ var init_Marc = __esm({
           } else if (this.time >= this.until) {
             if (this.purpose === "seat" || this.purpose === "mess") {
               const point = PATROL[this.patrolIndex++ % PATROL.length];
-              if (!this.go(new Vec339(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
+              if (!this.go(new Vec343(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
             } else if (!this.go(propPoint("marc-seat", ENTRY), "seat")) this.until = this.time + 3;
           }
           if (this.time < 2 && this.state === "idle") {
@@ -12221,7 +14043,7 @@ var init_Marc = __esm({
         this.animator.update(dt, this.velocity, elapsed);
         const p = this.root.getPosition(), room = HOUSE_ROOMS.find((r) => p.x >= r.minX && p.x <= r.maxX && p.z >= r.minZ && p.z <= r.maxZ);
         if (room) this.visited.add(room.id);
-        const screen = camera.camera.worldToScreen(new Vec339(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
+        const screen = camera.camera.worldToScreen(new Vec343(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
         this.label.hidden = performance.now() > this.speechUntil || screen.x < 0 || screen.x > viewport.width || screen.y < 135 || screen.y > viewport.height - 145;
         this.label.style.transform = `translate(${Math.max(6, Math.min(viewport.width - this.label.offsetWidth - 6, screen.x - this.label.offsetWidth / 2))}px,${screen.y - this.label.offsetHeight}px)`;
       }
@@ -12537,17 +14359,17 @@ var main_exports = {};
 __export(main_exports, {
   startGame: () => startGame
 });
-import { Application, Color as Color12, Entity as Entity41, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec340 } from "playcanvas";
+import { Application, Color as Color12, Entity as Entity45, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec344 } from "playcanvas";
 async function startGame(editorApp) {
   const canvas = document.querySelector("#game-canvas");
   const app = editorApp ?? new Application(canvas, { graphicsDeviceOptions: { alpha: false, antialias: true, powerPreference: "low-power" } });
-  app.graphicsDevice.maxPixelRatio = Math.min(window.devicePixelRatio || 1, 1.75);
+  app.graphicsDevice.maxPixelRatio = window.devicePixelRatio || 1;
   app.setCanvasFillMode(FILLMODE_NONE);
   app.setCanvasResolution(RESOLUTION_AUTO);
   await loadSquishyArt(app);
   const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color12(0.72, 0.68, 0.77);
   app.scene.ambientLight = ambientBase.clone();
-  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity41("Soft afternoon sunlight", app);
+  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity45("Soft afternoon sunlight", app);
   if (!sun.light) sun.addComponent("light", {
     type: "directional",
     color: new Color12(1, 0.92, 0.83),
@@ -12580,10 +14402,11 @@ async function startGame(editorApp) {
   const tornado = new LilahTornado(app, room, props, cleanup, loop, character, controller, camera, lilah);
   loop.tornado = tornado;
   const label = document.querySelector("#player-label");
-  const screenPoint = new Vec340();
-  const headPoint = new Vec340();
+  const screenPoint = new Vec344();
+  const headPoint = new Vec344();
   const viewport = document.querySelector("#game");
   const resize = () => {
+    app.graphicsDevice.maxPixelRatio = window.devicePixelRatio || 1;
     const { width, height } = viewport.getBoundingClientRect();
     app.resizeCanvas(width, height);
     camera.resize(width, height);
@@ -12606,7 +14429,7 @@ async function startGame(editorApp) {
     }
     loop.beforeMovement(now);
     if (loop.popUI.isOpen) return;
-    const bulky = cleanup.carry.item?.carryPace === "walk";
+    const bulky = cleanup.carry.item?.carryPace === "walk" || loop.dailyPlay.carrying;
     controller.speed = bulky ? WALK_SPEED * (["vacuum", "scooper"].includes(cleanup.carry.item?.id ?? "") ? 1.5 : 1) : RUN_SPEED;
     character.animator.setCarryPace(bulky ? "walk" : "run");
     const night = cleanup.mode === "day" && props.daily.clock.state.phase === "night" && loop.mode === "cleanup";
@@ -12624,8 +14447,13 @@ async function startGame(editorApp) {
     dogRoaming.update(dt, loop.mode === "cleanup" && !tornado.active && !!props.pet?.loaded, [character.player.getPosition(), lilah.root.getPosition(), marc.root.getPosition()]);
     props.pet?.dogAnimator?.update(dt);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === "cleanup", cleanup.mode);
+    if (loop.mode === "outdoors" && !controller.riding && character.grounding) {
+      const p = character.player.getPosition();
+      character.grounding.surfaceHeight = p.x < -9 || p.z < -16 ? 0.075 : 0.03;
+    }
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
+    loop.scooter.update(dt, loop.mode === "outdoors", !loop.fishing.active && !loop.huntUI.dialog.open && !loop.dailyPlay.occupied, loop.encounters.hop);
     lilah.update(dt, elapsed, loop.mode === "cleanup" && props.daily.clock.state.phase !== "school", cleanup.mode === "day" && !cleanup.movementLocked, character.player.getPosition(), camera.entity);
     marc.update(dt, elapsed, loop.mode === "cleanup" && props.daily.clock.state.phase !== "school", cleanup.mode === "day" && !tornado.active, character.player.getPosition(), lilah.root.getPosition(), cleanup.activeInteractionId, camera.entity);
     headPoint.copy(character.player.getPosition());
@@ -12636,6 +14464,7 @@ async function startGame(editorApp) {
   await captureWorld(app, room, props, loop, !!editorApp);
   await Promise.all([loop.outdoors.ready, loop.fishing.ready]);
   loop.outdoors.installDoor();
+  loop.neighborhood.install();
   props.daily.refresh();
   controller.setRoom(loop.mode === "store" ? loop.store : loop.mode === "recess" ? loop.recess : room);
   if (editorApp && loop.mode === "store") {
@@ -12830,7 +14659,7 @@ var index_default = `<!doctype html>
 `;
 
 // migration/local.css
-var local_default = '/* src/ui/hunt.css */\n#hunt-routes {\n  width: min(420px, calc(100% - 24px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  border: 2px solid white;\n  border-radius: 26px;\n  padding: 23px 16px 14px;\n  color: #57496b;\n  background: #faf5ef;\n}\n#hunt-routes::backdrop {\n  background: #46395480;\n  backdrop-filter: blur(4px);\n}\n#hunt-routes h2 {\n  font-size: 25px;\n  letter-spacing: -.8px;\n  margin: 12px 0 7px;\n}\n.hunt-budget {\n  font-size: 13px;\n  color: #59765e;\n  font-weight: 800;\n  margin: 0 0 15px;\n}\n.store-choice {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  width: 100%;\n  padding: 13px 10px;\n  margin: 9px 0;\n  text-align: left;\n  border: 1px solid #fff;\n  border-radius: 18px;\n  background:\n    linear-gradient(\n      110deg,\n      var(--shop-color),\n      #fff7ee);\n  color: #514863;\n  box-shadow: 0 3px 8px #69546710;\n  cursor: pointer;\n}\n.store-choice:disabled {\n  opacity: .5;\n  cursor: default;\n}\n.store-icon {\n  display: grid;\n  place-items: center;\n  width: 43px;\n  min-width: 43px;\n  height: 43px;\n  border-radius: 50%;\n  background: #fff8;\n  font-size: 28px;\n}\n.store-choice strong {\n  display: block;\n  font-size: 17px;\n  margin-bottom: 4px;\n}\n.store-choice small {\n  display: block;\n  font-size: 10px;\n  line-height: 1.5;\n}\n.store-choice em {\n  display: block;\n  font-size: 11px;\n  line-height: 1.35;\n  margin: 7px 0 4px;\n  font-style: normal;\n  font-weight: 700;\n}\n.route-status {\n  color: #5e795b;\n}\n.hunt-explainer {\n  font-size: 10px;\n  line-height: 1.5;\n  color: #8d7b8b;\n  margin: 12px 4px;\n}\n#shopping-time {\n  display: inline-block;\n  padding: 6px 10px;\n  margin: 3px 0;\n  background: #fffaeeed;\n  color: #66795b;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 700;\n  pointer-events: none;\n}\n#hunt-find {\n  position: absolute;\n  left: 16px;\n  right: 16px;\n  bottom: 220px;\n  max-width: 360px;\n  margin: auto;\n  padding: 12px 14px;\n  border: 1px solid white;\n  border-radius: 18px;\n  background: #fff8eff2;\n  color: #655371;\n  box-shadow: 0 4px 18px #56466320;\n  pointer-events: none;\n}\n#hunt-find strong {\n  font-size: 17px;\n}\n#hunt-find p {\n  font-size: 12px;\n  margin: 5px 0;\n  color: #59816b;\n  font-weight: 700;\n}\n#hunt-find small {\n  font-size: 10px;\n}\n#game[data-scene=store] #save-message {\n  bottom: auto;\n  top: 190px;\n  left: 16px;\n  width: calc(100% - 32px);\n  padding: 9px 12px;\n}\n#game[data-scene=store] #cleanup-hint {\n  background: #fff9efdf;\n  border-radius: 12px;\n  padding: 7px 9px;\n}\n#game[data-scene=store] #shop-display-marker {\n  background: transparent;\n  color: #ffe6a0;\n  border: 0;\n  padding: 0;\n  box-shadow: none;\n  font-size: 23px;\n  text-shadow: 0 0 4px white, 0 0 9px #e6b761;\n}\n#hunt-travel {\n  position: absolute;\n  inset: 0;\n  z-index: 45;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  background: #f5edf7f5;\n  color: #705b83;\n}\n#hunt-travel span {\n  font-size: 65px;\n  animation: hunt-bob .6s ease-in-out infinite alternate;\n}\n#hunt-travel h2 {\n  font-size: 27px;\n}\n@keyframes hunt-bob {\n  to {\n    transform: translateY(-10px) rotate(6deg);\n  }\n}\n.series-heading {\n  grid-column: 1/-1;\n  text-align: left;\n  padding: 10px 3px 4px;\n  font-size: 14px;\n}\n#game[data-scene=store] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] #day-label,\n#game[data-scene=store] #scene-subtitle {\n  display: none;\n}\n#game[data-scene=store] .room-title .eyebrow {\n  font-size: 12px;\n  letter-spacing: .7px;\n  margin-bottom: 4px;\n}\n@media (max-height: 740px) {\n  #hunt-find {\n    bottom: 190px;\n    padding: 8px 12px;\n  }\n  #hunt-routes {\n    padding-top: 14px;\n  }\n  .store-choice {\n    padding: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #hunt-travel span {\n    animation: none;\n  }\n}\n#hunt-routes .dialog-top-action {\n  position: sticky;\n  top: 0;\n  z-index: 2;\n  box-shadow: 0 0 0 5px #faf5fb;\n}\n\n/* src/ui/trading.css */\n#trading-dialog {\n  box-sizing: border-box;\n  width: min(460px, calc(100% - 16px));\n  max-height: calc(100dvh - 16px);\n  padding: 0;\n  border: 2px solid white;\n  border-radius: 24px;\n  background: #fcf7ef;\n  color: #514365;\n  overflow: hidden;\n}\n#trading-dialog[open] {\n  display: flex;\n  flex-direction: column;\n}\n#trading-dialog::backdrop {\n  background: #44355288;\n  backdrop-filter: blur(3px);\n}\n#trading-dialog button {\n  font: inherit;\n  color: inherit;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#trading-dialog button:disabled {\n  opacity: .48;\n  cursor: default;\n}\n.trade-header {\n  padding: 14px 18px 10px;\n  background:\n    linear-gradient(\n      120deg,\n      #fff,\n      var(--trader));\n  flex-shrink: 0;\n}\n.trade-header h2 {\n  margin: 4px 0;\n  font-size: 27px;\n}\n.trade-header strong {\n  font-size: 12px;\n}\n.trade-header p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  line-height: 1.4;\n}\n.trade-scroll {\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  padding: 0 14px 12px;\n  min-height: 0;\n}\n#trading-dialog h3 {\n  font-size: 13px;\n  margin: 12px 0 7px;\n  display: flex;\n  justify-content: space-between;\n  gap: 4px;\n}\n#trading-dialog h3 small {\n  font-size: 10px;\n  font-weight: normal;\n}\n.trade-slots {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n  gap: 6px;\n  min-height: 65px;\n  background: #e9dfef;\n  padding: 7px;\n  border-radius: 15px;\n}\n.trade-item {\n  border: 1px solid #fff;\n  background: #fffbf8;\n  border-radius: 12px;\n  padding: 4px;\n  text-align: center;\n  min-width: 0;\n}\n.trade-item img {\n  width: 100%;\n  height: 52px;\n  object-fit: contain;\n}\n.trade-item strong,\n.trade-item small {\n  display: block;\n  font-size: 10px;\n}\n.trade-item small {\n  font-size: 9px;\n  margin-top: 3px;\n}\n.trade-speech {\n  font-size: 12px;\n  line-height: 1.45;\n  background: #fff1cd;\n  border-radius: 13px;\n  padding: 10px;\n  margin: 10px 0;\n}\n.trade-empty {\n  grid-column: 1/-1;\n  margin: 10px;\n  font-size: 12px;\n  line-height: 1.5;\n}\n.trade-bag-heading label {\n  display: flex;\n  gap: 6px;\n  align-items: center;\n  font-size: 12px;\n  min-height: 32px;\n}\n.trade-bag-heading input {\n  width: 20px;\n  height: 20px;\n  accent-color: #8573a2;\n}\n.trade-safety {\n  font-size: 10px;\n  line-height: 1.4;\n  margin: 5px 0 10px;\n  color: #796b87;\n}\n#trade-inventory {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 6px;\n}\n.trade-bag-item {\n  display: flex;\n  align-items: center;\n  min-height: 62px;\n  padding: 4px;\n  border: 1px solid #ded2e6;\n  background: white;\n  border-radius: 12px;\n  text-align: left;\n  min-width: 0;\n}\n.trade-bag-item img {\n  width: 38px;\n  flex-shrink: 0;\n}\n.trade-bag-item strong {\n  font-size: 11px;\n  display: block;\n}\n.trade-bag-item small {\n  font-size: 9px;\n  display: block;\n  margin-top: 3px;\n}\n.trade-footer {\n  flex-shrink: 0;\n  padding: 8px 12px 12px;\n  background: #fcf7ef;\n  border-top: 1px solid #e8ddea;\n}\n.trade-footer p {\n  margin: 0 0 8px;\n  text-align: center;\n  font-size: 12px;\n  font-weight: bold;\n}\n.trade-controls {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  gap: 9px;\n}\n.trade-controls button {\n  border: 2px solid white;\n  border-radius: 18px;\n  font-size: 32px !important;\n  font-weight: bold !important;\n  min-height: 68px;\n  background: #f0c6cc;\n}\n.trade-controls button small {\n  display: block;\n  font-size: 10px;\n}\n.trade-controls #trade-add {\n  background: #f6dfa1;\n}\n.trade-controls #trade-accept {\n  background: #bad6b9;\n}\n#leave-recess {\n  position: absolute;\n  top: 76px;\n  right: 14px;\n  width: auto;\n  font-size: 12px;\n  padding: 9px 13px;\n  z-index: 5;\n}\n.collection-protection {\n  border: 0;\n  background: #fff9;\n  border-radius: 8px;\n  margin: 4px 1px 0;\n  min-width: 30px;\n  min-height: 32px;\n  font-size: 14px;\n  cursor: pointer;\n}\n.collection-protection[aria-pressed=true] {\n  background: #e5c6e9;\n  outline: 1px solid #b68ec0;\n}\n#game[data-scene=recess] #trip-wallet,\n#game[data-scene=recess] #mission-clock {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  .trade-header {\n    padding: 8px 12px;\n  }\n  .trade-header h2 {\n    font-size: 21px;\n  }\n  .trade-header p {\n    font-size: 11px;\n  }\n  .trade-item img {\n    height: 42px;\n  }\n  .trade-controls button {\n    min-height: 60px;\n  }\n  .trade-footer {\n    padding: 6px 10px;\n  }\n}\n#trade-suggest {\n  width: 100%;\n  min-height: 44px;\n  border: 2px solid #b4d4bd;\n  border-radius: 16px;\n  background: #edf8ed;\n  font-weight: 800;\n}\n.trade-help {\n  font-size: 11px;\n  color: #6d6477;\n}\n.trade-loved {\n  border-color: #bad8bb !important;\n}\n.trade-header > small {\n  display: block;\n  margin-top: 7px;\n  font-size: 11px;\n}\n\n/* src/ui/squishy-pop.css */\n.pop-launch {\n  position: fixed;\n  z-index: 20;\n  bottom: max(160px, 22vh);\n  left: 50%;\n  transform: translateX(-50%);\n  width: min(310px, 85vw);\n  border: 3px solid #fff9;\n  border-radius: 30px;\n  padding: 13px 16px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe7ee,\n      #efa6d4);\n  color: #655082;\n  box-shadow: 0 6px 22px #4f3b6240;\n  font-weight: 900;\n  font-size: 17px;\n  cursor: pointer;\n}\n.pop-launch span {\n  margin-right: 8px;\n}\n.pop-launch small {\n  display: block;\n  font-size: 11px;\n  letter-spacing: .5px;\n  margin-top: 5px;\n  font-weight: 600;\n}\n#squishy-pop {\n  padding: 0;\n  border: 0;\n  background: transparent;\n  color: #5d497d;\n  max-width: none;\n  max-height: none;\n  width: 100%;\n  height: 100dvh;\n  inset: 0;\n  margin: 0;\n  overflow: auto;\n  font-family: inherit;\n}\n#squishy-pop::backdrop {\n  background: #46345495;\n  backdrop-filter: blur(9px);\n}\n#squishy-pop * {\n  box-sizing: border-box;\n}\n#squishy-pop button {\n  font: inherit;\n  cursor: pointer;\n  min-height: 44px;\n  color: #654e83;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: linear-gradient(#ffe1ef, #f9aed5);\n  font-weight: 800;\n  padding: 9px 17px;\n  box-shadow: 0 3px 0 #c997c136;\n}\n#squishy-pop button:active {\n  transform: scale(.96);\n}\n#squishy-pop button:focus-visible {\n  outline: 3px solid #8a5fb4;\n  outline-offset: 2px;\n}\n.pop-shell {\n  width: min(100%, 480px);\n  min-height: 100%;\n  margin: auto;\n  padding: max(16px, env(safe-area-inset-top)) 18px max(14px, env(safe-area-inset-bottom));\n  background:\n    radial-gradient(\n      ellipse at 10% 45%,\n      #fff5d2aa,\n      transparent 60%),\n    linear-gradient(\n      155deg,\n      #fff8f1f5,\n      #f1e5fff5 60%,\n      #ffe9f1f5);\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 14px;\n}\n.pop-title {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.pop-title > div {\n  flex: 1;\n}\n.pop-title small {\n  font-size: 9px;\n  letter-spacing: 2px;\n}\n.pop-title h2 {\n  font-size: 30px;\n  letter-spacing: -1px;\n  line-height: 1.1;\n  margin: 6px 0;\n  font-weight: 1000;\n  color: #9878b9;\n  text-shadow: 0 2px 0 white;\n}\n.pop-title em {\n  font-style: normal;\n  color: #ed83b0;\n}\n.pop-title button {\n  width: 44px;\n  padding: 5px !important;\n  background: #ffffffad !important;\n}\n.pop-stats {\n  display: grid;\n  grid-template-columns: 1fr 1.1fr 1.1fr;\n  gap: 8px;\n}\n.pop-stats > div {\n  border-radius: 22px;\n  padding: 11px 5px;\n  background: #ffffffc7;\n  border: 2px solid #fff;\n  text-align: center;\n  box-shadow: 0 4px 0 #cbb4e227;\n}\n.pop-stats small {\n  display: block;\n  font-size: 10px;\n  letter-spacing: 1.6px;\n  color: #957bad;\n  font-weight: 800;\n}\n.pop-stats strong {\n  display: block;\n  font-size: 27px;\n  line-height: 1.3;\n}\n.pop-stats progress {\n  height: 6px;\n  width: 65%;\n  display: block;\n  margin: 4px auto 0;\n}\n.pop-tray {\n  position: relative;\n  border: 6px solid #f6eeff;\n  border-radius: 35px;\n  background:\n    linear-gradient(\n      135deg,\n      #d1b9ee,\n      #c4a6df);\n  padding: 9px;\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #bca1d8,\n    0 14px 25px #76609330;\n  isolation: isolate;\n}\n.pop-tray canvas {\n  width: 100%;\n  aspect-ratio: 1;\n  display: block;\n  touch-action: none;\n  border-radius: 21px;\n  background:\n    radial-gradient(\n      ellipse,\n      #fff2 40%,\n      transparent 70%);\n  user-select: none;\n}\n.pop-feedback {\n  position: absolute;\n  pointer-events: none;\n  inset: 40% 0 auto;\n  text-align: center;\n  font-size: 29px;\n  font-weight: 1000;\n  color: #ec65a9;\n  text-shadow:\n    2px 3px white,\n    -2px -2px white,\n    0 4px 6px #8a5fad;\n  transform: rotate(-6deg);\n  z-index: 2;\n}\n.pop-cover {\n  position: absolute;\n  inset: 0;\n  z-index: 3;\n  border-radius: 28px;\n  background: #fff5f2ef;\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  align-items: center;\n  text-align: center;\n  gap: 10px;\n  padding: 20px;\n  backdrop-filter: blur(4px);\n}\n.pop-cover[hidden] {\n  display: none;\n}\n.pop-cover h3 {\n  font-size: 23px;\n  line-height: 1.2;\n  margin: 0;\n}\n.pop-cover p {\n  font-size: 12px;\n  margin: 0;\n  max-width: 260px;\n}\n.pop-cover button {\n  width: 85%;\n  font-size: 14px !important;\n}\n.pop-cover .pop-link {\n  border: 0;\n  background: none;\n  box-shadow: none;\n  font-size: 12px !important;\n}\n.pop-count {\n  font-size: 80px;\n  color: #e778af;\n  animation: pop-count .8s infinite;\n}\n.pop-demo {\n  position: relative;\n  display: flex;\n  gap: 15px;\n  padding: 8px 10px 25px;\n  font-size: 40px;\n  color: #ec87b6;\n}\n.pop-demo b {\n  position: absolute;\n  left: 10%;\n  bottom: 0;\n  font-size: 32px;\n  animation: pop-finger 2s infinite;\n}\n.pop-frenzy {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 10px;\n  letter-spacing: 1px;\n  font-weight: 900;\n  margin-top: 3px;\n}\n.pop-frenzy progress {\n  flex: 1;\n  min-width: 0;\n}\n.pop-frenzy b {\n  color: #e788b5;\n}\n.pop-hint {\n  text-align: center;\n  font-size: 14px;\n  font-weight: 700;\n  margin: 0;\n}\n.pop-friends {\n  display: flex;\n  justify-content: center;\n  gap: 7px;\n}\n.pop-friends span {\n  width: 40px;\n  text-align: center;\n}\n.pop-friends img {\n  width: 40px;\n  height: 35px;\n  object-fit: contain;\n  display: block;\n}\n.pop-friends small {\n  font-size: 9px;\n  color: #b18a52;\n  display: block;\n}\n.pop-footer {\n  text-align: center;\n  font-size: 10px;\n  color: #a58fb0;\n  letter-spacing: 1px;\n}\n.pop-result-star {\n  font-size: 35px;\n  color: #f5c960;\n}\n.pop-result-numbers {\n  display: flex;\n  justify-content: space-around;\n  width: 100%;\n  font-size: 11px;\n}\n.pop-result-numbers b {\n  display: block;\n  font-size: 24px;\n}\n.pop-ticket-prize {\n  font-size: 15px;\n  color: #d26f9f;\n}\n.pop-cover progress {\n  width: 70%;\n  height: 9px;\n}\n#squishy-pop progress {\n  appearance: none;\n  border: 0;\n  border-radius: 20px;\n  background: #e1d4ed;\n  height: 9px;\n  overflow: hidden;\n}\n#squishy-pop progress::-webkit-progress-bar {\n  background: #e1d4ed;\n  border-radius: 20px;\n}\n#squishy-pop progress::-webkit-progress-value {\n  background:\n    linear-gradient(\n      90deg,\n      #bd95e0,\n      #f49abe);\n  border-radius: 20px;\n  transition: width .2s;\n}\n.urgent {\n  color: #df608a;\n  animation: pop-count 1s infinite;\n}\n@keyframes pop-finger {\n  0%, 15% {\n    left: 10%;\n  }\n  70%, 100% {\n    left: 75%;\n  }\n}\n@keyframes pop-count {\n  0% {\n    transform: scale(1.08);\n  }\n  70% {\n    transform: scale(1);\n  }\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 9px;\n    padding: 10px 15px;\n  }\n  .pop-title h2 {\n    font-size: 25px;\n  }\n  .pop-stats > div {\n    padding: 7px 3px;\n  }\n  .pop-stats strong {\n    font-size: 23px;\n  }\n  .pop-friends {\n    display: none;\n  }\n  .pop-footer {\n    display: none;\n  }\n  .pop-tray {\n    border-width: 5px;\n    padding: 6px;\n  }\n  .pop-cover {\n    gap: 7px;\n    padding: 10px;\n  }\n  .pop-cover h3 {\n    font-size: 20px;\n  }\n  .pop-result-star {\n    display: none;\n  }\n}\n@media (min-width: 500px) {\n  .pop-shell {\n    max-width: min(480px, 70dvh);\n    border-radius: 32px;\n    min-height: 0;\n    margin: 20px auto;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #squishy-pop * {\n    animation: none !important;\n  }\n}\n.pop-demo img {\n  width: 58px;\n  height: 58px;\n  object-fit: contain;\n}\n.pop-demo:before {\n  content: "";\n  position: absolute;\n  height: 5px;\n  background: #ffaad4;\n  left: 25px;\n  right: 25px;\n  top: 45%;\n  z-index: -1;\n  border-radius: 10px;\n}\n.pop-demo {\n  isolation: isolate;\n}\n.is-frenzy .pop-tray {\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #e7afd5,\n    0 0 30px #ffb8d5;\n}\n.is-frenzy .pop-frenzy {\n  color: #cf639e;\n}\n.pop-launch[hidden] {\n  display: none;\n}\n.pop-cover .pop-result-star {\n  animation: pop-count .8s 2;\n}\n#squishy-pop {\n  font-family:\n    "Trebuchet MS",\n    "Arial Rounded MT Bold",\n    Arial,\n    sans-serif;\n}\n[data-tickets] {\n  background-repeat: no-repeat;\n  background-position: calc(50% - 15px) center;\n  background-size: 35px;\n  padding-left: 26px;\n}\n.pop-launch {\n  animation: pop-entrance .3s ease-out;\n}\n@keyframes pop-entrance {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n.pop-frenzy span {\n  padding: 7px 0 7px 24px;\n  background-repeat: no-repeat;\n  background-position: left center;\n  background-size: 25px;\n}\n#squishy-pop[open] .pop-shell {\n  animation: pop-entrance .2s ease-out;\n}\n.pop-chain-cue {\n  position: absolute;\n  z-index: 4;\n  transform: translate(-50%, -100%);\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 5px 10px 5px 5px;\n  border: 2px solid white;\n  border-radius: 22px;\n  background: #fff6fc;\n  color: #6c4487;\n  box-shadow: 0 3px 12px #855a9955;\n  pointer-events: none;\n  white-space: nowrap;\n  font-size: 11px;\n  font-weight: 800;\n}\n.pop-chain-cue[hidden] {\n  display: none;\n}\n.pop-chain-cue > b {\n  display: grid;\n  place-items: center;\n  background: #e88bbb;\n  color: white;\n  border-radius: 50%;\n  width: 30px;\n  height: 30px;\n  font-size: 20px;\n}\n.pop-chain-cue span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-chain-cue img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n}\n.pop-chain-cue.pulse > b {\n  animation: pop-count .22s ease-out;\n}\n.pop-feedback {\n  inset: 3px 0 auto;\n  font-size: 22px;\n  transform: none;\n  line-height: 1.2;\n}\n.is-frenzy .pop-tray {\n  border-color: #fff0b5;\n  box-shadow:\n    inset 0 4px 10px #9973bb40,\n    0 7px 0 #e6a6d6,\n    0 0 24px #ffc8d7;\n}\n.is-frenzy .pop-frenzy {\n  background: #fff6d4;\n  border-radius: 18px;\n  padding: 3px 8px;\n}\n.pop-frenzy b {\n  min-width: 46px;\n  text-align: right;\n}\n.pop-hint {\n  font-size: 13px;\n  min-height: 18px;\n}\n.pop-previous-best {\n  font-size: 11px;\n  color: #957aac;\n}\n.pop-ticket-flight {\n  height: 34px;\n  width: 100%;\n  position: relative;\n  overflow: hidden;\n}\n.pop-ticket-flight img {\n  position: absolute;\n  left: calc(18% + var(--i)*8%);\n  width: 35px;\n  height: 28px;\n  object-fit: contain;\n  animation: pop-ticket-bank .95s calc(var(--i)*.07s) both;\n}\n.pop-ticket-prize {\n  font-size: 17px;\n}\n@keyframes pop-ticket-bank {\n  0% {\n    transform: translateY(23px) rotate(-18deg);\n    opacity: 0;\n  }\n  30% {\n    opacity: 1;\n  }\n  70% {\n    transform: translateY(-4px) rotate(8deg);\n    opacity: 1;\n  }\n  100% {\n    transform: translateY(8px) scale(.65);\n    opacity: 0;\n  }\n}\n.showing-results .pop-stats,\n.showing-results .pop-frenzy,\n.showing-results .pop-hint,\n.showing-results .pop-friends {\n  display: none;\n}\n.showing-results .pop-tray {\n  height: min(480px, calc(100dvh - 140px));\n  flex-shrink: 0;\n}\n.showing-results .pop-tray canvas {\n  position: absolute;\n  visibility: hidden;\n}\n.showing-results .pop-cover {\n  gap: 12px;\n  padding: 18px;\n  overflow: auto;\n}\n.showing-results .pop-cover h3 {\n  font-size: 24px;\n}\n.showing-results .pop-result-star {\n  display: block;\n  line-height: 1;\n  font-size: 32px;\n}\n.showing-results .pop-cover button {\n  flex-shrink: 0;\n  min-height: 44px;\n}\n.showing-results .pop-cover p {\n  line-height: 1.4;\n}\n@media (max-height: 700px) {\n  .showing-results .pop-cover {\n    gap: 8px;\n    padding: 12px;\n  }\n  .showing-results .pop-cover h3 {\n    font-size: 21px;\n  }\n  .showing-results .pop-result-star {\n    font-size: 24px;\n  }\n  .pop-chain-cue {\n    font-size: 10px;\n  }\n  .pop-feedback {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .pop-ticket-flight img {\n    animation: none;\n    opacity: 1;\n  }\n  .pop-chain-cue.pulse > b {\n    animation: none;\n  }\n}\n@media (max-width: 360px) {\n  .pop-title {\n    gap: 5px;\n  }\n  .pop-title > div {\n    min-width: 0;\n  }\n  .pop-title small {\n    font-size: 7px;\n    letter-spacing: .6px;\n  }\n  .pop-title h2 {\n    font-size: 20px;\n  }\n  .showing-results .pop-tray {\n    height: calc(100dvh - 145px);\n  }\n}\n#squishy-pop-shortcut {\n  pointer-events: auto;\n  border: 2px solid #fff;\n  border-radius: 22px;\n  padding: 9px 14px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe6f0,\n      #efb5dd);\n  color: #604c80;\n  font: 800 13px "Trebuchet MS", sans-serif;\n  box-shadow: 0 3px 10px #72538b26;\n  cursor: pointer;\n}\n#squishy-pop-shortcut:hover {\n  background: #f6c7e5;\n}\n#squishy-pop-shortcut:focus-visible {\n  outline: 3px solid #7855ae;\n  outline-offset: 3px;\n}\n@media (max-width: 600px) {\n  footer .asset-credits {\n    display: none;\n  }\n  #squishy-pop-shortcut {\n    font-size: 11px;\n    padding: 8px 10px;\n  }\n}\n#squishy-pop-shortcut {\n  min-height: 44px;\n}\n.pop-result-actions {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 8px;\n  width: 100%;\n}\n.pop-cover .pop-result-actions button {\n  width: 100%;\n  font-size: 12px !important;\n  padding: 8px;\n  line-height: 1.2;\n}\n.pop-result-actions button:first-child:last-child {\n  grid-column: 1/-1;\n}\n.pop-goals {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  padding: 7px 9px;\n  border: 2px solid white;\n  border-radius: 18px;\n  background: #fff6dc;\n  font-size: 12px;\n  font-weight: 800;\n  flex-wrap: wrap;\n}\n.pop-goals[hidden],\n.showing-results .pop-goals {\n  display: none;\n}\n.pop-goals small {\n  font-size: 9px;\n  color: #9878b9;\n}\n.pop-goals span,\n.pop-objectives span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-goals img,\n.pop-objectives img,\n.pop-previous-best img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n  vertical-align: middle;\n}\n.pop-goals .done {\n  color: #487865;\n}\n.pop-level-list {\n  display: flex;\n  flex-direction: column;\n  gap: 9px;\n  width: 100%;\n}\n.pop-level-list button {\n  width: 100%;\n  text-align: left;\n}\n.pop-level-list small {\n  display: block;\n  margin-top: 4px;\n  font-size: 11px;\n  font-weight: 600;\n}\n#squishy-pop button:disabled {\n  opacity: .55;\n  cursor: default;\n  transform: none;\n  background: #e5dfeb;\n}\n.pop-objectives {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 12px;\n  padding: 12px;\n  font-size: 18px;\n  font-weight: 800;\n}\n.showing-results .pop-cover {\n  justify-content: flex-start;\n}\n.showing-results .pop-cover > h3:first-child {\n  margin-top: 8px;\n}\n.pop-previous-best {\n  line-height: 1.5;\n}\n.showing-results .pop-cover > * {\n  flex-shrink: 0;\n}\n.showing-results .pop-cover .pop-link {\n  min-height: 44px;\n  padding: 7px;\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 7px;\n  }\n  .pop-goals {\n    font-size: 11px;\n    padding: 4px 6px;\n    gap: 5px;\n  }\n  .pop-goals img {\n    width: 24px;\n    height: 24px;\n  }\n  .showing-results .pop-cover {\n    gap: 7px;\n  }\n  .pop-level-list {\n    gap: 6px;\n  }\n}\n.pop-prizes {\n  min-height: 44px !important;\n  width: auto !important;\n  padding: 5px 10px !important;\n  font-size: 12px !important;\n}\n.pop-feedback[data-tier=great] {\n  font-size: clamp(22px, 6vw, 32px);\n  color: #fff6a0;\n  text-shadow: 0 3px 0 #7d4690, 0 0 18px #fff;\n}\n.pop-feedback[data-tier=super] {\n  font-size: clamp(26px, 7vw, 38px);\n  color: #fff;\n  border: 3px solid #ffdf65;\n  border-radius: 20px;\n  background: #9554bde8;\n  padding: 12px;\n  box-shadow: 0 0 24px #ffda6a;\n}\n.pop-feedback[data-tier=rainbow] {\n  font-size: clamp(24px, 6.5vw, 36px);\n  color: #fff;\n  background:\n    linear-gradient(\n      110deg,\n      #ea76a7,\n      #d0a554,\n      #61bca4,\n      #618ddb,\n      #a278c8);\n  border: 3px solid white;\n  border-radius: 20px;\n  padding: 12px;\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-tray[data-celebration=super] {\n  box-shadow: 0 0 0 5px #ffe393, 0 0 35px #f1abde;\n}\n.pop-tray[data-celebration=rainbow] {\n  box-shadow:\n    -10px 0 24px #ff9cad,\n    0 -8px 24px #fff09e,\n    10px 0 24px #98daff,\n    0 8px 24px #b5a1ff;\n}\n.pop-feedback[hidden] {\n  display: none;\n}\n.pop-feedback[data-tier=great],\n.pop-feedback[data-tier=super],\n.pop-feedback[data-tier=rainbow] {\n  animation: pop-reward .32s ease-out;\n}\n@keyframes pop-reward {\n  from {\n    transform: translateY(8px) scale(.88);\n    opacity: .5;\n  }\n  to {\n    transform: none;\n    opacity: 1;\n  }\n}\n.pop-feedback[data-tier=super] {\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-launch {\n  position: absolute;\n  top: 175px;\n  bottom: auto;\n  left: 18px;\n  transform: none;\n  width: auto;\n  max-width: 180px;\n  padding: 9px 13px;\n  font-size: 12px;\n  border-width: 2px;\n  box-shadow: 0 3px 10px #4f3b6220;\n}\n.pop-launch small {\n  display: none;\n}\n@media (max-height: 650px) {\n  .pop-launch {\n    top: 135px;\n  }\n}\n\n/* src/ui/ticket-shop.css */\n#ticket-shop {\n  width: min(92vw, 520px);\n  max-height: 88dvh;\n  overflow: auto;\n  border: 3px solid #efb6d2;\n  border-radius: 26px;\n  background: #fff8ed;\n  color: #604861;\n  padding: 22px;\n  text-align: center;\n}\n#ticket-shop::backdrop {\n  background: #403347a8;\n}\n.ticket-prizes {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px;\n  margin: 16px 0;\n}\n.ticket-prizes article {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 10px;\n  border-radius: 18px;\n  background: #f1e7fa;\n}\n.ticket-prizes img {\n  width: 96px;\n  height: 96px;\n  object-fit: contain;\n}\n#ticket-shop button {\n  min-height: 44px;\n  border: 0;\n  border-radius: 16px;\n  padding: 10px 14px;\n  background: #805ba6;\n  color: white;\n  font-weight: 700;\n  cursor: pointer;\n}\n#ticket-shop button:disabled {\n  background: #d3c4d5;\n  color: #665b69;\n  cursor: default;\n}\n#ticket-shop [data-close] {\n  display: block;\n  width: 100%;\n  margin-top: 16px;\n}\n#ticket-shop [role=status] {\n  font-weight: 700;\n  color: #566b40;\n}\n#travel-next-store {\n  position: absolute;\n  right: 12px;\n  top: 175px;\n  z-index: 12;\n  max-width: 170px;\n  min-height: 44px;\n  border: 2px solid #d9c5ec;\n  border-radius: 15px;\n  padding: 8px 12px;\n  background: #fff4e6;\n  color: #604861;\n  font-weight: 700;\n}\n#ticket-shop {\n  box-sizing: border-box;\n}\n#ticket-shop [data-close] {\n  position: sticky;\n  bottom: 0;\n  box-shadow: 0 0 0 5px #fff8ed;\n}\n.ticket-prizes article {\n  min-width: 0;\n}\n.ticket-prizes button {\n  width: 100%;\n}\n@media (max-width: 360px) {\n  #ticket-shop {\n    padding: 14px;\n  }\n  .ticket-prizes {\n    gap: 8px;\n  }\n  .ticket-prizes img {\n    width: 76px;\n    height: 76px;\n  }\n  .ticket-prizes article {\n    padding: 8px;\n  }\n  .ticket-prizes button {\n    padding: 8px;\n    font-size: 12px;\n  }\n}\n#ticket-shop [data-close] {\n  top: 0;\n  bottom: auto;\n  z-index: 2;\n}\n\n/* src/ui/tornado.css */\n#game[data-tornado] .room-title,\n#game[data-tornado] #cleanup-effects,\n#game[data-tornado] #house-doors,\n#game[data-tornado] #move-tip,\n#game[data-tornado] .mission-stats {\n  visibility: hidden;\n}\n#tornado-hud {\n  position: absolute;\n  z-index: 8;\n  top: 110px;\n  left: 22px;\n  width: min(340px, calc(100% - 44px));\n  padding: 15px 18px;\n  border: 2px solid #fff9;\n  border-radius: 23px;\n  background: #fff9f1ef;\n  color: #59476e;\n  box-shadow: 0 8px 25px #52416620;\n  pointer-events: none;\n  box-sizing: border-box;\n}\n#tornado-hud[hidden] {\n  display: none;\n}\n#tornado-hud header {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n#tornado-hud small {\n  font-size: 8px;\n  letter-spacing: 1.6px;\n  color: #907ca6;\n}\n#tornado-hud h2 {\n  font-size: 23px;\n  margin: 3px 0 10px;\n}\n#tornado-hud [data-time] {\n  font-size: 28px;\n  font-variant-numeric: tabular-nums;\n  margin-left: auto;\n}\n#tornado-hud [data-sound] {\n  pointer-events: auto;\n  border: 0;\n  background: #ece0f3;\n  color: #69517e;\n  border-radius: 50%;\n  width: 32px;\n  height: 32px;\n  cursor: pointer;\n}\n.tornado-meter-row,\n.tornado-score {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  font-size: 11px;\n}\n.tornado-score {\n  margin-top: 7px;\n  color: #71865c;\n}\n.tornado-score [data-streak] {\n  color: #a65585;\n  font-size: 10px;\n}\n#tornado-hud meter {\n  display: block;\n  width: 100%;\n  height: 17px;\n  margin-top: 4px;\n}\n#tornado-hud meter::-webkit-meter-bar {\n  background: #eee5f3;\n  border: 0;\n  border-radius: 10px;\n}\n#tornado-hud meter::-webkit-meter-optimum-value {\n  background:\n    linear-gradient(\n      90deg,\n      #c3cde8,\n      #e8adbe);\n  border-radius: 10px;\n}\n#tornado-hud p {\n  font-size: 11px;\n  line-height: 1.4;\n  min-height: 30px;\n  margin: 9px 0 0;\n}\n#tornado-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n  z-index: 7;\n}\n.tornado-marker {\n  position: absolute;\n  font-size: 24px;\n  border: 2px solid #fff;\n  background: #fff4d9ed;\n  box-shadow: 0 4px 12px #71603c30;\n  border-radius: 14px;\n  padding: 3px 7px;\n}\n.tornado-marker.near {\n  background: #dcf3c8;\n  box-shadow: 0 0 20px #fff3a1;\n}\n.tornado-marker.edge::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #9c729d;\n  transform: translate(-50%, -50%) rotate(var(--angle)) translateX(32px);\n}\n.tornado-sparkles {\n  position: absolute;\n  color: #8a599f;\n  text-shadow: 0 2px #fff;\n  font-weight: bold;\n  font-size: 26px;\n  animation: tornado-pop 1s ease-out forwards;\n  white-space: nowrap;\n}\n@keyframes tornado-pop {\n  from {\n    transform: translate(-50%, 0) scale(.6);\n  }\n  50% {\n    opacity: 1;\n  }\n  to {\n    transform: translate(-50%, -80px) scale(1.2);\n    opacity: 0;\n  }\n}\n#tornado-dialog {\n  box-sizing: border-box;\n  width: min(430px, calc(100% - 28px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  padding: 28px;\n  border: 2px solid white;\n  border-radius: 28px;\n  background: #fff8f1;\n  color: #5c4773;\n  text-align: center;\n  box-shadow: 0 20px 80px #51416650;\n}\n#tornado-dialog::backdrop {\n  background: #594d7666;\n  backdrop-filter: blur(3px);\n}\n#tornado-dialog small {\n  font-size: 9px;\n  letter-spacing: 1.4px;\n}\n#tornado-dialog h2 {\n  font-size: 29px;\n  line-height: 1.1;\n  margin: 12px 0;\n}\n#tornado-dialog p {\n  font-size: 14px;\n  line-height: 1.6;\n  color: #8b7094;\n}\n.tornado-emblem {\n  font-size: 60px;\n}\n.tornado-stars {\n  font-size: 48px;\n  color: #e4ae4e;\n  letter-spacing: 7px;\n}\n.tornado-instructions {\n  display: grid;\n  gap: 10px;\n  background: #efe6f4;\n  padding: 16px;\n  border-radius: 18px;\n  text-align: left;\n}\n.tornado-totals {\n  display: flex;\n  justify-content: space-around;\n  background: #efe6f4;\n  padding: 16px 4px;\n  border-radius: 18px;\n  font-size: 11px;\n}\n.tornado-totals b {\n  display: block;\n  font-size: 25px;\n  margin-bottom: 5px;\n}\n#tornado-dialog button {\n  display: block;\n  width: 100%;\n  padding: 14px;\n  border: 2px solid white;\n  border-radius: 16px;\n  margin-top: 10px;\n  background: #b8cfae;\n  color: #466240;\n  font: 700 16px system-ui;\n  cursor: pointer;\n}\n#tornado-dialog button.secondary {\n  background: #eee3f1;\n  color: #705285;\n}\n#tornado-dialog .tornado-earned {\n  color: #5b824e;\n  font-weight: bold;\n}\n@media (max-width: 500px) {\n  #tornado-hud {\n    top: 87px;\n    left: 12px;\n    width: calc(100% - 24px);\n    padding: 10px 13px;\n  }\n  #tornado-hud h2 {\n    font-size: 20px;\n    margin-bottom: 5px;\n  }\n  #tornado-hud p {\n    min-height: 16px;\n    margin-top: 5px;\n  }\n  #tornado-hud [data-time] {\n    font-size: 25px;\n  }\n  .tornado-marker {\n    font-size: 20px;\n  }\n}\n@media (max-height: 600px) and (orientation: landscape) {\n  #tornado-hud {\n    top: 80px;\n    width: 275px;\n    padding: 9px 12px;\n  }\n  #tornado-hud p {\n    min-height: 0;\n  }\n  #tornado-hud h2 {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .tornado-sparkles {\n    animation: none;\n  }\n}\n\n/* src/ui/styles.css */\n:root {\n  font-family:\n    "Trebuchet MS",\n    ui-rounded,\n    system-ui,\n    sans-serif;\n  color: #51466a;\n  background: #ede6f4;\n  font-synthesis: none;\n  -webkit-tap-highlight-color: transparent;\n}\n* {\n  box-sizing: border-box;\n}\nhtml,\nbody,\n#game {\n  margin: 0;\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  overscroll-behavior: none;\n}\nbody {\n  position: fixed;\n  inset: 0;\n}\n#game {\n  height: 100dvh;\n  position: relative;\n  isolation: isolate;\n  user-select: none;\n  -webkit-user-select: none;\n}\n#game-canvas {\n  display: block;\n  width: 100%;\n  height: 100%;\n  outline: none;\n  touch-action: none;\n}\n#game-canvas:focus-visible {\n  outline: 3px solid #9b86bd;\n  outline-offset: -3px;\n}\n.topbar {\n  position: absolute;\n  top: max(22px, env(safe-area-inset-top));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.wordmark {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  font-size: 26px;\n  font-weight: 800;\n  letter-spacing: -1px;\n}\n.wordmark small {\n  display: block;\n  font-size: 7px;\n  letter-spacing: 1.8px;\n  margin-top: 2px;\n  font-weight: 700;\n}\n.flower {\n  color: #a18abd;\n  font-size: 43px;\n  line-height: 1;\n}\n.chapter {\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: 2px;\n}\n.chapter span {\n  color: #b8a8c9;\n  margin: 0 5px;\n}\n.room-title {\n  position: absolute;\n  top: 14%;\n  width: 100%;\n  text-align: center;\n  pointer-events: none;\n}\n.eyebrow {\n  font-size: 9px;\n  letter-spacing: 2.3px;\n  font-weight: 700;\n  color: #8c7a9f;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 7px;\n}\n.eyebrow i {\n  width: 5px;\n  height: 5px;\n  border-radius: 50%;\n  background: #90ac95;\n}\nh1 {\n  font-size: clamp(26px, 4vw, 37px);\n  letter-spacing: -1.2px;\n  margin: 10px 0 7px;\n  font-weight: 800;\n}\n.room-title p {\n  font-size: 12px;\n  color: #8c7a9f;\n  margin: 0;\n}\n.player-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  padding: 5px 10px;\n  background: #fffaf4ee;\n  border: 1px solid #fff;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 800;\n  pointer-events: none;\n  box-shadow: 0 3px 10px #71608518;\n  will-change: transform;\n}\n.player-label span {\n  color: #d592ad;\n  margin-left: 4px;\n}\n.room-caption {\n  position: absolute;\n  bottom: 26%;\n  width: 100%;\n  text-align: center;\n  font-size: 10px;\n  letter-spacing: .5px;\n  color: #9e8db0;\n  pointer-events: none;\n}\n.room-caption span {\n  margin: 0 12px;\n  color: #b9a3cc;\n}\n.move-tip {\n  position: absolute;\n  bottom: 19%;\n  left: 50%;\n  transform: translateX(-50%);\n  display: flex;\n  gap: 10px;\n  align-items: center;\n  width: max-content;\n  max-width: calc(100% - 36px);\n  transition: opacity .6s;\n  pointer-events: none;\n}\n.tip-icon {\n  display: grid;\n  place-items: center;\n  width: 34px;\n  height: 34px;\n  background: #fbf7fcbb;\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  font-size: 22px;\n  color: #a389bb;\n}\n.move-tip strong,\n.move-tip div > span {\n  display: block;\n}\n.move-tip strong {\n  font-size: 12px;\n  margin-bottom: 3px;\n}\n.move-tip div > span {\n  font-size: 10px;\n  color: #9686a7;\n}\n.move-tip.explored {\n  opacity: 0;\n}\n.controls {\n  position: absolute;\n  left: max(27px, env(safe-area-inset-left));\n  right: max(27px, env(safe-area-inset-right));\n  bottom: max(42px, calc(env(safe-area-inset-bottom) + 24px));\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.joystick-group {\n  text-align: center;\n  pointer-events: auto;\n}\n#joystick {\n  position: relative;\n  width: 120px;\n  height: 120px;\n  border: 2px solid #fff9;\n  background:\n    linear-gradient(\n      140deg,\n      #fffc,\n      #ded1ec99);\n  border-radius: 50%;\n  box-shadow: 0 7px 22px #82709516, inset 0 1px 8px #fff8;\n  touch-action: none;\n  cursor: grab;\n}\n#joystick.dragging {\n  cursor: grabbing;\n}\n#joystick-knob {\n  position: absolute;\n  left: 34px;\n  top: 34px;\n  width: 48px;\n  height: 48px;\n  border-radius: 50%;\n  border: 2px solid #fff;\n  background:\n    linear-gradient(\n      145deg,\n      #cdbce5,\n      #aa93c9);\n  box-shadow: 0 5px 8px #6c51813b;\n  pointer-events: none;\n  display: grid;\n  place-items: center;\n  will-change: transform;\n}\n#joystick-knob svg {\n  width: 22px;\n  height: 22px;\n  fill: none;\n  stroke: #fff;\n  stroke-width: 2;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n  opacity: .8;\n}\n.direction {\n  position: absolute;\n  color: #ae9abd;\n  font-size: 22px;\n  line-height: 20px;\n}\n.up {\n  top: 5px;\n  left: 51px;\n}\n.down {\n  bottom: 7px;\n  left: 51px;\n}\n.left {\n  top: 47px;\n  left: 9px;\n}\n.right {\n  top: 47px;\n  right: 9px;\n}\n.control-label {\n  display: block;\n  font-size: 8px;\n  letter-spacing: 1.5px;\n  font-weight: 800;\n  color: #9581a8;\n  margin-top: 11px;\n}\n.explore-note {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  margin-top: 30px;\n  color: #8f7ba3;\n}\n.tiny-house {\n  font-size: 31px;\n  color: #ad98bd;\n}\n.explore-note > span:last-child {\n  font-size: 12px;\n  font-weight: 700;\n}\n.explore-note small {\n  display: block;\n  font-size: 9px;\n  font-weight: 400;\n  margin-top: 5px;\n}\nfooter {\n  position: absolute;\n  bottom: max(12px, env(safe-area-inset-bottom));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  font-size: 8px;\n  color: #a591b7;\n  letter-spacing: .6px;\n  pointer-events: none;\n}\n.build-badge {\n  font-size: 7px;\n  letter-spacing: 1.4px;\n}\n.keyboard-hint {\n  font-size: 8px;\n}\n#loading,\n#error {\n  position: absolute;\n  inset: 0;\n  background: #ede6f4;\n  display: grid;\n  place-content: center;\n  text-align: center;\n  padding: 32px;\n  z-index: 9;\n}\n#loading .loading-flower {\n  font-size: 60px;\n  color: #a18abd;\n  animation: breathe 1.2s infinite alternate;\n}\n#loading p {\n  font-size: 14px;\n}\n#error[hidden] {\n  display: none;\n}\n#error h2 {\n  font-size: 22px;\n}\n#error p {\n  font-size: 14px;\n  max-width: 320px;\n  line-height: 1.6;\n}\n@keyframes breathe {\n  to {\n    transform: scale(.85);\n    opacity: .5;\n  }\n}\n@media (min-width: 700px) {\n  .topbar {\n    left: 40px;\n    right: 40px;\n    top: 28px;\n  }\n  .room-title {\n    top: 12%;\n  }\n  .controls {\n    left: 45px;\n    right: 45px;\n    bottom: 50px;\n  }\n  .room-caption {\n    bottom: 15%;\n  }\n  .move-tip {\n    bottom: 7%;\n  }\n  .explore-note {\n    margin-top: 0;\n  }\n  footer {\n    left: 40px;\n    right: 40px;\n  }\n  .keyboard-hint {\n    font-size: 10px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .topbar {\n    top: 14px;\n  }\n  .room-title {\n    top: 13%;\n  }\n  h1 {\n    font-size: 25px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: 23%;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n  .keyboard-hint {\n    display: none;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .room-title {\n    top: 24%;\n    text-align: left;\n    padding-left: 28px;\n    width: 220px;\n  }\n  .eyebrow {\n    justify-content: flex-start;\n    font-size: 7px;\n    letter-spacing: 1px;\n  }\n  h1 {\n    font-size: 24px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .topbar {\n    top: 14px;\n  }\n  .room-caption,\n  .move-tip,\n  .explore-note {\n    display: none;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  .wordmark {\n    font-size: 21px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #loading .loading-flower {\n    animation: none;\n  }\n  .move-tip {\n    transition: none;\n  }\n}\n@media (max-width: 699px) {\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: calc(max(42px, env(safe-area-inset-bottom)) + 156px);\n  }\n}\n@media (max-width: 380px) {\n  .topbar {\n    left: 18px;\n    right: 18px;\n  }\n  .wordmark {\n    font-size: 24px;\n  }\n  .wordmark small {\n    font-size: 6px;\n    letter-spacing: 1.2px;\n    white-space: nowrap;\n  }\n  .chapter {\n    font-size: 8px;\n    letter-spacing: 1px;\n    white-space: nowrap;\n  }\n  .eyebrow {\n    font-size: 7px;\n    letter-spacing: 1.6px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n  .explore-note {\n    max-width: 125px;\n  }\n  .room-title {\n    top: 15%;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n}\n#house-music {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 10px;\n  line-height: 1.2;\n  padding: 8px;\n  min-height: 40px;\n  min-width: 54px;\n  cursor: pointer;\n}\nfooter {\n  gap: 6px;\n}\nfooter .keyboard-hint {\n  display: none;\n}\n@media (max-width: 380px) {\n  footer {\n    left: 12px;\n    right: 12px;\n  }\n  #collection-button {\n    font-size: 9px !important;\n  }\n}\n#audio-settings {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 11px;\n  padding: 8px;\n  min-height: 40px;\n  cursor: pointer;\n}\n.audio-settings {\n  width: min(340px, 85vw);\n  border: 0;\n  border-radius: 22px;\n  background: #fff9f1;\n  color: #534565;\n  padding: 24px;\n  font-family: inherit;\n}\n.audio-settings::backdrop {\n  background: #30283880;\n}\n.audio-settings label {\n  display: block;\n  margin: 22px 0;\n  font-weight: 700;\n}\n.audio-settings output {\n  float: right;\n}\n.audio-settings input {\n  display: block;\n  width: 100%;\n  height: 40px;\n  accent-color: #9873b5;\n}\n.audio-settings button {\n  min-height: 44px;\n  width: 100%;\n  border: 0;\n  border-radius: 15px;\n  background: #e1d1ed;\n  color: #493659;\n  font-weight: 700;\n}\n.audio-settings p {\n  font-size: 12px;\n}\nfooter {\n  flex-wrap: wrap;\n}\n.audio-settings {\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  box-sizing: border-box;\n}\n.audio-mutes {\n  display: flex;\n  gap: 8px;\n}\n.audio-mutes button {\n  flex: 1;\n  width: auto !important;\n}\n.audio-settings summary {\n  font-size: 13px;\n  cursor: pointer;\n}\n.audio-settings details p {\n  line-height: 1.5;\n}\n@media (max-height: 650px) {\n  .audio-settings {\n    padding: 16px;\n  }\n  .audio-settings h2 {\n    font-size: 20px;\n    margin: 0 0 10px;\n  }\n  .audio-settings label {\n    margin: 10px 0;\n  }\n}\n#game[data-scene=recess] .room-title {\n  top: 84px;\n  left: 18px;\n  right: auto;\n  width: auto;\n  max-width: 65%;\n  text-align: left;\n  padding: 10px 16px;\n  background: #fff8ece8;\n  border-radius: 18px;\n  pointer-events: none;\n}\n#game[data-scene=recess] .room-title h1 {\n  font-size: 22px;\n  margin: 3px 0;\n}\n#game[data-scene=recess] #scene-subtitle,\n#game[data-scene=recess] #day-label,\n#game[data-scene=recess] #room-connections {\n  display: none;\n}\n#game[data-scene=recess] .topbar {\n  background: #fff8ece8;\n  border-radius: 20px;\n  padding: 10px 18px;\n}\n#game[data-scene=recess] .cleanup-tip {\n  max-width: 70%;\n  background: #fff8ece6;\n  border-radius: 16px;\n  padding: 9px;\n}\n#game[data-scene=recess] #leave-recess {\n  top: 36px;\n  right: 44px;\n}\n@media (max-width: 600px) {\n  #game[data-scene=recess] .topbar {\n    left: 12px;\n    right: 12px;\n    padding: 9px 12px;\n  }\n  #game[data-scene=recess] .wordmark {\n    font-size: 20px;\n    gap: 6px;\n  }\n  #game[data-scene=recess] .wordmark .flower {\n    font-size: 29px;\n  }\n  #game[data-scene=recess] .wordmark small {\n    display: none;\n  }\n  #game[data-scene=recess] #leave-recess {\n    top: 28px;\n    right: 24px;\n    font-size: 11px;\n    padding: 9px 10px;\n  }\n  #game[data-scene=recess] .room-title {\n    top: 78px;\n    padding: 6px 12px;\n  }\n  #game[data-scene=recess] .room-title .eyebrow {\n    display: none;\n  }\n  #game[data-scene=recess] .room-title h1 {\n    font-size: 20px;\n    margin: 0;\n  }\n}\n\n/* src/ui/cleanup.css */\n.mission-stats {\n  display: flex;\n  flex-direction: column;\n  align-items: flex-end;\n  gap: 2px;\n}\n#mission-clock {\n  font-size: 23px;\n  font-weight: 800;\n  font-variant-numeric: tabular-nums;\n  letter-spacing: -1px;\n}\n#mission-clock.soon {\n  color: #b77795;\n}\n.allowance-label {\n  font-size: 7px;\n  letter-spacing: 1px;\n  color: #9581a8;\n}\n#allowance {\n  font-size: 13px;\n  color: #6e856c;\n  margin-left: 3px;\n}\n#task-count {\n  letter-spacing: 1px;\n  color: #6e856c;\n}\n.task-list {\n  display: flex;\n  list-style: none;\n  justify-content: center;\n  gap: 9px;\n  padding: 0;\n  margin: 6px 0 0;\n  height: 22px;\n}\n.task-list li {\n  display: flex;\n  align-items: center;\n  gap: 3px;\n  font-size: 9px;\n  color: #9784a6;\n  border-bottom: 2px solid transparent;\n}\n.task-list li > span:first-child {\n  font-size: 13px;\n}\n.task-list li.done {\n  color: #69866f;\n  border-color: #a6c5a6;\n}\n.task-list li.done > span:first-child {\n  color: #69866f;\n}\n.action-group {\n  pointer-events: auto;\n  text-align: center;\n}\n#action-button {\n  --hold-progress: 0deg;\n  width: 120px;\n  height: 120px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  gap: 3px;\n  border: 3px solid #fff9;\n  border-radius: 50%;\n  background:\n    linear-gradient(\n      145deg,\n      #f6b5d0,\n      #d888b6);\n  box-shadow: 0 6px 0 #ad739441, 0 8px 22px #82709522;\n  color: #663f6a;\n  cursor: pointer;\n  touch-action: none;\n  padding: 8px;\n  font-family: inherit;\n  position: relative;\n  -webkit-user-select: none;\n  user-select: none;\n}\n#action-button:disabled {\n  background:\n    linear-gradient(\n      145deg,\n      #f7f1f9,\n      #ddd0e8);\n  color: #a38caf;\n  box-shadow: 0 4px 0 #a58db222;\n  cursor: default;\n}\n#action-button:not(:disabled):active {\n  box-shadow: 0 2px 0 #ad739441;\n}\n#action-button:focus-visible,\n#replay:focus-visible {\n  outline: 3px solid #7960a5;\n  outline-offset: 4px;\n}\n#action-button.holding {\n  background: conic-gradient(#97c6a0 var(--hold-progress), #ecc0dd 0deg);\n}\n#action-icon {\n  font-size: 26px;\n  line-height: 29px;\n}\n#action-title {\n  font-size: 15px;\n  line-height: 18px;\n}\n#action-detail {\n  font-size: 10px;\n  max-width: 100%;\n  line-height: 13px;\n}\n.cleanup-tip {\n  text-align: center;\n  width: calc(100% - 36px);\n  max-width: 460px;\n  justify-content: center;\n  font-size: 11px;\n  line-height: 16px;\n  color: #887298;\n  min-height: 32px;\n}\n#cleanup-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n}\n.cleanup-marker {\n  position: absolute;\n  left: 0;\n  top: 0;\n  border-radius: 9px;\n  min-width: 22px;\n  padding: 3px 5px;\n  background: #fffaf2db;\n  border: 1px solid #fffc;\n  box-shadow: 0 2px 5px #62507722;\n  font-size: 13px;\n  line-height: 16px;\n  color: #775672;\n  will-change: transform;\n  white-space: nowrap;\n}\n.cleanup-marker[hidden] {\n  display: none;\n}\n.cleanup-marker.destination {\n  font-size: 16px !important;\n  border-radius: 50%;\n  padding: 7px !important;\n  box-shadow: 0 0 14px #fff2a8a0;\n}\n.cleanup-marker.offscreen::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #fff1aa;\n  font-size: 17px;\n  text-shadow: 0 1px 3px #504760;\n  transform: translate(-50%, -50%) rotate(var(--guide-angle)) translateX(26px);\n}\n.cleanup-marker.tool {\n  font-size: 10px;\n}\n.cleanup-marker.nearby {\n  background: #fff0b9;\n  border-color: #fff;\n  box-shadow: 0 0 10px #fff3a4bb;\n}\n.cleanup-marker.destination {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n.coin-popup {\n  position: absolute;\n  color: #63845d;\n  font-size: 22px;\n  font-weight: 800;\n  z-index: 2;\n  transform: translate(-50%, -100%);\n  animation: reward-rise .95s ease-out forwards;\n  text-shadow: 0 2px 0 #fff;\n}\n.coin-popup strong {\n  display: block;\n  padding: 3px 8px;\n  background: #fff9e4ed;\n  border-radius: 12px;\n}\n.coin-popup > span {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #e9bd61;\n  font-size: 17px;\n  animation: sparkle .75s ease-out forwards;\n}\n@keyframes reward-rise {\n  0% {\n    opacity: 0;\n    margin-top: 0;\n  }\n  20% {\n    opacity: 1;\n  }\n  75% {\n    opacity: 1;\n  }\n  100% {\n    opacity: 0;\n    margin-top: -40px;\n  }\n}\n@keyframes sparkle {\n  from {\n    transform: translate(-50%, -50%) scale(.3);\n    opacity: 1;\n  }\n  to {\n    transform: translate(var(--spark-x), var(--spark-y)) scale(.7);\n    opacity: 0;\n  }\n}\n.sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  clip-path: inset(50%);\n  overflow: hidden;\n  white-space: nowrap;\n}\n#results {\n  border: 2px solid #fff;\n  border-radius: 28px;\n  padding: 26px 22px 22px;\n  width: min(350px, calc(100% - 32px));\n  max-height: calc(100dvh - 32px);\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n  box-shadow: 0 16px 60px #55436140;\n}\n#results::backdrop {\n  background: #52416666;\n  backdrop-filter: blur(4px);\n}\n.results-flower {\n  font-size: 43px;\n  line-height: 1;\n  color: #af94cb;\n  margin-bottom: 16px;\n}\n#results .eyebrow {\n  font-size: 7px;\n  letter-spacing: 1.6px;\n}\n#results h2 {\n  margin: 12px 0 8px;\n  font-size: 30px;\n  letter-spacing: -1px;\n}\n#results-summary {\n  font-size: 12px;\n  line-height: 1.6;\n  color: #927d9e;\n}\n.results-totals {\n  display: flex;\n  justify-content: space-evenly;\n  padding: 14px 0;\n  margin: 12px 0 0;\n  background: #eee5f5;\n  border-radius: 17px;\n}\n.results-totals strong {\n  display: block;\n  font-size: 28px;\n}\n.results-totals span {\n  font-size: 10px;\n  color: #8e789f;\n}\n#results-money {\n  color: #708b6b;\n}\n#results-bonus {\n  font-size: 11px;\n  color: #788f6c;\n}\n#results-list {\n  list-style: none;\n  padding: 0;\n  display: flex;\n  justify-content: center;\n  flex-wrap: wrap;\n  gap: 6px 12px;\n  margin: 18px 0;\n  font-size: 10px;\n  color: #a58eb1;\n}\n#results-list .done {\n  color: #638269;\n}\n#replay {\n  width: 100%;\n  border: 2px solid #fff8;\n  border-radius: 17px;\n  padding: 15px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 16px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  box-shadow: 0 4px 0 #8caa8555;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#replay span {\n  margin-left: 7px;\n  font-size: 21px;\n}\n@media (max-width: 380px) {\n  .task-list {\n    gap: 6px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  #mission-clock {\n    font-size: 21px;\n  }\n  .allowance-label {\n    font-size: 6px;\n    letter-spacing: .5px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait), (orientation: landscape) and (max-height: 600px) {\n  #action-button {\n    width: 102px;\n    height: 102px;\n  }\n  #action-title {\n    font-size: 13px;\n  }\n  #action-icon {\n    font-size: 22px;\n    line-height: 24px;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .task-list {\n    height: 18px;\n    margin-top: 2px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  .task-list li > span:first-child {\n    font-size: 11px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .task-list {\n    flex-wrap: wrap;\n    height: auto;\n    justify-content: flex-start;\n    max-width: 175px;\n    gap: 5px 10px;\n  }\n  #results {\n    padding: 12px 18px;\n  }\n  .results-flower {\n    display: none;\n  }\n  #results h2 {\n    font-size: 24px;\n    margin: 7px 0;\n  }\n  .results-totals {\n    padding: 7px 0;\n  }\n  #results-list {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .coin-popup {\n    animation: none;\n  }\n  .coin-popup > span {\n    display: none;\n  }\n}\n\n/* src/ui/collection.css */\n[hidden] {\n  display: none !important;\n}\n#collection-button {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  padding: 8px 0 8px 10px;\n}\n#collection-button:disabled {\n  opacity: .45;\n}\n#wallet {\n  margin-left: 4px;\n  color: #638269;\n}\n.loop-button {\n  width: 100%;\n  border: 2px solid #fff9;\n  border-radius: 16px;\n  padding: 13px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 15px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  margin: 5px 0;\n  touch-action: manipulation;\n}\n.pink-button {\n  background: #e8b5d2;\n  color: #704b75;\n}\n.loop-button:disabled {\n  opacity: .55;\n  cursor: default;\n}\n#results-wallet {\n  font-size: 12px;\n  color: #6f8869;\n}\n#go-shopping {\n  margin-bottom: 10px;\n}\n#collection-dialog {\n  border: 2px solid #fff;\n  border-radius: 26px;\n  width: min(410px, calc(100% - 24px));\n  max-height: calc(100dvh - 24px);\n  padding: 22px 17px 17px;\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n}\n#collection-dialog::backdrop {\n  background: #52416688;\n  backdrop-filter: blur(4px);\n}\n#collection-dialog h2 {\n  margin: 10px 0 6px;\n  font-size: 28px;\n  letter-spacing: -1px;\n}\n#collection-summary {\n  font-size: 11px;\n  color: #947c9e;\n}\n#collection-grid {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 7px;\n  margin: 17px 0;\n}\n.dumpling-card {\n  background: #efe7f4;\n  border: 1px solid #fff;\n  border-radius: 14px;\n  padding: 6px 2px 9px;\n  min-width: 0;\n}\n.dumpling-card.owned {\n  background: linear-gradient(#fff9, var(--rarity));\n}\n.dumpling-card img {\n  width: 100%;\n  height: auto;\n  display: block;\n}\n.dumpling-card strong {\n  font-size: 10px;\n  display: block;\n}\n.dumpling-card small {\n  display: block;\n  font-size: 8px;\n  margin-top: 3px;\n}\n.dumpling-card .copies {\n  font-size: 10px;\n  font-weight: 800;\n  margin-top: 5px;\n}\n#store-markers {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n#shop-display-marker {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n#reveal-copy {\n  position: absolute;\n  top: 71%;\n  left: 6%;\n  width: 88%;\n  text-align: center;\n  color: var(--rarity-ink,#775887);\n  font-size: 13px;\n  pointer-events: none;\n}\n.reveal-badges {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n}\n#reveal-copy small {\n  color: var(--rarity-ink,#665070);\n  padding: 5px 10px;\n  border: 1px solid var(--rarity,#dacbdf);\n  border-radius: 20px;\n  background: var(--rarity-wash,#f4edf5);\n  font-size: 11px;\n  line-height: 1.2;\n  font-weight: 800;\n  letter-spacing: .4px;\n}\n#reveal-copy .reveal-status {\n  background: #fffc;\n  border-color: #fff;\n  color: #64556c;\n}\n#reveal-copy h2 {\n  margin: 7px 0 4px;\n  font-size: 32px;\n  line-height: 1.1;\n  letter-spacing: -.8px;\n}\n#reveal-copy p {\n  font-size: 11px;\n  margin: 0;\n  color: #74647e;\n}\n#reveal-copy[data-rarity=Legendary] .reveal-rarity {\n  box-shadow: 0 0 0 2px #fff8, 0 2px 10px #dbb14b30;\n}\n#reveal-copy.has-reveal {\n  animation: reveal-caption .4s ease-out;\n}\n@keyframes reveal-caption {\n  from {\n    transform: translateY(6px);\n    opacity: 0;\n  }\n  to {\n    transform: translateY(0);\n    opacity: 1;\n  }\n}\n#save-message {\n  position: absolute;\n  bottom: 26%;\n  left: 8%;\n  width: 84%;\n  padding: 12px;\n  border-radius: 14px;\n  background: #fff5de;\n  color: #796143;\n  font-size: 12px;\n  text-align: center;\n  z-index: 8;\n  pointer-events: none;\n}\n#game[data-scene=home] .joystick-group {\n  visibility: hidden;\n}\n#game[data-scene=home] .cleanup-tip {\n  display: none;\n}\n#squish-friend {\n  position: absolute;\n  left: 8%;\n  bottom: 12%;\n  min-width: 100px;\n  min-height: 48px;\n  padding: 12px 20px;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: #f1d6dd;\n  color: #795268;\n  font: 800 16px "Trebuchet MS", sans-serif;\n  box-shadow: 0 4px 12px #75534a15;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#home-vignette {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  background:\n    linear-gradient(\n      #ede6f4ed,\n      transparent 29%,\n      transparent 75%,\n      #ede6f4dd);\n}\n#trip-wallet {\n  font-size: 8px;\n  letter-spacing: 1px;\n  color: #887298;\n  text-align: right;\n}\n#trip-balance {\n  display: block;\n  font-size: 24px;\n  letter-spacing: -1px;\n  color: #638269;\n}\n#reveal-copy {\n  isolation: isolate;\n}\n#game[data-scene=home] .topbar,\n#game[data-scene=home] .room-title,\n#game[data-scene=home] footer {\n  text-shadow: 0 1px 8px #fff;\n}\n@media (max-height: 740px) {\n  #reveal-copy {\n    top: 68%;\n  }\n  #reveal-copy h2 {\n    font-size: 27px;\n  }\n  #collection-dialog {\n    padding-top: 15px;\n  }\n  #collection-grid {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #reveal-copy.has-reveal {\n    animation: none;\n  }\n}\n#game[data-scene=home] .controls {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  right: 18px;\n  justify-content: flex-end;\n}\n#game[data-scene=home] .joystick-group,\n#game[data-scene=home] .control-label {\n  display: none;\n}\n#game[data-scene=home] #action-button {\n  width: 136px;\n  height: 48px;\n  border-radius: 25px;\n  display: flex;\n  flex-direction: row;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n}\n#game[data-scene=home] #action-icon {\n  font-size: 20px;\n  margin: 0;\n}\n#game[data-scene=home] #action-title {\n  font-size: 13px;\n  margin: 0;\n}\n#game[data-scene=home] #action-detail {\n  display: none;\n}\n#game[data-scene=home] #squish-friend {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  left: 18px;\n  min-width: 130px;\n  font-size: 14px;\n}\nbody:has(#game[data-scene=home]) .dev-launch {\n  top: 77px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] .room-title {\n    top: 83px;\n    left: 20px;\n    right: 88px;\n    text-align: left;\n  }\n  #game[data-scene=home] .room-title .eyebrow,\n  #game[data-scene=home] #day-label {\n    display: none;\n  }\n  #game[data-scene=home] .room-title h1 {\n    font-size: 20px;\n    margin: 2px 0 4px;\n  }\n  #game[data-scene=home] .room-title p {\n    margin: 0;\n    font-size: 10px;\n  }\n  #game[data-scene=home] #reveal-copy {\n    top: 64%;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    margin: 7px 0 3px;\n    font-size: 24px;\n  }\n  #game[data-scene=home] #reveal-copy small {\n    font-size: 10px;\n    padding: 4px 8px;\n  }\n  #game[data-scene=home] #reveal-copy p {\n    font-size: 10px;\n  }\n}\n#collection-actions {\n  position: sticky;\n  top: -1px;\n  z-index: 2;\n  background: #faf5fb;\n  padding: 4px 0;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 5px;\n}\n#collection-actions .loop-button {\n  font-size: 12px;\n  padding: 10px 5px;\n  margin: 0;\n  min-height: 44px;\n}\n#collection-actions #open-next {\n  grid-column: 1/-1;\n}\n#reveal-copy {\n  background: #fff9;\n  border-radius: 18px;\n  padding: 8px;\n  left: 8%;\n  width: 84%;\n}\n#home-vignette {\n  background:\n    linear-gradient(\n      #ede6f4a0,\n      transparent 25%,\n      transparent 70%,\n      #ede6f4a0);\n}\n#game[data-scene=home] #home-vignette {\n  background:\n    linear-gradient(\n      180deg,\n      #21112465,\n      transparent 27%,\n      transparent 65%,\n      #21112450);\n}\n#game[data-scene=home] .room-title,\n#game[data-scene=home] .topbar,\n#game[data-scene=home] footer {\n  color: #fff7ee;\n  text-shadow: 0 2px 5px #341c40;\n}\n#game[data-scene=home] #reveal-copy {\n  background: #fff8f0ed;\n  box-shadow: 0 5px 24px #49254920;\n}\n#game[data-scene=home] #reveal-copy {\n  top: auto;\n  bottom: 140px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] #reveal-copy {\n    top: auto;\n    bottom: 132px;\n    padding: 6px;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    font-size: 20px;\n    margin: 5px 0 3px;\n  }\n}\n#game[data-scene=home] #reveal-copy {\n  width: min(84%, 380px);\n  left: 50%;\n  translate: -50% 0;\n}\n@media (min-height: 651px) {\n  #game[data-scene=home] #reveal-copy {\n    bottom: 125px;\n  }\n}\n#fishing-panel {\n  position: absolute;\n  bottom: 22px;\n  left: 50%;\n  translate: -50% 0;\n  width: min(92%, 420px);\n  padding: 14px;\n  border-radius: 22px;\n  border: 2px solid #fff7;\n  background: #fff8eefa;\n  box-shadow: 0 5px 25px #35555130;\n  text-align: center;\n  color: #4e5f69;\n  z-index: 25;\n}\n#fishing-panel p {\n  font-size: 15px;\n  line-height: 1.4;\n  margin: 0 0 10px;\n  font-weight: 700;\n}\n#fishing-panel button {\n  border: 2px solid #fff;\n  border-radius: 20px;\n  background: #afd7ca;\n  color: #335a54;\n  font: 800 16px system-ui;\n  padding: 13px 22px;\n  min-height: 48px;\n  margin: 3px;\n  touch-action: manipulation;\n}\n#fishing-panel button:last-child {\n  background: #ede3ea;\n  font-size: 12px;\n  padding: 10px 14px;\n}\n#fishing-panel progress {\n  width: 80%;\n  display: block;\n  margin: 8px auto;\n  accent-color: #81b6a2;\n}\n#game[data-fishing=true] .controls,\n#game[data-fishing=true] .joystick-group,\n#game[data-fishing=true] footer,\n#game[data-fishing=true] .room-title {\n  visibility: hidden;\n}\n#game[data-scene=outdoors] .room-title {\n  pointer-events: none;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 22px;\n}\n#game[data-scene=outdoors] .room-title .eyebrow {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title {\n  top: 84px;\n  left: 20px;\n  right: 20px;\n  text-align: left;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 18px;\n  margin: 3px 0;\n}\n#game[data-scene=outdoors] #day-label {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title p {\n  font-size: 11px;\n}\nbody:has(#game[data-fishing=true]) .dev-launch {\n  top: 78px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n#game[data-fishing=true] #move-tip {\n  visibility: hidden;\n}\n#fishing-panel progress[hidden] {\n  display: none;\n}\n#fishing-panel {\n  padding: 12px 14px;\n  bottom: 14px;\n  max-width: 390px;\n}\n#fishing-panel .fish-status {\n  display: block;\n  text-transform: uppercase;\n  font: 800 10px system-ui;\n  letter-spacing: 1.5px;\n  color: #738b87;\n  margin-bottom: 5px;\n}\n#fishing-panel p {\n  margin: 0 0 8px;\n  min-height: 22px;\n}\n#fishing-panel .fish-gauges {\n  display: flex;\n  gap: 12px;\n  margin: 8px 0;\n}\n#fishing-panel label {\n  flex: 1;\n  text-align: left;\n  font: 700 11px system-ui;\n}\n#fishing-panel progress {\n  width: 100%;\n  height: 9px;\n  margin: 5px 0;\n  appearance: none;\n  border: 0;\n  border-radius: 8px;\n  overflow: hidden;\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-bar {\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-value {\n  background: #7eaf9c;\n  border-radius: 8px;\n  transition: width .12s;\n}\n#fishing-panel[data-warning=true] label:last-child progress::-webkit-progress-value {\n  background: #d67976;\n}\n#fishing-panel[data-warning=true] p {\n  color: #ad535a;\n}\n#fishing-panel .fish-controls {\n  display: flex;\n  align-items: stretch;\n  gap: 5px;\n}\n#fishing-panel .fish-controls button {\n  touch-action: none;\n  user-select: none;\n  margin: 0;\n  padding: 13px 8px;\n  flex: 1;\n  border-radius: 15px;\n  font: 800 12px system-ui;\n  min-height: 52px;\n  background: #eee6f0;\n  color: #635470;\n}\n#fishing-panel #fish-action {\n  flex: 1.55;\n  background: #b1dac7;\n  color: #335e51;\n  font-size: 15px;\n}\n#fishing-panel .fish-controls button[data-held=true] {\n  background: #80bfa7 !important;\n  box-shadow: inset 0 2px 4px #416a6133;\n}\n#fishing-panel .fish-controls button[data-cue=true] {\n  border-color: #b194cf;\n  background: #e3d5f0;\n}\n#fishing-panel .fish-tip {\n  display: block;\n  font: 11px system-ui;\n  line-height: 1.4;\n  color: #79857f;\n  margin: 7px 0 2px;\n}\n#fishing-panel > button:last-child {\n  min-height: 32px;\n  padding: 5px 12px;\n  margin: 0;\n  background: transparent;\n  color: #797e83;\n  font-size: 11px;\n}\n#fishing-panel [hidden] {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  #fishing-panel {\n    bottom: 8px;\n    padding: 8px 12px;\n  }\n  #fishing-panel .fish-status,\n  #fishing-panel .fish-tip {\n    display: none;\n  }\n  #fishing-panel .fish-controls button {\n    min-height: 44px;\n    padding: 9px 6px;\n  }\n}\n#fish-direction-cue {\n  position: absolute;\n  bottom: calc(var(--panel-height,230px) + 25px);\n  left: 50%;\n  translate: -50% 0;\n  z-index: 26;\n  pointer-events: none;\n  background: #fff9e7ee;\n  border: 3px solid #e8bc60;\n  border-radius: 20px;\n  padding: 2px 15px 8px;\n  min-width: 85px;\n  text-align: center;\n  color: #725d36;\n  box-shadow: 0 4px 14px #405c5230;\n}\n#fish-direction-cue[hidden] {\n  display: none;\n}\n#fish-direction-cue[data-side=left] {\n  left: 19%;\n}\n#fish-direction-cue[data-side=right] {\n  left: 81%;\n}\n#fish-direction-cue span {\n  display: block;\n  font: 900 46px/1 system-ui;\n  letter-spacing: -6px;\n  padding-right: 6px;\n}\n#fish-direction-cue b {\n  display: block;\n  font: 900 11px system-ui;\n  letter-spacing: .7px;\n}\n#fish-direction-cue[data-side=left] .fish-arrows {\n  animation: pull-left .65s ease-in-out infinite;\n}\n#fish-direction-cue[data-side=right] .fish-arrows {\n  animation: pull-right .65s ease-in-out infinite;\n}\n#fish-direction-cue[data-correct=true] {\n  border-color: #80b7a0;\n  color: #417761;\n}\n#fish-direction-cue[data-correct=true] span {\n  font-size: 35px;\n  letter-spacing: 0;\n}\n#fish-direction-cue[data-side=rest] {\n  border-color: #d99485;\n  color: #a1574f;\n}\n#fish-direction-cue .fish-hand {\n  font-size: 30px;\n  letter-spacing: 0;\n  margin: 4px;\n}\n#fishing-panel .fish-controls button[data-cue=true] {\n  border: 3px solid #e1b45b;\n  background: #ffedb7;\n  color: #624f31;\n  box-shadow: 0 0 0 3px #f7d78b60;\n}\n#fishing-panel .fish-controls[data-pull="-1"] #fish-right,\n#fishing-panel .fish-controls[data-pull="1"] #fish-left {\n  opacity: .55;\n}\n#fishing-panel .fish-controls[data-pull=rest] #fish-action {\n  background: #efd2c8;\n  color: #945c51;\n}\n@keyframes pull-left {\n  0%, 100% {\n    transform: translateX(4px);\n  }\n  50% {\n    transform: translateX(-7px);\n  }\n}\n@keyframes pull-right {\n  0%, 100% {\n    transform: translateX(-4px);\n  }\n  50% {\n    transform: translateX(7px);\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #fish-direction-cue .fish-arrows {\n    animation: none !important;\n  }\n}\n\n/* src/ui/house.css */\n#mission-picker {\n  display: flex;\n  gap: 5px;\n  justify-content: center;\n  margin: 9px auto 0;\n  pointer-events: auto;\n}\n#mission-picker button {\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  background: #f6f0f9db;\n  padding: 5px 10px;\n  color: #8c739d;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#mission-picker button[aria-pressed=true] {\n  color: #614d7c;\n  background: #d6c4e8;\n}\n#mission-picker button:disabled {\n  opacity: .65;\n  cursor: default;\n}\n#room-connections {\n  margin: 7px 12px 0;\n  font-size: 10px;\n  color: #816b90;\n}\n#house-doors {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n.door-label {\n  position: absolute;\n  left: 0;\n  top: 0;\n  white-space: nowrap;\n  padding: 3px 6px;\n  font-size: 9px;\n  font-weight: 700;\n  color: #756085;\n  background: #fff6e7dc;\n  border: 1px solid #fff8;\n  border-radius: 7px;\n}\n.room-title {\n  text-shadow: 0 1px 6px #ede6f4;\n}\n#game[data-mission=practice] #task-count {\n  font-size: 9px;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #mission-picker {\n    margin-top: 5px;\n  }\n  #mission-picker button {\n    padding: 4px 8px;\n    font-size: 9px;\n  }\n  #room-connections {\n    margin-top: 4px;\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #mission-picker {\n    justify-content: flex-start;\n    flex-wrap: wrap;\n    width: 180px;\n    margin-left: 0;\n  }\n  #room-connections {\n    max-width: 165px;\n    margin-left: 0;\n  }\n}\n#game[data-scene=cleanup] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border: 1px solid #fff9;\n  border-radius: 20px;\n  background: #fff9efed;\n  box-shadow: 0 4px 20px #66564412;\n}\n#game[data-scene=cleanup] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=cleanup] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=cleanup] .flower {\n  font-size: 34px;\n}\n#game[data-scene=cleanup] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=cleanup] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1.1px;\n  color: #5c6e52;\n}\n#game[data-scene=cleanup] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n  letter-spacing: -.6px;\n}\n#game[data-scene=cleanup] .task-list {\n  justify-content: flex-start;\n  background: #fff8efdc;\n  border-radius: 9px;\n  padding: 4px 7px;\n  width: max-content;\n  max-width: 100%;\n  height: auto;\n}\n#game[data-scene=cleanup] #mission-picker {\n  justify-content: flex-start;\n  margin: 7px 0 0;\n}\n#game[data-scene=cleanup] #room-connections {\n  display: none;\n}\n#game[data-scene=cleanup] .player-label {\n  font-size: 9px;\n  padding: 3px 7px;\n}\n#game[data-scene=cleanup] .controls {\n  bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px));\n  left: 20px;\n  right: 20px;\n}\n#game[data-scene=cleanup] .control-label {\n  color: #50624c;\n  text-shadow: 0 1px 3px #ffff;\n}\n#game[data-scene=cleanup] #cleanup-hint {\n  background: #fff9efed;\n  width: calc(100% - 32px);\n  left: 16px;\n  padding: 7px 10px;\n  border-radius: 12px;\n  color: #596651;\n  bottom: calc(max(40px, env(safe-area-inset-bottom)) + 150px);\n  font-size: 10px;\n}\n#game[data-scene=cleanup] footer {\n  left: 16px;\n  right: 16px;\n  background: #fff9efed;\n  padding: 5px 9px;\n  border-radius: 12px;\n  bottom: 8px;\n  color: #6c795e;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #game[data-scene=cleanup] .room-title {\n    top: 85px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] #mission-picker {\n    margin-top: 5px;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    bottom: calc(max(36px, env(safe-area-inset-bottom)) + 144px);\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=cleanup] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=cleanup] .room-title {\n    top: 95px;\n    width: 210px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] .task-list {\n    flex-wrap: wrap;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    width: 40%;\n    left: 30%;\n    bottom: 12px;\n  }\n  #game[data-scene=cleanup] footer {\n    display: flex;\n    flex-wrap: wrap;\n    top: 12px;\n    bottom: auto;\n    left: 270px;\n    right: 16px;\n    justify-content: flex-end;\n  }\n}\n.asset-credits {\n  color: inherit;\n  font-size: 9px;\n  text-decoration: none;\n  padding: 5px;\n}\n#day-label {\n  margin: 5px 0;\n  font-size: 11px;\n  font-weight: 700;\n  color: #667b5b;\n  text-transform: capitalize;\n}\n#mission-picker {\n  flex-wrap: wrap;\n}\n#game[data-mission=day] .task-list {\n  flex-wrap: wrap;\n  font-size: 9px;\n}\n#game[data-mission=day] #mission-clock {\n  font-size: 19px;\n  white-space: nowrap;\n}\n#school-transition {\n  position: absolute;\n  z-index: 30;\n  inset: 0;\n  background: #f6eafaed;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  color: #65517b;\n}\n#school-transition[hidden] {\n  display: none;\n}\n#school-transition span {\n  font-size: 64px;\n}\n.lilah-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  max-width: 165px;\n  padding: 7px 10px;\n  border-radius: 15px 15px 15px 3px;\n  background: #fff2ceeF;\n  color: #735978;\n  font-size: 12px;\n  font-weight: 700;\n  pointer-events: none;\n  box-shadow: 0 3px 12px #7c627525;\n  z-index: 5;\n  text-align: center;\n}\n.lilah-label[hidden] {\n  display: none;\n}\n.marc-label {\n  background: #e7f0e4ef;\n  color: #4f655c;\n}\n#player-label,\n#house-doors,\n#room-connections {\n  display: none !important;\n}\n#game[data-scene=cleanup] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border-radius: 20px;\n  background: #fff9efed;\n}\n#game[data-scene=store] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=store] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=store] .flower {\n  font-size: 34px;\n}\n#game[data-scene=store] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=store] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1px;\n}\n#game[data-scene=store] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n}\n#game[data-scene=store] #scene-subtitle {\n  font-size: 11px;\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=store] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=store] .room-title {\n    width: 210px;\n  }\n}\n#bedtime-fade {\n  position: absolute;\n  inset: 0;\n  background: #161325;\n  z-index: 80;\n  pointer-events: none;\n}\n#house-effects {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font: 700 10px "Trebuchet MS", sans-serif;\n  min-height: 36px;\n  cursor: pointer;\n  padding: 4px 6px;\n}\n\n/* src/dev/developer-panel.css */\n.dev-launch,\n.dev-inline {\n  font: 800 11px/1.2 system-ui, sans-serif !important;\n  letter-spacing: .08em;\n  background: #27263c !important;\n  color: #e6dcff !important;\n  border: 1px solid #b9a4e8 !important;\n  border-radius: 12px !important;\n  min-height: 44px;\n  min-width: 44px;\n  padding: 10px !important;\n  cursor: pointer;\n}\n.dev-launch {\n  position: fixed;\n  z-index: 90;\n  bottom: 64px;\n  left: 50%;\n  transform: translateX(-50%);\n  box-shadow: 0 4px 18px #29223a40;\n}\n.dev-launch {\n  bottom: calc(64px + env(safe-area-inset-bottom, 0px));\n}\n#developer-panel {\n  height: min(850px, calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));\n}\n.dev-inline {\n  margin: 6px;\n  flex-shrink: 0;\n}\n.pop-title .dev-inline {\n  font-size: 9px !important;\n  letter-spacing: 0;\n  margin: 0;\n  min-width: 38px;\n  padding: 5px !important;\n}\n#developer-panel {\n  width: min(720px, calc(100vw - 24px));\n  max-width: none;\n  max-height: none;\n  height: min(850px, calc(100dvh - 24px));\n  margin: auto;\n  padding: 0;\n  overflow: hidden;\n  border: 1px solid #b6a4d764;\n  border-radius: 24px;\n  background: #181926;\n  color: #eeeaf8;\n  box-shadow: 0 28px 100px #100c23a6;\n  font: 14px/1.45 system-ui, sans-serif;\n  text-align: left;\n}\n#developer-panel::backdrop {\n  background: #121020a6;\n  backdrop-filter: blur(5px);\n}\n#developer-panel * {\n  box-sizing: border-box;\n}\n#developer-panel [hidden] {\n  display: none !important;\n}\n#developer-panel .dev-shell {\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n}\n#developer-panel button {\n  font: 650 13px/1.35 system-ui, sans-serif;\n  cursor: pointer;\n  min-height: 44px;\n  border: 1px solid #494458;\n  background: #303043;\n  color: #f3efff;\n  border-radius: 12px;\n  padding: 11px 13px;\n  box-shadow: none;\n  text-transform: none;\n  letter-spacing: 0;\n  transition: background .12s;\n}\n#developer-panel button:hover {\n  background: #414057;\n}\n#developer-panel button:focus-visible,\n#developer-panel select:focus-visible {\n  outline: 3px solid #d1bcff;\n  outline-offset: 2px;\n}\n#developer-panel button:disabled {\n  opacity: .4;\n  cursor: not-allowed;\n}\n#developer-panel button[aria-pressed=true] {\n  background: #b5dccc;\n  color: #1d3830;\n  border-color: #b5dccc;\n}\n#developer-panel .dev-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n  padding: 24px 26px 16px;\n  background:\n    radial-gradient(\n      ellipse at 90% 10%,\n      #76588b45,\n      transparent 60%);\n}\n#developer-panel .dev-eyebrow {\n  color: #c0b7d5;\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: .16em;\n  display: flex;\n  align-items: center;\n  gap: 7px;\n}\n#developer-panel .dev-eyebrow i {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: #aaddc4;\n  box-shadow: 0 0 12px #aaddc440;\n}\n#developer-panel h2 {\n  color: #f5f0ff;\n  font-size: 29px;\n  letter-spacing: -1px;\n  margin: 5px 0 2px;\n  font-weight: 750;\n}\n#developer-panel h2 span {\n  color: #d9baf5;\n  margin-left: 10px;\n}\n#developer-panel .dev-header p {\n  color: #b7afc8;\n  margin: 0;\n  font-size: 12px;\n}\n#developer-panel .dev-close {\n  font-size: 25px;\n  padding: 2px;\n  width: 44px;\n  background: #ffffff08;\n  border-color: #ffffff20;\n}\n#developer-panel .dev-live {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 0 26px 16px;\n  color: #d2cddd;\n  font-size: 11px;\n}\n#developer-panel .dev-live span {\n  padding: 5px 9px;\n  border: 1px solid #ffffff15;\n  border-radius: 7px;\n  background: #ffffff05;\n}\n#developer-panel .dev-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 4px;\n  border-block: 1px solid #ffffff12;\n  padding: 6px 20px;\n  background: #20202e;\n}\n#developer-panel .dev-tabs button {\n  background: transparent;\n  border-color: transparent;\n  color: #aaa2bc;\n  border-radius: 9px;\n  padding: 10px 4px;\n  font-size: 12px;\n}\n#developer-panel .dev-tabs button[aria-selected=true] {\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-content {\n  overflow-y: auto;\n  min-height: 0;\n  padding: 20px 26px;\n  flex: 1;\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  scrollbar-color: #6b597f transparent;\n}\n#developer-panel .dev-hero {\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  width: 100%;\n  padding: 22px 18px;\n  text-align: left;\n  background:\n    linear-gradient(\n      120deg,\n      #d7c6f2,\n      #efc8da);\n  border: 0;\n  color: #392e4b;\n  margin-bottom: 16px;\n}\n#developer-panel .dev-hero:hover {\n  background:\n    linear-gradient(\n      120deg,\n      #e2d5f8,\n      #f6d8e5);\n}\n#developer-panel .dev-hero-icon {\n  font-size: 38px;\n  line-height: 1;\n}\n#developer-panel .dev-hero small {\n  display: block;\n  letter-spacing: .13em;\n  font-size: 9px;\n  font-weight: 800;\n  opacity: .75;\n}\n#developer-panel .dev-hero strong {\n  display: block;\n  font-size: 22px;\n  letter-spacing: -.6px;\n  margin: 3px 0;\n}\n#developer-panel .dev-hero span span {\n  display: block;\n  font-size: 11px;\n  font-weight: 500;\n}\n#developer-panel .dev-hero b {\n  font-size: 25px;\n  margin-left: auto;\n}\n#developer-panel .dev-card {\n  background: #232333;\n  border: 1px solid #ffffff10;\n  border-radius: 16px;\n  padding: 18px;\n  margin-bottom: 14px;\n}\n#developer-panel h3 {\n  font-size: 15px;\n  margin: 0 0 8px;\n  color: #f0eafa;\n  font-weight: 700;\n}\n#developer-panel p {\n  color: #b8b0c9;\n  font-size: 12px;\n  margin: 0 0 13px;\n  line-height: 1.55;\n}\n#developer-panel .dev-card > p:last-child {\n  margin: 12px 0 0;\n}\n#developer-panel .dev-grid {\n  display: grid;\n  grid-template-columns: repeat(2, minmax(0, 1fr));\n  gap: 8px;\n}\n#developer-panel .dev-grid button {\n  text-align: left;\n}\n#developer-panel .dev-select-label {\n  display: block;\n  font-size: 11px;\n  color: #b9b1ca;\n  margin: 15px 0 6px;\n}\n#developer-panel select {\n  display: block;\n  width: 100%;\n  border: 1px solid #58506b;\n  background: #181926;\n  color: #eeeaf8;\n  border-radius: 10px;\n  min-height: 44px;\n  padding: 10px;\n  margin-bottom: 8px;\n  font: 13px system-ui, sans-serif;\n}\n#developer-panel .dev-notice {\n  padding: 16px;\n  border-radius: 14px;\n  background: #30342f;\n  border: 1px solid #b8d4bb30;\n  margin-bottom: 14px;\n  color: #c8e5d1;\n}\n#developer-panel .dev-notice strong {\n  font-size: 12px;\n}\n#developer-panel .dev-notice p {\n  margin: 6px 0 0;\n  color: #b4c2b6;\n}\n#developer-panel .dev-resume {\n  width: 100%;\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-danger {\n  color: #ffc4bf;\n  border-color: #965e6455;\n}\n#developer-panel pre {\n  white-space: pre-wrap;\n  font: 11px/1.8 ui-monospace, monospace;\n  color: #bbb4cd;\n  margin: 16px 0 0;\n  overflow-wrap: anywhere;\n}\n#developer-panel .dev-bottom {\n  padding: 13px 26px 15px;\n  border-top: 1px solid #ffffff12;\n  background: #20202e;\n}\n#developer-panel .dev-bottom > span {\n  display: block;\n  font-size: 11px;\n  color: #bce1cd;\n}\n#developer-panel .dev-bottom small {\n  display: block;\n  font-size: 10px;\n  color: #aaa1bc;\n  margin-top: 3px;\n}\n#developer-panel [data-status] {\n  font-size: 11px;\n  color: #d6c4f3;\n  margin-top: 8px;\n}\n#developer-panel [data-status][data-error=true] {\n  color: #ffc1b7;\n}\n@media (max-width: 480px) {\n  #developer-panel {\n    width: calc(100vw - 12px);\n    height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));\n    border-radius: 18px;\n  }\n  #developer-panel .dev-header {\n    padding: 17px 16px 12px;\n  }\n  #developer-panel h2 {\n    font-size: 25px;\n  }\n  #developer-panel .dev-live {\n    padding: 0 16px 12px;\n    gap: 5px;\n  }\n  #developer-panel .dev-tabs {\n    padding: 5px 10px;\n  }\n  #developer-panel .dev-content {\n    padding: 14px;\n  }\n  #developer-panel .dev-card {\n    padding: 14px;\n  }\n  #developer-panel .dev-bottom {\n    padding: 11px 16px;\n  }\n  #developer-panel .dev-hero {\n    padding: 16px 13px;\n    gap: 10px;\n  }\n  #developer-panel .dev-hero strong {\n    font-size: 20px;\n  }\n  #developer-panel .dev-hero-icon {\n    font-size: 28px;\n  }\n  #developer-panel .dev-grid button {\n    font-size: 12px;\n    padding: 10px;\n  }\n  #developer-panel .dev-bottom small {\n    font-size: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #developer-panel button {\n    transition: none;\n  }\n}\n#developer-panel .dev-bottom {\n  position: static;\n  display: block;\n  flex-shrink: 0;\n  letter-spacing: 0;\n  pointer-events: auto;\n}\n#squishy-pop:has(.dev-inline) .pop-footer {\n  display: block;\n}\n#squishy-pop .pop-title .dev-inline {\n  background: #27263c !important;\n  color: #e6dcff !important;\n}\n';
+var local_default = '/* src/ui/hunt.css */\n#hunt-routes {\n  width: min(420px, calc(100% - 24px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  border: 2px solid white;\n  border-radius: 26px;\n  padding: 23px 16px 14px;\n  color: #57496b;\n  background: #faf5ef;\n}\n#hunt-routes::backdrop {\n  background: #46395480;\n  backdrop-filter: blur(4px);\n}\n#hunt-routes h2 {\n  font-size: 25px;\n  letter-spacing: -.8px;\n  margin: 12px 0 7px;\n}\n.hunt-budget {\n  font-size: 13px;\n  color: #59765e;\n  font-weight: 800;\n  margin: 0 0 15px;\n}\n.store-choice {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  width: 100%;\n  padding: 13px 10px;\n  margin: 9px 0;\n  text-align: left;\n  border: 1px solid #fff;\n  border-radius: 18px;\n  background:\n    linear-gradient(\n      110deg,\n      var(--shop-color),\n      #fff7ee);\n  color: #514863;\n  box-shadow: 0 3px 8px #69546710;\n  cursor: pointer;\n}\n.store-choice:disabled {\n  opacity: .5;\n  cursor: default;\n}\n.store-icon {\n  display: grid;\n  place-items: center;\n  width: 43px;\n  min-width: 43px;\n  height: 43px;\n  border-radius: 50%;\n  background: #fff8;\n  font-size: 28px;\n}\n.store-choice strong {\n  display: block;\n  font-size: 17px;\n  margin-bottom: 4px;\n}\n.store-choice small {\n  display: block;\n  font-size: 10px;\n  line-height: 1.5;\n}\n.store-choice em {\n  display: block;\n  font-size: 11px;\n  line-height: 1.35;\n  margin: 7px 0 4px;\n  font-style: normal;\n  font-weight: 700;\n}\n.route-status {\n  color: #5e795b;\n}\n.hunt-explainer {\n  font-size: 10px;\n  line-height: 1.5;\n  color: #8d7b8b;\n  margin: 12px 4px;\n}\n#shopping-time {\n  display: inline-block;\n  padding: 6px 10px;\n  margin: 3px 0;\n  background: #fffaeeed;\n  color: #66795b;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 700;\n  pointer-events: none;\n}\n#hunt-find {\n  position: absolute;\n  left: 16px;\n  right: 16px;\n  bottom: 220px;\n  max-width: 360px;\n  margin: auto;\n  padding: 12px 14px;\n  border: 1px solid white;\n  border-radius: 18px;\n  background: #fff8eff2;\n  color: #655371;\n  box-shadow: 0 4px 18px #56466320;\n  pointer-events: none;\n}\n#hunt-find strong {\n  font-size: 17px;\n}\n#hunt-find p {\n  font-size: 12px;\n  margin: 5px 0;\n  color: #59816b;\n  font-weight: 700;\n}\n#hunt-find small {\n  font-size: 10px;\n}\n#game[data-scene=store] #save-message {\n  bottom: auto;\n  top: 190px;\n  left: 16px;\n  width: calc(100% - 32px);\n  padding: 9px 12px;\n}\n#game[data-scene=store] #cleanup-hint {\n  background: #fff9efdf;\n  border-radius: 12px;\n  padding: 7px 9px;\n}\n#game[data-scene=store] #shop-display-marker {\n  background: transparent;\n  color: #ffe6a0;\n  border: 0;\n  padding: 0;\n  box-shadow: none;\n  font-size: 23px;\n  text-shadow: 0 0 4px white, 0 0 9px #e6b761;\n}\n#hunt-travel {\n  position: absolute;\n  inset: 0;\n  z-index: 45;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  background: #f5edf7f5;\n  color: #705b83;\n}\n#hunt-travel span {\n  font-size: 65px;\n  animation: hunt-bob .6s ease-in-out infinite alternate;\n}\n#hunt-travel h2 {\n  font-size: 27px;\n}\n@keyframes hunt-bob {\n  to {\n    transform: translateY(-10px) rotate(6deg);\n  }\n}\n.series-heading {\n  grid-column: 1/-1;\n  text-align: left;\n  padding: 10px 3px 4px;\n  font-size: 14px;\n}\n#game[data-scene=store] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] #day-label,\n#game[data-scene=store] #scene-subtitle {\n  display: none;\n}\n#game[data-scene=store] .room-title .eyebrow {\n  font-size: 12px;\n  letter-spacing: .7px;\n  margin-bottom: 4px;\n}\n@media (max-height: 740px) {\n  #hunt-find {\n    bottom: 190px;\n    padding: 8px 12px;\n  }\n  #hunt-routes {\n    padding-top: 14px;\n  }\n  .store-choice {\n    padding: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #hunt-travel span {\n    animation: none;\n  }\n}\n#hunt-routes .dialog-top-action {\n  position: sticky;\n  top: 0;\n  z-index: 2;\n  box-shadow: 0 0 0 5px #faf5fb;\n}\n\n/* src/ui/trading.css */\n#trading-dialog {\n  box-sizing: border-box;\n  width: min(460px, calc(100% - 16px));\n  max-height: calc(100dvh - 16px);\n  padding: 0;\n  border: 2px solid white;\n  border-radius: 24px;\n  background: #fcf7ef;\n  color: #514365;\n  overflow: hidden;\n}\n#trading-dialog[open] {\n  display: flex;\n  flex-direction: column;\n}\n#trading-dialog::backdrop {\n  background: #44355288;\n  backdrop-filter: blur(3px);\n}\n#trading-dialog button {\n  font: inherit;\n  color: inherit;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#trading-dialog button:disabled {\n  opacity: .48;\n  cursor: default;\n}\n.trade-header {\n  padding: 14px 18px 10px;\n  background:\n    linear-gradient(\n      120deg,\n      #fff,\n      var(--trader));\n  flex-shrink: 0;\n}\n.trade-header h2 {\n  margin: 4px 0;\n  font-size: 27px;\n}\n.trade-header strong {\n  font-size: 12px;\n}\n.trade-header p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  line-height: 1.4;\n}\n.trade-scroll {\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  padding: 0 14px 12px;\n  min-height: 0;\n}\n#trading-dialog h3 {\n  font-size: 13px;\n  margin: 12px 0 7px;\n  display: flex;\n  justify-content: space-between;\n  gap: 4px;\n}\n#trading-dialog h3 small {\n  font-size: 10px;\n  font-weight: normal;\n}\n.trade-slots {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n  gap: 6px;\n  min-height: 65px;\n  background: #e9dfef;\n  padding: 7px;\n  border-radius: 15px;\n}\n.trade-item {\n  border: 1px solid #fff;\n  background: #fffbf8;\n  border-radius: 12px;\n  padding: 4px;\n  text-align: center;\n  min-width: 0;\n}\n.trade-item img {\n  width: 100%;\n  height: 52px;\n  object-fit: contain;\n}\n.trade-item strong,\n.trade-item small {\n  display: block;\n  font-size: 10px;\n}\n.trade-item small {\n  font-size: 9px;\n  margin-top: 3px;\n}\n.trade-speech {\n  font-size: 12px;\n  line-height: 1.45;\n  background: #fff1cd;\n  border-radius: 13px;\n  padding: 10px;\n  margin: 10px 0;\n}\n.trade-empty {\n  grid-column: 1/-1;\n  margin: 10px;\n  font-size: 12px;\n  line-height: 1.5;\n}\n.trade-bag-heading label {\n  display: flex;\n  gap: 6px;\n  align-items: center;\n  font-size: 12px;\n  min-height: 32px;\n}\n.trade-bag-heading input {\n  width: 20px;\n  height: 20px;\n  accent-color: #8573a2;\n}\n.trade-safety {\n  font-size: 10px;\n  line-height: 1.4;\n  margin: 5px 0 10px;\n  color: #796b87;\n}\n#trade-inventory {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 6px;\n}\n.trade-bag-item {\n  display: flex;\n  align-items: center;\n  min-height: 62px;\n  padding: 4px;\n  border: 1px solid #ded2e6;\n  background: white;\n  border-radius: 12px;\n  text-align: left;\n  min-width: 0;\n}\n.trade-bag-item img {\n  width: 38px;\n  flex-shrink: 0;\n}\n.trade-bag-item strong {\n  font-size: 11px;\n  display: block;\n}\n.trade-bag-item small {\n  font-size: 9px;\n  display: block;\n  margin-top: 3px;\n}\n.trade-footer {\n  flex-shrink: 0;\n  padding: 8px 12px 12px;\n  background: #fcf7ef;\n  border-top: 1px solid #e8ddea;\n}\n.trade-footer p {\n  margin: 0 0 8px;\n  text-align: center;\n  font-size: 12px;\n  font-weight: bold;\n}\n.trade-controls {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  gap: 9px;\n}\n.trade-controls button {\n  border: 2px solid white;\n  border-radius: 18px;\n  font-size: 32px !important;\n  font-weight: bold !important;\n  min-height: 68px;\n  background: #f0c6cc;\n}\n.trade-controls button small {\n  display: block;\n  font-size: 10px;\n}\n.trade-controls #trade-add {\n  background: #f6dfa1;\n}\n.trade-controls #trade-accept {\n  background: #bad6b9;\n}\n#leave-recess {\n  position: absolute;\n  top: 76px;\n  right: 14px;\n  width: auto;\n  font-size: 12px;\n  padding: 9px 13px;\n  z-index: 5;\n}\n.collection-protection {\n  border: 0;\n  background: #fff9;\n  border-radius: 8px;\n  margin: 4px 1px 0;\n  min-width: 30px;\n  min-height: 32px;\n  font-size: 14px;\n  cursor: pointer;\n}\n.collection-protection[aria-pressed=true] {\n  background: #e5c6e9;\n  outline: 1px solid #b68ec0;\n}\n#game[data-scene=recess] #trip-wallet,\n#game[data-scene=recess] #mission-clock {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  .trade-header {\n    padding: 8px 12px;\n  }\n  .trade-header h2 {\n    font-size: 21px;\n  }\n  .trade-header p {\n    font-size: 11px;\n  }\n  .trade-item img {\n    height: 42px;\n  }\n  .trade-controls button {\n    min-height: 60px;\n  }\n  .trade-footer {\n    padding: 6px 10px;\n  }\n}\n#trade-suggest {\n  width: 100%;\n  min-height: 44px;\n  border: 2px solid #b4d4bd;\n  border-radius: 16px;\n  background: #edf8ed;\n  font-weight: 800;\n}\n.trade-help {\n  font-size: 11px;\n  color: #6d6477;\n}\n.trade-loved {\n  border-color: #bad8bb !important;\n}\n.trade-header > small {\n  display: block;\n  margin-top: 7px;\n  font-size: 11px;\n}\n\n/* src/ui/squishy-pop.css */\n.pop-launch {\n  position: fixed;\n  z-index: 20;\n  bottom: max(160px, 22vh);\n  left: 50%;\n  transform: translateX(-50%);\n  width: min(310px, 85vw);\n  border: 3px solid #fff9;\n  border-radius: 30px;\n  padding: 13px 16px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe7ee,\n      #efa6d4);\n  color: #655082;\n  box-shadow: 0 6px 22px #4f3b6240;\n  font-weight: 900;\n  font-size: 17px;\n  cursor: pointer;\n}\n.pop-launch span {\n  margin-right: 8px;\n}\n.pop-launch small {\n  display: block;\n  font-size: 11px;\n  letter-spacing: .5px;\n  margin-top: 5px;\n  font-weight: 600;\n}\n#squishy-pop {\n  padding: 0;\n  border: 0;\n  background: transparent;\n  color: #5d497d;\n  max-width: none;\n  max-height: none;\n  width: 100%;\n  height: 100dvh;\n  inset: 0;\n  margin: 0;\n  overflow: auto;\n  font-family: inherit;\n}\n#squishy-pop::backdrop {\n  background: #46345495;\n  backdrop-filter: blur(9px);\n}\n#squishy-pop * {\n  box-sizing: border-box;\n}\n#squishy-pop button {\n  font: inherit;\n  cursor: pointer;\n  min-height: 44px;\n  color: #654e83;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: linear-gradient(#ffe1ef, #f9aed5);\n  font-weight: 800;\n  padding: 9px 17px;\n  box-shadow: 0 3px 0 #c997c136;\n}\n#squishy-pop button:active {\n  transform: scale(.96);\n}\n#squishy-pop button:focus-visible {\n  outline: 3px solid #8a5fb4;\n  outline-offset: 2px;\n}\n.pop-shell {\n  width: min(100%, 480px);\n  min-height: 100%;\n  margin: auto;\n  padding: max(16px, env(safe-area-inset-top)) 18px max(14px, env(safe-area-inset-bottom));\n  background:\n    radial-gradient(\n      ellipse at 10% 45%,\n      #fff5d2aa,\n      transparent 60%),\n    linear-gradient(\n      155deg,\n      #fff8f1f5,\n      #f1e5fff5 60%,\n      #ffe9f1f5);\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 14px;\n}\n.pop-title {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.pop-title > div {\n  flex: 1;\n}\n.pop-title small {\n  font-size: 9px;\n  letter-spacing: 2px;\n}\n.pop-title h2 {\n  font-size: 30px;\n  letter-spacing: -1px;\n  line-height: 1.1;\n  margin: 6px 0;\n  font-weight: 1000;\n  color: #9878b9;\n  text-shadow: 0 2px 0 white;\n}\n.pop-title em {\n  font-style: normal;\n  color: #ed83b0;\n}\n.pop-title button {\n  width: 44px;\n  padding: 5px !important;\n  background: #ffffffad !important;\n}\n.pop-stats {\n  display: grid;\n  grid-template-columns: 1fr 1.1fr 1.1fr;\n  gap: 8px;\n}\n.pop-stats > div {\n  border-radius: 22px;\n  padding: 11px 5px;\n  background: #ffffffc7;\n  border: 2px solid #fff;\n  text-align: center;\n  box-shadow: 0 4px 0 #cbb4e227;\n}\n.pop-stats small {\n  display: block;\n  font-size: 10px;\n  letter-spacing: 1.6px;\n  color: #957bad;\n  font-weight: 800;\n}\n.pop-stats strong {\n  display: block;\n  font-size: 27px;\n  line-height: 1.3;\n}\n.pop-stats progress {\n  height: 6px;\n  width: 65%;\n  display: block;\n  margin: 4px auto 0;\n}\n.pop-tray {\n  position: relative;\n  border: 6px solid #f6eeff;\n  border-radius: 35px;\n  background:\n    linear-gradient(\n      135deg,\n      #d1b9ee,\n      #c4a6df);\n  padding: 9px;\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #bca1d8,\n    0 14px 25px #76609330;\n  isolation: isolate;\n}\n.pop-tray canvas {\n  width: 100%;\n  aspect-ratio: 1;\n  display: block;\n  touch-action: none;\n  border-radius: 21px;\n  background:\n    radial-gradient(\n      ellipse,\n      #fff2 40%,\n      transparent 70%);\n  user-select: none;\n}\n.pop-feedback {\n  position: absolute;\n  pointer-events: none;\n  inset: 40% 0 auto;\n  text-align: center;\n  font-size: 29px;\n  font-weight: 1000;\n  color: #ec65a9;\n  text-shadow:\n    2px 3px white,\n    -2px -2px white,\n    0 4px 6px #8a5fad;\n  transform: rotate(-6deg);\n  z-index: 2;\n}\n.pop-cover {\n  position: absolute;\n  inset: 0;\n  z-index: 3;\n  border-radius: 28px;\n  background: #fff5f2ef;\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  align-items: center;\n  text-align: center;\n  gap: 10px;\n  padding: 20px;\n  backdrop-filter: blur(4px);\n}\n.pop-cover[hidden] {\n  display: none;\n}\n.pop-cover h3 {\n  font-size: 23px;\n  line-height: 1.2;\n  margin: 0;\n}\n.pop-cover p {\n  font-size: 12px;\n  margin: 0;\n  max-width: 260px;\n}\n.pop-cover button {\n  width: 85%;\n  font-size: 14px !important;\n}\n.pop-cover .pop-link {\n  border: 0;\n  background: none;\n  box-shadow: none;\n  font-size: 12px !important;\n}\n.pop-count {\n  font-size: 80px;\n  color: #e778af;\n  animation: pop-count .8s infinite;\n}\n.pop-demo {\n  position: relative;\n  display: flex;\n  gap: 15px;\n  padding: 8px 10px 25px;\n  font-size: 40px;\n  color: #ec87b6;\n}\n.pop-demo b {\n  position: absolute;\n  left: 10%;\n  bottom: 0;\n  font-size: 32px;\n  animation: pop-finger 2s infinite;\n}\n.pop-frenzy {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 10px;\n  letter-spacing: 1px;\n  font-weight: 900;\n  margin-top: 3px;\n}\n.pop-frenzy progress {\n  flex: 1;\n  min-width: 0;\n}\n.pop-frenzy b {\n  color: #e788b5;\n}\n.pop-hint {\n  text-align: center;\n  font-size: 14px;\n  font-weight: 700;\n  margin: 0;\n}\n.pop-friends {\n  display: flex;\n  justify-content: center;\n  gap: 7px;\n}\n.pop-friends span {\n  width: 40px;\n  text-align: center;\n}\n.pop-friends img {\n  width: 40px;\n  height: 35px;\n  object-fit: contain;\n  display: block;\n}\n.pop-friends small {\n  font-size: 9px;\n  color: #b18a52;\n  display: block;\n}\n.pop-footer {\n  text-align: center;\n  font-size: 10px;\n  color: #a58fb0;\n  letter-spacing: 1px;\n}\n.pop-result-star {\n  font-size: 35px;\n  color: #f5c960;\n}\n.pop-result-numbers {\n  display: flex;\n  justify-content: space-around;\n  width: 100%;\n  font-size: 11px;\n}\n.pop-result-numbers b {\n  display: block;\n  font-size: 24px;\n}\n.pop-ticket-prize {\n  font-size: 15px;\n  color: #d26f9f;\n}\n.pop-cover progress {\n  width: 70%;\n  height: 9px;\n}\n#squishy-pop progress {\n  appearance: none;\n  border: 0;\n  border-radius: 20px;\n  background: #e1d4ed;\n  height: 9px;\n  overflow: hidden;\n}\n#squishy-pop progress::-webkit-progress-bar {\n  background: #e1d4ed;\n  border-radius: 20px;\n}\n#squishy-pop progress::-webkit-progress-value {\n  background:\n    linear-gradient(\n      90deg,\n      #bd95e0,\n      #f49abe);\n  border-radius: 20px;\n  transition: width .2s;\n}\n.urgent {\n  color: #df608a;\n  animation: pop-count 1s infinite;\n}\n@keyframes pop-finger {\n  0%, 15% {\n    left: 10%;\n  }\n  70%, 100% {\n    left: 75%;\n  }\n}\n@keyframes pop-count {\n  0% {\n    transform: scale(1.08);\n  }\n  70% {\n    transform: scale(1);\n  }\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 9px;\n    padding: 10px 15px;\n  }\n  .pop-title h2 {\n    font-size: 25px;\n  }\n  .pop-stats > div {\n    padding: 7px 3px;\n  }\n  .pop-stats strong {\n    font-size: 23px;\n  }\n  .pop-friends {\n    display: none;\n  }\n  .pop-footer {\n    display: none;\n  }\n  .pop-tray {\n    border-width: 5px;\n    padding: 6px;\n  }\n  .pop-cover {\n    gap: 7px;\n    padding: 10px;\n  }\n  .pop-cover h3 {\n    font-size: 20px;\n  }\n  .pop-result-star {\n    display: none;\n  }\n}\n@media (min-width: 500px) {\n  .pop-shell {\n    max-width: min(480px, 70dvh);\n    border-radius: 32px;\n    min-height: 0;\n    margin: 20px auto;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #squishy-pop * {\n    animation: none !important;\n  }\n}\n.pop-demo img {\n  width: 58px;\n  height: 58px;\n  object-fit: contain;\n}\n.pop-demo:before {\n  content: "";\n  position: absolute;\n  height: 5px;\n  background: #ffaad4;\n  left: 25px;\n  right: 25px;\n  top: 45%;\n  z-index: -1;\n  border-radius: 10px;\n}\n.pop-demo {\n  isolation: isolate;\n}\n.is-frenzy .pop-tray {\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #e7afd5,\n    0 0 30px #ffb8d5;\n}\n.is-frenzy .pop-frenzy {\n  color: #cf639e;\n}\n.pop-launch[hidden] {\n  display: none;\n}\n.pop-cover .pop-result-star {\n  animation: pop-count .8s 2;\n}\n#squishy-pop {\n  font-family:\n    "Trebuchet MS",\n    "Arial Rounded MT Bold",\n    Arial,\n    sans-serif;\n}\n[data-tickets] {\n  background-repeat: no-repeat;\n  background-position: calc(50% - 15px) center;\n  background-size: 35px;\n  padding-left: 26px;\n}\n.pop-launch {\n  animation: pop-entrance .3s ease-out;\n}\n@keyframes pop-entrance {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n.pop-frenzy span {\n  padding: 7px 0 7px 24px;\n  background-repeat: no-repeat;\n  background-position: left center;\n  background-size: 25px;\n}\n#squishy-pop[open] .pop-shell {\n  animation: pop-entrance .2s ease-out;\n}\n.pop-chain-cue {\n  position: absolute;\n  z-index: 4;\n  transform: translate(-50%, -100%);\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 5px 10px 5px 5px;\n  border: 2px solid white;\n  border-radius: 22px;\n  background: #fff6fc;\n  color: #6c4487;\n  box-shadow: 0 3px 12px #855a9955;\n  pointer-events: none;\n  white-space: nowrap;\n  font-size: 11px;\n  font-weight: 800;\n}\n.pop-chain-cue[hidden] {\n  display: none;\n}\n.pop-chain-cue > b {\n  display: grid;\n  place-items: center;\n  background: #e88bbb;\n  color: white;\n  border-radius: 50%;\n  width: 30px;\n  height: 30px;\n  font-size: 20px;\n}\n.pop-chain-cue span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-chain-cue img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n}\n.pop-chain-cue.pulse > b {\n  animation: pop-count .22s ease-out;\n}\n.pop-feedback {\n  inset: 3px 0 auto;\n  font-size: 22px;\n  transform: none;\n  line-height: 1.2;\n}\n.is-frenzy .pop-tray {\n  border-color: #fff0b5;\n  box-shadow:\n    inset 0 4px 10px #9973bb40,\n    0 7px 0 #e6a6d6,\n    0 0 24px #ffc8d7;\n}\n.is-frenzy .pop-frenzy {\n  background: #fff6d4;\n  border-radius: 18px;\n  padding: 3px 8px;\n}\n.pop-frenzy b {\n  min-width: 46px;\n  text-align: right;\n}\n.pop-hint {\n  font-size: 13px;\n  min-height: 18px;\n}\n.pop-previous-best {\n  font-size: 11px;\n  color: #957aac;\n}\n.pop-ticket-flight {\n  height: 34px;\n  width: 100%;\n  position: relative;\n  overflow: hidden;\n}\n.pop-ticket-flight img {\n  position: absolute;\n  left: calc(18% + var(--i)*8%);\n  width: 35px;\n  height: 28px;\n  object-fit: contain;\n  animation: pop-ticket-bank .95s calc(var(--i)*.07s) both;\n}\n.pop-ticket-prize {\n  font-size: 17px;\n}\n@keyframes pop-ticket-bank {\n  0% {\n    transform: translateY(23px) rotate(-18deg);\n    opacity: 0;\n  }\n  30% {\n    opacity: 1;\n  }\n  70% {\n    transform: translateY(-4px) rotate(8deg);\n    opacity: 1;\n  }\n  100% {\n    transform: translateY(8px) scale(.65);\n    opacity: 0;\n  }\n}\n.showing-results .pop-stats,\n.showing-results .pop-frenzy,\n.showing-results .pop-hint,\n.showing-results .pop-friends {\n  display: none;\n}\n.showing-results .pop-tray {\n  height: min(480px, calc(100dvh - 140px));\n  flex-shrink: 0;\n}\n.showing-results .pop-tray canvas {\n  position: absolute;\n  visibility: hidden;\n}\n.showing-results .pop-cover {\n  gap: 12px;\n  padding: 18px;\n  overflow: auto;\n}\n.showing-results .pop-cover h3 {\n  font-size: 24px;\n}\n.showing-results .pop-result-star {\n  display: block;\n  line-height: 1;\n  font-size: 32px;\n}\n.showing-results .pop-cover button {\n  flex-shrink: 0;\n  min-height: 44px;\n}\n.showing-results .pop-cover p {\n  line-height: 1.4;\n}\n@media (max-height: 700px) {\n  .showing-results .pop-cover {\n    gap: 8px;\n    padding: 12px;\n  }\n  .showing-results .pop-cover h3 {\n    font-size: 21px;\n  }\n  .showing-results .pop-result-star {\n    font-size: 24px;\n  }\n  .pop-chain-cue {\n    font-size: 10px;\n  }\n  .pop-feedback {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .pop-ticket-flight img {\n    animation: none;\n    opacity: 1;\n  }\n  .pop-chain-cue.pulse > b {\n    animation: none;\n  }\n}\n@media (max-width: 360px) {\n  .pop-title {\n    gap: 5px;\n  }\n  .pop-title > div {\n    min-width: 0;\n  }\n  .pop-title small {\n    font-size: 7px;\n    letter-spacing: .6px;\n  }\n  .pop-title h2 {\n    font-size: 20px;\n  }\n  .showing-results .pop-tray {\n    height: calc(100dvh - 145px);\n  }\n}\n#squishy-pop-shortcut {\n  pointer-events: auto;\n  border: 2px solid #fff;\n  border-radius: 22px;\n  padding: 9px 14px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe6f0,\n      #efb5dd);\n  color: #604c80;\n  font: 800 13px "Trebuchet MS", sans-serif;\n  box-shadow: 0 3px 10px #72538b26;\n  cursor: pointer;\n}\n#squishy-pop-shortcut:hover {\n  background: #f6c7e5;\n}\n#squishy-pop-shortcut:focus-visible {\n  outline: 3px solid #7855ae;\n  outline-offset: 3px;\n}\n@media (max-width: 600px) {\n  footer .asset-credits {\n    display: none;\n  }\n  #squishy-pop-shortcut {\n    font-size: 11px;\n    padding: 8px 10px;\n  }\n}\n#squishy-pop-shortcut {\n  min-height: 44px;\n}\n.pop-result-actions {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 8px;\n  width: 100%;\n}\n.pop-cover .pop-result-actions button {\n  width: 100%;\n  font-size: 12px !important;\n  padding: 8px;\n  line-height: 1.2;\n}\n.pop-result-actions button:first-child:last-child {\n  grid-column: 1/-1;\n}\n.pop-goals {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  padding: 7px 9px;\n  border: 2px solid white;\n  border-radius: 18px;\n  background: #fff6dc;\n  font-size: 12px;\n  font-weight: 800;\n  flex-wrap: wrap;\n}\n.pop-goals[hidden],\n.showing-results .pop-goals {\n  display: none;\n}\n.pop-goals small {\n  font-size: 9px;\n  color: #9878b9;\n}\n.pop-goals span,\n.pop-objectives span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-goals img,\n.pop-objectives img,\n.pop-previous-best img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n  vertical-align: middle;\n}\n.pop-goals .done {\n  color: #487865;\n}\n.pop-level-list {\n  display: flex;\n  flex-direction: column;\n  gap: 9px;\n  width: 100%;\n}\n.pop-level-list button {\n  width: 100%;\n  text-align: left;\n}\n.pop-level-list small {\n  display: block;\n  margin-top: 4px;\n  font-size: 11px;\n  font-weight: 600;\n}\n#squishy-pop button:disabled {\n  opacity: .55;\n  cursor: default;\n  transform: none;\n  background: #e5dfeb;\n}\n.pop-objectives {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 12px;\n  padding: 12px;\n  font-size: 18px;\n  font-weight: 800;\n}\n.showing-results .pop-cover {\n  justify-content: flex-start;\n}\n.showing-results .pop-cover > h3:first-child {\n  margin-top: 8px;\n}\n.pop-previous-best {\n  line-height: 1.5;\n}\n.showing-results .pop-cover > * {\n  flex-shrink: 0;\n}\n.showing-results .pop-cover .pop-link {\n  min-height: 44px;\n  padding: 7px;\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 7px;\n  }\n  .pop-goals {\n    font-size: 11px;\n    padding: 4px 6px;\n    gap: 5px;\n  }\n  .pop-goals img {\n    width: 24px;\n    height: 24px;\n  }\n  .showing-results .pop-cover {\n    gap: 7px;\n  }\n  .pop-level-list {\n    gap: 6px;\n  }\n}\n.pop-prizes {\n  min-height: 44px !important;\n  width: auto !important;\n  padding: 5px 10px !important;\n  font-size: 12px !important;\n}\n.pop-feedback[data-tier=great] {\n  font-size: clamp(22px, 6vw, 32px);\n  color: #fff6a0;\n  text-shadow: 0 3px 0 #7d4690, 0 0 18px #fff;\n}\n.pop-feedback[data-tier=super] {\n  font-size: clamp(26px, 7vw, 38px);\n  color: #fff;\n  border: 3px solid #ffdf65;\n  border-radius: 20px;\n  background: #9554bde8;\n  padding: 12px;\n  box-shadow: 0 0 24px #ffda6a;\n}\n.pop-feedback[data-tier=rainbow] {\n  font-size: clamp(24px, 6.5vw, 36px);\n  color: #fff;\n  background:\n    linear-gradient(\n      110deg,\n      #ea76a7,\n      #d0a554,\n      #61bca4,\n      #618ddb,\n      #a278c8);\n  border: 3px solid white;\n  border-radius: 20px;\n  padding: 12px;\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-tray[data-celebration=super] {\n  box-shadow: 0 0 0 5px #ffe393, 0 0 35px #f1abde;\n}\n.pop-tray[data-celebration=rainbow] {\n  box-shadow:\n    -10px 0 24px #ff9cad,\n    0 -8px 24px #fff09e,\n    10px 0 24px #98daff,\n    0 8px 24px #b5a1ff;\n}\n.pop-feedback[hidden] {\n  display: none;\n}\n.pop-feedback[data-tier=great],\n.pop-feedback[data-tier=super],\n.pop-feedback[data-tier=rainbow] {\n  animation: pop-reward .32s ease-out;\n}\n@keyframes pop-reward {\n  from {\n    transform: translateY(8px) scale(.88);\n    opacity: .5;\n  }\n  to {\n    transform: none;\n    opacity: 1;\n  }\n}\n.pop-feedback[data-tier=super] {\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-launch {\n  position: absolute;\n  top: 175px;\n  bottom: auto;\n  left: 18px;\n  transform: none;\n  width: auto;\n  max-width: 180px;\n  padding: 9px 13px;\n  font-size: 12px;\n  border-width: 2px;\n  box-shadow: 0 3px 10px #4f3b6220;\n}\n.pop-launch small {\n  display: none;\n}\n@media (max-height: 650px) {\n  .pop-launch {\n    top: 135px;\n  }\n}\n\n/* src/ui/ticket-shop.css */\n#ticket-shop {\n  width: min(92vw, 520px);\n  max-height: 88dvh;\n  overflow: auto;\n  border: 3px solid #efb6d2;\n  border-radius: 26px;\n  background: #fff8ed;\n  color: #604861;\n  padding: 22px;\n  text-align: center;\n}\n#ticket-shop::backdrop {\n  background: #403347a8;\n}\n.ticket-prizes {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px;\n  margin: 16px 0;\n}\n.ticket-prizes article {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 10px;\n  border-radius: 18px;\n  background: #f1e7fa;\n}\n.ticket-prizes img {\n  width: 96px;\n  height: 96px;\n  object-fit: contain;\n}\n#ticket-shop button {\n  min-height: 44px;\n  border: 0;\n  border-radius: 16px;\n  padding: 10px 14px;\n  background: #805ba6;\n  color: white;\n  font-weight: 700;\n  cursor: pointer;\n}\n#ticket-shop button:disabled {\n  background: #d3c4d5;\n  color: #665b69;\n  cursor: default;\n}\n#ticket-shop [data-close] {\n  display: block;\n  width: 100%;\n  margin-top: 16px;\n}\n#ticket-shop [role=status] {\n  font-weight: 700;\n  color: #566b40;\n}\n#travel-next-store {\n  position: absolute;\n  right: 12px;\n  top: 175px;\n  z-index: 12;\n  max-width: 170px;\n  min-height: 44px;\n  border: 2px solid #d9c5ec;\n  border-radius: 15px;\n  padding: 8px 12px;\n  background: #fff4e6;\n  color: #604861;\n  font-weight: 700;\n}\n#ticket-shop {\n  box-sizing: border-box;\n}\n#ticket-shop [data-close] {\n  position: sticky;\n  bottom: 0;\n  box-shadow: 0 0 0 5px #fff8ed;\n}\n.ticket-prizes article {\n  min-width: 0;\n}\n.ticket-prizes button {\n  width: 100%;\n}\n@media (max-width: 360px) {\n  #ticket-shop {\n    padding: 14px;\n  }\n  .ticket-prizes {\n    gap: 8px;\n  }\n  .ticket-prizes img {\n    width: 76px;\n    height: 76px;\n  }\n  .ticket-prizes article {\n    padding: 8px;\n  }\n  .ticket-prizes button {\n    padding: 8px;\n    font-size: 12px;\n  }\n}\n#ticket-shop [data-close] {\n  top: 0;\n  bottom: auto;\n  z-index: 2;\n}\n\n/* src/ui/tornado.css */\n#game[data-tornado] .room-title,\n#game[data-tornado] #cleanup-effects,\n#game[data-tornado] #house-doors,\n#game[data-tornado] #move-tip,\n#game[data-tornado] .mission-stats {\n  visibility: hidden;\n}\n#tornado-hud {\n  position: absolute;\n  z-index: 8;\n  top: 110px;\n  left: 22px;\n  width: min(340px, calc(100% - 44px));\n  padding: 15px 18px;\n  border: 2px solid #fff9;\n  border-radius: 23px;\n  background: #fff9f1ef;\n  color: #59476e;\n  box-shadow: 0 8px 25px #52416620;\n  pointer-events: none;\n  box-sizing: border-box;\n}\n#tornado-hud[hidden] {\n  display: none;\n}\n#tornado-hud header {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n#tornado-hud small {\n  font-size: 8px;\n  letter-spacing: 1.6px;\n  color: #907ca6;\n}\n#tornado-hud h2 {\n  font-size: 23px;\n  margin: 3px 0 10px;\n}\n#tornado-hud [data-time] {\n  font-size: 28px;\n  font-variant-numeric: tabular-nums;\n  margin-left: auto;\n}\n#tornado-hud [data-sound] {\n  pointer-events: auto;\n  border: 0;\n  background: #ece0f3;\n  color: #69517e;\n  border-radius: 50%;\n  width: 32px;\n  height: 32px;\n  cursor: pointer;\n}\n.tornado-meter-row,\n.tornado-score {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  font-size: 11px;\n}\n.tornado-score {\n  margin-top: 7px;\n  color: #71865c;\n}\n.tornado-score [data-streak] {\n  color: #a65585;\n  font-size: 10px;\n}\n#tornado-hud meter {\n  display: block;\n  width: 100%;\n  height: 17px;\n  margin-top: 4px;\n}\n#tornado-hud meter::-webkit-meter-bar {\n  background: #eee5f3;\n  border: 0;\n  border-radius: 10px;\n}\n#tornado-hud meter::-webkit-meter-optimum-value {\n  background:\n    linear-gradient(\n      90deg,\n      #c3cde8,\n      #e8adbe);\n  border-radius: 10px;\n}\n#tornado-hud p {\n  font-size: 11px;\n  line-height: 1.4;\n  min-height: 30px;\n  margin: 9px 0 0;\n}\n#tornado-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n  z-index: 7;\n}\n.tornado-marker {\n  position: absolute;\n  font-size: 24px;\n  border: 2px solid #fff;\n  background: #fff4d9ed;\n  box-shadow: 0 4px 12px #71603c30;\n  border-radius: 14px;\n  padding: 3px 7px;\n}\n.tornado-marker.near {\n  background: #dcf3c8;\n  box-shadow: 0 0 20px #fff3a1;\n}\n.tornado-marker.edge::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #9c729d;\n  transform: translate(-50%, -50%) rotate(var(--angle)) translateX(32px);\n}\n.tornado-sparkles {\n  position: absolute;\n  color: #8a599f;\n  text-shadow: 0 2px #fff;\n  font-weight: bold;\n  font-size: 26px;\n  animation: tornado-pop 1s ease-out forwards;\n  white-space: nowrap;\n}\n@keyframes tornado-pop {\n  from {\n    transform: translate(-50%, 0) scale(.6);\n  }\n  50% {\n    opacity: 1;\n  }\n  to {\n    transform: translate(-50%, -80px) scale(1.2);\n    opacity: 0;\n  }\n}\n#tornado-dialog {\n  box-sizing: border-box;\n  width: min(430px, calc(100% - 28px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  padding: 28px;\n  border: 2px solid white;\n  border-radius: 28px;\n  background: #fff8f1;\n  color: #5c4773;\n  text-align: center;\n  box-shadow: 0 20px 80px #51416650;\n}\n#tornado-dialog::backdrop {\n  background: #594d7666;\n  backdrop-filter: blur(3px);\n}\n#tornado-dialog small {\n  font-size: 9px;\n  letter-spacing: 1.4px;\n}\n#tornado-dialog h2 {\n  font-size: 29px;\n  line-height: 1.1;\n  margin: 12px 0;\n}\n#tornado-dialog p {\n  font-size: 14px;\n  line-height: 1.6;\n  color: #8b7094;\n}\n.tornado-emblem {\n  font-size: 60px;\n}\n.tornado-stars {\n  font-size: 48px;\n  color: #e4ae4e;\n  letter-spacing: 7px;\n}\n.tornado-instructions {\n  display: grid;\n  gap: 10px;\n  background: #efe6f4;\n  padding: 16px;\n  border-radius: 18px;\n  text-align: left;\n}\n.tornado-totals {\n  display: flex;\n  justify-content: space-around;\n  background: #efe6f4;\n  padding: 16px 4px;\n  border-radius: 18px;\n  font-size: 11px;\n}\n.tornado-totals b {\n  display: block;\n  font-size: 25px;\n  margin-bottom: 5px;\n}\n#tornado-dialog button {\n  display: block;\n  width: 100%;\n  padding: 14px;\n  border: 2px solid white;\n  border-radius: 16px;\n  margin-top: 10px;\n  background: #b8cfae;\n  color: #466240;\n  font: 700 16px system-ui;\n  cursor: pointer;\n}\n#tornado-dialog button.secondary {\n  background: #eee3f1;\n  color: #705285;\n}\n#tornado-dialog .tornado-earned {\n  color: #5b824e;\n  font-weight: bold;\n}\n@media (max-width: 500px) {\n  #tornado-hud {\n    top: 87px;\n    left: 12px;\n    width: calc(100% - 24px);\n    padding: 10px 13px;\n  }\n  #tornado-hud h2 {\n    font-size: 20px;\n    margin-bottom: 5px;\n  }\n  #tornado-hud p {\n    min-height: 16px;\n    margin-top: 5px;\n  }\n  #tornado-hud [data-time] {\n    font-size: 25px;\n  }\n  .tornado-marker {\n    font-size: 20px;\n  }\n}\n@media (max-height: 600px) and (orientation: landscape) {\n  #tornado-hud {\n    top: 80px;\n    width: 275px;\n    padding: 9px 12px;\n  }\n  #tornado-hud p {\n    min-height: 0;\n  }\n  #tornado-hud h2 {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .tornado-sparkles {\n    animation: none;\n  }\n}\n\n/* src/ui/styles.css */\n:root {\n  font-family:\n    "Trebuchet MS",\n    ui-rounded,\n    system-ui,\n    sans-serif;\n  color: #51466a;\n  background: #ede6f4;\n  font-synthesis: none;\n  -webkit-tap-highlight-color: transparent;\n}\n* {\n  box-sizing: border-box;\n}\nhtml,\nbody,\n#game {\n  margin: 0;\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  overscroll-behavior: none;\n}\nbody {\n  position: fixed;\n  inset: 0;\n}\n#game {\n  height: 100dvh;\n  position: relative;\n  isolation: isolate;\n  user-select: none;\n  -webkit-user-select: none;\n}\n#game-canvas {\n  display: block;\n  width: 100%;\n  height: 100%;\n  outline: none;\n  touch-action: none;\n}\n#game-canvas:focus-visible {\n  outline: 3px solid #9b86bd;\n  outline-offset: -3px;\n}\n.topbar {\n  position: absolute;\n  top: max(22px, env(safe-area-inset-top));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.wordmark {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  font-size: 26px;\n  font-weight: 800;\n  letter-spacing: -1px;\n}\n.wordmark small {\n  display: block;\n  font-size: 7px;\n  letter-spacing: 1.8px;\n  margin-top: 2px;\n  font-weight: 700;\n}\n.flower {\n  color: #a18abd;\n  font-size: 43px;\n  line-height: 1;\n}\n.chapter {\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: 2px;\n}\n.chapter span {\n  color: #b8a8c9;\n  margin: 0 5px;\n}\n.room-title {\n  position: absolute;\n  top: 14%;\n  width: 100%;\n  text-align: center;\n  pointer-events: none;\n}\n.eyebrow {\n  font-size: 9px;\n  letter-spacing: 2.3px;\n  font-weight: 700;\n  color: #8c7a9f;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 7px;\n}\n.eyebrow i {\n  width: 5px;\n  height: 5px;\n  border-radius: 50%;\n  background: #90ac95;\n}\nh1 {\n  font-size: clamp(26px, 4vw, 37px);\n  letter-spacing: -1.2px;\n  margin: 10px 0 7px;\n  font-weight: 800;\n}\n.room-title p {\n  font-size: 12px;\n  color: #8c7a9f;\n  margin: 0;\n}\n.player-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  padding: 5px 10px;\n  background: #fffaf4ee;\n  border: 1px solid #fff;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 800;\n  pointer-events: none;\n  box-shadow: 0 3px 10px #71608518;\n  will-change: transform;\n}\n.player-label span {\n  color: #d592ad;\n  margin-left: 4px;\n}\n.room-caption {\n  position: absolute;\n  bottom: 26%;\n  width: 100%;\n  text-align: center;\n  font-size: 10px;\n  letter-spacing: .5px;\n  color: #9e8db0;\n  pointer-events: none;\n}\n.room-caption span {\n  margin: 0 12px;\n  color: #b9a3cc;\n}\n.move-tip {\n  position: absolute;\n  bottom: 19%;\n  left: 50%;\n  transform: translateX(-50%);\n  display: flex;\n  gap: 10px;\n  align-items: center;\n  width: max-content;\n  max-width: calc(100% - 36px);\n  transition: opacity .6s;\n  pointer-events: none;\n}\n.tip-icon {\n  display: grid;\n  place-items: center;\n  width: 34px;\n  height: 34px;\n  background: #fbf7fcbb;\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  font-size: 22px;\n  color: #a389bb;\n}\n.move-tip strong,\n.move-tip div > span {\n  display: block;\n}\n.move-tip strong {\n  font-size: 12px;\n  margin-bottom: 3px;\n}\n.move-tip div > span {\n  font-size: 10px;\n  color: #9686a7;\n}\n.move-tip.explored {\n  opacity: 0;\n}\n.controls {\n  position: absolute;\n  left: max(27px, env(safe-area-inset-left));\n  right: max(27px, env(safe-area-inset-right));\n  bottom: max(42px, calc(env(safe-area-inset-bottom) + 24px));\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.joystick-group {\n  text-align: center;\n  pointer-events: auto;\n}\n#joystick {\n  position: relative;\n  width: 120px;\n  height: 120px;\n  border: 2px solid #fff9;\n  background:\n    linear-gradient(\n      140deg,\n      #fffc,\n      #ded1ec99);\n  border-radius: 50%;\n  box-shadow: 0 7px 22px #82709516, inset 0 1px 8px #fff8;\n  touch-action: none;\n  cursor: grab;\n}\n#joystick.dragging {\n  cursor: grabbing;\n}\n#joystick-knob {\n  position: absolute;\n  left: 34px;\n  top: 34px;\n  width: 48px;\n  height: 48px;\n  border-radius: 50%;\n  border: 2px solid #fff;\n  background:\n    linear-gradient(\n      145deg,\n      #cdbce5,\n      #aa93c9);\n  box-shadow: 0 5px 8px #6c51813b;\n  pointer-events: none;\n  display: grid;\n  place-items: center;\n  will-change: transform;\n}\n#joystick-knob svg {\n  width: 22px;\n  height: 22px;\n  fill: none;\n  stroke: #fff;\n  stroke-width: 2;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n  opacity: .8;\n}\n.direction {\n  position: absolute;\n  color: #ae9abd;\n  font-size: 22px;\n  line-height: 20px;\n}\n.up {\n  top: 5px;\n  left: 51px;\n}\n.down {\n  bottom: 7px;\n  left: 51px;\n}\n.left {\n  top: 47px;\n  left: 9px;\n}\n.right {\n  top: 47px;\n  right: 9px;\n}\n.control-label {\n  display: block;\n  font-size: 8px;\n  letter-spacing: 1.5px;\n  font-weight: 800;\n  color: #9581a8;\n  margin-top: 11px;\n}\n.explore-note {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  margin-top: 30px;\n  color: #8f7ba3;\n}\n.tiny-house {\n  font-size: 31px;\n  color: #ad98bd;\n}\n.explore-note > span:last-child {\n  font-size: 12px;\n  font-weight: 700;\n}\n.explore-note small {\n  display: block;\n  font-size: 9px;\n  font-weight: 400;\n  margin-top: 5px;\n}\nfooter {\n  position: absolute;\n  bottom: max(12px, env(safe-area-inset-bottom));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  font-size: 8px;\n  color: #a591b7;\n  letter-spacing: .6px;\n  pointer-events: none;\n}\n.build-badge {\n  font-size: 7px;\n  letter-spacing: 1.4px;\n}\n.keyboard-hint {\n  font-size: 8px;\n}\n#loading,\n#error {\n  position: absolute;\n  inset: 0;\n  background: #ede6f4;\n  display: grid;\n  place-content: center;\n  text-align: center;\n  padding: 32px;\n  z-index: 9;\n}\n#loading .loading-flower {\n  font-size: 60px;\n  color: #a18abd;\n  animation: breathe 1.2s infinite alternate;\n}\n#loading p {\n  font-size: 14px;\n}\n#error[hidden] {\n  display: none;\n}\n#error h2 {\n  font-size: 22px;\n}\n#error p {\n  font-size: 14px;\n  max-width: 320px;\n  line-height: 1.6;\n}\n@keyframes breathe {\n  to {\n    transform: scale(.85);\n    opacity: .5;\n  }\n}\n@media (min-width: 700px) {\n  .topbar {\n    left: 40px;\n    right: 40px;\n    top: 28px;\n  }\n  .room-title {\n    top: 12%;\n  }\n  .controls {\n    left: 45px;\n    right: 45px;\n    bottom: 50px;\n  }\n  .room-caption {\n    bottom: 15%;\n  }\n  .move-tip {\n    bottom: 7%;\n  }\n  .explore-note {\n    margin-top: 0;\n  }\n  footer {\n    left: 40px;\n    right: 40px;\n  }\n  .keyboard-hint {\n    font-size: 10px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .topbar {\n    top: 14px;\n  }\n  .room-title {\n    top: 13%;\n  }\n  h1 {\n    font-size: 25px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: 23%;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n  .keyboard-hint {\n    display: none;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .room-title {\n    top: 24%;\n    text-align: left;\n    padding-left: 28px;\n    width: 220px;\n  }\n  .eyebrow {\n    justify-content: flex-start;\n    font-size: 7px;\n    letter-spacing: 1px;\n  }\n  h1 {\n    font-size: 24px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .topbar {\n    top: 14px;\n  }\n  .room-caption,\n  .move-tip,\n  .explore-note {\n    display: none;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  .wordmark {\n    font-size: 21px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #loading .loading-flower {\n    animation: none;\n  }\n  .move-tip {\n    transition: none;\n  }\n}\n@media (max-width: 699px) {\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: calc(max(42px, env(safe-area-inset-bottom)) + 156px);\n  }\n}\n@media (max-width: 380px) {\n  .topbar {\n    left: 18px;\n    right: 18px;\n  }\n  .wordmark {\n    font-size: 24px;\n  }\n  .wordmark small {\n    font-size: 6px;\n    letter-spacing: 1.2px;\n    white-space: nowrap;\n  }\n  .chapter {\n    font-size: 8px;\n    letter-spacing: 1px;\n    white-space: nowrap;\n  }\n  .eyebrow {\n    font-size: 7px;\n    letter-spacing: 1.6px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n  .explore-note {\n    max-width: 125px;\n  }\n  .room-title {\n    top: 15%;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n}\n#house-music {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 10px;\n  line-height: 1.2;\n  padding: 8px;\n  min-height: 40px;\n  min-width: 54px;\n  cursor: pointer;\n}\nfooter {\n  gap: 6px;\n}\nfooter .keyboard-hint {\n  display: none;\n}\n@media (max-width: 380px) {\n  footer {\n    left: 12px;\n    right: 12px;\n  }\n  #collection-button {\n    font-size: 9px !important;\n  }\n}\n#audio-settings {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 11px;\n  padding: 8px;\n  min-height: 40px;\n  cursor: pointer;\n}\n.audio-settings {\n  width: min(340px, 85vw);\n  border: 0;\n  border-radius: 22px;\n  background: #fff9f1;\n  color: #534565;\n  padding: 24px;\n  font-family: inherit;\n}\n.audio-settings::backdrop {\n  background: #30283880;\n}\n.audio-settings label {\n  display: block;\n  margin: 22px 0;\n  font-weight: 700;\n}\n.audio-settings output {\n  float: right;\n}\n.audio-settings input {\n  display: block;\n  width: 100%;\n  height: 40px;\n  accent-color: #9873b5;\n}\n.audio-settings button {\n  min-height: 44px;\n  width: 100%;\n  border: 0;\n  border-radius: 15px;\n  background: #e1d1ed;\n  color: #493659;\n  font-weight: 700;\n}\n.audio-settings p {\n  font-size: 12px;\n}\nfooter {\n  flex-wrap: wrap;\n}\n.audio-settings {\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  box-sizing: border-box;\n}\n.audio-mutes {\n  display: flex;\n  gap: 8px;\n}\n.audio-mutes button {\n  flex: 1;\n  width: auto !important;\n}\n.audio-settings summary {\n  font-size: 13px;\n  cursor: pointer;\n}\n.audio-settings details p {\n  line-height: 1.5;\n}\n@media (max-height: 650px) {\n  .audio-settings {\n    padding: 16px;\n  }\n  .audio-settings h2 {\n    font-size: 20px;\n    margin: 0 0 10px;\n  }\n  .audio-settings label {\n    margin: 10px 0;\n  }\n}\n#game[data-scene=recess] .room-title {\n  top: 84px;\n  left: 18px;\n  right: auto;\n  width: auto;\n  max-width: 65%;\n  text-align: left;\n  padding: 10px 16px;\n  background: #fff8ece8;\n  border-radius: 18px;\n  pointer-events: none;\n}\n#game[data-scene=recess] .room-title h1 {\n  font-size: 22px;\n  margin: 3px 0;\n}\n#game[data-scene=recess] #scene-subtitle,\n#game[data-scene=recess] #day-label,\n#game[data-scene=recess] #room-connections {\n  display: none;\n}\n#game[data-scene=recess] .topbar {\n  background: #fff8ece8;\n  border-radius: 20px;\n  padding: 10px 18px;\n}\n#game[data-scene=recess] .cleanup-tip {\n  max-width: 70%;\n  background: #fff8ece6;\n  border-radius: 16px;\n  padding: 9px;\n}\n#game[data-scene=recess] #leave-recess {\n  top: 36px;\n  right: 44px;\n}\n@media (max-width: 600px) {\n  #game[data-scene=recess] .topbar {\n    left: 12px;\n    right: 12px;\n    padding: 9px 12px;\n  }\n  #game[data-scene=recess] .wordmark {\n    font-size: 20px;\n    gap: 6px;\n  }\n  #game[data-scene=recess] .wordmark .flower {\n    font-size: 29px;\n  }\n  #game[data-scene=recess] .wordmark small {\n    display: none;\n  }\n  #game[data-scene=recess] #leave-recess {\n    top: 28px;\n    right: 24px;\n    font-size: 11px;\n    padding: 9px 10px;\n  }\n  #game[data-scene=recess] .room-title {\n    top: 78px;\n    padding: 6px 12px;\n  }\n  #game[data-scene=recess] .room-title .eyebrow {\n    display: none;\n  }\n  #game[data-scene=recess] .room-title h1 {\n    font-size: 20px;\n    margin: 0;\n  }\n}\n#daily-play-open {\n  left: 18px;\n  bottom: 175px;\n  right: auto;\n  max-width: 180px;\n  font-size: 14px;\n  padding: 12px 16px;\n  background: #fff6df;\n  color: #5e486f;\n}\n#daily-play-drop {\n  left: 18px;\n  bottom: 229px;\n  right: auto;\n  max-width: 180px;\n  font-size: 14px;\n  padding: 12px 16px;\n}\n.daily-play-journal {\n  max-width: 520px;\n  max-height: 80dvh;\n  overflow: auto;\n  border: 2px solid #bba5cb;\n  border-radius: 25px;\n  background: #fff8ea;\n  color: #594469;\n  padding: 24px;\n  box-shadow: 0 12px 60px #33214455;\n}\n.daily-play-journal::backdrop {\n  background: #31274466;\n}\n.daily-play-journal h2 {\n  margin: 0 0 12px;\n}\n.daily-play-journal p {\n  line-height: 1.45;\n}\n.daily-play-card {\n  background: #eee8f2;\n  border-radius: 14px;\n  padding: 12px 16px;\n  margin: 10px 0;\n}\n.daily-play-card p {\n  margin: 6px 0;\n}\n.daily-play-card small {\n  color: #756381;\n}\n.daily-play-journal > button {\n  display: block;\n  margin: 18px auto 0;\n  padding: 13px 26px;\n  border: 0;\n  border-radius: 24px;\n  background: #d5eadc;\n  color: #334d40;\n  font-size: 17px;\n  font-weight: 700;\n  cursor: pointer;\n}\n.daily-play-journal > button.daily-play-close {\n  float: right;\n  margin: 0 0 8px 12px;\n  padding: 8px 14px;\n  font-size: 24px;\n  line-height: 1;\n}\n\n/* src/ui/cleanup.css */\n.mission-stats {\n  display: flex;\n  flex-direction: column;\n  align-items: flex-end;\n  gap: 2px;\n}\n#mission-clock {\n  font-size: 23px;\n  font-weight: 800;\n  font-variant-numeric: tabular-nums;\n  letter-spacing: -1px;\n}\n#mission-clock.soon {\n  color: #b77795;\n}\n.allowance-label {\n  font-size: 7px;\n  letter-spacing: 1px;\n  color: #9581a8;\n}\n#allowance {\n  font-size: 13px;\n  color: #6e856c;\n  margin-left: 3px;\n}\n#task-count {\n  letter-spacing: 1px;\n  color: #6e856c;\n}\n.task-list {\n  display: flex;\n  list-style: none;\n  justify-content: center;\n  gap: 9px;\n  padding: 0;\n  margin: 6px 0 0;\n  height: 22px;\n}\n.task-list li {\n  display: flex;\n  align-items: center;\n  gap: 3px;\n  font-size: 9px;\n  color: #9784a6;\n  border-bottom: 2px solid transparent;\n}\n.task-list li > span:first-child {\n  font-size: 13px;\n}\n.task-list li.done {\n  color: #69866f;\n  border-color: #a6c5a6;\n}\n.task-list li.done > span:first-child {\n  color: #69866f;\n}\n.action-group {\n  pointer-events: auto;\n  text-align: center;\n}\n#action-button {\n  --hold-progress: 0deg;\n  width: 120px;\n  height: 120px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  gap: 3px;\n  border: 3px solid #fff9;\n  border-radius: 50%;\n  background:\n    linear-gradient(\n      145deg,\n      #f6b5d0,\n      #d888b6);\n  box-shadow: 0 6px 0 #ad739441, 0 8px 22px #82709522;\n  color: #663f6a;\n  cursor: pointer;\n  touch-action: none;\n  padding: 8px;\n  font-family: inherit;\n  position: relative;\n  -webkit-user-select: none;\n  user-select: none;\n}\n#action-button:disabled {\n  background:\n    linear-gradient(\n      145deg,\n      #f7f1f9,\n      #ddd0e8);\n  color: #a38caf;\n  box-shadow: 0 4px 0 #a58db222;\n  cursor: default;\n}\n#action-button:not(:disabled):active {\n  box-shadow: 0 2px 0 #ad739441;\n}\n#action-button:focus-visible,\n#replay:focus-visible {\n  outline: 3px solid #7960a5;\n  outline-offset: 4px;\n}\n#action-button.holding {\n  background: conic-gradient(#97c6a0 var(--hold-progress), #ecc0dd 0deg);\n}\n#action-icon {\n  font-size: 26px;\n  line-height: 29px;\n}\n#action-title {\n  font-size: 15px;\n  line-height: 18px;\n}\n#action-detail {\n  font-size: 10px;\n  max-width: 100%;\n  line-height: 13px;\n}\n.cleanup-tip {\n  text-align: center;\n  width: calc(100% - 36px);\n  max-width: 460px;\n  justify-content: center;\n  font-size: 11px;\n  line-height: 16px;\n  color: #887298;\n  min-height: 32px;\n}\n#cleanup-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n}\n.cleanup-marker {\n  position: absolute;\n  left: 0;\n  top: 0;\n  border-radius: 9px;\n  min-width: 22px;\n  padding: 3px 5px;\n  background: #fffaf2db;\n  border: 1px solid #fffc;\n  box-shadow: 0 2px 5px #62507722;\n  font-size: 13px;\n  line-height: 16px;\n  color: #775672;\n  will-change: transform;\n  white-space: nowrap;\n}\n.cleanup-marker[hidden] {\n  display: none;\n}\n.cleanup-marker.destination {\n  font-size: 16px !important;\n  border-radius: 50%;\n  padding: 7px !important;\n  box-shadow: 0 0 14px #fff2a8a0;\n}\n.cleanup-marker.offscreen::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #fff1aa;\n  font-size: 17px;\n  text-shadow: 0 1px 3px #504760;\n  transform: translate(-50%, -50%) rotate(var(--guide-angle)) translateX(26px);\n}\n.cleanup-marker.tool {\n  font-size: 10px;\n}\n.cleanup-marker.nearby {\n  background: #fff0b9;\n  border-color: #fff;\n  box-shadow: 0 0 10px #fff3a4bb;\n}\n.cleanup-marker.destination {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n.coin-popup {\n  position: absolute;\n  color: #63845d;\n  font-size: 22px;\n  font-weight: 800;\n  z-index: 2;\n  transform: translate(-50%, -100%);\n  animation: reward-rise .95s ease-out forwards;\n  text-shadow: 0 2px 0 #fff;\n}\n.coin-popup strong {\n  display: block;\n  padding: 3px 8px;\n  background: #fff9e4ed;\n  border-radius: 12px;\n}\n.coin-popup > span {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #e9bd61;\n  font-size: 17px;\n  animation: sparkle .75s ease-out forwards;\n}\n@keyframes reward-rise {\n  0% {\n    opacity: 0;\n    margin-top: 0;\n  }\n  20% {\n    opacity: 1;\n  }\n  75% {\n    opacity: 1;\n  }\n  100% {\n    opacity: 0;\n    margin-top: -40px;\n  }\n}\n@keyframes sparkle {\n  from {\n    transform: translate(-50%, -50%) scale(.3);\n    opacity: 1;\n  }\n  to {\n    transform: translate(var(--spark-x), var(--spark-y)) scale(.7);\n    opacity: 0;\n  }\n}\n.sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  clip-path: inset(50%);\n  overflow: hidden;\n  white-space: nowrap;\n}\n#results {\n  border: 2px solid #fff;\n  border-radius: 28px;\n  padding: 26px 22px 22px;\n  width: min(350px, calc(100% - 32px));\n  max-height: calc(100dvh - 32px);\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n  box-shadow: 0 16px 60px #55436140;\n}\n#results::backdrop {\n  background: #52416666;\n  backdrop-filter: blur(4px);\n}\n.results-flower {\n  font-size: 43px;\n  line-height: 1;\n  color: #af94cb;\n  margin-bottom: 16px;\n}\n#results .eyebrow {\n  font-size: 7px;\n  letter-spacing: 1.6px;\n}\n#results h2 {\n  margin: 12px 0 8px;\n  font-size: 30px;\n  letter-spacing: -1px;\n}\n#results-summary {\n  font-size: 12px;\n  line-height: 1.6;\n  color: #927d9e;\n}\n.results-totals {\n  display: flex;\n  justify-content: space-evenly;\n  padding: 14px 0;\n  margin: 12px 0 0;\n  background: #eee5f5;\n  border-radius: 17px;\n}\n.results-totals strong {\n  display: block;\n  font-size: 28px;\n}\n.results-totals span {\n  font-size: 10px;\n  color: #8e789f;\n}\n#results-money {\n  color: #708b6b;\n}\n#results-bonus {\n  font-size: 11px;\n  color: #788f6c;\n}\n#results-list {\n  list-style: none;\n  padding: 0;\n  display: flex;\n  justify-content: center;\n  flex-wrap: wrap;\n  gap: 6px 12px;\n  margin: 18px 0;\n  font-size: 10px;\n  color: #a58eb1;\n}\n#results-list .done {\n  color: #638269;\n}\n#replay {\n  width: 100%;\n  border: 2px solid #fff8;\n  border-radius: 17px;\n  padding: 15px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 16px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  box-shadow: 0 4px 0 #8caa8555;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#replay span {\n  margin-left: 7px;\n  font-size: 21px;\n}\n@media (max-width: 380px) {\n  .task-list {\n    gap: 6px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  #mission-clock {\n    font-size: 21px;\n  }\n  .allowance-label {\n    font-size: 6px;\n    letter-spacing: .5px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait), (orientation: landscape) and (max-height: 600px) {\n  #action-button {\n    width: 102px;\n    height: 102px;\n  }\n  #action-title {\n    font-size: 13px;\n  }\n  #action-icon {\n    font-size: 22px;\n    line-height: 24px;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .task-list {\n    height: 18px;\n    margin-top: 2px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  .task-list li > span:first-child {\n    font-size: 11px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .task-list {\n    flex-wrap: wrap;\n    height: auto;\n    justify-content: flex-start;\n    max-width: 175px;\n    gap: 5px 10px;\n  }\n  #results {\n    padding: 12px 18px;\n  }\n  .results-flower {\n    display: none;\n  }\n  #results h2 {\n    font-size: 24px;\n    margin: 7px 0;\n  }\n  .results-totals {\n    padding: 7px 0;\n  }\n  #results-list {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .coin-popup {\n    animation: none;\n  }\n  .coin-popup > span {\n    display: none;\n  }\n}\n\n/* src/ui/collection.css */\n[hidden] {\n  display: none !important;\n}\n#collection-button {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  padding: 8px 0 8px 10px;\n}\n#collection-button:disabled {\n  opacity: .45;\n}\n#wallet {\n  margin-left: 4px;\n  color: #638269;\n}\n.loop-button {\n  width: 100%;\n  border: 2px solid #fff9;\n  border-radius: 16px;\n  padding: 13px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 15px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  margin: 5px 0;\n  touch-action: manipulation;\n}\n.pink-button {\n  background: #e8b5d2;\n  color: #704b75;\n}\n.loop-button:disabled {\n  opacity: .55;\n  cursor: default;\n}\n#results-wallet {\n  font-size: 12px;\n  color: #6f8869;\n}\n#go-shopping {\n  margin-bottom: 10px;\n}\n#collection-dialog {\n  border: 2px solid #fff;\n  border-radius: 26px;\n  width: min(410px, calc(100% - 24px));\n  max-height: calc(100dvh - 24px);\n  padding: 22px 17px 17px;\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n}\n#collection-dialog::backdrop {\n  background: #52416688;\n  backdrop-filter: blur(4px);\n}\n#collection-dialog h2 {\n  margin: 10px 0 6px;\n  font-size: 28px;\n  letter-spacing: -1px;\n}\n#collection-summary {\n  font-size: 11px;\n  color: #947c9e;\n}\n#collection-grid {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 7px;\n  margin: 17px 0;\n}\n.dumpling-card {\n  background: #efe7f4;\n  border: 1px solid #fff;\n  border-radius: 14px;\n  padding: 6px 2px 9px;\n  min-width: 0;\n}\n.dumpling-card.owned {\n  background: linear-gradient(#fff9, var(--rarity));\n}\n.dumpling-card img {\n  width: 100%;\n  height: auto;\n  display: block;\n}\n.dumpling-card strong {\n  font-size: 10px;\n  display: block;\n}\n.dumpling-card small {\n  display: block;\n  font-size: 8px;\n  margin-top: 3px;\n}\n.dumpling-card .copies {\n  font-size: 10px;\n  font-weight: 800;\n  margin-top: 5px;\n}\n#store-markers {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n#shop-display-marker {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n#reveal-copy {\n  position: absolute;\n  top: 71%;\n  left: 6%;\n  width: 88%;\n  text-align: center;\n  color: var(--rarity-ink,#775887);\n  font-size: 13px;\n  pointer-events: none;\n}\n.reveal-badges {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n}\n#reveal-copy small {\n  color: var(--rarity-ink,#665070);\n  padding: 5px 10px;\n  border: 1px solid var(--rarity,#dacbdf);\n  border-radius: 20px;\n  background: var(--rarity-wash,#f4edf5);\n  font-size: 11px;\n  line-height: 1.2;\n  font-weight: 800;\n  letter-spacing: .4px;\n}\n#reveal-copy .reveal-status {\n  background: #fffc;\n  border-color: #fff;\n  color: #64556c;\n}\n#reveal-copy h2 {\n  margin: 7px 0 4px;\n  font-size: 32px;\n  line-height: 1.1;\n  letter-spacing: -.8px;\n}\n#reveal-copy p {\n  font-size: 11px;\n  margin: 0;\n  color: #74647e;\n}\n#reveal-copy[data-rarity=Legendary] .reveal-rarity {\n  box-shadow: 0 0 0 2px #fff8, 0 2px 10px #dbb14b30;\n}\n#reveal-copy.has-reveal {\n  animation: reveal-caption .4s ease-out;\n}\n@keyframes reveal-caption {\n  from {\n    transform: translateY(6px);\n    opacity: 0;\n  }\n  to {\n    transform: translateY(0);\n    opacity: 1;\n  }\n}\n#save-message {\n  position: absolute;\n  bottom: 26%;\n  left: 8%;\n  width: 84%;\n  padding: 12px;\n  border-radius: 14px;\n  background: #fff5de;\n  color: #796143;\n  font-size: 12px;\n  text-align: center;\n  z-index: 8;\n  pointer-events: none;\n}\n#game[data-scene=home] .joystick-group {\n  visibility: hidden;\n}\n#game[data-scene=home] .cleanup-tip {\n  display: none;\n}\n#squish-friend {\n  position: absolute;\n  left: 8%;\n  bottom: 12%;\n  min-width: 100px;\n  min-height: 48px;\n  padding: 12px 20px;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: #f1d6dd;\n  color: #795268;\n  font: 800 16px "Trebuchet MS", sans-serif;\n  box-shadow: 0 4px 12px #75534a15;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#home-vignette {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  background:\n    linear-gradient(\n      #ede6f4ed,\n      transparent 29%,\n      transparent 75%,\n      #ede6f4dd);\n}\n#trip-wallet {\n  font-size: 8px;\n  letter-spacing: 1px;\n  color: #887298;\n  text-align: right;\n}\n#trip-balance {\n  display: block;\n  font-size: 24px;\n  letter-spacing: -1px;\n  color: #638269;\n}\n#reveal-copy {\n  isolation: isolate;\n}\n#game[data-scene=home] .topbar,\n#game[data-scene=home] .room-title,\n#game[data-scene=home] footer {\n  text-shadow: 0 1px 8px #fff;\n}\n@media (max-height: 740px) {\n  #reveal-copy {\n    top: 68%;\n  }\n  #reveal-copy h2 {\n    font-size: 27px;\n  }\n  #collection-dialog {\n    padding-top: 15px;\n  }\n  #collection-grid {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #reveal-copy.has-reveal {\n    animation: none;\n  }\n}\n#game[data-scene=home] .controls {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  right: 18px;\n  justify-content: flex-end;\n}\n#game[data-scene=home] .joystick-group,\n#game[data-scene=home] .control-label {\n  display: none;\n}\n#game[data-scene=home] #action-button {\n  width: 136px;\n  height: 48px;\n  border-radius: 25px;\n  display: flex;\n  flex-direction: row;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n}\n#game[data-scene=home] #action-icon {\n  font-size: 20px;\n  margin: 0;\n}\n#game[data-scene=home] #action-title {\n  font-size: 13px;\n  margin: 0;\n}\n#game[data-scene=home] #action-detail {\n  display: none;\n}\n#game[data-scene=home] #squish-friend {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  left: 18px;\n  min-width: 130px;\n  font-size: 14px;\n}\nbody:has(#game[data-scene=home]) .dev-launch {\n  top: 77px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] .room-title {\n    top: 83px;\n    left: 20px;\n    right: 88px;\n    text-align: left;\n  }\n  #game[data-scene=home] .room-title .eyebrow,\n  #game[data-scene=home] #day-label {\n    display: none;\n  }\n  #game[data-scene=home] .room-title h1 {\n    font-size: 20px;\n    margin: 2px 0 4px;\n  }\n  #game[data-scene=home] .room-title p {\n    margin: 0;\n    font-size: 10px;\n  }\n  #game[data-scene=home] #reveal-copy {\n    top: 64%;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    margin: 7px 0 3px;\n    font-size: 24px;\n  }\n  #game[data-scene=home] #reveal-copy small {\n    font-size: 10px;\n    padding: 4px 8px;\n  }\n  #game[data-scene=home] #reveal-copy p {\n    font-size: 10px;\n  }\n}\n#collection-actions {\n  position: sticky;\n  top: -1px;\n  z-index: 2;\n  background: #faf5fb;\n  padding: 4px 0;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 5px;\n}\n#collection-actions .loop-button {\n  font-size: 12px;\n  padding: 10px 5px;\n  margin: 0;\n  min-height: 44px;\n}\n#collection-actions #open-next {\n  grid-column: 1/-1;\n}\n#reveal-copy {\n  background: #fff9;\n  border-radius: 18px;\n  padding: 8px;\n  left: 8%;\n  width: 84%;\n}\n#home-vignette {\n  background:\n    linear-gradient(\n      #ede6f4a0,\n      transparent 25%,\n      transparent 70%,\n      #ede6f4a0);\n}\n#game[data-scene=home] #home-vignette {\n  background:\n    linear-gradient(\n      180deg,\n      #21112465,\n      transparent 27%,\n      transparent 65%,\n      #21112450);\n}\n#game[data-scene=home] .room-title,\n#game[data-scene=home] .topbar,\n#game[data-scene=home] footer {\n  color: #fff7ee;\n  text-shadow: 0 2px 5px #341c40;\n}\n#game[data-scene=home] #reveal-copy {\n  background: #fff8f0ed;\n  box-shadow: 0 5px 24px #49254920;\n}\n#game[data-scene=home] #reveal-copy {\n  top: auto;\n  bottom: 140px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] #reveal-copy {\n    top: auto;\n    bottom: 132px;\n    padding: 6px;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    font-size: 20px;\n    margin: 5px 0 3px;\n  }\n}\n#game[data-scene=home] #reveal-copy {\n  width: min(84%, 380px);\n  left: 50%;\n  translate: -50% 0;\n}\n@media (min-height: 651px) {\n  #game[data-scene=home] #reveal-copy {\n    bottom: 125px;\n  }\n}\n#fishing-panel {\n  position: absolute;\n  bottom: 22px;\n  left: 50%;\n  translate: -50% 0;\n  width: min(92%, 420px);\n  padding: 14px;\n  border-radius: 22px;\n  border: 2px solid #fff7;\n  background: #fff8eefa;\n  box-shadow: 0 5px 25px #35555130;\n  text-align: center;\n  color: #4e5f69;\n  z-index: 25;\n}\n#fishing-panel p {\n  font-size: 15px;\n  line-height: 1.4;\n  margin: 0 0 10px;\n  font-weight: 700;\n}\n#fishing-panel button {\n  border: 2px solid #fff;\n  border-radius: 20px;\n  background: #afd7ca;\n  color: #335a54;\n  font: 800 16px system-ui;\n  padding: 13px 22px;\n  min-height: 48px;\n  margin: 3px;\n  touch-action: manipulation;\n}\n#fishing-panel button:last-child {\n  background: #ede3ea;\n  font-size: 12px;\n  padding: 10px 14px;\n}\n#fishing-panel progress {\n  width: 80%;\n  display: block;\n  margin: 8px auto;\n  accent-color: #81b6a2;\n}\n#game[data-fishing=true] .controls,\n#game[data-fishing=true] .joystick-group,\n#game[data-fishing=true] footer,\n#game[data-fishing=true] .room-title {\n  visibility: hidden;\n}\n#game[data-scene=outdoors] .room-title {\n  pointer-events: none;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 22px;\n}\n#game[data-scene=outdoors] .room-title .eyebrow {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title {\n  top: 84px;\n  left: 20px;\n  right: 20px;\n  text-align: left;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 18px;\n  margin: 3px 0;\n}\n#game[data-scene=outdoors] #day-label {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title p {\n  font-size: 11px;\n}\nbody:has(#game[data-fishing=true]) .dev-launch {\n  top: 78px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n#game[data-fishing=true] #move-tip {\n  visibility: hidden;\n}\n#fishing-panel progress[hidden] {\n  display: none;\n}\n#fishing-panel {\n  padding: 12px 14px;\n  bottom: 14px;\n  max-width: 390px;\n}\n#fishing-panel .fish-status {\n  display: block;\n  text-transform: uppercase;\n  font: 800 10px system-ui;\n  letter-spacing: 1.5px;\n  color: #738b87;\n  margin-bottom: 5px;\n}\n#fishing-panel p {\n  margin: 0 0 8px;\n  min-height: 22px;\n}\n#fishing-panel .fish-gauges {\n  display: flex;\n  gap: 12px;\n  margin: 8px 0;\n}\n#fishing-panel label {\n  flex: 1;\n  text-align: left;\n  font: 700 11px system-ui;\n}\n#fishing-panel progress {\n  width: 100%;\n  height: 9px;\n  margin: 5px 0;\n  appearance: none;\n  border: 0;\n  border-radius: 8px;\n  overflow: hidden;\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-bar {\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-value {\n  background: #7eaf9c;\n  border-radius: 8px;\n  transition: width .12s;\n}\n#fishing-panel[data-warning=true] label:last-child progress::-webkit-progress-value {\n  background: #d67976;\n}\n#fishing-panel[data-warning=true] p {\n  color: #ad535a;\n}\n#fishing-panel .fish-controls {\n  display: flex;\n  align-items: stretch;\n  gap: 5px;\n}\n#fishing-panel .fish-controls button {\n  touch-action: none;\n  user-select: none;\n  margin: 0;\n  padding: 13px 8px;\n  flex: 1;\n  border-radius: 15px;\n  font: 800 12px system-ui;\n  min-height: 52px;\n  background: #eee6f0;\n  color: #635470;\n}\n#fishing-panel #fish-action {\n  flex: 1.55;\n  background: #b1dac7;\n  color: #335e51;\n  font-size: 15px;\n}\n#fishing-panel .fish-controls button[data-held=true] {\n  background: #80bfa7 !important;\n  box-shadow: inset 0 2px 4px #416a6133;\n}\n#fishing-panel .fish-controls button[data-cue=true] {\n  border-color: #b194cf;\n  background: #e3d5f0;\n}\n#fishing-panel .fish-tip {\n  display: block;\n  font: 11px system-ui;\n  line-height: 1.4;\n  color: #79857f;\n  margin: 7px 0 2px;\n}\n#fishing-panel > button:last-child {\n  min-height: 32px;\n  padding: 5px 12px;\n  margin: 0;\n  background: transparent;\n  color: #797e83;\n  font-size: 11px;\n}\n#fishing-panel [hidden] {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  #fishing-panel {\n    bottom: 8px;\n    padding: 8px 12px;\n  }\n  #fishing-panel .fish-status,\n  #fishing-panel .fish-tip {\n    display: none;\n  }\n  #fishing-panel .fish-controls button {\n    min-height: 44px;\n    padding: 9px 6px;\n  }\n}\n#fish-direction-cue {\n  position: absolute;\n  bottom: calc(var(--panel-height,230px) + 25px);\n  left: 50%;\n  translate: -50% 0;\n  z-index: 26;\n  pointer-events: none;\n  background: #fff9e7ee;\n  border: 3px solid #e8bc60;\n  border-radius: 20px;\n  padding: 2px 15px 8px;\n  min-width: 85px;\n  text-align: center;\n  color: #725d36;\n  box-shadow: 0 4px 14px #405c5230;\n}\n#fish-direction-cue[hidden] {\n  display: none;\n}\n#fish-direction-cue[data-side=left] {\n  left: 19%;\n}\n#fish-direction-cue[data-side=right] {\n  left: 81%;\n}\n#fish-direction-cue span {\n  display: block;\n  font: 900 46px/1 system-ui;\n  letter-spacing: -6px;\n  padding-right: 6px;\n}\n#fish-direction-cue b {\n  display: block;\n  font: 900 11px system-ui;\n  letter-spacing: .7px;\n}\n#fish-direction-cue[data-side=left] .fish-arrows {\n  animation: pull-left .65s ease-in-out infinite;\n}\n#fish-direction-cue[data-side=right] .fish-arrows {\n  animation: pull-right .65s ease-in-out infinite;\n}\n#fish-direction-cue[data-correct=true] {\n  border-color: #80b7a0;\n  color: #417761;\n}\n#fish-direction-cue[data-correct=true] span {\n  font-size: 35px;\n  letter-spacing: 0;\n}\n#fish-direction-cue[data-side=rest] {\n  border-color: #d99485;\n  color: #a1574f;\n}\n#fish-direction-cue .fish-hand {\n  font-size: 30px;\n  letter-spacing: 0;\n  margin: 4px;\n}\n#fishing-panel .fish-controls button[data-cue=true] {\n  border: 3px solid #e1b45b;\n  background: #ffedb7;\n  color: #624f31;\n  box-shadow: 0 0 0 3px #f7d78b60;\n}\n#fishing-panel .fish-controls[data-pull="-1"] #fish-right,\n#fishing-panel .fish-controls[data-pull="1"] #fish-left {\n  opacity: .55;\n}\n#fishing-panel .fish-controls[data-pull=rest] #fish-action {\n  background: #efd2c8;\n  color: #945c51;\n}\n@keyframes pull-left {\n  0%, 100% {\n    transform: translateX(4px);\n  }\n  50% {\n    transform: translateX(-7px);\n  }\n}\n@keyframes pull-right {\n  0%, 100% {\n    transform: translateX(-4px);\n  }\n  50% {\n    transform: translateX(7px);\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #fish-direction-cue .fish-arrows {\n    animation: none !important;\n  }\n}\n\n/* src/ui/house.css */\n#mission-picker {\n  display: flex;\n  gap: 5px;\n  justify-content: center;\n  margin: 9px auto 0;\n  pointer-events: auto;\n}\n#mission-picker button {\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  background: #f6f0f9db;\n  padding: 5px 10px;\n  color: #8c739d;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#mission-picker button[aria-pressed=true] {\n  color: #614d7c;\n  background: #d6c4e8;\n}\n#mission-picker button:disabled {\n  opacity: .65;\n  cursor: default;\n}\n#room-connections {\n  margin: 7px 12px 0;\n  font-size: 10px;\n  color: #816b90;\n}\n#house-doors {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n.door-label {\n  position: absolute;\n  left: 0;\n  top: 0;\n  white-space: nowrap;\n  padding: 3px 6px;\n  font-size: 9px;\n  font-weight: 700;\n  color: #756085;\n  background: #fff6e7dc;\n  border: 1px solid #fff8;\n  border-radius: 7px;\n}\n.room-title {\n  text-shadow: 0 1px 6px #ede6f4;\n}\n#game[data-mission=practice] #task-count {\n  font-size: 9px;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #mission-picker {\n    margin-top: 5px;\n  }\n  #mission-picker button {\n    padding: 4px 8px;\n    font-size: 9px;\n  }\n  #room-connections {\n    margin-top: 4px;\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #mission-picker {\n    justify-content: flex-start;\n    flex-wrap: wrap;\n    width: 180px;\n    margin-left: 0;\n  }\n  #room-connections {\n    max-width: 165px;\n    margin-left: 0;\n  }\n}\n#game[data-scene=cleanup] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border: 1px solid #fff9;\n  border-radius: 20px;\n  background: #fff9efed;\n  box-shadow: 0 4px 20px #66564412;\n}\n#game[data-scene=cleanup] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=cleanup] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=cleanup] .flower {\n  font-size: 34px;\n}\n#game[data-scene=cleanup] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=cleanup] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1.1px;\n  color: #5c6e52;\n}\n#game[data-scene=cleanup] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n  letter-spacing: -.6px;\n}\n#game[data-scene=cleanup] .task-list {\n  justify-content: flex-start;\n  background: #fff8efdc;\n  border-radius: 9px;\n  padding: 4px 7px;\n  width: max-content;\n  max-width: 100%;\n  height: auto;\n}\n#game[data-scene=cleanup] #mission-picker {\n  justify-content: flex-start;\n  margin: 7px 0 0;\n}\n#game[data-scene=cleanup] #room-connections {\n  display: none;\n}\n#game[data-scene=cleanup] .player-label {\n  font-size: 9px;\n  padding: 3px 7px;\n}\n#game[data-scene=cleanup] .controls {\n  bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px));\n  left: 20px;\n  right: 20px;\n}\n#game[data-scene=cleanup] .control-label {\n  color: #50624c;\n  text-shadow: 0 1px 3px #ffff;\n}\n#game[data-scene=cleanup] #cleanup-hint {\n  background: #fff9efed;\n  width: calc(100% - 32px);\n  left: 16px;\n  padding: 7px 10px;\n  border-radius: 12px;\n  color: #596651;\n  bottom: calc(max(40px, env(safe-area-inset-bottom)) + 150px);\n  font-size: 10px;\n}\n#game[data-scene=cleanup] footer {\n  left: 16px;\n  right: 16px;\n  background: #fff9efed;\n  padding: 5px 9px;\n  border-radius: 12px;\n  bottom: 8px;\n  color: #6c795e;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #game[data-scene=cleanup] .room-title {\n    top: 85px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] #mission-picker {\n    margin-top: 5px;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    bottom: calc(max(36px, env(safe-area-inset-bottom)) + 144px);\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=cleanup] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=cleanup] .room-title {\n    top: 95px;\n    width: 210px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] .task-list {\n    flex-wrap: wrap;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    width: 40%;\n    left: 30%;\n    bottom: 12px;\n  }\n  #game[data-scene=cleanup] footer {\n    display: flex;\n    flex-wrap: wrap;\n    top: 12px;\n    bottom: auto;\n    left: 270px;\n    right: 16px;\n    justify-content: flex-end;\n  }\n}\n.asset-credits {\n  color: inherit;\n  font-size: 9px;\n  text-decoration: none;\n  padding: 5px;\n}\n#day-label {\n  margin: 5px 0;\n  font-size: 11px;\n  font-weight: 700;\n  color: #667b5b;\n  text-transform: capitalize;\n}\n#mission-picker {\n  flex-wrap: wrap;\n}\n#game[data-mission=day] .task-list {\n  flex-wrap: wrap;\n  font-size: 9px;\n}\n#game[data-mission=day] #mission-clock {\n  font-size: 19px;\n  white-space: nowrap;\n}\n#school-transition {\n  position: absolute;\n  z-index: 30;\n  inset: 0;\n  background: #f6eafaed;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  color: #65517b;\n}\n#school-transition[hidden] {\n  display: none;\n}\n#school-transition span {\n  font-size: 64px;\n}\n.lilah-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  max-width: 165px;\n  padding: 7px 10px;\n  border-radius: 15px 15px 15px 3px;\n  background: #fff2ceeF;\n  color: #735978;\n  font-size: 12px;\n  font-weight: 700;\n  pointer-events: none;\n  box-shadow: 0 3px 12px #7c627525;\n  z-index: 5;\n  text-align: center;\n}\n.lilah-label[hidden] {\n  display: none;\n}\n.marc-label {\n  background: #e7f0e4ef;\n  color: #4f655c;\n}\n#player-label,\n#house-doors,\n#room-connections {\n  display: none !important;\n}\n#game[data-scene=cleanup] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border-radius: 20px;\n  background: #fff9efed;\n}\n#game[data-scene=store] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=store] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=store] .flower {\n  font-size: 34px;\n}\n#game[data-scene=store] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=store] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1px;\n}\n#game[data-scene=store] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n}\n#game[data-scene=store] #scene-subtitle {\n  font-size: 11px;\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=store] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=store] .room-title {\n    width: 210px;\n  }\n}\n#bedtime-fade {\n  position: absolute;\n  inset: 0;\n  background: #161325;\n  z-index: 80;\n  pointer-events: none;\n}\n#house-effects {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font: 700 10px "Trebuchet MS", sans-serif;\n  min-height: 36px;\n  cursor: pointer;\n  padding: 4px 6px;\n}\n\n/* src/dev/developer-panel.css */\n.dev-launch,\n.dev-inline {\n  font: 800 11px/1.2 system-ui, sans-serif !important;\n  letter-spacing: .08em;\n  background: #27263c !important;\n  color: #e6dcff !important;\n  border: 1px solid #b9a4e8 !important;\n  border-radius: 12px !important;\n  min-height: 44px;\n  min-width: 44px;\n  padding: 10px !important;\n  cursor: pointer;\n}\n.dev-launch {\n  position: fixed;\n  z-index: 90;\n  bottom: 64px;\n  left: 50%;\n  transform: translateX(-50%);\n  box-shadow: 0 4px 18px #29223a40;\n}\n.dev-launch {\n  bottom: calc(64px + env(safe-area-inset-bottom, 0px));\n}\n#developer-panel {\n  height: min(850px, calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));\n}\n.dev-inline {\n  margin: 6px;\n  flex-shrink: 0;\n}\n.pop-title .dev-inline {\n  font-size: 9px !important;\n  letter-spacing: 0;\n  margin: 0;\n  min-width: 38px;\n  padding: 5px !important;\n}\n#developer-panel {\n  width: min(720px, calc(100vw - 24px));\n  max-width: none;\n  max-height: none;\n  height: min(850px, calc(100dvh - 24px));\n  margin: auto;\n  padding: 0;\n  overflow: hidden;\n  border: 1px solid #b6a4d764;\n  border-radius: 24px;\n  background: #181926;\n  color: #eeeaf8;\n  box-shadow: 0 28px 100px #100c23a6;\n  font: 14px/1.45 system-ui, sans-serif;\n  text-align: left;\n}\n#developer-panel::backdrop {\n  background: #121020a6;\n  backdrop-filter: blur(5px);\n}\n#developer-panel * {\n  box-sizing: border-box;\n}\n#developer-panel [hidden] {\n  display: none !important;\n}\n#developer-panel .dev-shell {\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n}\n#developer-panel button {\n  font: 650 13px/1.35 system-ui, sans-serif;\n  cursor: pointer;\n  min-height: 44px;\n  border: 1px solid #494458;\n  background: #303043;\n  color: #f3efff;\n  border-radius: 12px;\n  padding: 11px 13px;\n  box-shadow: none;\n  text-transform: none;\n  letter-spacing: 0;\n  transition: background .12s;\n}\n#developer-panel button:hover {\n  background: #414057;\n}\n#developer-panel button:focus-visible,\n#developer-panel select:focus-visible {\n  outline: 3px solid #d1bcff;\n  outline-offset: 2px;\n}\n#developer-panel button:disabled {\n  opacity: .4;\n  cursor: not-allowed;\n}\n#developer-panel button[aria-pressed=true] {\n  background: #b5dccc;\n  color: #1d3830;\n  border-color: #b5dccc;\n}\n#developer-panel .dev-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n  padding: 24px 26px 16px;\n  background:\n    radial-gradient(\n      ellipse at 90% 10%,\n      #76588b45,\n      transparent 60%);\n}\n#developer-panel .dev-eyebrow {\n  color: #c0b7d5;\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: .16em;\n  display: flex;\n  align-items: center;\n  gap: 7px;\n}\n#developer-panel .dev-eyebrow i {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: #aaddc4;\n  box-shadow: 0 0 12px #aaddc440;\n}\n#developer-panel h2 {\n  color: #f5f0ff;\n  font-size: 29px;\n  letter-spacing: -1px;\n  margin: 5px 0 2px;\n  font-weight: 750;\n}\n#developer-panel h2 span {\n  color: #d9baf5;\n  margin-left: 10px;\n}\n#developer-panel .dev-header p {\n  color: #b7afc8;\n  margin: 0;\n  font-size: 12px;\n}\n#developer-panel .dev-close {\n  font-size: 25px;\n  padding: 2px;\n  width: 44px;\n  background: #ffffff08;\n  border-color: #ffffff20;\n}\n#developer-panel .dev-live {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 0 26px 16px;\n  color: #d2cddd;\n  font-size: 11px;\n}\n#developer-panel .dev-live span {\n  padding: 5px 9px;\n  border: 1px solid #ffffff15;\n  border-radius: 7px;\n  background: #ffffff05;\n}\n#developer-panel .dev-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 4px;\n  border-block: 1px solid #ffffff12;\n  padding: 6px 20px;\n  background: #20202e;\n}\n#developer-panel .dev-tabs button {\n  background: transparent;\n  border-color: transparent;\n  color: #aaa2bc;\n  border-radius: 9px;\n  padding: 10px 4px;\n  font-size: 12px;\n}\n#developer-panel .dev-tabs button[aria-selected=true] {\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-content {\n  overflow-y: auto;\n  min-height: 0;\n  padding: 20px 26px;\n  flex: 1;\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  scrollbar-color: #6b597f transparent;\n}\n#developer-panel .dev-hero {\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  width: 100%;\n  padding: 22px 18px;\n  text-align: left;\n  background:\n    linear-gradient(\n      120deg,\n      #d7c6f2,\n      #efc8da);\n  border: 0;\n  color: #392e4b;\n  margin-bottom: 16px;\n}\n#developer-panel .dev-hero:hover {\n  background:\n    linear-gradient(\n      120deg,\n      #e2d5f8,\n      #f6d8e5);\n}\n#developer-panel .dev-hero-icon {\n  font-size: 38px;\n  line-height: 1;\n}\n#developer-panel .dev-hero small {\n  display: block;\n  letter-spacing: .13em;\n  font-size: 9px;\n  font-weight: 800;\n  opacity: .75;\n}\n#developer-panel .dev-hero strong {\n  display: block;\n  font-size: 22px;\n  letter-spacing: -.6px;\n  margin: 3px 0;\n}\n#developer-panel .dev-hero span span {\n  display: block;\n  font-size: 11px;\n  font-weight: 500;\n}\n#developer-panel .dev-hero b {\n  font-size: 25px;\n  margin-left: auto;\n}\n#developer-panel .dev-card {\n  background: #232333;\n  border: 1px solid #ffffff10;\n  border-radius: 16px;\n  padding: 18px;\n  margin-bottom: 14px;\n}\n#developer-panel h3 {\n  font-size: 15px;\n  margin: 0 0 8px;\n  color: #f0eafa;\n  font-weight: 700;\n}\n#developer-panel p {\n  color: #b8b0c9;\n  font-size: 12px;\n  margin: 0 0 13px;\n  line-height: 1.55;\n}\n#developer-panel .dev-card > p:last-child {\n  margin: 12px 0 0;\n}\n#developer-panel .dev-grid {\n  display: grid;\n  grid-template-columns: repeat(2, minmax(0, 1fr));\n  gap: 8px;\n}\n#developer-panel .dev-grid button {\n  text-align: left;\n}\n#developer-panel .dev-select-label {\n  display: block;\n  font-size: 11px;\n  color: #b9b1ca;\n  margin: 15px 0 6px;\n}\n#developer-panel select {\n  display: block;\n  width: 100%;\n  border: 1px solid #58506b;\n  background: #181926;\n  color: #eeeaf8;\n  border-radius: 10px;\n  min-height: 44px;\n  padding: 10px;\n  margin-bottom: 8px;\n  font: 13px system-ui, sans-serif;\n}\n#developer-panel .dev-notice {\n  padding: 16px;\n  border-radius: 14px;\n  background: #30342f;\n  border: 1px solid #b8d4bb30;\n  margin-bottom: 14px;\n  color: #c8e5d1;\n}\n#developer-panel .dev-notice strong {\n  font-size: 12px;\n}\n#developer-panel .dev-notice p {\n  margin: 6px 0 0;\n  color: #b4c2b6;\n}\n#developer-panel .dev-resume {\n  width: 100%;\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-danger {\n  color: #ffc4bf;\n  border-color: #965e6455;\n}\n#developer-panel pre {\n  white-space: pre-wrap;\n  font: 11px/1.8 ui-monospace, monospace;\n  color: #bbb4cd;\n  margin: 16px 0 0;\n  overflow-wrap: anywhere;\n}\n#developer-panel .dev-bottom {\n  padding: 13px 26px 15px;\n  border-top: 1px solid #ffffff12;\n  background: #20202e;\n}\n#developer-panel .dev-bottom > span {\n  display: block;\n  font-size: 11px;\n  color: #bce1cd;\n}\n#developer-panel .dev-bottom small {\n  display: block;\n  font-size: 10px;\n  color: #aaa1bc;\n  margin-top: 3px;\n}\n#developer-panel [data-status] {\n  font-size: 11px;\n  color: #d6c4f3;\n  margin-top: 8px;\n}\n#developer-panel [data-status][data-error=true] {\n  color: #ffc1b7;\n}\n@media (max-width: 480px) {\n  #developer-panel {\n    width: calc(100vw - 12px);\n    height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));\n    border-radius: 18px;\n  }\n  #developer-panel .dev-header {\n    padding: 17px 16px 12px;\n  }\n  #developer-panel h2 {\n    font-size: 25px;\n  }\n  #developer-panel .dev-live {\n    padding: 0 16px 12px;\n    gap: 5px;\n  }\n  #developer-panel .dev-tabs {\n    padding: 5px 10px;\n  }\n  #developer-panel .dev-content {\n    padding: 14px;\n  }\n  #developer-panel .dev-card {\n    padding: 14px;\n  }\n  #developer-panel .dev-bottom {\n    padding: 11px 16px;\n  }\n  #developer-panel .dev-hero {\n    padding: 16px 13px;\n    gap: 10px;\n  }\n  #developer-panel .dev-hero strong {\n    font-size: 20px;\n  }\n  #developer-panel .dev-hero-icon {\n    font-size: 28px;\n  }\n  #developer-panel .dev-grid button {\n    font-size: 12px;\n    padding: 10px;\n  }\n  #developer-panel .dev-bottom small {\n    font-size: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #developer-panel button {\n    transition: none;\n  }\n}\n#developer-panel .dev-bottom {\n  position: static;\n  display: block;\n  flex-shrink: 0;\n  letter-spacing: 0;\n  pointer-events: auto;\n}\n#squishy-pop:has(.dev-inline) .pop-footer {\n  display: block;\n}\n#squishy-pop .pop-title .dev-inline {\n  background: #27263c !important;\n  color: #e6dcff !important;\n}\n';
 
 // src/editor/FullGame.ts
 async function startEditorGame(app) {

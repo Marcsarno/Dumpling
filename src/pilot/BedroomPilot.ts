@@ -52,8 +52,9 @@ export async function startPilot(app:Application){
  },()=>{});
  const surfaces=new SurfaceTextures(app);for(const a of app.assets.list()){if(a.type==='material'&&a.resource){const m=a.resource as StandardMaterial;if(m.name==='Honey birch')surfaces.apply(m,'wood');if(m.name==='Lilac rug')surfaces.apply(m,'rug');}}
  const resolveAsset=(path:string)=>{const name=path.endsWith('arianna.glb')?'pilot-arianna-original.bin':'pilot-'+path.split('/').pop();const asset=app.assets.find(name);return asset?.getFileUrl()??'/'+path;};
- app.graphicsDevice.maxPixelRatio=Math.min(devicePixelRatio||1,1.75);
- const resize=()=>{app.resizeCanvas(innerWidth,innerHeight);camera.resize(innerWidth,innerHeight);};resize();window.addEventListener('resize',resize);
+ // Same protected character quality as the full game: native display pixels.
+ app.graphicsDevice.maxPixelRatio=devicePixelRatio||1;
+ const resize=()=>{app.graphicsDevice.maxPixelRatio=devicePixelRatio||1;app.resizeCanvas(innerWidth,innerHeight);camera.resize(innerWidth,innerHeight);};resize();window.addEventListener('resize',resize);
  let lastBounds='';app.on('update',(elapsed:number)=>{
   const dt=document.hidden?0:Math.min(elapsed,.04),now=performance.now();
   const signature=colliderNodes.map(e=>Array.from(e.getWorldTransform().data).join(',')).join(';');if(signature!==lastBounds){refreshBounds();controller.setRoom(room);lastBounds=signature;}

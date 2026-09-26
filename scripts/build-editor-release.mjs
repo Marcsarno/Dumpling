@@ -2,6 +2,7 @@ import {cp,mkdir,readFile,writeFile,copyFile,readdir} from 'node:fs/promises';
 import {resolve,dirname,basename} from 'node:path';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
+import {verifyAriannaQuality} from './verify-arianna-quality.mjs';
 import './migration-build.mjs';
 
 // The committed Editor export supplies authored layout and assets. Compile the
@@ -21,6 +22,7 @@ for(const path of overlays){
  while(config.assets[updatedId])updatedId++;
  config.assets[updatedId]={id:String(updatedId),name,type:'binary',file:{url,filename:basename(path)},data:{},preload:false,tags:[]};updatedId++;
 }
+verifyAriannaQuality(resolve(output,'assets/characters/arianna/arianna.glb'));
 // Keep the in-game credits and compact license manifest current as well.
 const credits=Object.values(config.assets).find(a=>a.name==='game__asset-credits.html');
 if(credits)await copyFile('public/asset-credits.html',resolve(output,credits.file.url.split('?')[0]));

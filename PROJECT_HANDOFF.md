@@ -1,3 +1,15 @@
+## Release authorization — September 26
+
+The user explicitly requested deployment of the reviewed daily-play and restored-outdoors pass. Earlier preview-only statements below are historical. Preserve production arianna.* saves; verify the deployed commit at https://dumpling-sandy.vercel.app/release.json. Physical-phone testing remains outstanding.
+
+## Latest: daily play and restored outdoors — September 26
+
+See docs/daily-play-local-review.md. Fifteen original Blender interactions, five seeded choices per game day, additive saves, restored pond/backyard and continuous original road to the left. Removed added cottages, road island and man/dog encounters. Imported KayKit actions have a reviewed forward arm-range adaptation on Arianna’s original rig; both maps remain 2048×2048 and native display pixels are protected. No deployment, commit or push. Scooter control/obstacle work and Dad rides deferred by the user. The local review uses the isolated outdoorReview namespace. Browser playtests and memory counters are under artifacts/daily-play; physical-phone performance remains unverified.
+
+## Latest: protected Arianna quality and outdoor prototype — September 25
+
+Read AGENTS.md and docs/outdoor-journeys-local-preview.md first. User requires Arianna's original 2048×2048 textures, full mesh/material quality and native display pixels at all times; never optimize her down or replace/reweight her rig. Restored original textures after discovering the older optimizer had reduced them. Jump upper-arm adaptation was rejected and removed. Outdoor/scooter work remains a local prototype with remaining work documented there. Production baseline is eb47411. No deployment authorization for this pass.
+
 ## Latest: character and interactive fishing upgrade
 
 See NPC_FISHING_UPGRADE.md. Actual Quaternius Worker guard; slimmer fitted classmates/cook; hold/release/countersteer fishing battle and visual pass. Tested locally, synced to PlayCanvas checkpoint 8c8b45c9-3521-4ba6-85fe-4edabd243ec1. No new Git commit or public deployment. Preserve all uncommitted work.

@@ -6,6 +6,8 @@ import { CharacterAnimator, type CharacterManifest } from './CharacterAnimator';
 import { CharacterGrounding } from './CharacterGrounding';
 import {fishingTracks,type FishingMotion} from './FishingRetarget';
 import {sleepingTrack,bedEntryTrack} from './RestingPose';
+import {scooterTracks} from './JourneyPose';
+import {playTracks} from './PlayMotion';
 
 export function createCharacter(app: Application) {
   const player = new Entity('Arianna', app);
@@ -62,6 +64,9 @@ export async function loadArianna(app: Application, character: ReturnType<typeof
   if(!fishingResponse.ok)throw new Error('Fishing animation library could not load.');
   const fishing=fishingTracks(model,tracks.find(t=>t.name==='Idle')!,await fishingResponse.json() as FishingMotion);
   tracks.push(...fishing);manifest.animations.push(...fishing.map(t=>({name:t.name,duration_seconds:t.duration,loop:['Fishing_Idle','Fishing_Reeling','Fishing_Left','Fishing_Right'].includes(t.name)})));
+  const scooter=scooterTracks(model,tracks.find(t=>t.name==='Idle')!);tracks.push(...scooter);manifest.animations.push(...scooter.map(t=>({name:t.name,duration_seconds:t.duration,loop:true})));
+  const play=playTracks(model,tracks.find(t=>t.name==='Idle')!,await(await fetch(resolveAsset('assets/outdoors/play-motion.json'))).json());tracks.push(...play);manifest.animations.push(...play.map(t=>({name:t.name,duration_seconds:t.duration,loop:false})));
+  for(const [name,time] of Object.entries({PlayKick:.32,PlayRoll:.60,PlayThrow:.58,PlayInteract:.45,PlayReach:.45,PlayUse:.6,PlayJump:.48,PlayWave:.75}))manifest.interaction_events[name]=[{time_seconds:time,event:'toy-contact'}];
   // Normalize the visual only. Root position, movement and collision radius stay untouched.
   const bounds = new BoundingBox();
   let first = true;

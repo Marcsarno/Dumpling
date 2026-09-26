@@ -5,7 +5,9 @@ import {createHash} from 'node:crypto';
 const ffmpeg='C:/pinokio/bin/miniconda/Library/bin/ffmpeg.exe';
 const dir='artifacts/texture-optimization';mkdirSync(dir,{recursive:true});
 const report=[];
-for(const file of ['characters/arianna/arianna.glb','characters/marc/marc.glb','characters/lilah/lilah.glb','pets/sunny-pup.glb']){
+// User requirement: Arianna always retains her original full-quality 2048px
+// textures, geometry, materials and rig. Never include her in this optimizer.
+for(const file of ['characters/marc/marc.glb','characters/lilah/lilah.glb','pets/sunny-pup.glb']){
  const path='public/assets/'+file,backup=dir+'/'+file.replaceAll('/','-');if(!existsSync(backup))copyFileSync(path,backup);
  const b=readFileSync(backup),length=b.readUInt32LE(12),json=JSON.parse(b.subarray(20,20+length)),bin=b.subarray(28+length);
  const originalViews=json.bufferViews.map(v=>bin.subarray(v.byteOffset||0,(v.byteOffset||0)+v.byteLength));

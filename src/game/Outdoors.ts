@@ -6,10 +6,10 @@ export const SCHOOL_GATE=new Vec3(22,.09,-29.4);
 export class Outdoors{
  readonly root:Entity;readonly roof:Entity;readonly ready:Promise<void>;readonly water:Entity;readonly obstacles:BoundingBox[]=[];readonly halfWidth=40;readonly halfDepth=45;
  readonly walkable=[{minX:-9,maxX:-3.3,minZ:-6,maxZ:9.8},{minX:-14,maxX:14,minZ:-19,maxZ:-4},{minX:-4,maxX:31,minZ:-19.5,maxZ:-16},{minX:20,maxX:24,minZ:-27,maxZ:-18},{minX:14,maxX:31,minZ:-33,maxZ:-26}];
- private guard?:Awaited<ReturnType<typeof crossingGuard>>;private time=0;private opened=false;readonly art:OutdoorArt;
+ private guard?:Awaited<ReturnType<typeof crossingGuard>>;private guardLoading=false;private visible=false;private time=0;private opened=false;readonly art:OutdoorArt;
  constructor(private app:Application,private house:Bedroom){
   this.root=new Entity('Pond and school walk',app);app.root.addChild(this.root);const group=app.batcher.addGroup('Outdoor architecture',false,14),s=primitives(app,this.root,group.id),grass=outdoorSurface(app,'grass'),stone=outdoorSurface(app,'path'),edge=material('Limestone edges','#eadfc3'),soil=material('Pond bank','#a79b74'),road=material('Quiet street','#8994a0'),white=material('Crossing paint','#fff4d7'),wood=material('Honey garden oak','#b89570'),mint=material('School mint','#b3cbbc'),cream=material('School plaster','#f5dfb8'),pink=material('Roof clay','#cb8d88');
-  this.art=new OutdoorArt(app,this.root);
+  this.art=new OutdoorArt(app,this.root,true);
   const box=(n:string,x:number,y:number,z:number,w:number,h:number,d:number,m=stone)=>s(n,'box',[x,y,z],[w,h,d],m);
   box('Back garden lawn',7,-.16,-16,54,.25,40,grass);box('Side garden lawn',-6.6,-.16,3,4.8,.25,14,grass);
   gardenGround(app,this.root,grass,group.id);meadowFringes(app,this.root,group.id);
@@ -58,12 +58,12 @@ export class Outdoors{
   for(const z of [-1.7,2.2,5.6,11.1]){r('Exterior window frame','box',[-3.51,1.70,z],[.10,1.18,1.25],edge);r('Exterior blue glass','box',[-3.57,1.70,z],[.05,.98,1.05],material('Cottage sky glass','#accacf'));r('Exterior window mullion','box',[-3.61,1.70,z],[.05,1.03,.06],edge);r('Exterior window ledge','box',[-3.65,1.08,z],[.3,.10,1.42],wood);}
   r('Chimney','box',[7,4.0,8],[.75,1.4,.75],cream);r('Chimney cap','box',[7,4.73,8],[.95,.14,.95],edge);this.roof.enabled=false;
   for(const [x,z,hx,hz] of [[-1.4,-7,.85,.34],[-2.8,-11.4,.12,.12],[20,-18,.35,.35],[16.5,-28.5,1.5,1],[28,-28.5,1.5,1],[17,-29.8,3.05,.12],[27.5,-29.8,3.55,.12],[19.8,-30,.23,.23],[24.2,-30,.23,.23]])this.obstacles.push(new BoundingBox(new Vec3(x,.6,z),new Vec3(hx,1,hz)));
-  this.ready=Promise.all([this.art.finish(),crossingGuard(app,this.root).then(g=>this.guard=g)]).then(()=>{app.batcher.generate([group.id]);});
+  app.batcher.generate([group.id]);this.root.enabled=false;this.ready=Promise.resolve();
  }
  installDoor(){
   if(this.opened)return;this.opened=true;
   // The authored Editor wall remains authoritative except for this one doorway cutout.
-  const shapes=primitives(this.app,this.root),wall=material('Entry plaster repair','#f3dfca'),trim=material('Entry ivory repair','#f5e9d6');
+  const shapes=primitives(this.app,this.house.root),wall=material('Entry plaster repair','#f3dfca'),trim=material('Entry ivory repair','#f5e9d6');
   for(const r of this.house.root.findComponents('render') as RenderComponent[]){const n=r.entity,p=n.getPosition();if((['Painted cottage wall','Ivory wall cap','Cottage skirting'].includes(n.name)&&Math.abs(p.x+3.3)<.2&&p.z>5.8&&p.z<7.4)||['Front door timber','Front door inset','Door brass handle'].includes(n.name)){r.enabled=false;r.batchGroupId=-1;}}
   // Clear only obsolete decorative trees/fence pieces across the new garden route.
   for(const node of this.house.root.find(n=>n.name.startsWith('Art '))){const p=node.getPosition();if((node.name.startsWith('Art tree')&&p.z<-3)||(node.name==='Art fence_planksDouble'&&Math.abs(p.z+6)<.2&&p.x<1)){node.enabled=false;for(const r of (node as Entity).findComponents('render') as RenderComponent[]){r.enabled=false;r.batchGroupId=-1;}}}
@@ -71,6 +71,6 @@ export class Outdoors{
   for(const [a,b] of [[3.6,7.6],[8.95,9.5]]){shapes('Open entry wall','box',[-3.3,1.325,(a+b)/2],[.14,2.65,b-a],wall);shapes('Open entry skirting','box',[-3.28,.12,(a+b)/2],[.16,.16,b-a],trim);this.house.obstacles.push(new BoundingBox(new Vec3(-3.3,.7,(a+b)/2),new Vec3(.07,1.4,(b-a)/2)));}
   this.house.walkable!.push(...this.walkable);this.house.obstacles.push(...this.obstacles);this.house.halfWidth=this.halfWidth;this.house.halfDepth=this.halfDepth;this.app.batcher.generate();
  }
- update(dt:number,p:Vec3,enabled:boolean){this.root.enabled=enabled;this.time+=dt;this.roof.enabled=enabled&&(p.x<-5.2||p.z<-5);this.guard?.update(this.time,p);}
+ update(dt:number,p:Vec3,enabled:boolean){const camera=this.app.root.findByTag('migration.camera')[0] as Entity|undefined;const near=enabled&&(p.x>-42||!!camera?.camera?.frustum.containsAabb(new BoundingBox(new Vec3(7,2,-13),new Vec3(31,8,29))));this.root.enabled=near;this.roof.enabled=near&&(p.x<-5.2||p.z<-5);if(near&&!this.visible)void this.art.finish().catch(e=>console.error('Outdoor plants',e));if(!near&&this.visible)this.art.unload();this.visible=near;if(near&&p.z<-12&&!this.guardLoading){this.guardLoading=true;void crossingGuard(this.app,this.root).then(g=>this.guard=g).catch(e=>console.error('Crossing guard',e));}if(near){this.time+=dt;this.guard?.update(this.time,p);}}
  snapshot(){return{ready:!this.art.errors.length,roof:this.roof.enabled,stand:POND.stand.toArray(),gate:SCHOOL_GATE.toArray(),walkable:this.house.walkable,obstacles:this.house.obstacles.map(b=>({center:b.center.toArray(),halfExtents:b.halfExtents.toArray()}))};}
 }

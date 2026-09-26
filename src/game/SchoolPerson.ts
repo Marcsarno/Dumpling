@@ -1,6 +1,8 @@
 import {Asset,AnimCurve,AnimData,AnimTrack,BoundingBox,Entity,Quat,Vec3,StandardMaterial,INTERPOLATION_LINEAR,type Application,type ContainerResource,type GraphNode,type RenderComponent} from 'playcanvas';
 import {assetUrl} from '../editor/AssetUrls';
 const assets=new WeakMap<Application,Map<string,Promise<ContainerResource & {animations:Asset[]}>>>();
+const studentAssets=new WeakMap<Application,Map<string,Asset>>();
+export function releaseSchoolStudents(app:Application){const records=studentAssets.get(app);if(!records)return;for(const [file,a] of records){a.unload();app.assets.remove(a);assets.get(app)?.delete(file);}records.clear();}
 type Path={entityPath:string[];component:string;propertyPath:string[]};
 /** Preserve the source skin and rig; bake chair fitting into each peaceful clip. */
 function seatedTrack(model:Entity,source:AnimTrack,scale:number,student=false){
@@ -27,7 +29,7 @@ function seatedTrack(model:Entity,source:AnimTrack,scale:number,student=false){
  return new AnimTrack(source.name,source.duration,[new AnimData(1,times)],output.map((v,i)=>new AnimData(channels[i].path.propertyPath[0]==='localRotation'?4:3,v)),channels.map((c,i)=>new AnimCurve([c.path] as unknown as string[],0,i,INTERPOLATION_LINEAR)));
 }
 export async function schoolPerson(app:Application,parent:Entity,file:string,name:string,height=1.38,seated=false){
- let cache=assets.get(app);if(!cache){cache=new Map();assets.set(app,cache);}if(!cache.has(file))cache.set(file,new Promise((resolve,reject)=>{const a=new Asset(name,'container',{url:assetUrl('assets/people/'+file+'.glb')});a.once('load',()=>resolve(a.resource as ContainerResource & {animations:Asset[]}));a.once('error',reject);app.assets.add(a);app.assets.load(a);}));
+ let cache=assets.get(app);if(!cache){cache=new Map();assets.set(app,cache);}if(!cache.has(file))cache.set(file,new Promise((resolve,reject)=>{const a=new Asset(name,'container',{url:assetUrl('assets/people/'+file+'.glb')});if(file.startsWith('student-')){let map=studentAssets.get(app);if(!map){map=new Map();studentAssets.set(app,map);}map.set(file,a);}a.once('load',()=>resolve(a.resource as ContainerResource & {animations:Asset[]}));a.once('error',reject);app.assets.add(a);app.assets.load(a);}));
  const res=await cache.get(file)!,model=res.instantiateRenderEntity({castShadows:true}),bounds=new BoundingBox();let first=true;for(const render of model.findComponents('render') as RenderComponent[])for(const m of render.meshInstances){if(first){bounds.copy(m.aabb);first=false;}else bounds.add(m.aabb);}
  if(seated&&!file.startsWith('student-')){model.findByName('Head')!.setLocalScale(1.20,1.20,1.20);const palette:Record<string,Record<string,string>>={jules:{Purple:'#9d88bf',LightBlue:'#587995',White:'#eee4d8'},remy:{LightBrown:'#9dbda6',Red_Dark:'#6c8d78',LightBlue:'#567188'},poppy:{White:'#ead2e6',Orange:'#b88aac',Grey:'#ede3d7'}};for(const render of model.findComponents('render') as RenderComponent[])for(const mesh of render.meshInstances){const color=palette[file]?.[mesh.material.name];if(color){const mat=mesh.material.clone() as StandardMaterial;mat.diffuse.fromString(color);mat.update();mesh.material=mat;}}}
  const scale=height/(file.startsWith('student-')?2.14:bounds.halfExtents.y*2),tracks=res.animations.map(a=>a.resource as AnimTrack).map(t=>seated?seatedTrack(model,t,scale,file.startsWith('student-')):t);
