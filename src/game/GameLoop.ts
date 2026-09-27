@@ -160,6 +160,7 @@ export class GameLoop {
     this.huntUI.showTravel(storeById(id).name);this.travelUntil=performance.now()+1100;
     this.joystick.reset();this.controller.reset();
   }
+  resetUIInput(){this.action.reset();}
   private attempt(fn: () => void) { try { fn(); } catch (error) { console.error('Game interaction failed:', error); this.message(error instanceof Error ? error.message : 'Please try again.', true); } }
   private message(value: string, persistent = false) {
     el('#save-message').textContent = value; el('#save-message').hidden = false;
@@ -257,6 +258,7 @@ export class GameLoop {
     let discovered = 0, total = 0;
     for (const series of SERIES) {
       const heading=document.createElement('strong');heading.className='series-heading';heading.textContent=`${series.name} · ${series.items.filter(id=>this.save.data.collection[id]>0).length}/${series.items.length}`;grid.append(heading);
+      heading.classList.toggle('empty-series',!series.items.some(id=>this.save.data.collection[id]>0));
     for (const data of DUMPLINGS.filter(d=>(series.items as readonly string[]).includes(d.id))) {
       const count = this.save.data.collection[data.id] || 0; if (count) discovered++; total += count;
       const card = document.createElement('article'); card.className = `dumpling-card${count ? ' owned' : ''}`; card.dataset.id = data.id;
@@ -275,6 +277,7 @@ export class GameLoop {
     }
     }
     el('#collection-summary').textContent = `${discovered} / ${DUMPLINGS.length} discovered · ${total} collected · Wallet $${this.save.data.balance}`;
+    el('.collection-empty').hidden=discovered>0;
     el('#open-next').hidden = !this.save.data.boxes.length;
     el('#open-next').textContent = `Open next box · ${this.save.data.boxes.length} waiting`;
     el<HTMLDialogElement>('#collection-dialog').showModal();el('#collection-dialog').scrollTop=0; this.joystick.reset(); this.controller.reset();

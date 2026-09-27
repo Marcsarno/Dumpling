@@ -23,6 +23,8 @@ import './ui/styles.css';
 import './ui/cleanup.css';
 import './ui/collection.css';
 import './ui/house.css';
+import { AdventureHUD } from './ui/AdventureHUD';
+import { HOUSE_ROOMS } from './data/house';
 
 export async function startGame(editorApp?:Application) {
   const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas')!;
@@ -73,6 +75,7 @@ export async function startGame(editorApp?:Application) {
   observer.observe(viewport);
   resize();
   const houseMusic=new HouseMusic();const destroyAudioSettings=createAudioSettings();const destroyPerformance=performanceSettings(app,()=>loop.popUI.isOpen||loop.developerPaused);
+  const hud=new AdventureHUD(()=>{joystick.reset();controller.reset();cleanup.action.reset();loop.resetUIInput();});
   const dogRoaming=new DogRoaming(room,props.pet!.dog,props.daily!);
   app.on('update', (elapsed: number) => {
     houseMusic.update({mode:loop.mode,phase:props.daily!.clock.state.phase,store:loop.mode==='store'?loop.store.definition.id:'',paused:loop.popUI.isOpen||loop.developerPaused||tornado.active,revealing:loop.opening.phase==='opening'},Math.min(elapsed,.1));
@@ -80,6 +83,7 @@ export async function startGame(editorApp?:Application) {
     if(loop.developerPaused||loop.popUI.isOpen||document.hidden)cleanup.audio.silence();
     if(loop.developerPaused){loop.developerTick(now,elapsed);return;}
     loop.beforeMovement(now);
+    if(document.querySelector('dialog[open]'))controller.enabled=false;
     if(loop.popUI.isOpen)return;
     const bulky = cleanup.carry.item?.carryPace === 'walk'||loop.dailyPlay.carrying||loop.schoolGate.carrying;
     controller.speed = bulky ? WALK_SPEED * (['vacuum','scooper'].includes(cleanup.carry.item?.id??'') ? 1.5 : 1) : RUN_SPEED;
@@ -100,6 +104,15 @@ export async function startGame(editorApp?:Application) {
     dogRoaming.update(dt,loop.mode==='cleanup'&&!tornado.active&&!!props.pet?.loaded,[character.player.getPosition(),lilah.root.getPosition(),marc.root.getPosition()]);
     props.pet?.dogAnimator?.update(dt);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === 'cleanup', cleanup.mode);
+    const day=props.daily!.clock;
+    const position=character.player.getPosition();
+    const location=loop.mode==='cleanup'?(HOUSE_ROOMS.find(room=>room.id===navigation.current)?.name??'Home'):
+      loop.mode==='store'?loop.store.definition.name:loop.mode==='recess'?loop.recess.area:
+      loop.mode==='home'?'Little surprises':position.z<-26&&position.x>14?'School garden':position.x<-9?'Maple Lane':'Home garden';
+    hud.update({scene:loop.mode,location,day:day.state.day,time:day.label,phase:day.state.phase,
+      mode:cleanup.mode,timed:cleanup.mission.timed,running:cleanup.mission.state==='running',
+      remaining:document.querySelector('#mission-clock')!.textContent!,revealing:loop.opening.phase==='opening',
+      tasks:cleanup.mission.tasks,completed:cleanup.mission.completed,hint:document.querySelector('#cleanup-hint')!.textContent!});
     if(loop.mode==='outdoors'&&!controller.riding&&character.grounding){const p=character.player.getPosition();character.grounding.surfaceHeight=p.x<-9||p.z<-16?.075:.03;}
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
@@ -168,7 +181,7 @@ export async function startGame(editorApp?:Application) {
   let developerPanel:{destroy():void}|undefined;let disposed=false;
   void import('./dev/DeveloperPanel').then(({DeveloperPanel})=>{if(!disposed)developerPanel=new DeveloperPanel(loop,()=>({fps:app.stats.frame.fps,drawCalls:app.stats.drawCalls.total,position:character.player.getPosition().toArray()}));});
   if (import.meta.hot) import.meta.hot.dispose(() => {
-    disposed=true;developerPanel?.destroy();houseMusic.destroy();destroyPerformance();destroyAudioSettings();
+    disposed=true;hud.destroy();developerPanel?.destroy();houseMusic.destroy();destroyPerformance();destroyAudioSettings();
     observer.disconnect(); tornado.destroy(); marc.destroy(); lilah.destroy(); navigation.destroy(); loop.destroy(); cleanup.destroy(); joystick.destroy(); controller.destroy(); app.destroy();
     delete (window as unknown as Record<string, unknown>).__roomTest;
   });

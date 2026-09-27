@@ -3136,7 +3136,7 @@ var PlayerController = class {
     this.setRoom(room);
     this.keyboard = new Keyboard(window, { preventDefault: false });
     window.addEventListener("keydown", (event) => {
-      if (event.key === " " && event.target?.closest("button,dialog")) return;
+      if (document.querySelector("dialog[open]") || event.key === " " && event.target?.closest("button")) return;
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(event.key)) event.preventDefault();
     }, { signal: this.abort.signal });
     window.addEventListener("blur", this.reset, { signal: this.abort.signal });
@@ -4803,7 +4803,7 @@ var ActionButton = class {
     this.cancel = cancel;
     const options = { signal: this.abort.signal };
     element.addEventListener("pointerdown", (event) => {
-      if (!this.enabled || event.button !== 0 || this.held || element.disabled) return;
+      if (!this.enabled || event.button !== 0 || this.held || element.disabled || document.querySelector("dialog[open]")) return;
       event.preventDefault();
       this.pointer = event.pointerId;
       element.setPointerCapture(event.pointerId);
@@ -4817,14 +4817,14 @@ var ActionButton = class {
     }
     element.addEventListener("contextmenu", (event) => event.preventDefault(), options);
     element.addEventListener("click", (event) => {
-      if (this.enabled && event.detail === 0 && !this.held && !element.disabled) {
+      if (this.enabled && event.detail === 0 && !this.held && !element.disabled && !document.querySelector("dialog[open]")) {
         this.press();
         this.cancel();
       }
     }, options);
     window.addEventListener("keydown", (event) => {
       const target = event.target;
-      if (!this.enabled || !["Space", "KeyE"].includes(event.code) || target?.closest("dialog") || target?.closest("button") && target !== element) return;
+      if (!this.enabled || !["Space", "KeyE"].includes(event.code) || document.querySelector("dialog[open]") || target?.closest("button") && target !== element) return;
       event.preventDefault();
       if (event.repeat || this.held || element.disabled) return;
       this.key = event.code;
@@ -9613,7 +9613,7 @@ var OutdoorEncounters = class {
     document.querySelector("#game").append(this.button);
     this.button.onclick = () => this.jump();
     window.addEventListener("keydown", (e) => {
-      if (e.code === "KeyJ" && !this.button.hidden && !e.repeat) this.jump();
+      if (e.code === "KeyJ" && !this.button.hidden && !e.repeat && !document.querySelector("dialog[open]")) this.jump();
     }, { signal: this.abort.signal });
   }
   app;
@@ -12156,6 +12156,9 @@ var GameLoop = class {
     this.joystick.reset();
     this.controller.reset();
   }
+  resetUIInput() {
+    this.action.reset();
+  }
   attempt(fn) {
     try {
       fn();
@@ -12336,6 +12339,7 @@ var GameLoop = class {
       heading.className = "series-heading";
       heading.textContent = `${series.name} \xB7 ${series.items.filter((id) => this.save.data.collection[id] > 0).length}/${series.items.length}`;
       grid.append(heading);
+      heading.classList.toggle("empty-series", !series.items.some((id) => this.save.data.collection[id] > 0));
       for (const data of DUMPLINGS.filter((d) => series.items.includes(d.id))) {
         const count = this.save.data.collection[data.id] || 0;
         if (count) discovered++;
@@ -12382,6 +12386,7 @@ var GameLoop = class {
       }
     }
     el("#collection-summary").textContent = `${discovered} / ${DUMPLINGS.length} discovered \xB7 ${total} collected \xB7 Wallet $${this.save.data.balance}`;
+    el(".collection-empty").hidden = discovered > 0;
     el("#open-next").hidden = !this.save.data.boxes.length;
     el("#open-next").textContent = `Open next box \xB7 ${this.save.data.boxes.length} waiting`;
     el("#collection-dialog").showModal();
@@ -13471,7 +13476,7 @@ var LilahTornado = class {
     return this.playing && (!this.cleaning || this.cleaning.aligning) && !this.character.animator.busy;
   }
   available() {
-    return this.loop.mode === "cleanup" && this.cleanup.mode === "day" && this.props.daily.clock.state.phase !== "school" && this.props.daily.clock.state.phase !== "night" && !this.cleanup.carry.item && !this.cleanup.movementLocked && this.lilah.ready && !this.character.placeholder.enabled && !document.querySelector("dialog[open]");
+    return this.loop.mode === "cleanup" && this.cleanup.mode === "day" && this.props.daily.clock.state.phase !== "school" && this.props.daily.clock.state.phase !== "night" && !this.cleanup.carry.item && !this.cleanup.movementLocked && this.lilah.ready && !this.character.placeholder.enabled && !document.querySelector("dialog[open]:not(#adventure-menu)");
   }
   open(forced) {
     if (this.active || !this.available()) return;
@@ -14349,6 +14354,206 @@ var Marc = class {
   }
 };
 
+// src/ui/AdventureHUD.ts
+var icons = {
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
+  book: '<path d="M12 6C9 3 5 3 2 4v15c4-1 7 0 10 2 3-2 6-3 10-2V4c-3-1-7-1-10 2Zm0 0v15M6 8h2m-2 4h2m8-4h2m-2 4h2"/>',
+  flower: '<path d="M12 9c-7-10-12 1-5 4-9 4 0 12 5 4 5 8 14 0 5-4 7-3 2-14-5-4Z"/><circle cx="12" cy="13" r="2"/>',
+  bag: '<path d="M5 8h14l1 13H4L5 8Zm4 1V6a3 3 0 0 1 6 0v3"/>',
+  sound: '<path d="m4 9 4 0 5-4v14l-5-4H4V9Zm12-1c3 2 3 6 0 8m3-11c5 4 5 10 0 14"/>',
+  menu: '<path d="M4 7h16M4 12h11M4 17h16"/>',
+  close: '<path d="m6 6 12 12M6 18 18 6"/>',
+  arrow: '<path d="M4 12h15m-6-6 6 6-6 6"/>',
+  spark: '<path d="m12 2 2.8 7.2L22 12l-7.2 2.8L12 22l-2.8-7.2L2 12l7.2-2.8L12 2Z"/>'
+};
+function hudIcon(name) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${icons[name]}</svg>`;
+}
+var AdventureHUD = class {
+  constructor(resetInput) {
+    this.resetInput = resetInput;
+    this.game.classList.add("adventure-ui");
+    this.game.dataset.input = matchMedia("(pointer:coarse)").matches ? "touch" : "pointer";
+    this.root.id = "adventure-hud";
+    this.root.innerHTML = `<div class="adventure-status"><div class="day-seal">${hudIcon("sun")}</div><div class="place-copy"><span id="adventure-time"></span><strong id="adventure-place"></strong></div><button id="adventure-today" aria-label="Open today's journal">${hudIcon("book")}<span>Today <b id="adventure-count"></b></span></button></div><div class="adventure-tools"><div class="adventure-wallet" aria-label="Wallet">${hudIcon("bag")}<strong id="adventure-balance"></strong></div><button id="adventure-menu-open" aria-label="Open game menu">${hudIcon("menu")}<span>Menu</span></button></div><div class="adventure-timer" hidden><small>TIME LEFT</small><strong></strong></div><div class="adventure-keyboard" aria-hidden="true"><kbd>W A S D</kbd><span>Move</span></div>`;
+    this.menu.id = "adventure-menu";
+    this.menu.className = "adventure-panel";
+    this.menu.setAttribute("aria-labelledby", "adventure-menu-title");
+    this.menu.innerHTML = `<header class="adventure-panel-head"><div><span class="adventure-overline">A LITTLE TIME FOR YOU</span><h2 id="adventure-menu-title">Arianna<span class="brand-petal">${hudIcon("flower")}</span></h2></div><button class="adventure-close" aria-label="Close menu">${hudIcon("close")}</button></header><div class="adventure-panel-body"><button class="adventure-resume">Back to the adventure ${hudIcon("arrow")}</button><nav class="adventure-destinations" aria-label="Game menu"><button data-journal>${hudIcon("book")}<span><strong>Today's journal</strong><small>Your little things to do</small></span>${hudIcon("arrow")}</button><button data-route="#collection-button">${hudIcon("bag")}<span><strong>My collection</strong><small data-collection-count>Your squishy friends</small></span>${hudIcon("arrow")}</button><button data-route="#squishy-pop-shortcut">${hudIcon("flower")}<span><strong>Squishy Pop</strong><small>A little arcade break</small></span>${hudIcon("arrow")}</button><button data-route="#audio-settings">${hudIcon("sound")}<span><strong>Sound & settings</strong><small>Make yourself comfortable</small></span>${hudIcon("arrow")}</button></nav><p class="adventure-availability" hidden>Collection opens after your round or outing.</p><details class="adventure-activities"><summary>Choose an activity</summary><p>Daily life, a quick cleanup, or time to explore.</p><div data-modes></div></details><details class="adventure-help"><summary>How to play</summary><p>Drag the movement stick, or use WASD / arrow keys. Walk close to something, then use the large action button or E / Space. Outside, use Jump or J. Hold the action button when it says \u201CHold to clean.\u201D</p><p data-help></p></details><p class="adventure-clock-note"></p><div class="adventure-menu-foot"><a href="./asset-credits.html" target="_blank" rel="noopener">Art credits</a><button data-developer hidden>Developer tools</button></div></div>`;
+    this.journal.id = "adventure-journal";
+    this.journal.className = "adventure-panel";
+    this.journal.setAttribute("aria-labelledby", "adventure-journal-title");
+    this.journal.innerHTML = `<header class="adventure-panel-head"><div><span class="adventure-overline" data-journal-day></span><h2 id="adventure-journal-title">A lovely little day.</h2></div><button class="adventure-close" aria-label="Close journal">${hudIcon("close")}</button></header><div class="adventure-panel-body"><div class="journal-summary">${hudIcon("book")}<span data-summary></span></div><ol class="journal-tasks"></ol><div class="journal-hint"><span class="adventure-overline">A LITTLE NUDGE</span><p data-hint></p></div><p class="adventure-clock-note"></p><button class="adventure-resume">Let's go ${hudIcon("arrow")}</button></div>`;
+    this.menu.querySelector("[data-modes]").append(this.modePicker);
+    this.game.append(this.root, this.menu, this.journal);
+    const signal = this.abort.signal;
+    for (const button2 of document.querySelectorAll("[data-collection-filter]")) button2.addEventListener("click", () => {
+      document.querySelector("#collection-dialog").dataset.filter = button2.dataset.collectionFilter;
+      for (const peer of document.querySelectorAll("[data-collection-filter]")) peer.setAttribute("aria-pressed", String(peer === button2));
+    }, { signal });
+    const credits = this.menu.querySelector(".adventure-menu-foot a");
+    credits.href = document.querySelector(".asset-credits").href;
+    this.root.querySelector("#adventure-menu-open").addEventListener("click", () => this.open(this.menu), { signal });
+    this.root.querySelector("#adventure-today").addEventListener("click", () => this.open(this.journal), { signal });
+    for (const dialog of [this.menu, this.journal]) {
+      for (const button2 of dialog.querySelectorAll(".adventure-close,.adventure-resume")) button2.addEventListener("click", () => this.close(), { signal });
+      dialog.addEventListener("cancel", (e) => {
+        e.preventDefault();
+        this.close();
+      }, { signal });
+      dialog.addEventListener("close", () => this.resetInput(), { signal });
+    }
+    this.menu.querySelector("[data-journal]").addEventListener("click", () => {
+      this.menu.close();
+      this.open(this.journal);
+    }, { signal });
+    for (const button2 of this.menu.querySelectorAll("[data-route]")) {
+      const selector = button2.dataset.route;
+      this.routeButtons.set(button2, selector);
+      button2.addEventListener("click", () => {
+        const target = document.querySelector(selector);
+        if (!target || target.disabled) return;
+        this.close();
+        target.click();
+      }, { signal });
+    }
+    this.modePicker.addEventListener("click", (e) => {
+      if (e.target.closest("button:not(:disabled)")) this.close();
+    }, { capture: true, signal });
+    this.menu.querySelector("[data-developer]").addEventListener("click", () => {
+      this.close();
+      document.querySelector(".dev-launch")?.click();
+    }, { signal });
+    this.actionGlyph.className = "adventure-action-glyph";
+    this.actionGlyph.innerHTML = hudIcon("spark");
+    this.actionKey.className = "adventure-action-key";
+    this.actionKey.textContent = "E";
+    document.querySelector("#action-button").append(this.actionGlyph, this.actionKey);
+    window.addEventListener("pointerdown", (e) => {
+      this.game.dataset.input = e.pointerType === "touch" ? "touch" : "pointer";
+    }, { signal });
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Tab") this.game.dataset.input = "keyboard";
+      if (["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code) && !document.querySelector("dialog[open]")) {
+        this.game.dataset.input = "keyboard";
+        document.querySelector("#game-canvas").focus({ preventScroll: true });
+      }
+      if (e.code === "Escape" && !document.querySelector("dialog[open]")) {
+        e.preventDefault();
+        this.open(this.menu);
+      }
+    }, { signal });
+    this.observer = new MutationObserver(() => this.syncModal());
+    this.observer.observe(document.body, { subtree: true, attributes: true, attributeFilter: ["open"] });
+  }
+  resetInput;
+  game = document.querySelector("#game");
+  root = document.createElement("div");
+  menu = document.createElement("dialog");
+  journal = document.createElement("dialog");
+  abort = new AbortController();
+  taskSignature = "";
+  modePicker = document.querySelector("#mission-picker");
+  modeParent = this.modePicker.parentElement;
+  routeButtons = /* @__PURE__ */ new Map();
+  lastFocus;
+  actionGlyph = document.createElement("span");
+  actionKey = document.createElement("kbd");
+  observer;
+  hasModal = false;
+  syncModal() {
+    const opened = !!document.querySelector("dialog[open]");
+    if (opened !== this.hasModal) {
+      this.resetInput();
+      this.hasModal = opened;
+    }
+    this.game.dataset.modal = String(opened);
+    if (this.isOpen && document.querySelector("dialog[open]:not(#adventure-menu):not(#adventure-journal)")) this.close();
+  }
+  get isOpen() {
+    return this.menu.open || this.journal.open;
+  }
+  open(dialog) {
+    if (document.querySelector("dialog[open]")) return;
+    if (document.activeElement instanceof HTMLElement && !document.activeElement.closest("dialog")) this.lastFocus = document.activeElement;
+    this.resetInput();
+    dialog.showModal();
+    this.syncModal();
+    dialog.querySelector(".adventure-close").focus({ preventScroll: true });
+  }
+  close() {
+    this.menu.close();
+    this.journal.close();
+    this.resetInput();
+    if (!document.querySelector("dialog[open]")) this.lastFocus?.focus({ preventScroll: true });
+  }
+  text(scope, selector, value) {
+    const node = scope.querySelector(selector);
+    if (node.textContent !== value) node.textContent = value;
+  }
+  update(state) {
+    const completed = state.tasks.filter((task) => state.completed.has(task.id)).length;
+    this.text(this.root, "#adventure-place", state.location);
+    this.text(this.root, "#adventure-time", `Day ${state.day} \xB7 ${state.time}`);
+    this.text(this.root, "#adventure-balance", document.querySelector("#wallet").textContent ?? "$0");
+    this.text(this.root, "#adventure-count", state.mode === "practice" ? "" : `${completed}/${state.tasks.length}`);
+    this.game.dataset.revealing = String(state.revealing);
+    const timer = this.root.querySelector(".adventure-timer");
+    timer.hidden = !state.timed || state.scene !== "cleanup";
+    this.text(timer, "strong", state.remaining);
+    timer.classList.toggle("urgent", document.querySelector("#mission-clock").classList.contains("soon"));
+    for (const [button2, selector] of this.routeButtons) button2.disabled = !!document.querySelector(selector)?.disabled;
+    this.text(this.menu, "[data-collection-count]", (document.querySelector("#collection-button").textContent ?? "").replace("Collection \xB7 ", ""));
+    this.menu.querySelector(".adventure-availability").hidden = !document.querySelector("#collection-button").disabled;
+    this.menu.querySelector("[data-developer]").hidden = !document.querySelector(".dev-launch");
+    this.text(this.menu, "[data-help]", state.hint);
+    this.menu.querySelector(".adventure-activities").hidden = state.scene !== "cleanup";
+    const clockNote = state.timed && state.running ? "Your round timer keeps running while you browse." : state.scene === "cleanup" && state.mode === "day" ? "Your day continues while you browse." : "";
+    for (const panel of [this.menu, this.journal]) this.text(panel, ".adventure-clock-note", clockNote);
+    this.text(this.journal, "[data-journal-day]", `DAY ${state.day} \xB7 ${state.phase.toUpperCase()}`);
+    this.text(this.journal, "[data-summary]", state.mode === "practice" ? "Take your time. Explore freely." : `${completed} of ${state.tasks.length} little things done`);
+    this.text(this.journal, "[data-hint]", state.hint);
+    const signature = JSON.stringify([state.mode, state.tasks, [...state.completed]]);
+    if (signature !== this.taskSignature) {
+      this.taskSignature = signature;
+      const list = this.journal.querySelector(".journal-tasks");
+      list.replaceChildren();
+      if (state.mode === "practice") {
+        const p = document.createElement("li");
+        p.textContent = "No checklist today. See what you can discover.";
+        list.append(p);
+      } else for (const task of state.tasks) {
+        const row = document.createElement("li"), mark = document.createElement("span"), copy = document.createElement("div"), name = document.createElement("strong"), place = document.createElement("small");
+        const done = state.completed.has(task.id);
+        row.classList.toggle("done", done);
+        mark.className = "journal-check";
+        mark.textContent = done ? "\u2713" : "";
+        mark.setAttribute("aria-label", done ? "Complete" : "To do");
+        const rooms = { teeth: "Bathroom", outfit: "Bedroom", breakfast: "Kitchen", read: "Bedroom" };
+        name.textContent = task.name;
+        place.textContent = task.room ?? rooms[task.id] ?? "";
+        copy.append(name);
+        if (place.textContent) copy.append(place);
+        row.append(mark, copy);
+        list.append(row);
+      }
+    }
+    const action = document.querySelector("#action-button");
+    this.game.dataset.action = action.disabled ? "idle" : "ready";
+  }
+  destroy() {
+    this.observer.disconnect();
+    this.abort.abort();
+    this.modeParent.append(this.modePicker);
+    this.root.remove();
+    this.menu.remove();
+    this.journal.remove();
+    this.actionGlyph.remove();
+    this.actionKey.remove();
+    this.game.classList.remove("adventure-ui");
+  }
+};
+
 // src/main.ts
 async function startGame(editorApp) {
   const canvas = document.querySelector("#game-canvas");
@@ -14408,6 +14613,12 @@ async function startGame(editorApp) {
   const houseMusic = new HouseMusic();
   const destroyAudioSettings = createAudioSettings();
   const destroyPerformance = performanceSettings(app, () => loop.popUI.isOpen || loop.developerPaused);
+  const hud = new AdventureHUD(() => {
+    joystick.reset();
+    controller.reset();
+    cleanup.action.reset();
+    loop.resetUIInput();
+  });
   const dogRoaming = new DogRoaming(room, props.pet.dog, props.daily);
   app.on("update", (elapsed) => {
     houseMusic.update({ mode: loop.mode, phase: props.daily.clock.state.phase, store: loop.mode === "store" ? loop.store.definition.id : "", paused: loop.popUI.isOpen || loop.developerPaused || tornado.active, revealing: loop.opening.phase === "opening" }, Math.min(elapsed, 0.1));
@@ -14418,6 +14629,7 @@ async function startGame(editorApp) {
       return;
     }
     loop.beforeMovement(now);
+    if (document.querySelector("dialog[open]")) controller.enabled = false;
     if (loop.popUI.isOpen) return;
     const bulky = cleanup.carry.item?.carryPace === "walk" || loop.dailyPlay.carrying || loop.schoolGate.carrying;
     controller.speed = bulky ? WALK_SPEED * (["vacuum", "scooper"].includes(cleanup.carry.item?.id ?? "") ? 1.5 : 1) : RUN_SPEED;
@@ -14437,6 +14649,24 @@ async function startGame(editorApp) {
     dogRoaming.update(dt, loop.mode === "cleanup" && !tornado.active && !!props.pet?.loaded, [character.player.getPosition(), lilah.root.getPosition(), marc.root.getPosition()]);
     props.pet?.dogAnimator?.update(dt);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === "cleanup", cleanup.mode);
+    const day = props.daily.clock;
+    const position = character.player.getPosition();
+    const location2 = loop.mode === "cleanup" ? HOUSE_ROOMS.find((room2) => room2.id === navigation.current)?.name ?? "Home" : loop.mode === "store" ? loop.store.definition.name : loop.mode === "recess" ? loop.recess.area : loop.mode === "home" ? "Little surprises" : position.z < -26 && position.x > 14 ? "School garden" : position.x < -9 ? "Maple Lane" : "Home garden";
+    hud.update({
+      scene: loop.mode,
+      location: location2,
+      day: day.state.day,
+      time: day.label,
+      phase: day.state.phase,
+      mode: cleanup.mode,
+      timed: cleanup.mission.timed,
+      running: cleanup.mission.state === "running",
+      remaining: document.querySelector("#mission-clock").textContent,
+      revealing: loop.opening.phase === "opening",
+      tasks: cleanup.mission.tasks,
+      completed: cleanup.mission.completed,
+      hint: document.querySelector("#cleanup-hint").textContent
+    });
     if (loop.mode === "outdoors" && !controller.riding && character.grounding) {
       const p = character.player.getPosition();
       character.grounding.surfaceHeight = p.x < -9 || p.z < -16 ? 0.075 : 0.03;
@@ -14524,6 +14754,7 @@ async function startGame(editorApp) {
   });
   if (import.meta.hot) import.meta.hot.dispose(() => {
     disposed = true;
+    hud.destroy();
     developerPanel?.destroy();
     houseMusic.destroy();
     destroyPerformance();

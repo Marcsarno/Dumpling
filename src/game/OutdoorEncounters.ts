@@ -10,7 +10,7 @@ export class OutdoorEncounters {
  hop=0;
  constructor(private app:Application,private character:ReturnType<typeof createCharacter>,private controller:PlayerController,private say:(s:string)=>void){
   this.button.id='journey-jump';this.button.className='journey-button';this.button.textContent='↥ Jump';this.button.style.bottom='220px';this.button.hidden=true;document.querySelector('#game')!.append(this.button);this.button.onclick=()=>this.jump();
-  window.addEventListener('keydown',e=>{if(e.code==='KeyJ'&&!this.button.hidden&&!e.repeat)this.jump();},{signal:this.abort.signal});
+  window.addEventListener('keydown',e=>{if(e.code==='KeyJ'&&!this.button.hidden&&!e.repeat&&!document.querySelector('dialog[open]'))this.jump();},{signal:this.abort.signal});
  }
  jump(){if(this.button.hidden||this.jumping>0||!this.controller.enabled||this.character.placeholder.enabled)return;this.jumping=this.controller.riding?.72:1.1667;if(!this.controller.riding)this.character.animator.playAction('PlayJump',1.1667);}
  get airborne(){return this.jumping>.16;}

@@ -54,12 +54,12 @@
         <p id="results-wallet"></p><button id="go-shopping" class="loop-button pink-button" type="button">Go Shopping →</button>
         <button id="replay" type="button" autofocus>Play again <span aria-hidden="true">↻</span></button>
       </dialog>
-      <dialog id="collection-dialog" aria-labelledby="collection-title">
-        <span class="eyebrow">LITTLE FRIENDS, LITTLE JOYS</span><h2 id="collection-title">Your dumplings</h2>
-        <p id="collection-summary"></p><div id="collection-actions">
+      <dialog id="collection-dialog" aria-labelledby="collection-title" data-filter="owned">
+        <header class="collection-heading"><div><span class="eyebrow">LITTLE FRIENDS, LITTLE JOYS</span><h2 id="collection-title">Your dumplings</h2></div><button id="back-cleanup" type="button" aria-label="Back to house">×</button></header>
+        <p id="collection-summary"></p>
         <button id="open-next" class="loop-button pink-button" type="button">Open a box</button>
-        <button id="back-cleanup" class="loop-button" type="button">Back to house →</button>
-          </div><div id="collection-grid"></div>
+        <div class="collection-toolbar"><div class="collection-filters" aria-label="Collection filter"><button data-collection-filter="owned" aria-pressed="true" type="button">My friends</button><button data-collection-filter="all" aria-pressed="false" type="button">All friends</button></div><details class="collection-more"><summary>More</summary><div id="collection-actions"></div></details></div>
+        <p class="collection-empty" hidden>Your first little friend is waiting. Open a box to meet them.</p><div id="collection-grid"></div>
       </dialog>
       <div id="loading" role="status"><span class="loading-flower">✿</span><p>Making room for you…</p></div>
       <div id="error" role="alert" hidden><h2>We couldn’t open your room.</h2><p>Please use a browser with WebGL 2 enabled, then refresh.</p></div>

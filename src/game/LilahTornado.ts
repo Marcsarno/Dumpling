@@ -59,7 +59,7 @@ export class LilahTornado {
     },{signal});
     document.addEventListener('visibilitychange',()=>this.audio.pause(document.hidden),{signal});
   }
-  available(){return this.loop.mode==='cleanup'&&this.cleanup.mode==='day'&&this.props.daily!.clock.state.phase!=='school'&&this.props.daily!.clock.state.phase!=='night'&&!this.cleanup.carry.item&&!this.cleanup.movementLocked&&this.lilah.ready&&!this.character.placeholder.enabled&&!document.querySelector('dialog[open]');}
+  available(){return this.loop.mode==='cleanup'&&this.cleanup.mode==='day'&&this.props.daily!.clock.state.phase!=='school'&&this.props.daily!.clock.state.phase!=='night'&&!this.cleanup.carry.item&&!this.cleanup.movementLocked&&this.lilah.ready&&!this.character.placeholder.enabled&&!document.querySelector('dialog[open]:not(#adventure-menu)');}
   open(forced?:Interruption){
     if(this.active||!this.available())return;
     this.phase='intro';this.special=forced??chooseInterruption();this.cleanup.setActive(false);this.controller.reset();this.camera.endChore();

@@ -49,7 +49,7 @@ export class PlayerController {
     this.setRoom(room);
     this.keyboard = new Keyboard(window, { preventDefault: false });
     window.addEventListener('keydown', event => {
-      if (event.key === ' ' && (event.target as HTMLElement)?.closest('button,dialog')) return;
+      if (document.querySelector('dialog[open]') || (event.key === ' ' && (event.target as HTMLElement)?.closest('button'))) return;
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(event.key)) event.preventDefault();
     }, { signal: this.abort.signal });
     window.addEventListener('blur', this.reset, { signal: this.abort.signal });

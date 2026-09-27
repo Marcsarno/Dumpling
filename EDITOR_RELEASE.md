@@ -1,5 +1,9 @@
 # Production Editor build
 
+## Adventure UI release — September 27, 2026
+
+The user authorized deployment after reviewing the locally built interface. See `docs/ui-redesign-local-review.md` for scope and validation. Release the compact HUD, menu, journal, collection and settings presentation together with the character-quality protections already included in the reviewed build. Preserve existing `arianna.*` saves. Verify the new commit and runtime at `/release.json`; the reviewed runtime hash is `1560102be5047775`. Physical-phone and complete gameplay regression testing remain outstanding.
+
 Vercel serves the exported Editor scene with current TypeScript gameplay compiled into it, preserving the three authored stores.
 
 - Production: https://dumpling-sandy.vercel.app/

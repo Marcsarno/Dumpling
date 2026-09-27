@@ -8,7 +8,7 @@ export class ActionButton {
   constructor(readonly element: HTMLButtonElement, private readonly press: () => void, private readonly cancel: () => void) {
     const options = { signal: this.abort.signal };
     element.addEventListener('pointerdown', event => {
-      if (!this.enabled || event.button !== 0 || this.held || element.disabled) return;
+      if (!this.enabled || event.button !== 0 || this.held || element.disabled || document.querySelector('dialog[open]')) return;
       event.preventDefault(); this.pointer = event.pointerId;
       element.setPointerCapture(event.pointerId); this.held = true; this.press();
     }, options);
@@ -18,11 +18,11 @@ export class ActionButton {
     element.addEventListener('contextmenu', event => event.preventDefault(), options);
     element.addEventListener('click', event => {
       // Pointer activations happen on press. detail=0 supports assistive programmatic clicks.
-      if (this.enabled && event.detail === 0 && !this.held && !element.disabled) { this.press(); this.cancel(); }
+      if (this.enabled && event.detail === 0 && !this.held && !element.disabled && !document.querySelector('dialog[open]')) { this.press(); this.cancel(); }
     }, options);
     window.addEventListener('keydown', event => {
       const target = event.target as HTMLElement;
-      if (!this.enabled || !['Space', 'KeyE'].includes(event.code) || target?.closest('dialog') || (target?.closest('button') && target !== element)) return;
+      if (!this.enabled || !['Space', 'KeyE'].includes(event.code) || document.querySelector('dialog[open]') || (target?.closest('button') && target !== element)) return;
       event.preventDefault();
       if (event.repeat || this.held || element.disabled) return;
       this.key = event.code; this.held = true; this.press();
