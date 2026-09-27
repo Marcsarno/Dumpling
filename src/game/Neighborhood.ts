@@ -17,7 +17,7 @@ export class Neighborhood {
  install(){
   this.house.walkable!.push({minX:-100,maxX:31,minZ:-27.5,maxZ:-16.3});this.house.halfWidth=110;
   for(const shop of SHOP_STOPS)this.house.walkable!.push({minX:shop.x-6,maxX:shop.x+6,minZ:-30.8,maxZ:-25.8});
-  for(const p of PLAY_SPOTS)this.house.walkable!.push({minX:p.x-3,maxX:p.x+3,minZ:-18.2,maxZ:-12.6});
+  // Former play alcoves are ordinary verge again.
  }
  update(p:Vec3,outside:boolean){
   for(let i=0;i<this.maxSections;i++){
@@ -48,14 +48,6 @@ export class Neighborhood {
    art.add(k%2?'CommonTree_1':'CommonTree_3',x,-36-rand()*1.5,3.1+rand()*1.2,rand()*360);
    art.add('Bush_Common_Flowers',x,-35,.6,rand()*360);
    if(k%2===0)art.add('Rock_Medium_1',x+1,-35.8,.45,rand()*360);
-  }
-  for(const p of PLAY_SPOTS.filter(p=>p.x>=center-12&&p.x<center+12)){
-   s('Play alcove paving','box',[p.x,.015,p.z],[5.5,.12,5.1],paving,false);
-   for(const dx of [-2.8,2.8])art.add('Bush_Common_Flowers',p.x+dx,-13.4,.65,rand()*360);
-   art.add('CommonTree_1',p.x-4,-12.2,3.2+rand()*.6,rand()*360);
-   art.add('Rock_Medium_1',p.x-3.5,-11.5,.48,rand()*360);
-   art.add('Bush_Common_Flowers',p.x+3.2,-11.9,.8,rand()*360);
-   for(let i=0;i<3;i++)s('Garden stepping stone','cylinder',[p.x+3.5+i*.65,.02,-14.3+Math.sin(i)*.35],[.5,.07,.4],curb,false);
   }
   const shop=SHOP_STOPS[index];
   if(shop){

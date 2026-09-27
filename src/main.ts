@@ -81,7 +81,7 @@ export async function startGame(editorApp?:Application) {
     if(loop.developerPaused){loop.developerTick(now,elapsed);return;}
     loop.beforeMovement(now);
     if(loop.popUI.isOpen)return;
-    const bulky = cleanup.carry.item?.carryPace === 'walk'||loop.dailyPlay.carrying;
+    const bulky = cleanup.carry.item?.carryPace === 'walk'||loop.dailyPlay.carrying||loop.schoolGate.carrying;
     controller.speed = bulky ? WALK_SPEED * (['vacuum','scooper'].includes(cleanup.carry.item?.id??'') ? 1.5 : 1) : RUN_SPEED;
     character.animator.setCarryPace(bulky ? 'walk' : 'run');
     const night=cleanup.mode==='day'&&props.daily!.clock.state.phase==='night'&&loop.mode==='cleanup';
@@ -103,7 +103,7 @@ export async function startGame(editorApp?:Application) {
     if(loop.mode==='outdoors'&&!controller.riding&&character.grounding){const p=character.player.getPosition();character.grounding.surfaceHeight=p.x<-9||p.z<-16?.075:.03;}
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
-    loop.scooter.update(dt,loop.mode==='outdoors',!loop.fishing.active&&!loop.huntUI.dialog.open&&!loop.dailyPlay.occupied,loop.encounters.hop);
+    loop.scooter.update(dt,loop.mode==='outdoors',!loop.fishing.active&&!loop.huntUI.dialog.open&&!loop.dailyPlay.occupied&&!loop.schoolGate.carrying&&!loop.schoolGate.busy,loop.encounters.hop);
     lilah.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day'&&!cleanup.movementLocked,character.player.getPosition(),camera.entity);
     marc.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day'&&!tornado.active,character.player.getPosition(),lilah.root.getPosition(),cleanup.activeInteractionId,camera.entity);
     headPoint.copy(character.player.getPosition());

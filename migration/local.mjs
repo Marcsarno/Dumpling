@@ -1347,7 +1347,7 @@ function animateSquishy(model, time, strength = 0.012) {
 }
 
 // src/main.ts
-import { Application, Color as Color12, Entity as Entity45, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec344 } from "playcanvas";
+import { Application, Color as Color12, Entity as Entity46, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec345 } from "playcanvas";
 
 // src/game/house.ts
 import { BoundingBox as BoundingBox4, Entity as Entity7, Vec3 as Vec36 } from "playcanvas";
@@ -5596,7 +5596,7 @@ var CleanupGame = class {
 // src/game/GameLoop.ts
 init_collection();
 init_collection();
-import { Vec3 as Vec338 } from "playcanvas";
+import { Vec3 as Vec339 } from "playcanvas";
 
 // src/systems/ProgressStore.ts
 init_SaveNamespace();
@@ -9195,13 +9195,21 @@ var Outdoors = class {
     }
     for (let z = -25.3; z <= -19.7; z += 0.7) box("Crosswalk stripe", 22, 0.04, z, 3.5, 0.018, 0.4, white);
     path(22, -26, 22, -31, 3.4);
-    for (const x of [16.5, 28]) {
+    for (const x of [28]) {
       box("School flower bed", x, 0.1, -28.5, 3, 0.3, 2, soil);
       for (let i = 0; i < 3; i++) this.art.add("Bush_Common_Flowers", x - 1 + i, -28.5, 0.65, i * 40);
     }
-    for (const [ax, bx, z] of [[14, 20, -29.8], [24, 31, -29.8]]) for (let x = ax; x <= bx; x += 0.55) {
+    for (const [ax, bx, z] of [[24, 31, -29.8]]) for (let x = ax; x <= bx; x += 0.55) {
       box("School fence picket", x, 0.65, z, 0.09, 1.3, 0.1, wood);
       box("School fence rail", x, 0.92, z, 0.65, 0.08, 0.08, wood);
+    }
+    box("School low garden wall", 16.65, 0.32, -29.8, 5.55, 0.64, 0.26, edge);
+    box("School low wall cap", 16.65, 0.67, -29.8, 5.7, 0.1, 0.36, cream);
+    box("School short return wall", 14, 0.32, -28.4, 0.25, 0.64, 2.55, edge);
+    box("School short return cap", 14, 0.67, -28.4, 0.36, 0.1, 2.65, cream);
+    box("School sidewalk curb", 17, 0.08, -26.12, 6, 0.16, 0.14, edge);
+    for (let x = 14.15; x < 19.3; x += 0.65) {
+      box("Garden wall stone join", x, 0.32, -29.66, 0.012, 0.5, 0.012, soil);
     }
     for (const x of [19.8, 24.2]) {
       box("Gate pillar", x, 1.3, -30, 0.45, 2.6, 0.45, mint);
@@ -9228,7 +9236,7 @@ var Outdoors = class {
     for (let z = -4; z < 10; z += 1.15) this.art.add("Bush_Common", -8.7, z, 0.62, z * 9);
     for (const [x, z, h] of [[-11.8, -7.4, 0.55], [-11, -8.3, 0.4], [-12, -15.8, 0.6], [-8.9, -16.5, 0.5], [-1.4, -5.5, 0.45], [3.6, -7.8, 0.55], [4.5, -8.3, 0.4], [15.5, -31.4, 0.5], [28.9, -31, 0.6]]) this.art.add("Plant_1", x, z, h, x * 27);
     for (const [x, z, h] of [[-12.1, -7.8, 0.8], [-10.7, -16.7, 0.8], [-9.3, -16.9, 0.55], [3.8, -8.5, 0.75], [4.8, -8.1, 0.55], [28.9, -31.9, 0.85]]) this.art.add("Bush_Common_Flowers", x, z, h, z * 21);
-    for (const x of [16.5, 28]) {
+    for (const x of [28]) {
       box("Bed front limestone", x, 0.13, -27.48, 3.18, 0.35, 0.12, edge);
       for (const side of [-1, 1]) box("Bed side limestone", x + side * 1.55, 0.13, -28.5, 0.12, 0.35, 2.15, edge);
     }
@@ -9255,7 +9263,7 @@ var Outdoors = class {
     r("Chimney", "box", [7, 4, 8], [0.75, 1.4, 0.75], cream);
     r("Chimney cap", "box", [7, 4.73, 8], [0.95, 0.14, 0.95], edge);
     this.roof.enabled = false;
-    for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [16.5, -28.5, 1.5, 1], [28, -28.5, 1.5, 1], [17, -29.8, 3.05, 0.12], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox15(new Vec332(x, 0.6, z), new Vec332(hx, 1, hz)));
+    for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [28, -28.5, 1.5, 1], [16.65, -29.8, 2.78, 0.15], [14, -28.4, 0.15, 1.28], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox15(new Vec332(x, 0.6, z), new Vec332(hx, 1, hz)));
     app.batcher.generate([group.id]);
     this.root.enabled = false;
     this.ready = Promise.resolve();
@@ -9492,7 +9500,6 @@ var Neighborhood = class {
     this.house.walkable.push({ minX: -100, maxX: 31, minZ: -27.5, maxZ: -16.3 });
     this.house.halfWidth = 110;
     for (const shop of SHOP_STOPS) this.house.walkable.push({ minX: shop.x - 6, maxX: shop.x + 6, minZ: -30.8, maxZ: -25.8 });
-    for (const p of PLAY_SPOTS) this.house.walkable.push({ minX: p.x - 3, maxX: p.x + 3, minZ: -18.2, maxZ: -12.6 });
   }
   update(p, outside) {
     for (let i = 0; i < this.maxSections; i++) {
@@ -9549,14 +9556,6 @@ var Neighborhood = class {
       art.add(k % 2 ? "CommonTree_1" : "CommonTree_3", x, -36 - rand() * 1.5, 3.1 + rand() * 1.2, rand() * 360);
       art.add("Bush_Common_Flowers", x, -35, 0.6, rand() * 360);
       if (k % 2 === 0) art.add("Rock_Medium_1", x + 1, -35.8, 0.45, rand() * 360);
-    }
-    for (const p of PLAY_SPOTS.filter((p2) => p2.x >= center - 12 && p2.x < center + 12)) {
-      s("Play alcove paving", "box", [p.x, 0.015, p.z], [5.5, 0.12, 5.1], paving, false);
-      for (const dx of [-2.8, 2.8]) art.add("Bush_Common_Flowers", p.x + dx, -13.4, 0.65, rand() * 360);
-      art.add("CommonTree_1", p.x - 4, -12.2, 3.2 + rand() * 0.6, rand() * 360);
-      art.add("Rock_Medium_1", p.x - 3.5, -11.5, 0.48, rand() * 360);
-      art.add("Bush_Common_Flowers", p.x + 3.2, -11.9, 0.8, rand() * 360);
-      for (let i = 0; i < 3; i++) s("Garden stepping stone", "cylinder", [p.x + 3.5 + i * 0.65, 0.02, -14.3 + Math.sin(i) * 0.35], [0.5, 0.07, 0.4], curb, false);
     }
     const shop = SHOP_STOPS[index];
     if (shop) {
@@ -10615,14 +10614,705 @@ var DailyPlay = class {
   }
 };
 
+// src/game/SchoolGatePlay.ts
+import { Entity as Entity39, Vec3 as Vec336, BoundingBox as BoundingBox18, Texture as Texture6, Mesh as Mesh5, MeshInstance as MeshInstance5, CULLFACE_NONE as CULLFACE_NONE5 } from "playcanvas";
+
+// src/systems/SchoolBallPhysics.ts
+var BALL_RADIUS = 0.23;
+function ballFits(x, z, floors, solids) {
+  for (const dx of [-BALL_RADIUS, BALL_RADIUS]) for (const dz of [-BALL_RADIUS, BALL_RADIUS])
+    if (!floors.some((r) => x + dx >= r.minX && x + dx <= r.maxX && z + dz >= r.minZ && z + dz <= r.maxZ)) return false;
+  return !solids.some((r) => x > r.minX - BALL_RADIUS && x < r.maxX + BALL_RADIUS && z > r.minZ - BALL_RADIUS && z < r.maxZ + BALL_RADIUS);
+}
+function stepSchoolBall(b, dt, floors, solids) {
+  let impacts = 0;
+  const count = Math.max(1, Math.ceil(Math.min(0.1, Math.max(0, dt)) / 8e-3)), h = Math.min(0.1, Math.max(0, dt)) / count;
+  for (let i = 0; i < count; i++) {
+    const nx = b.x + b.vx * h;
+    if (ballFits(nx, b.z, floors, solids)) b.x = nx;
+    else if (Math.abs(b.vx) > 0.08) {
+      b.vx *= -0.76;
+      impacts++;
+    } else b.vx = 0;
+    const nz = b.z + b.vz * h;
+    if (ballFits(b.x, nz, floors, solids)) b.z = nz;
+    else if (Math.abs(b.vz) > 0.08) {
+      b.vz *= -0.76;
+      impacts++;
+    } else b.vz = 0;
+    const drag = Math.exp(-0.72 * h);
+    b.vx *= drag;
+    b.vz *= drag;
+  }
+  if (Math.hypot(b.vx, b.vz) < 0.055) {
+    b.vx = 0;
+    b.vz = 0;
+  }
+  return impacts;
+}
+function kickSchoolBall(b, dx, dz, speed) {
+  const length = Math.hypot(dx, dz);
+  if (length < 1e-3) return false;
+  const v = Math.min(5.4, Math.max(0.2, speed));
+  b.vx = dx / length * v;
+  b.vz = dz / length * v;
+  return true;
+}
+function playerKick(b, player, friend, assist = true) {
+  let dx = b.x - player.x, dz = b.z - player.z;
+  const length = Math.hypot(dx, dz);
+  if (length < 0.05) {
+    dx = 0;
+    dz = -1;
+  } else {
+    dx /= length;
+    dz /= length;
+  }
+  const fx = friend.x - b.x, fz = friend.z - b.z, fd = Math.hypot(fx, fz);
+  const passing = assist && fd > 0.8 && fd < 6 && (dx * fx + dz * fz) / fd > 0.88;
+  if (passing) {
+    dx = dx * 0.3 + fx / fd * 0.7;
+    dz = dz * 0.3 + fz / fd * 0.7;
+  }
+  kickSchoolBall(b, dx, dz, passing ? Math.min(4.6, fd * 0.75 + 1.05) : 4.35);
+  return passing;
+}
+
+// src/game/SchoolGatePlay.ts
+var HOME = new Vec336(19.15, 0.075, -28.2);
+var LEAVES = new Vec336(15.55, 0.075, -28.65);
+var SchoolGatePlay = class {
+  constructor(app, character, controller, room, camera) {
+    this.app = app;
+    this.character = character;
+    this.controller = controller;
+    this.room = room;
+    this.camera = camera;
+    this.pickup.id = "school-ball-pickup";
+    this.pickup.className = "journey-button";
+    this.pickup.textContent = "Pick up ball";
+    this.pickup.hidden = true;
+    this.pickup.style.cssText = "right:18px;bottom:276px;left:auto;min-height:44px;";
+    this.pickup.onclick = () => this.take();
+    this.speech.id = "poppy-play-speech";
+    this.speech.hidden = true;
+    this.speech.style.cssText = "position:absolute;z-index:12;pointer-events:none;background:#fff9ec;color:#66536a;border:2px solid #e9bad0;border-radius:16px;padding:7px 12px;font:600 15px/1.2 Trebuchet MS,sans-serif;max-width:175px;text-align:center;box-shadow:0 3px 0 #c9b0b333;";
+    document.querySelector("#game").append(this.pickup, this.speech);
+    window.addEventListener("pointerdown", () => this.audio.unlock(), { once: true, signal: this.abort.signal });
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "KeyF" && !e.repeat && !this.pickup.hidden && !document.querySelector("dialog[open]")) this.take();
+    }, { signal: this.abort.signal });
+    app.on("prerender", this.attachHeld, this);
+  }
+  app;
+  character;
+  controller;
+  room;
+  camera;
+  stage = null;
+  body = { x: 19.05, z: -27.6, vx: 0, vz: 0 };
+  active = false;
+  available = false;
+  held = false;
+  pending = false;
+  time = 0;
+  cooldown = 0;
+  lastPlayerContact = -100;
+  lastSay = -100;
+  npcState = "waiting";
+  npcTimer = 0;
+  npcTarget = new Vec336();
+  npcKickTo = new Vec336();
+  kicked = false;
+  npcPractice = false;
+  invited = false;
+  leafSound = 0;
+  jumpSeen = false;
+  nodTime = 0;
+  audio = new PlayAudio();
+  abort = new AbortController();
+  pickup = document.createElement("button");
+  speech = document.createElement("div");
+  screen = new Vec336();
+  ballFloors = [];
+  ballSolids = [];
+  stats = { playerKicks: 0, passes: 0, returns: 0, nudges: 0, wallBounces: 0, leafBursts: 0, pickups: 0, putdowns: 0, practiceKicks: 0, loads: 0, releases: 0 };
+  error = "";
+  lastContact = null;
+  get carrying() {
+    return this.held;
+  }
+  get busy() {
+    return this.pending;
+  }
+  get movementLocked() {
+    return this.pending && !this.controller.approaching;
+  }
+  get focus() {
+    if (!this.stage?.ready || !this.available || this.controller.riding) return null;
+    if (this.held) return { title: "Put down", detail: "Leave the ball wherever you like", icon: "\u26BD", enabled: !this.pending };
+    const p = this.character.player.getPosition();
+    if (Math.hypot(p.x - this.body.x, p.z - this.body.z) > 0.98 || Math.hypot(this.body.vx, this.body.vz) > 2.8) return null;
+    return { title: "Kick", detail: "Face the ball to choose its direction", icon: "\u26BD", enabled: !this.pending && !this.character.animator.busy };
+  }
+  load() {
+    const root = new Entity39("School gate shared play", this.app);
+    this.app.root.addChild(root);
+    const materials = [], textures = [], meshes = [];
+    const mat = (n, c2) => {
+      const m = material(n, c2);
+      materials.push(m);
+      return m;
+    };
+    const s = primitives(this.app, root);
+    const ballMaterial = mat("Poppy cream and coral playground ball", "#fff7df");
+    const canvas = document.createElement("canvas");
+    canvas.width = 512;
+    canvas.height = 256;
+    const c = canvas.getContext("2d");
+    c.fillStyle = "#f9dfbd";
+    c.fillRect(0, 0, 512, 256);
+    for (let i = 0; i < 6; i++) {
+      c.fillStyle = i % 2 ? "#df8069" : "#699fa9";
+      c.beginPath();
+      c.moveTo(i * 512 / 6, 0);
+      c.bezierCurveTo(i * 512 / 6 + 32, 70, i * 512 / 6 + 32, 186, i * 512 / 6, 256);
+      c.lineTo((i + 0.64) * 512 / 6, 256);
+      c.bezierCurveTo((i + 0.64) * 512 / 6 + 32, 186, (i + 0.64) * 512 / 6 + 32, 70, (i + 0.64) * 512 / 6, 0);
+      c.fill();
+      c.strokeStyle = "#a1746033";
+      c.lineWidth = 2;
+      c.stroke();
+    }
+    const tex = new Texture6(this.app.graphicsDevice, { name: "Original school ball panels", mipmaps: true });
+    tex.setSource(canvas);
+    textures.push(tex);
+    ballMaterial.diffuseMap = tex;
+    ballMaterial.update();
+    const ball = s("Poppy shared ball", "sphere", [this.body.x, 0.31, this.body.z], [BALL_RADIUS * 2, BALL_RADIUS * 2, BALL_RADIUS * 2], ballMaterial);
+    const shadowMat = mat("Ball contact shadow", "#8b887b");
+    const shadow = s("Ball soft contact", "cylinder", [this.body.x, 0.081, this.body.z], [0.39, 4e-3, 0.3], shadowMat, false);
+    const bag = mat("Poppy rose backpack", "#cb95b2"), trim = mat("Bag cream piping", "#f3dfca");
+    s("Poppy schoolbag", "box", [18.6, 0.35, -29.38], [0.44, 0.53, 0.25], bag);
+    s("Bag round flap", "sphere", [18.6, 0.58, -29.38], [0.44, 0.19, 0.25], bag);
+    s("Bag front pocket", "box", [18.6, 0.28, -29.22], [0.3, 0.2, 0.08], trim);
+    s("Bag handle", "box", [18.6, 0.7, -29.37], [0.17, 0.06, 0.045], bag);
+    s("Water bottle", "cylinder", [18.98, 0.23, -29.35], [0.14, 0.3, 0.14], mat("Bottle mint", "#93bcb3"));
+    const colors = ["#b87949", "#d89d54", "#ddbb73", "#a59554"];
+    const leafMats = colors.map((h, i) => {
+      const m = mat("School fallen leaf " + i, h);
+      m.cull = CULLFACE_NONE5;
+      m.update();
+      return m;
+    });
+    const mesh = new Mesh5(this.app.graphicsDevice);
+    mesh.setPositions([0, 0.025, 0, -0.09, 0, -0.07, -0.065, 0, -0.18, 0, 8e-3, -0.26, 0.065, 0, -0.18, 0.09, 0, -0.07, 0, 0.012, 0.07]);
+    mesh.setNormals(Array.from({ length: 7 }, () => [0, 1, 0]).flat());
+    mesh.setIndices([0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5, 0, 5, 6, 0, 6, 1]);
+    mesh.update();
+    meshes.push(mesh);
+    const leaves = [];
+    for (let i = 0; i < 42; i++) {
+      const angle = i * 2.39996, r = 0.12 + Math.sqrt(i / 42) * 0.85;
+      const e = new Entity39("Fallen maple leaf " + i, this.app);
+      root.addChild(e);
+      e.addComponent("render", { meshInstances: [new MeshInstance5(mesh, leafMats[i % 4])], castShadows: false });
+      const home = new Vec336(LEAVES.x + Math.cos(angle) * r, 0.087 + i % 4 * 0.018, LEAVES.z + Math.sin(angle) * r * 0.66);
+      e.setPosition(home);
+      e.setLocalEulerAngles(0, i * 73, (i % 3 - 1) * 12);
+      e.setLocalScale(0.85 + i % 3 * 0.2, 0.85 + i % 3 * 0.2, 0.85 + i % 3 * 0.2);
+      leaves.push({ entity: e, home, v: new Vec336(), spin: (i % 2 ? 1 : -1) * (110 + i * 7) });
+    }
+    const person = new Entity39("Poppy at the school gate", this.app);
+    root.addChild(person);
+    person.setPosition(HOME);
+    const lease = leaseContainer(this.app, assetUrl("assets/people/student-poppy-play.glb"), "School gate Poppy");
+    const planner = new HousePath({ walkable: [{ minX: 14.35, maxX: 30.65, minZ: -29.42, maxZ: -26.38 }], obstacles: this.room.obstacles }, 0.23);
+    const stage = { root, ball, shadow, person, model: null, lease, materials, textures, meshes, leaves, ready: false, clip: "", age: 0, popTimer: 0, route: [], routeClock: 0, planner };
+    this.stage = stage;
+    this.stats.loads++;
+    this.npcState = "waiting";
+    this.npcTimer = 1.8;
+    this.invited = false;
+    this.ballFloors = this.room.walkable.map((r) => ({ ...r }));
+    this.ballSolids = this.room.obstacles.map((b) => ({ minX: b.center.x - b.halfExtents.x, maxX: b.center.x + b.halfExtents.x, minZ: b.center.z - b.halfExtents.z, maxZ: b.center.z + b.halfExtents.z }));
+    this.ballSolids.push({ minX: 14, maxX: 20, minZ: -26.19, maxZ: -26.05 });
+    void lease.ready.then((resource) => {
+      if (this.stage !== stage) return;
+      const model = resource.instantiateModelEntity({ castShadows: true });
+      person.addChild(model);
+      model.setLocalScale(1.34 / 2.14, 1.34 / 2.14, 1.34 / 2.14);
+      const tracks2 = resource.animations.map((a) => a.resource);
+      model.addComponent("anim", { activate: true });
+      for (const t of tracks2) model.anim.assignAnimation(t.name, t, void 0, 1, !["Wave", "Kick_Right", "Interact"].includes(t.name));
+      model.anim.playing = false;
+      stage.model = model;
+      stage.ready = true;
+      this.clip("Idle_Neutral");
+      model.anim.update(0);
+    }).catch((e) => {
+      this.error = String(e);
+      console.error("School play character", e);
+    });
+  }
+  clip(name) {
+    const s = this.stage;
+    if (!s?.model || s.clip === name) return;
+    s.clip = name;
+    s.model.anim.speed = 1;
+    s.model.anim.baseLayer.transition(name, 0.12);
+  }
+  say(text) {
+    if (this.time - this.lastSay < 5) return;
+    this.lastSay = this.time;
+    this.speech.textContent = text;
+    this.speech.hidden = false;
+    this.nodTime = 3.5;
+  }
+  distance() {
+    const p = this.character.player.getPosition();
+    return Math.hypot(p.x - this.body.x, p.z - this.body.z);
+  }
+  press() {
+    const s = this.stage;
+    if (!s?.ready || !this.focus?.enabled) return;
+    this.audio.unlock();
+    if (this.held) {
+      this.putDown();
+      return;
+    }
+    this.pending = true;
+    this.controller.reset();
+    const target = new Vec336(this.body.x, 0.075, this.body.z);
+    const act = () => {
+      if (!this.active) {
+        this.pending = false;
+        return;
+      }
+      this.character.animator.playAction("PlayKick", 0.65, () => {
+        if (!this.active || this.held || this.distance() > 1.05) return;
+        const p = this.character.player.getPosition(), friend = s.person.getPosition();
+        const pass = playerKick(this.body, p, friend);
+        this.stats.playerKicks++;
+        if (pass) this.stats.passes++;
+        this.lastContact = { kind: "player kick", distance: this.distance(), foot: this.character.animator.snapshot().feet[1] };
+        this.lastPlayerContact = this.time;
+        this.cooldown = 0.48;
+        this.audio.tone(125, 0.14, "sine", 0.55);
+        s.popTimer = 0.32;
+        this.npcState = "watching";
+        this.npcTimer = 0.45;
+      }, target);
+    };
+    if (this.distance() > 0.64) this.controller.approachProp(target, act, () => {
+      this.pending = false;
+    });
+    else act();
+  }
+  take() {
+    if (!this.available || !this.stage?.ready || this.pending || this.held || this.character.animator.busy || this.distance() > 1.05) return;
+    this.pending = true;
+    this.controller.reset();
+    this.body.vx = 0;
+    this.body.vz = 0;
+    this.character.animator.playAction("PickUp", 0.7, () => {
+      if (!this.active || this.distance() > 1.1) return;
+      this.held = true;
+      this.stats.pickups++;
+      this.character.animator.setCarrying(true);
+      this.npcState = "following";
+      this.npcTimer = 0;
+      this.lastPlayerContact = this.time;
+      this.say("Can I have a turn?");
+    }, new Vec336(this.body.x, 0.075, this.body.z));
+  }
+  putDown() {
+    const s = this.stage;
+    if (!s) return;
+    const p = this.character.player.getPosition();
+    const yaw = this.character.animator.snapshot().yaw * Math.PI / 180;
+    let point = null;
+    for (const a of [0, 0.6, -0.6, 1.3, -1.3, Math.PI]) {
+      const q = new Vec336(p.x + Math.sin(yaw + a) * 0.55, 0.075, p.z + Math.cos(yaw + a) * 0.55);
+      if (ballFits(q.x, q.z, this.ballFloors, this.ballSolids)) {
+        point = q;
+        break;
+      }
+    }
+    if (!point) return;
+    this.pending = true;
+    this.controller.reset();
+    const drop = point;
+    this.character.animator.playAction("PutDown", 0.7, () => {
+      if (!this.active) return;
+      this.held = false;
+      this.character.animator.setCarrying(false);
+      this.body = { x: drop.x, z: drop.z, vx: 0, vz: 0 };
+      this.stats.putdowns++;
+      this.cooldown = 0.8;
+      this.lastPlayerContact = this.time;
+      this.npcState = "watching";
+      this.npcTimer = 2;
+      s.popTimer = 0.18;
+    }, drop);
+  }
+  attachHeld = () => {
+    const s = this.stage;
+    if (!s || !this.held) return;
+    const hands = this.character.animator.snapshot().hands;
+    if (hands.length === 2) {
+      const h = new Vec336().add2(new Vec336(...hands[0]), new Vec336(...hands[1])).mulScalar(0.5);
+      h.add(this.character.visual.getWorldTransform().transformVector(new Vec336(0, 0.05, 0.14)));
+      s.ball.setPosition(h);
+      this.body.x = h.x;
+      this.body.z = h.z;
+    }
+  };
+  movePoppy(point, dt) {
+    const s = this.stage, at = s.person.getPosition();
+    const target = point.clone();
+    target.x = Math.max(14.8, Math.min(30.4, target.x));
+    target.z = Math.max(-29.05, Math.min(-26.7, target.z));
+    target.y = 0;
+    const player = this.character.player.getPosition();
+    if (s.routeClock <= 0) {
+      const planner = new HousePath({ walkable: [{ minX: 14.35, maxX: 30.65, minZ: -29.42, maxZ: -26.38 }], obstacles: [...this.room.obstacles, new BoundingBox18(new Vec336(player.x, 0.6, player.z), new Vec336(0.48, 0.7, 0.48))] }, 0.23);
+      s.route = planner.route(new Vec336(at.x, 0, at.z), target);
+      s.routeClock = 0.6;
+    }
+    s.routeClock -= dt;
+    if (Math.hypot(at.x - target.x, at.z - target.z) < 0.12) {
+      s.route = [];
+      return false;
+    }
+    const next = s.route[0];
+    if (!next) return false;
+    const delta = new Vec336(next.x - at.x, 0, next.z - at.z), distance = delta.length();
+    if (distance < 0.09) {
+      s.route.shift();
+      return false;
+    }
+    delta.normalize();
+    const step = Math.min(distance, 1 * dt), q = new Vec336(at.x + delta.x * step, 0.075, at.z + delta.z * step);
+    if (q.distance(new Vec336(player.x, 0.075, player.z)) < 0.7) {
+      s.routeClock = 0;
+      return false;
+    }
+    s.person.setPosition(q);
+    s.person.setEulerAngles(0, Math.atan2(delta.x, delta.z) * 180 / Math.PI, 0);
+    this.clip("Walk");
+    return true;
+  }
+  face(point, dt) {
+    const s = this.stage, p = s.person.getPosition(), wanted = Math.atan2(point.x - p.x, point.z - p.z) * 180 / Math.PI, old = s.person.getEulerAngles().y;
+    let d = (wanted - old + 540) % 360 - 180;
+    s.person.setEulerAngles(0, old + d * (1 - Math.exp(-9 * dt)), 0);
+  }
+  startNpcKick(target, practice = false) {
+    this.npcState = "kick";
+    this.npcTimer = 0;
+    this.npcKickTo.copy(target);
+    this.kicked = false;
+    this.clip("Kick_Right");
+    this.npcPractice = practice;
+  }
+  updatePoppy(dt) {
+    const s = this.stage, p = s.person.getPosition(), player = this.character.player.getPosition(), ball = new Vec336(this.body.x, 0.075, this.body.z), speed = Math.hypot(this.body.vx, this.body.vz);
+    const space = Math.hypot(p.x - player.x, p.z - player.z);
+    if (space < 0.7 || space < 0.95 && this.controller.input.lengthSq() > 0.01) {
+      const away = Math.atan2(p.x - player.x, p.z - player.z);
+      for (const offset of [0, 0.6, -0.6, 1.2, -1.2, 1.55, -1.55]) {
+        const a = away + offset, q = new Vec336(p.x + Math.sin(a) * 1.3 * dt, 0.075, p.z + Math.cos(a) * 1.3 * dt);
+        if (s.planner.free(q.x, q.z) && Math.hypot(q.x - player.x, q.z - player.z) > space) {
+          s.person.setPosition(q);
+          s.person.setEulerAngles(0, a * 180 / Math.PI, 0);
+          this.clip("Walk");
+          this.npcState = "waiting";
+          this.npcTimer = 0.4;
+          s.routeClock = 0;
+          return;
+        }
+      }
+    }
+    this.npcTimer -= dt;
+    if (this.npcState === "kick") {
+      this.npcTimer += 2 * dt;
+      this.face(ball, dt);
+      const foot = s.model?.findByName("Foot.R")?.getPosition();
+      if (!this.kicked && this.npcTimer > 0.45) {
+        this.kicked = true;
+        if (p.distance(ball) < 0.8 && !this.held) {
+          if (this.npcPractice) this.stats.practiceKicks++;
+          else this.stats.returns++;
+          const dx = this.npcKickTo.x - ball.x, dz = this.npcKickTo.z - ball.z, d2 = Math.hypot(dx, dz);
+          kickSchoolBall(this.body, dx, dz, Math.min(4.5, d2 * 0.72 + 0.28));
+          this.lastContact = { kind: "Poppy kick", distance: foot ? Math.hypot(foot.x - ball.x, foot.z - ball.z) : -1, foot: foot?.toArray() };
+          s.popTimer = 0.22;
+          this.cooldown = 0.6;
+          this.audio.tone(135, 0.12, "sine", 0.6);
+        }
+      }
+      if (this.npcTimer > 1.2) {
+        this.npcState = "watching";
+        this.npcTimer = 2;
+        this.clip("Idle_Neutral");
+      }
+      return;
+    }
+    if (this.held) {
+      const dx = player.x - p.x, dz = player.z - p.z, d2 = Math.hypot(dx, dz);
+      if (d2 > 1.7 && player.z < -25.6 && player.x > 13.5 && player.x < 31) {
+        const goal = new Vec336(player.x - dx / Math.max(d2, 0.01) * 1.45, 0, player.z - dz / Math.max(d2, 0.01) * 1.45);
+        if (this.movePoppy(goal, dt)) return;
+      }
+      this.clip("Interact");
+      this.face(player, dt);
+      return;
+    }
+    if (!this.invited && player.distance(HOME) < 5.8) {
+      this.invited = true;
+      this.say("Want to play?");
+      this.clip("Wave");
+      this.npcState = "greeting";
+      this.npcTimer = 1.6;
+    }
+    if (this.npcState === "greeting" && this.npcTimer > 0) {
+      this.face(player, dt);
+      return;
+    }
+    if (this.pending || this.time - this.lastPlayerContact < 0.7 || this.npcTimer > 0 || this.distance() < 1.3) {
+      this.clip("Idle_Neutral");
+      this.face(ball, dt);
+      return;
+    }
+    if (speed > 1.15) {
+      this.clip("Idle_Neutral");
+      this.face(ball, dt);
+      return;
+    }
+    if (ball.x < 14.3 || ball.x > 30.6 || ball.z > -26.3 || ball.z < -29.5) {
+      if (!this.movePoppy(HOME, dt)) {
+        this.clip("Idle_Neutral");
+        this.face(player, dt);
+      }
+      return;
+    }
+    const joined = this.invited && player.distance(HOME) < 8.5;
+    const target = joined ? new Vec336(player.x, 0.075, player.z) : new Vec336(17.6, 0.075, -30.3);
+    const d = new Vec336().sub2(target, ball);
+    d.y = 0;
+    d.normalize();
+    const behind = Math.atan2(-d.x, -d.z);
+    let approach = null;
+    for (const angle of [0, 0.4, -0.4, 0.8, -0.8, 1.3, -1.3, 2, -2, Math.PI]) {
+      const q = new Vec336(ball.x + Math.sin(behind + angle) * 0.56, 0.075, ball.z + Math.cos(behind + angle) * 0.56);
+      if (s.planner.free(q.x, q.z) && q.distance(player) > 0.75) {
+        approach = q;
+        break;
+      }
+    }
+    if (!approach) {
+      this.clip("Idle_Neutral");
+      return;
+    }
+    this.npcTarget.copy(approach);
+    if (p.distance(this.npcTarget) > 0.16) {
+      if (this.movePoppy(this.npcTarget, dt)) {
+        this.npcState = "retrieving";
+        return;
+      }
+      this.clip("Idle_Neutral");
+      return;
+    }
+    this.face(ball, dt);
+    const wanted = Math.atan2(ball.x - p.x, ball.z - p.z) * 180 / Math.PI;
+    if (Math.abs((wanted - s.person.getEulerAngles().y + 540) % 360 - 180) > 12) {
+      this.clip("Idle_Neutral");
+      return;
+    }
+    if (joined && this.time - this.lastPlayerContact < 1.7) {
+      this.clip("Idle_Neutral");
+      return;
+    }
+    this.startNpcKick(target, !joined);
+    if (joined) this.say("Your turn!");
+  }
+  leaves(dt) {
+    const s = this.stage, player = this.character.player.getPosition(), moving = this.controller.velocity.length(), jump = this.character.animator.actionName === "PlayJump";
+    const triggerJump = jump && !this.jumpSeen;
+    this.jumpSeen = jump;
+    this.leafSound = Math.max(0, this.leafSound - dt);
+    let touched = 0;
+    for (const l of s.leaves) {
+      const p = l.entity.getPosition().clone(), pd = Math.hypot(p.x - player.x, p.z - player.z), bd = Math.hypot(p.x - this.body.x, p.z - this.body.z);
+      const foot = pd < (triggerJump ? 1.15 : 0.44) && (moving > 0.12 || triggerJump), ball = !this.held && bd < 0.43 && Math.hypot(this.body.vx, this.body.vz) > 0.25;
+      if ((foot || ball) && p.y < 0.18) {
+        const ox = p.x - (ball ? this.body.x : player.x), oz = p.z - (ball ? this.body.z : player.z), d = Math.max(0.06, Math.hypot(ox, oz));
+        l.v.set(ox / d * (triggerJump ? 1.6 : 0.85), triggerJump ? 2.2 : 0.75, oz / d * (triggerJump ? 1.6 : 0.85));
+        touched++;
+      }
+      if (l.v.lengthSq() > 1e-3) {
+        p.add(l.v.clone().mulScalar(dt));
+        l.v.y -= 4.2 * dt;
+        l.v.x *= Math.exp(-1.8 * dt);
+        l.v.z *= Math.exp(-1.8 * dt);
+        if (p.y < 0.085) {
+          p.y = 0.085;
+          l.v.y = 0;
+          l.v.x *= 0.7;
+          l.v.z *= 0.7;
+        }
+        l.entity.setPosition(p);
+        l.entity.rotateLocal(l.spin * dt * 0.3, l.spin * dt, l.spin * dt * 0.18);
+      } else if (player.distance(LEAVES) > 6) {
+        l.entity.setPosition(new Vec336().lerp(p, l.home, 1 - Math.exp(-0.3 * dt)));
+      }
+    }
+    if (touched && !this.leafSound) {
+      this.leafSound = 0.4;
+      this.stats.leafBursts++;
+      this.audio.tone(420, 0.12, "triangle", 0.3);
+      if (triggerJump) this.say("Look at them fly!");
+    }
+  }
+  update(dt, outside, available) {
+    this.active = outside;
+    this.available = outside && available && !this.controller.riding;
+    if (!outside) {
+      this.leave();
+      return;
+    }
+    const p = this.character.player.getPosition();
+    const near = p.distance(HOME) < 19 || this.held || this.distance() < 13;
+    if (!near) {
+      if (this.stage) this.unload();
+      return;
+    }
+    if (!this.stage) this.load();
+    const s = this.stage;
+    this.pickup.hidden = !s.ready || !this.available || this.held || this.pending || this.character.animator.busy || this.distance() > 0.98 || Math.hypot(this.body.vx, this.body.vz) > 1.8;
+    if (!available || dt <= 0) {
+      this.speech.hidden = true;
+      return;
+    }
+    this.time += dt;
+    s.age += dt;
+    this.cooldown = Math.max(0, this.cooldown - dt);
+    s.popTimer = Math.max(0, s.popTimer - dt);
+    if (this.pending && !this.character.animator.busy && !this.controller.approaching) this.pending = false;
+    if (!this.held) {
+      const ox = this.body.x, oz = this.body.z, hit = stepSchoolBall(this.body, dt, this.ballFloors, this.ballSolids);
+      if (hit) {
+        this.stats.wallBounces += hit;
+        if (this.cooldown <= 0) {
+          this.audio.tone(100, 0.12, "sine", 0.6);
+          this.cooldown = 0.12;
+        }
+        s.popTimer = 0.15;
+      }
+      const d = this.distance(), v = this.controller.velocity;
+      if (!this.pending && d < 0.48 && d > 0.02) {
+        const nx = (this.body.x - p.x) / d, nz = (this.body.z - p.z) / d, toward = this.body.vx * nx + this.body.vz * nz;
+        if (toward < -0.08) {
+          this.body.vx -= toward * nx;
+          this.body.vz -= toward * nz;
+          this.body.vx *= 0.25;
+          this.body.vz *= 0.25;
+          this.cooldown = 0.15;
+          s.popTimer = 0.12;
+        }
+      }
+      if (!this.controller.riding && !this.pending && this.cooldown <= 0 && d < 0.49 && v.length() > 0.2) {
+        const dx = this.body.x - p.x, dz = this.body.z - p.z;
+        if (dx * v.x + dz * v.z > 0) {
+          kickSchoolBall(this.body, dx, dz, Math.min(2.6, v.length() * 0.85));
+          this.lastPlayerContact = this.time;
+          this.stats.nudges++;
+          this.cooldown = 0.22;
+          this.npcTimer = 1.8;
+          this.audio.tone(110, 0.1, "sine", 0.5);
+        }
+      }
+      const lift = Math.sin(Math.min(1, s.popTimer / 0.32) * Math.PI) * 0.07;
+      s.ball.setPosition(this.body.x, 0.075 + BALL_RADIUS + lift, this.body.z);
+      s.ball.rotateLocal((this.body.z - oz) / BALL_RADIUS * 57.3, 0, -(this.body.x - ox) / BALL_RADIUS * 57.3);
+      s.shadow.setPosition(this.body.x, 0.081, this.body.z);
+      s.shadow.enabled = true;
+    } else {
+      s.shadow.enabled = false;
+    }
+    if (s.ready) {
+      this.updatePoppy(dt);
+      s.model.anim.update(dt);
+      const lf = s.model.findByName("Foot.L"), rf = s.model.findByName("Foot.R");
+      const min = Math.min(lf.getPosition().y, rf.getPosition().y), local = s.model.getLocalPosition();
+      s.model.setLocalPosition(local.x, local.y + (0.11 - min), local.z);
+      const pp = s.person.getPosition();
+      this.controller.dynamicObstacles.push(new BoundingBox18(new Vec336(pp.x, 0.6, pp.z), new Vec336(0.24, 0.7, 0.24)));
+    }
+    this.leaves(dt);
+    this.nodTime = Math.max(0, this.nodTime - dt);
+    this.speech.hidden = this.nodTime <= 0 || p.distance(s.person.getPosition()) > 9;
+    if (!this.speech.hidden) {
+      const point = s.person.getPosition().clone();
+      point.y += 1.65;
+      this.camera.entity.camera.worldToScreen(point, this.screen);
+      const width = this.speech.parentElement.clientWidth;
+      this.speech.hidden = this.screen.x < 0 || this.screen.x > width;
+      this.speech.style.left = `${Math.max(8, Math.min(width - this.speech.offsetWidth - 8, this.screen.x - this.speech.offsetWidth / 2))}px`;
+      this.speech.style.top = `${Math.max(8, this.screen.y - this.speech.offsetHeight)}px`;
+    }
+  }
+  leave() {
+    if (this.pending) {
+      this.controller.reset();
+      this.character.animator.cancelAction();
+    }
+    this.pending = false;
+    if (this.held) {
+      this.held = false;
+      this.character.animator.setCarrying(false);
+      this.body = { x: 19.05, z: -27.6, vx: 0, vz: 0 };
+    }
+    this.pickup.hidden = true;
+    this.speech.hidden = true;
+    if (this.stage) this.unload();
+  }
+  unload() {
+    const s = this.stage;
+    if (!s) return;
+    this.stage = null;
+    s.root.destroy();
+    s.lease.release();
+    s.materials.forEach((m) => m.destroy());
+    s.textures.forEach((t) => t.destroy());
+    s.meshes.forEach((m) => m.destroy());
+    this.stats.releases++;
+    this.pickup.hidden = true;
+    this.speech.hidden = true;
+  }
+  snapshot() {
+    const s = this.stage;
+    return { loaded: !!s, ready: s?.ready ?? false, error: this.error, held: this.held, pending: this.pending, ball: { ...this.body }, poppy: s ? { position: s.person.getPosition().toArray(), state: this.npcState, clip: s.clip, feet: ["Foot.L", "Foot.R"].map((n) => s.model?.findByName(n)?.getPosition().toArray()) } : null, stats: { ...this.stats }, contact: this.lastContact, leaves: s?.leaves.map((l) => l.entity.getPosition().toArray()), home: HOME.toArray() };
+  }
+  destroy() {
+    this.leave();
+    this.audio.destroy();
+    this.abort.abort();
+    this.pickup.remove();
+    this.speech.remove();
+    this.app.off("prerender", this.attachHeld, this);
+  }
+};
+
 // src/game/Fishing.ts
-import { Asset as Asset10, Entity as Entity40, Vec3 as Vec337, Quat as Quat10, BoundingBox as BoundingBox18, AnimData as AnimData8, AnimTrack as AnimTrack8 } from "playcanvas";
+import { Asset as Asset10, Entity as Entity41, Vec3 as Vec338, Quat as Quat10, BoundingBox as BoundingBox19, AnimData as AnimData8, AnimTrack as AnimTrack8 } from "playcanvas";
 
 // src/game/FishingRod.ts
-import { Entity as Entity39, Mat4 as Mat43, Mesh as Mesh5, MeshInstance as MeshInstance5, Vec3 as Vec336 } from "playcanvas";
+import { Entity as Entity40, Mat4 as Mat43, Mesh as Mesh6, MeshInstance as MeshInstance6, Vec3 as Vec337 } from "playcanvas";
 function flexibleRod(app, root, source) {
   const inverse = new Mat43().copy(root.getWorldTransform()).invert(), parts = [];
-  const output = new Entity39("Flexible rod mesh", app);
+  const output = new Entity40("Flexible rod mesh", app);
   root.addChild(output);
   const instances = [];
   for (const render of source.findComponents("render")) {
@@ -10634,17 +11324,17 @@ function flexibleRod(app, root, source) {
       original.mesh.getUvs(0, uv);
       const transform = new Mat43().mul2(inverse, original.node.getWorldTransform());
       for (let i = 0; i < positions.length; i += 3) {
-        const p = transform.transformPoint(new Vec336(positions[i], positions[i + 1], positions[i + 2])), n = transform.transformVector(new Vec336(normals[i], normals[i + 1], normals[i + 2])).normalize();
+        const p = transform.transformPoint(new Vec337(positions[i], positions[i + 1], positions[i + 2])), n = transform.transformVector(new Vec337(normals[i], normals[i + 1], normals[i + 2])).normalize();
         positions.splice(i, 3, p.x, p.y, p.z);
         normals.splice(i, 3, n.x, n.y, n.z);
       }
-      const mesh = new Mesh5(app.graphicsDevice);
+      const mesh = new Mesh6(app.graphicsDevice);
       mesh.setPositions(positions);
       mesh.setNormals(normals);
       if (uv.length) mesh.setUvs(0, uv);
       mesh.setIndices(indices);
       mesh.update();
-      instances.push(new MeshInstance5(mesh, original.material, output));
+      instances.push(new MeshInstance6(mesh, original.material, output));
       parts.push({ mesh, positions, normals });
     }
     render.enabled = false;
@@ -10658,7 +11348,7 @@ function flexibleRod(app, root, source) {
       for (let i = 0; i < positions.length; i += 3) {
         const t = Math.max(0, Math.min(1, (positions[i + 1] - 0.35) / 1.47));
         positions[i + 2] += bend * t * t;
-        const n = new Vec336(normals[i], normals[i + 1] - 2 * bend * t / 1.47 * normals[i + 2], normals[i + 2]).normalize();
+        const n = new Vec337(normals[i], normals[i + 1] - 2 * bend * t / 1.47 * normals[i + 2], normals[i + 2]).normalize();
         normals[i] = n.x;
         normals[i + 1] = n.y;
         normals[i + 2] = n.z;
@@ -10667,7 +11357,7 @@ function flexibleRod(app, root, source) {
       p.mesh.setNormals(normals);
       p.mesh.update();
     }
-  }, tip: () => root.getWorldTransform().transformPoint(new Vec336(0, 1.82, bend)) };
+  }, tip: () => root.getWorldTransform().transformPoint(new Vec337(0, 1.82, bend)) };
 }
 
 // src/game/Fishing.ts
@@ -10696,10 +11386,10 @@ var Fishing = class {
     this.save = save;
     this.splash = new Audio(assetUrl("assets/outdoors/pond-splash.mp3"));
     this.splash.preload = "auto";
-    this.root = new Entity40("Pond fishing presentation", app);
+    this.root = new Entity41("Pond fishing presentation", app);
     parent.addChild(this.root);
     const shape = primitives(app, this.root), wood = material("Fishing rod cork", "#ac8762"), red = material("Bobber coral", "#f1958c"), cream = material("Fishing cream", "#fff1d7");
-    this.rod = new Entity40("Hand fitted fishing rod", app);
+    this.rod = new Entity41("Hand fitted fishing rod", app);
     this.root.addChild(this.rod);
     const r = primitives(app, this.rod);
     r("Cork grip", "cylinder", [0, 0.12, 0], [0.07, 0.24, 0.07], wood);
@@ -10714,7 +11404,7 @@ var Fishing = class {
     this.root.enabled = false;
     this.setupControls();
     const rodReady = this.load("fishingrod_lvl1").then((res) => {
-      const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity40("Rod normalization", app);
+      const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity41("Rod normalization", app);
       this.rod.addChild(pivot);
       pivot.addChild(e);
       pivot.setLocalScale(scale, scale, scale);
@@ -10723,9 +11413,9 @@ var Fishing = class {
       for (const name of ["Cork grip", "Slender rod", "Reel"]) this.rod.findByName(name).enabled = false;
     });
     this.ready = Promise.all(FISH.map(async ([file], i) => {
-      const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity40(file, app);
+      const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity41(file, app);
       this.root.addChild(anchor);
-      const normalization = new Entity40("Fish size and origin", app);
+      const normalization = new Entity41("Fish size and origin", app);
       anchor.addChild(normalization);
       normalization.addChild(e);
       const scale = 0.8 / Math.max(bounds.halfExtents.x * 2, bounds.halfExtents.y * 2, bounds.halfExtents.z * 2);
@@ -10769,7 +11459,7 @@ var Fishing = class {
   prev = "";
   lastClip = "";
   settle = 0;
-  startPoint = new Vec337();
+  startPoint = new Vec338();
   caught = false;
   saveError = "";
   side = 0;
@@ -10810,7 +11500,7 @@ var Fishing = class {
     });
   }
   bounds(e) {
-    const b = new BoundingBox18();
+    const b = new BoundingBox19();
     let first = true;
     for (const r of e.findComponents("render")) for (const m of r.meshInstances) {
       if (first) {
@@ -10949,7 +11639,7 @@ var Fishing = class {
     }
     this.settle += dt;
     const blend = Math.min(1, this.settle / 0.7), ease = blend * blend * (3 - 2 * blend);
-    this.character.player.setPosition(new Vec337().lerp(this.startPoint, POND.stand, ease));
+    this.character.player.setPosition(new Vec338().lerp(this.startPoint, POND.stand, ease));
     this.round.update(dt);
     const r = this.round;
     if (!this.active) {
@@ -11035,7 +11725,7 @@ var Fishing = class {
     this.lastFish.copy(this.fishPoint);
     this.fishPoint.copy(POND.bobber);
     if (r.phase === "reel") {
-      const near = new Vec337(-4.85, 0.16, -10.35), far = POND.bobber;
+      const near = new Vec338(-4.85, 0.16, -10.35), far = POND.bobber;
       this.fishPoint.lerp(near, far, r.distance);
       const target = r.pullSide * 0.68 + Math.sin(r.fightTime * 2) * 0.13;
       this.side += (target - this.side) * Math.min(1, dt * 3);
@@ -11047,22 +11737,22 @@ var Fishing = class {
     }
     const hands = this.character.animator.snapshot().hands;
     if (hands.length === 2) {
-      const hand = new Vec337(...hands[1]);
+      const hand = new Vec338(...hands[1]);
       this.rod.setPosition(hand);
-      const tip = new Vec337().lerp(hand, this.fishPoint, 0.58);
+      const tip = new Vec338().lerp(hand, this.fishPoint, 0.58);
       tip.y += 1.35 + (r.phase === "cast" ? Math.sin(r.elapsed / 1.93 * Math.PI) * 0.7 : 0);
-      this.rod.setRotation(new Quat10().setFromDirections(Vec337.UP, tip.sub(hand).normalize()));
+      this.rod.setRotation(new Quat10().setFromDirections(Vec338.UP, tip.sub(hand).normalize()));
     }
     this.flexible?.update(r.phase === "reel" ? r.tension * 0.3 + (r.pullSide ? Math.sin(r.total * 18) * 0.018 : 0) : 0.015, dt);
     this.rod.enabled = !["catch", "release"].includes(r.phase);
-    const rodTip = this.flexible?.tip() ?? this.rod.getWorldTransform().transformPoint(new Vec337(0, 1.82, 0));
+    const rodTip = this.flexible?.tip() ?? this.rod.getWorldTransform().transformPoint(new Vec338(0, 1.82, 0));
     let bob = this.fishPoint.clone();
     if (r.phase === "wait") {
       const twitch = Math.max(0, 1 - Math.abs(r.elapsed - 1.05) / 0.22);
       bob.y -= twitch * 0.035;
     }
     bob.y += r.phase === "bite" ? -0.08 + Math.sin(r.elapsed * 24) * 0.04 : Math.sin(r.total * 3) * 0.025;
-    if (r.phase === "prepare") bob.copy(rodTip).add(new Vec337(0, -0.35, 0));
+    if (r.phase === "prepare") bob.copy(rodTip).add(new Vec338(0, -0.35, 0));
     if (r.phase === "cast") {
       const t = Math.min(1, r.elapsed / 1.5);
       bob.lerp(rodTip, bob, t);
@@ -11082,8 +11772,8 @@ var Fishing = class {
       w.setLocalScale(s, s * 0.7, s);
     });
     const delta = bob.clone().sub(rodTip);
-    this.line.setPosition(new Vec337().lerp(bob, rodTip, 0.5));
-    this.line.setRotation(new Quat10().setFromDirections(Vec337.UP, delta.clone().normalize()));
+    this.line.setPosition(new Vec338().lerp(bob, rodTip, 0.5));
+    this.line.setRotation(new Quat10().setFromDirections(Vec338.UP, delta.clone().normalize()));
     this.line.setLocalScale(8e-3, delta.length(), 8e-3);
     this.line.enabled = !["catch", "release"].includes(r.phase);
     const reward = this.receipt ? this.reward : this.fishes[r.fishIndex];
@@ -11096,7 +11786,7 @@ var Fishing = class {
       if (move.lengthSq() > 1e-6) fish.setEulerAngles(0, Math.atan2(move.x, move.z) * 180 / Math.PI, Math.sin(r.total * 7) * 6);
     }
     if (reward && ["catch", "release"].includes(r.phase)) {
-      const landing = new Vec337(-5.55, 1.55, -10.65), release = r.phase === "release", t = Math.min(1, release ? r.elapsed / 0.95 : this.catchTime / 0.8), ease = t * t * (3 - 2 * t), point = new Vec337().lerp(release ? landing : this.landingPoint, release ? POND.bobber : landing, ease);
+      const landing = new Vec338(-5.55, 1.55, -10.65), release = r.phase === "release", t = Math.min(1, release ? r.elapsed / 0.95 : this.catchTime / 0.8), ease = t * t * (3 - 2 * t), point = new Vec338().lerp(release ? landing : this.landingPoint, release ? POND.bobber : landing, ease);
       if (this.receipt) {
         reward.setPosition(point);
         reward.rotateLocal(0, dt * 24, 0);
@@ -11266,6 +11956,7 @@ var GameLoop = class {
     };
     this.encounters = new OutdoorEncounters(app, character, controller, (s) => this.message(s));
     this.dailyPlay = new DailyPlay(app, character, controller, camera, (s) => this.message(s));
+    this.schoolGate = new SchoolGatePlay(app, character, controller, room, camera);
     this.popUI.onPrizes = () => {
       void this.ticketShop.open();
       this.controller.reset();
@@ -11399,6 +12090,7 @@ var GameLoop = class {
   outsideLast = 0;
   recessFromGate = false;
   dailyPlay;
+  schoolGate;
   recessFromSchool = false;
   travelUntil = 0;
   inspecting = null;
@@ -11412,8 +12104,8 @@ var GameLoop = class {
   messageUntil = 0;
   pendingCredit = null;
   baseZoom = 9;
-  screen = new Vec338();
-  markerPoint = new Vec338();
+  screen = new Vec339();
+  markerPoint = new Vec339();
   developerPaused = false;
   developerClockFrozen = false;
   destination = "";
@@ -11499,7 +12191,10 @@ var GameLoop = class {
     el("#collection-button").textContent = `Collection \xB7 ${discovered} / ${DUMPLINGS.length}${data.boxes.length ? ` \xB7 \u{1F381} ${data.boxes.length}` : ""}`;
   }
   transition(mode, continuous = false) {
-    if (this.mode === "outdoors" && mode !== "outdoors") this.dailyPlay.leave();
+    if (this.mode === "outdoors" && mode !== "outdoors") {
+      this.dailyPlay.leave();
+      this.schoolGate.leave();
+    }
     if (this.mode === "outdoors" && mode !== "outdoors" && this.character.grounding) this.character.grounding.surfaceHeight = null;
     if (this.mode === "recess" && mode !== "recess") {
       this.recess.root.enabled = false;
@@ -11738,6 +12433,10 @@ var GameLoop = class {
         this.message("Head home along Maple Lane, or visit another shop.");
       }
     } else if (this.mode === "outdoors") {
+      if (this.focus === "school-ball") {
+        this.schoolGate.press();
+        return;
+      }
       if (this.focus === "daily-play") {
         this.dailyPlay.press();
         return;
@@ -11805,8 +12504,9 @@ var GameLoop = class {
     this.outdoors.update(outdoorDt, p, this.mode === "outdoors");
     this.neighborhood.update(p, this.mode === "outdoors");
     const playAvailable = !this.fishing.active && !this.huntUI.dialog.open && !this.popUI.isOpen && !el("#collection-dialog").open;
-    this.dailyPlay.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors", playAvailable, this.props.daily.clock.state.day);
-    this.encounters.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors", playAvailable && !this.dailyPlay.occupied, this.props.daily.clock.state.day);
+    this.dailyPlay.update(0, false, false, this.props.daily.clock.state.day);
+    this.schoolGate.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors" && this.props.daily.clock.state.phase !== "night", playAvailable && !this.ticketShop.dialog.open && !this.character.placeholder.enabled);
+    this.encounters.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors", playAvailable && !this.dailyPlay.occupied && !this.schoolGate.carrying && !this.schoolGate.busy, this.props.daily.clock.state.day);
     this.fishing.update(document.hidden ? 0 : outdoorDt);
     el("#game").dataset.fishing = String(this.fishing.active);
     if (this.fishing.active) {
@@ -11833,7 +12533,7 @@ var GameLoop = class {
     el("#school-transition").hidden = !school || this.mode === "recess";
     if (this.mode === "cleanup") this.cleanup.mission.tick(now);
     this.controller.enabled = (!school || this.mode === "recess") && (this.mode !== "recess" || this.recess.isReady) && !this.ticketShop.dialog.open && !this.tradingUI.dialog.open && !this.travelUntil && !this.inspecting && !this.huntUI.dialog.open && (this.mode === "outdoors" || this.mode === "recess" || this.mode === "store" || this.mode === "cleanup" && this.cleanup.mission.state !== "finished" && !this.cleanup.movementLocked) && !el("#collection-dialog").open;
-    if (this.mode === "outdoors" && this.dailyPlay.movementLocked) this.controller.enabled = false;
+    if (this.mode === "outdoors" && (this.dailyPlay.movementLocked || this.schoolGate.movementLocked)) this.controller.enabled = false;
   }
   update(now) {
     this.nextStore.hidden = this.mode !== "store" || this.popUI.isOpen || !!this.travelUntil || Object.values(this.save.data.hunt?.stores ?? {}).filter((s) => s.visited).length >= 2;
@@ -11882,7 +12582,7 @@ var GameLoop = class {
     let title = "Action", detail = "Come closer", icon = "\u270B", enabled = false;
     if (this.mode === "outdoors") {
       const p = this.character.player.getPosition();
-      this.focus = p.distance(POND.stand) < 1.25 ? "pond-fish" : p.distance(SCHOOL_GATE) < 1.8 ? "school-gate" : p.distance(new Vec338(-6.3, 0.09, 8.25)) < 1.2 && clock.canShop ? "outdoor-shops" : "";
+      this.focus = p.distance(POND.stand) < 1.25 ? "pond-fish" : p.distance(SCHOOL_GATE) < 1.8 ? "school-gate" : p.distance(new Vec339(-6.3, 0.09, 8.25)) < 1.2 && clock.canShop ? "outdoor-shops" : "";
       const stop = SHOP_STOPS.find((s) => Math.hypot(s.x - p.x, p.z - SHOP_DOOR_Z) < 1.7);
       if (stop) this.focus = "neighborhood-shop-" + stop.id;
       title = this.focus === "pond-fish" ? "FISH" : this.focus === "school-gate" ? "Enter school" : this.focus === "outdoor-shops" ? "Visit shops" : "Explore";
@@ -11894,6 +12594,14 @@ var GameLoop = class {
         detail = stop.name;
         icon = "\u{1F6CD}";
         enabled = clock.canShop;
+      }
+      const gatePlay = this.schoolGate.focus;
+      if (gatePlay && this.focus !== "school-gate") {
+        this.focus = "school-ball";
+        title = gatePlay.title;
+        detail = gatePlay.detail;
+        icon = gatePlay.icon;
+        enabled = gatePlay.enabled;
       }
       const play = this.dailyPlay.focus;
       if (play) {
@@ -11907,7 +12615,8 @@ var GameLoop = class {
       const destination = SHOP_STOPS.find((s) => s.id === this.destination);
       el("#scene-subtitle").textContent = destination ? `${destination.name} \xB7 ${Math.round(Math.hypot(p.x - destination.x, p.z - SHOP_DOOR_Z))} steps away` : "School path \u2191 \xB7 three little shops \u2190";
       el("#cleanup-hint").textContent = p.z < -16 ? "Follow the sidewalk. Cross at the stripes with Ms Maple." : "The pond is up the garden path. Walk back through the cottage door to go inside.";
-      if (p.x < -9) el("#cleanup-hint").textContent = "Explore the lane \xB7 five little play gardens today \xB7 shops across the street";
+      if (p.z < -26 && p.x > 14 && p.x < 31) el("#cleanup-hint").textContent = this.schoolGate.carrying ? "Put the ball down when you want to play again." : "Poppy is playing by the school wall. You can join in.";
+      if (p.x < -9) el("#cleanup-hint").textContent = "Three neighborhood shops \xB7 the school is back along the lane";
     } else if (this.mode === "recess") {
       const p = this.character.player.getPosition();
       const seat = this.recess.seats.filter((s) => p.distance(s.anchor) < 1.05).sort((a, b) => p.distance(a.anchor) - p.distance(b.anchor))[0];
@@ -12179,6 +12888,7 @@ var GameLoop = class {
       phase: this.opening.phase,
       reveal: this.save.data.reveal ? { ...this.save.data.reveal } : null,
       focus: this.focus,
+      schoolGate: this.schoolGate.snapshot(),
       dailyPlay: this.dailyPlay.snapshot(),
       neighborhood: this.neighborhood.snapshot(),
       encounters: this.encounters.snapshot(),
@@ -12196,6 +12906,7 @@ var GameLoop = class {
   }
   destroy() {
     this.dailyPlay.destroy();
+    this.schoolGate.destroy();
     this.neighborhood.destroy();
     this.encounters.destroy();
     this.scooter.destroy();
@@ -12211,12 +12922,12 @@ var GameLoop = class {
 };
 
 // src/ui/HouseNavigation.ts
-import { Vec3 as Vec339 } from "playcanvas";
+import { Vec3 as Vec340 } from "playcanvas";
 var HouseNavigation = class {
   current = "bedroom";
   root = document.querySelector("#house-doors");
-  point = new Vec339();
-  screen = new Vec339();
+  point = new Vec340();
+  screen = new Vec340();
   labels = HOUSE_DOORS.map((door) => {
     const label = document.createElement("span");
     label.className = "door-label";
@@ -12251,22 +12962,22 @@ var HouseNavigation = class {
 };
 
 // src/game/Lilah.ts
-import { Asset as Asset11, BoundingBox as BoundingBox19, Entity as Entity41, Vec3 as Vec340 } from "playcanvas";
+import { Asset as Asset11, BoundingBox as BoundingBox20, Entity as Entity42, Vec3 as Vec341 } from "playcanvas";
 var Lilah = class {
   constructor(app, house, daily) {
     this.app = app;
     this.house = house;
     this.daily = daily;
-    this.root = new Entity41("Lilah \xB7 age 2", app);
+    this.root = new Entity42("Lilah \xB7 age 2", app);
     app.root.addChild(this.root);
     this.root.setPosition(1, 0.09, 0.7);
-    this.visual = new Entity41("Lilah visual", app);
+    this.visual = new Entity42("Lilah visual", app);
     this.root.addChild(this.visual);
-    const placeholder = new Entity41("Lilah loading", app);
+    const placeholder = new Entity42("Lilah loading", app);
     this.visual.addChild(placeholder);
     this.animator = new CharacterAnimator(this.visual, placeholder);
     this.planner = new HousePath(house);
-    this.socket = new Entity41("Lilah toy grip", app);
+    this.socket = new Entity42("Lilah toy grip", app);
     this.visual.addChild(this.socket);
     this.animator.bindCarrySocket(this.socket);
     this.toy = primitives(app, this.socket)("Favorite block", "box", [0, 0, 0], [0.13, 0.13, 0.13], material("Lilah favorite block", "#edb867"));
@@ -12363,7 +13074,7 @@ var Lilah = class {
     const job = this.job;
     if (!job || this.animator.busy) return;
     if (this.route.length) {
-      const p = this.root.getPosition(), next = this.route[0], delta = new Vec340(next.x - p.x, 0, next.z - p.z), distance = delta.length();
+      const p = this.root.getPosition(), next = this.route[0], delta = new Vec341(next.x - p.x, 0, next.z - p.z), distance = delta.length();
       if (distance < 0.035) {
         this.route.shift();
         return;
@@ -12374,11 +13085,11 @@ var Lilah = class {
       if (separation < 0.43 && separation <= previousSeparation) {
         job.blocked += dt;
         if (job.blocked > 0.45) {
-          const obstacle = new BoundingBox19(new Vec340(arianna.x, 0, arianna.z), new Vec340(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec340(p.x, 0, p.z);
+          const obstacle = new BoundingBox20(new Vec341(arianna.x, 0, arianna.z), new Vec341(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec341(p.x, 0, p.z);
           let path = planner.route(start, job.point);
           if (!path.length) {
             for (let i = 0; i < 16; i++) {
-              const angle = i * Math.PI / 8, escape = new Vec340(p.x + Math.sin(angle) * 0.65, 0, p.z + Math.cos(angle) * 0.65);
+              const angle = i * Math.PI / 8, escape = new Vec341(p.x + Math.sin(angle) * 0.65, 0, p.z + Math.cos(angle) * 0.65);
               if (Math.hypot(escape.x - arianna.x, escape.z - arianna.z) < 0.55 || (escape.x - p.x) * (p.x - arianna.x) + (escape.z - p.z) * (p.z - arianna.z) <= 0 || !this.planner.line(start, escape)) continue;
               const rest = planner.route(escape, job.point);
               if (rest.length) {
@@ -12396,7 +13107,7 @@ var Lilah = class {
         this.root.setPosition(q);
         velocity.copy(delta).mulScalar(1.05);
       } else {
-        this.route = this.planner.route(new Vec340(p.x, 0, p.z), job.point);
+        this.route = this.planner.route(new Vec341(p.x, 0, p.z), job.point);
       }
     } else {
       if (!job.wait) {
@@ -12414,7 +13125,7 @@ var Lilah = class {
         this.job = null;
         job.drop();
         this.say(job.icon === "\u{1F9FA}" ? "Oops! ALL the toys!" : "Ta-da! Your turn, Ari!");
-      }, new Vec340(job.point.x, 0.1, job.point.z + 0.3));
+      }, new Vec341(job.point.x, 0.1, job.point.z + 0.3));
     }
   }
   async load() {
@@ -12440,7 +13151,7 @@ var Lilah = class {
       walk_playback: 1
     };
     for (const required of ["Idle", "Walk", "CarryIdle", "CarryWalk", "PickUp", "PutDown", "Celebrate"]) if (!tracks2.some((t) => t.name === required)) throw new Error("Missing Lilah clip " + required);
-    const alignment = new Entity41("Lilah ground alignment", this.app);
+    const alignment = new Entity42("Lilah ground alignment", this.app);
     this.visual.addChild(alignment);
     alignment.addChild(model);
     model.setLocalScale(this.height / 1.03, this.height / 1.03, this.height / 1.03);
@@ -12497,17 +13208,17 @@ var Lilah = class {
       this.carrying = false;
       this.toy.enabled = false;
       this.animator.setCarrying(false);
-      this.go(propPoint("crib", new Vec340(8.55, 0, -1.3)), "bedtime");
+      this.go(propPoint("crib", new Vec341(8.55, 0, -1.3)), "bedtime");
       this.nextDecision = this.time + 30;
       return;
     }
     if (Math.random() < 0.55) {
-      for (const [x, z] of [[0.9, 0.7], [-0.9, 0.7], [0.9, -0.7], [-0.9, -0.7]]) if (this.go(new Vec340(arianna.x + x, 0, arianna.z + z), "follow")) break;
+      for (const [x, z] of [[0.9, 0.7], [-0.9, 0.7], [0.9, -0.7], [-0.9, -0.7]]) if (this.go(new Vec341(arianna.x + x, 0, arianna.z + z), "follow")) break;
       this.state = "following";
       this.say(["Ari! Wait for me!", "I do it too!", "Whatcha doing?"][Math.floor(Math.random() * 3)]);
     } else {
       const spots = [[1.1, 1.3], [3.8, 2], [1.4, 5.6], [0.5, 10.8], [4.3, 11.4], [8.4, 0.5]], p = spots[Math.floor(Math.random() * spots.length)];
-      this.go(new Vec340(p[0], 0, p[1]), "explore");
+      this.go(new Vec341(p[0], 0, p[1]), "explore");
       this.state = "exploring";
       this.say("Ooh! What\u2019s that?");
     }
@@ -12532,12 +13243,12 @@ var Lilah = class {
       this.carrying = false;
       this.toy.enabled = false;
       if (this.grounding) this.grounding.surfaceHeight = null;
-      if (this.state === "sleeping" || this.bedStart) this.root.setPosition(propPoint("crib", new Vec340(8.55, 0.09, -1.3)));
+      if (this.state === "sleeping" || this.bedStart) this.root.setPosition(propPoint("crib", new Vec341(8.55, 0.09, -1.3)));
       this.bedStart = null;
       this.state = "watching";
     }
     if ((this.state === "sleeping" || this.bedStart) && !this.daily.clock.state.lilahAsleep && this.daily.clock.state.minutes < 1095) {
-      this.root.setPosition(propPoint("crib", new Vec340(8.55, 0.09, -1.3)));
+      this.root.setPosition(propPoint("crib", new Vec341(8.55, 0.09, -1.3)));
       this.state = "watching";
       this.bedStart = null;
       this.animator.setWorkClip(null);
@@ -12551,7 +13262,7 @@ var Lilah = class {
       this.animator.cancelAction();
       this.decide(arianna);
     }
-    const velocity = new Vec340();
+    const velocity = new Vec341();
     if (this.scripted) this.updateTornado(dt, arianna, velocity);
     else if (this.bedStart) {
       const entry = this.bedStart;
@@ -12589,7 +13300,7 @@ var Lilah = class {
     this.animator.update(dt, velocity, elapsed);
     const p = this.root.getPosition();
     this.visited.add(p.z < 3 ? "bedroom" : p.z < 9 ? "living" : "kitchen");
-    const screen = camera.camera.worldToScreen(new Vec340(p.x, p.y + this.height + 0.12, p.z));
+    const screen = camera.camera.worldToScreen(new Vec341(p.x, p.y + this.height + 0.12, p.z));
     const viewport = document.querySelector("#game").getBoundingClientRect();
     this.label.hidden = performance.now() > this.speechUntil || screen.x < 10 || screen.x > viewport.width - 10 || screen.y < 130 || screen.y > viewport.height - 130;
     this.label.style.transform = `translate(${Math.max(4, Math.min(viewport.width - this.label.offsetWidth - 4, screen.x - this.label.offsetWidth / 2))}px,${screen.y - this.label.offsetHeight}px)`;
@@ -12628,7 +13339,7 @@ var Lilah = class {
 };
 
 // src/game/LilahTornado.ts
-import { Entity as Entity42, Vec3 as Vec341 } from "playcanvas";
+import { Entity as Entity43, Vec3 as Vec342 } from "playcanvas";
 
 // src/systems/TornadoRules.ts
 var TORNADO_SECONDS = 55;
@@ -12790,7 +13501,7 @@ var LilahTornado = class {
     this.action.enabled = true;
     this.notice = "Follow Lilah\u2019s thought bubbles. Tap Action near a mess!";
     this.noticeUntil = 6;
-    this.spots = [[1.1, 2.1], [1.1, 4.8], [0.7, 8.1], [0.5, 10.3], [1.8, 11.3], [4.8, 11.5], [3.7, 6.4], [3.8, 2], [8.4, 0.8], [8.1, 7]].map(([x, z]) => new Vec341(x, 0, z)).filter((p) => this.planner.free(p.x, p.z) && this.planner.route(new Vec341(this.character.player.getPosition().x, 0, this.character.player.getPosition().z), p).length > 0);
+    this.spots = [[1.1, 2.1], [1.1, 4.8], [0.7, 8.1], [0.5, 10.3], [1.8, 11.3], [4.8, 11.5], [3.7, 6.4], [3.8, 2], [8.4, 0.8], [8.1, 7]].map(([x, z]) => new Vec342(x, 0, z)).filter((p) => this.planner.free(p.x, p.z) && this.planner.route(new Vec342(this.character.player.getPosition().x, 0, this.character.player.getPosition().z), p).length > 0);
     this.lilah.beginTornado();
     void this.audio.unlock();
     this.audio.pause(false);
@@ -12875,7 +13586,7 @@ var LilahTornado = class {
   }
   spawn(point, type, special) {
     if (this.messes.length >= 3) return;
-    const root = new Entity42("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
+    const root = new Entity43("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
     this.props.root.addChild(root);
     root.setPosition(point.x, 0.06, point.z);
     const shape = primitives(this.app, root), n = special === "basket" ? 12 : type === 3 ? 5 : 6;
@@ -12904,7 +13615,7 @@ var LilahTornado = class {
   }
   focus() {
     const p = this.character.player.getPosition();
-    return this.messes.filter((m) => Math.hypot(p.x - m.point.x, p.z - m.point.z) < 1.15 && this.sight.line(new Vec341(p.x, 0, p.z), m.point)).sort((a, b) => a.point.distance(p) - b.point.distance(p))[0];
+    return this.messes.filter((m) => Math.hypot(p.x - m.point.x, p.z - m.point.z) < 1.15 && this.sight.line(new Vec342(p.x, 0, p.z), m.point)).sort((a, b) => a.point.distance(p) - b.point.distance(p))[0];
   }
   clean() {
     if (!this.playing || this.cleaning || this.character.animator.busy) return;
@@ -12942,7 +13653,7 @@ var LilahTornado = class {
     if (!pet.loaded) return;
     const p = pet.dog.getPosition(), point = this.spots.filter((v) => !this.messes.some((m) => m.point.distance(v) < 1)).sort((a, b) => a.distance(p) - b.distance(p))[0];
     if (!point) return;
-    const path = this.planner.route(new Vec341(p.x, 0, p.z), point);
+    const path = this.planner.route(new Vec342(p.x, 0, p.z), point);
     if (!path.length) {
       this.specialStarted = true;
       return;
@@ -12957,7 +13668,7 @@ var LilahTornado = class {
     if (!dog || dog.wait < 0 && !dog.route.length) return;
     const root = this.props.pet.dog;
     if (dog.route.length) {
-      const p = root.getPosition(), next = dog.route[0], delta = new Vec341(next.x - p.x, 0, next.z - p.z), distance = delta.length();
+      const p = root.getPosition(), next = dog.route[0], delta = new Vec342(next.x - p.x, 0, next.z - p.z), distance = delta.length();
       if (distance < 0.04) {
         dog.route.shift();
         return;
@@ -12971,7 +13682,7 @@ var LilahTornado = class {
         root.setPosition(dog.point.x, 0.04, dog.point.z);
         this.spawn(dog.point, 0, "dog");
         dog.wait = -1;
-        dog.route = this.planner.route(dog.point, new Vec341(dog.home.x, 0, dog.home.z));
+        dog.route = this.planner.route(dog.point, new Vec342(dog.home.x, 0, dog.home.z));
       }
     }
   }
@@ -12997,7 +13708,7 @@ var LilahTornado = class {
     set("[data-notice]", this.elapsed < this.noticeUntil ? this.notice : this.messes.length === 3 ? "Lilah takes a breather. Pick any mess!" : "\u{1F463} Follow Lilah \xB7 \u2728 Tap Action to tidy");
     const bounds = get("#game").getBoundingClientRect();
     for (const m of this.messes) {
-      const p = this.camera.entity.camera.worldToScreen(new Vec341(m.point.x, 0.4, m.point.z)), x = Math.max(24, Math.min(bounds.width - 24, p.x)), y = Math.max(this.hud.offsetTop + this.hud.offsetHeight + 40, Math.min(bounds.height - 180, p.y));
+      const p = this.camera.entity.camera.worldToScreen(new Vec342(m.point.x, 0.4, m.point.z)), x = Math.max(24, Math.min(bounds.width - 24, p.x)), y = Math.max(this.hud.offsetTop + this.hud.offsetHeight + 40, Math.min(bounds.height - 180, p.y));
       m.label.classList.toggle("near", m === nearest);
       m.label.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
       m.label.classList.toggle("edge", x !== p.x || y !== p.y);
@@ -13097,7 +13808,7 @@ var LilahTornado = class {
 };
 
 // src/game/FamilyDinner.ts
-import { Asset as Asset12, BoundingBox as BoundingBox20, Entity as Entity43, Vec3 as Vec342 } from "playcanvas";
+import { Asset as Asset12, BoundingBox as BoundingBox21, Entity as Entity44, Vec3 as Vec343 } from "playcanvas";
 var FamilyDinner = class {
   constructor(app, house, daily, root, visual, animator, say) {
     this.app = app;
@@ -13108,10 +13819,10 @@ var FamilyDinner = class {
     this.animator = animator;
     this.say = say;
     this.planner = new HousePath(house, 0.25);
-    this.socket = new Entity43("Dad serving hands", app);
+    this.socket = new Entity44("Dad serving hands", app);
     visual.addChild(this.socket);
     animator.bindCarrySocket(this.socket);
-    this.tray = new Entity43("Family dinner", app);
+    this.tray = new Entity44("Family dinner", app);
     house.root.addChild(this.tray);
     this.tray.enabled = false;
     primitives(app, this.tray)("Dinner platter", "cylinder", [0, 0, 0], [0.72, 0.025, 0.58], material("Dinner china", "#fff2d9"), false);
@@ -13123,7 +13834,7 @@ var FamilyDinner = class {
         a.once("error", reject);
         app.assets.load(a);
       });
-      const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox20();
+      const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox21();
       let first = true;
       for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
         if (first) {
@@ -13157,7 +13868,7 @@ var FamilyDinner = class {
   day = 0;
   stage = "idle";
   route = [];
-  goal = new Vec342();
+  goal = new Vec343();
   timer = 0;
   blocked = 0;
   retry = 0;
@@ -13165,14 +13876,14 @@ var FamilyDinner = class {
   serving = "pizza";
   table() {
     this.tray.reparent(this.house.root);
-    this.tray.setPosition(propPoint("dining", new Vec342(0.55, 0.99, 14.35)));
+    this.tray.setPosition(propPoint("dining", new Vec343(0.55, 0.99, 14.35)));
     this.tray.setEulerAngles(0, propYaw("dining", 0), 0);
     this.tray.enabled = true;
   }
   go(p, stage) {
     const at = this.root.getPosition();
     this.goal.copy(p);
-    this.route = this.planner.route(new Vec342(at.x, 0, at.z), p);
+    this.route = this.planner.route(new Vec343(at.x, 0, at.z), p);
     this.stage = stage;
     this.blocked = 0;
     return this.route.length > 0;
@@ -13210,7 +13921,7 @@ var FamilyDinner = class {
     if (this.stage === "idle") {
       if (s.dinnerServed && !this.tray.enabled) this.table();
       if (!canStart || !this.due()) return false;
-      if (!this.go(propPoint("fridge", new Vec342(-1.65, 0, 14.55)), "fetch")) {
+      if (!this.go(propPoint("fridge", new Vec343(-1.65, 0, 14.55)), "fetch")) {
         this.finish();
         return false;
       }
@@ -13219,13 +13930,13 @@ var FamilyDinner = class {
     if (["fetch", "carry", "seat"].includes(this.stage)) {
       const p = this.root.getPosition(), next = this.route[0];
       if (next) {
-        const delta = new Vec342(next.x - p.x, 0, next.z - p.z), distance = delta.length(), step = Math.min(distance, dt * 1.05);
+        const delta = new Vec343(next.x - p.x, 0, next.z - p.z), distance = delta.length(), step = Math.min(distance, dt * 1.05);
         delta.normalize();
         const q = p.clone().add(delta.clone().mulScalar(step));
         if (people.some((v) => Math.hypot(v.x - q.x, v.z - q.z) < 0.6) || !this.planner.free(q.x, q.z)) {
           this.blocked += dt;
           if (this.blocked > 3) {
-            this.route = this.planner.route(new Vec342(p.x, 0, p.z), this.goal);
+            this.route = this.planner.route(new Vec343(p.x, 0, p.z), this.goal);
             this.blocked = 0;
           }
           return true;
@@ -13244,11 +13955,11 @@ var FamilyDinner = class {
         this.stage = "pickup";
         this.timer = 1.4;
         this.animator.setIdleClip("Cleaning");
-        this.animator.faceTowards(propPoint("fridge", new Vec342(-2.65, 1, 14.55)));
+        this.animator.faceTowards(propPoint("fridge", new Vec343(-2.65, 1, 14.55)));
       } else if (this.stage === "carry") {
         this.stage = "place";
         this.timer = 1.1;
-        this.animator.faceTowards(propPoint("dining", new Vec342(0.55, 1, 13.85)));
+        this.animator.faceTowards(propPoint("dining", new Vec343(0.55, 1, 13.85)));
       } else {
         this.stage = "sitting";
         this.timer = 1.3;
@@ -13260,7 +13971,7 @@ var FamilyDinner = class {
       this.timer -= dt;
       if (this.stage === "sitting" || this.stage === "standing") {
         const down = this.stage === "sitting", t = Math.max(0, Math.min(1, 1 - this.timer / (down ? 1.3 : 1.2))), z = down ? 15.65 - 0.55 * t : 15.1 + 0.55 * t;
-        this.root.setPosition(propPoint("dining", new Vec342(0.55, 0.09, z)));
+        this.root.setPosition(propPoint("dining", new Vec343(0.55, 0.09, z)));
       }
       if (this.timer > 0) return true;
       if (this.stage === "pickup") {
@@ -13271,7 +13982,7 @@ var FamilyDinner = class {
         this.tray.setLocalPosition(0, 0.035, 0.06);
         this.tray.setLocalEulerAngles(0, 0, 0);
         this.tray.enabled = true;
-        if (!this.go(propPoint("dining", new Vec342(0.55, 0, 15.65)), "carry")) {
+        if (!this.go(propPoint("dining", new Vec343(0.55, 0, 15.65)), "carry")) {
           this.tray.enabled = false;
           this.finish();
         }
@@ -13290,14 +14001,14 @@ var FamilyDinner = class {
       } else if (this.stage === "sitting") {
         this.stage = "seated";
         this.timer = 12 + s.day % 4 * 2;
-        this.root.setPosition(propPoint("dining", new Vec342(0.55, 0.09, 15.1)));
+        this.root.setPosition(propPoint("dining", new Vec343(0.55, 0.09, 15.1)));
       } else if (this.stage === "seated") {
         this.stage = "standing";
         this.timer = 1.2;
         this.animator.setIdleClip("Idle");
         this.animator.playAction("StandUp", 1.2);
       } else if (this.stage === "standing") {
-        this.root.setPosition(propPoint("dining", new Vec342(0.55, 0.09, 15.65)));
+        this.root.setPosition(propPoint("dining", new Vec343(0.55, 0.09, 15.65)));
         this.finish();
         return false;
       }
@@ -13314,10 +14025,10 @@ var FamilyDinner = class {
 };
 
 // src/game/Marc.ts
-import { Asset as Asset13, AnimData as AnimData9, AnimTrack as AnimTrack9, Entity as Entity44, Quat as Quat11, Vec3 as Vec343 } from "playcanvas";
-var SEAT = new Vec343(4.5, 0, 7.35);
+import { Asset as Asset13, AnimData as AnimData9, AnimTrack as AnimTrack9, Entity as Entity45, Quat as Quat11, Vec3 as Vec344 } from "playcanvas";
+var SEAT = new Vec344(4.5, 0, 7.35);
 var YAW = -35;
-var FORWARD = new Vec343(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
+var FORWARD = new Vec344(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
 var ENTRY = SEAT.clone().add(FORWARD.clone().mulScalar(1.02));
 var SEATED = SEAT.clone().add(FORWARD.clone().mulScalar(0.28));
 var PATROL = [[8.4, 0.5], [8.1, 9.6], [0.4, 11.2], [3.8, 2], [1.25, 5.6]];
@@ -13327,12 +14038,12 @@ var Marc = class {
     this.app = app;
     this.house = house;
     this.daily = daily;
-    this.root = new Entity44("Marc", app);
+    this.root = new Entity45("Marc", app);
     app.root.addChild(this.root);
     this.root.setPosition(3.5, 0.09, 6.2);
-    this.visual = new Entity44("Marc visual", app);
+    this.visual = new Entity45("Marc visual", app);
     this.root.addChild(this.visual);
-    const placeholder = new Entity44("Marc loading", app);
+    const placeholder = new Entity45("Marc loading", app);
     this.visual.addChild(placeholder);
     this.animator = new CharacterAnimator(this.visual, placeholder);
     this.planner = new HousePath(house, 0.25);
@@ -13343,7 +14054,7 @@ var Marc = class {
     document.querySelector("#game").append(this.label);
     const colors = ["#cda678", "#c5d9dd", "#b8c39d"];
     for (let i = 0; i < 3; i++) {
-      const tool = new Entity44(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
+      const tool = new Entity45(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
       this.root.addChild(tool);
       const shape = primitives(app, tool);
       shape("Dad cleanup tool", "box", [0, 0, 0], i === 0 ? [0.25, 0.16, 0.23] : i === 1 ? [0.3, 0.025, 0.23] : [0.3, 0.07, 0.13], material("Dad tool " + i, colors[i]));
@@ -13384,7 +14095,7 @@ var Marc = class {
   standCount = 0;
   sitCount = 0;
   visited = /* @__PURE__ */ new Set();
-  velocity = new Vec343();
+  velocity = new Vec344();
   blockedFor = 0;
   nextScan = 0;
   async load() {
@@ -13425,7 +14136,7 @@ var Marc = class {
     }
     tracks2.push(new AnimTrack9("Cleaning", idle.duration, idle.inputs, outputs, idle.curves));
     const manifest = { animations: tracks2.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: !["SitDown", "StandUp"].includes(t.name) })), locomotion: { Walk: { travel_speed_mps: 1.2 }, CarryWalk: { travel_speed_mps: 1.05 } }, interaction_events: {}, scale: { rest_height_m: 1.8 }, hand_joints: ["LeftHand", "RightHand"], walk_playback: 1 };
-    const alignment = new Entity44("Marc ground alignment", this.app);
+    const alignment = new Entity45("Marc ground alignment", this.app);
     this.visual.addChild(alignment);
     alignment.addChild(model);
     model.setLocalScale(this.height / 1.8, this.height / 1.8, this.height / 1.8);
@@ -13459,7 +14170,7 @@ var Marc = class {
     if (!m) return false;
     const p = this.root.getPosition(), candidates = [];
     for (const radius of [0.65, 0.85]) for (let i = 0; i < 12; i++) {
-      const a = i * Math.PI / 6, v = new Vec343(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
+      const a = i * Math.PI / 6, v = new Vec344(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
       if (this.planner.free(v.x, v.z)) candidates.push(v);
     }
     candidates.sort((a, b) => a.distance(p) - b.distance(p));
@@ -13487,7 +14198,7 @@ var Marc = class {
     this.label.hidden = true;
     if (!this.root.enabled || document.hidden) return;
     if (!active) {
-      this.animator.update(0, new Vec343(), Math.max(elapsed, 1e-3));
+      this.animator.update(0, new Vec344(), Math.max(elapsed, 1e-3));
       return;
     }
     this.time += dt;
@@ -13556,7 +14267,7 @@ var Marc = class {
                   this.until = this.time + 3;
                   this.animator.setIdleClip("Cleaning");
                   const mess = this.mess();
-                  this.animator.faceTowards(new Vec343(mess.x, 0, mess.z));
+                  this.animator.faceTowards(new Vec344(mess.x, 0, mess.z));
                   this.say(["These blocks are plotting against my feet.", "Ah, floor juice. My least favorite flavor.", "Crumbs: the glitter of snack time."][Number(mess.id.at(-1))]);
                 } else {
                   this.state = "idle";
@@ -13577,7 +14288,7 @@ var Marc = class {
         }
       } else if (this.state === "sitting-down" || this.state === "standing-up") {
         const down = this.state === "sitting-down", t = Math.min(1, (this.time - this.transitionStart) / (down ? 1.3 : 1)), smooth2 = t * t * (3 - 2 * t);
-        const p2 = new Vec343().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
+        const p2 = new Vec344().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
         this.root.setPosition(p2.x, 0.09, p2.z);
         this.visual.setLocalEulerAngles(0, propYaw("marc-seat", YAW), 0);
         if (this.time >= this.until && !this.animator.busy) {
@@ -13609,7 +14320,7 @@ var Marc = class {
       } else if (this.time >= this.until) {
         if (this.purpose === "seat" || this.purpose === "mess") {
           const point = PATROL[this.patrolIndex++ % PATROL.length];
-          if (!this.go(new Vec343(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
+          if (!this.go(new Vec344(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
         } else if (!this.go(propPoint("marc-seat", ENTRY), "seat")) this.until = this.time + 3;
       }
       if (this.time < 2 && this.state === "idle") {
@@ -13621,7 +14332,7 @@ var Marc = class {
     this.animator.update(dt, this.velocity, elapsed);
     const p = this.root.getPosition(), room = HOUSE_ROOMS.find((r) => p.x >= r.minX && p.x <= r.maxX && p.z >= r.minZ && p.z <= r.maxZ);
     if (room) this.visited.add(room.id);
-    const screen = camera.camera.worldToScreen(new Vec343(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
+    const screen = camera.camera.worldToScreen(new Vec344(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
     this.label.hidden = performance.now() > this.speechUntil || screen.x < 0 || screen.x > viewport.width || screen.y < 135 || screen.y > viewport.height - 145;
     this.label.style.transform = `translate(${Math.max(6, Math.min(viewport.width - this.label.offsetWidth - 6, screen.x - this.label.offsetWidth / 2))}px,${screen.y - this.label.offsetHeight}px)`;
   }
@@ -13648,7 +14359,7 @@ async function startGame(editorApp) {
   await loadSquishyArt(app);
   const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color12(0.72, 0.68, 0.77);
   app.scene.ambientLight = ambientBase.clone();
-  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity45("Soft afternoon sunlight", app);
+  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity46("Soft afternoon sunlight", app);
   if (!sun.light) sun.addComponent("light", {
     type: "directional",
     color: new Color12(1, 0.92, 0.83),
@@ -13681,8 +14392,8 @@ async function startGame(editorApp) {
   const tornado = new LilahTornado(app, room, props, cleanup, loop, character, controller, camera, lilah);
   loop.tornado = tornado;
   const label = document.querySelector("#player-label");
-  const screenPoint = new Vec344();
-  const headPoint = new Vec344();
+  const screenPoint = new Vec345();
+  const headPoint = new Vec345();
   const viewport = document.querySelector("#game");
   const resize = () => {
     app.graphicsDevice.maxPixelRatio = window.devicePixelRatio || 1;
@@ -13708,7 +14419,7 @@ async function startGame(editorApp) {
     }
     loop.beforeMovement(now);
     if (loop.popUI.isOpen) return;
-    const bulky = cleanup.carry.item?.carryPace === "walk" || loop.dailyPlay.carrying;
+    const bulky = cleanup.carry.item?.carryPace === "walk" || loop.dailyPlay.carrying || loop.schoolGate.carrying;
     controller.speed = bulky ? WALK_SPEED * (["vacuum", "scooper"].includes(cleanup.carry.item?.id ?? "") ? 1.5 : 1) : RUN_SPEED;
     character.animator.setCarryPace(bulky ? "walk" : "run");
     const night = cleanup.mode === "day" && props.daily.clock.state.phase === "night" && loop.mode === "cleanup";
@@ -13732,7 +14443,7 @@ async function startGame(editorApp) {
     }
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
-    loop.scooter.update(dt, loop.mode === "outdoors", !loop.fishing.active && !loop.huntUI.dialog.open && !loop.dailyPlay.occupied, loop.encounters.hop);
+    loop.scooter.update(dt, loop.mode === "outdoors", !loop.fishing.active && !loop.huntUI.dialog.open && !loop.dailyPlay.occupied && !loop.schoolGate.carrying && !loop.schoolGate.busy, loop.encounters.hop);
     lilah.update(dt, elapsed, loop.mode === "cleanup" && props.daily.clock.state.phase !== "school", cleanup.mode === "day" && !cleanup.movementLocked, character.player.getPosition(), camera.entity);
     marc.update(dt, elapsed, loop.mode === "cleanup" && props.daily.clock.state.phase !== "school", cleanup.mode === "day" && !tornado.active, character.player.getPosition(), lilah.root.getPosition(), cleanup.activeInteractionId, camera.entity);
     headPoint.copy(character.player.getPosition());

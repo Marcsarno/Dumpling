@@ -35,8 +35,15 @@ export class Outdoors{
   for(let z=-25.3;z<=-19.7;z+=.7)box('Crosswalk stripe',22,.04,z,3.5,.018,.4,white);
   path(22,-26,22,-31,3.4);
   // Raised planting beds make the safe crosswalk route readable, with no moving traffic.
-  for(const x of [16.5,28]){box('School flower bed',x,.1,-28.5,3,.3,2,soil);for(let i=0;i<3;i++)this.art.add('Bush_Common_Flowers',x-1+i,-28.5,.65,i*40);}
-  for(const [ax,bx,z] of [[14,20,-29.8],[24,31,-29.8]])for(let x=ax;x<=bx;x+=.55){box('School fence picket',x,.65,z,.09,1.3,.10,wood);box('School fence rail',x,.92,z,.65,.08,.08,wood);}
+  for(const x of [28]){box('School flower bed',x,.1,-28.5,3,.3,2,soil);for(let i=0;i<3;i++)this.art.add('Bush_Common_Flowers',x-1+i,-28.5,.65,i*40);}
+  for(const [ax,bx,z] of [[24,31,-29.8]])for(let x=ax;x<=bx;x+=.55){box('School fence picket',x,.65,z,.09,1.3,.10,wood);box('School fence rail',x,.92,z,.65,.08,.08,wood);}
+  // Existing school frontage becomes a small shared waiting/play corner.
+  box('School low garden wall',16.65,.32,-29.8,5.55,.64,.26,edge);
+  box('School low wall cap',16.65,.67,-29.8,5.7,.10,.36,cream);
+  box('School short return wall',14.0,.32,-28.4,.25,.64,2.55,edge);
+  box('School short return cap',14.0,.67,-28.4,.36,.10,2.65,cream);
+  box('School sidewalk curb',17,.08,-26.12,6,.16,.14,edge);
+  for(let x=14.15;x<19.3;x+=.65){box('Garden wall stone join',x,.32,-29.66,.012,.50,.012,soil);}
   for(const x of [19.8,24.2]){box('Gate pillar',x,1.3,-30,.45,2.6,.45,mint);s('Gate cap','sphere',[x,2.65,-30],[.6,.22,.6],cream);}
   box('School gate arch',22,2.68,-30,4.8,.32,.4,mint);classroomSign(app,this.root,'School gate sign','MAPLE GROVE\nSCHOOL',[22,2.73,-29.76],3.2,.55);
   box('School facade',22,2.1,-35,16,4.2,3,cream);box('School roof',22,4.25,-35,17,.35,4,pink);
@@ -51,13 +58,13 @@ export class Outdoors{
   for(const [x,z,h] of [[-11.8,-7.4,.55],[-11,-8.3,.40],[-12,-15.8,.6],[-8.9,-16.5,.5],[-1.4,-5.5,.45],[3.6,-7.8,.55],[4.5,-8.3,.4],[15.5,-31.4,.5],[28.9,-31,.6]])this.art.add('Plant_1',x,z,h,x*27);
   for(const [x,z,h] of [[-12.1,-7.8,.8],[-10.7,-16.7,.8],[-9.3,-16.9,.55],[3.8,-8.5,.75],[4.8,-8.1,.55],[28.9,-31.9,.85]])this.art.add('Bush_Common_Flowers',x,z,h,z*21);
   // A planted entrance court frames the destination, leaving the gate and crossing open.
-  for(const x of [16.5,28]){box('Bed front limestone',x,.13,-27.48,3.18,.35,.12,edge);for(const side of [-1,1])box('Bed side limestone',x+side*1.55,.13,-28.5,.12,.35,2.15,edge);}
+  for(const x of [28]){box('Bed front limestone',x,.13,-27.48,3.18,.35,.12,edge);for(const side of [-1,1])box('Bed side limestone',x+side*1.55,.13,-28.5,.12,.35,2.15,edge);}
   for(const x of [20.8,23.2])for(let z=-31.4;z>-33.2;z-=.55)box('Entry court inset',x,.04,z,.55,.03,.40,edge);
   this.roof=new Entity('Outside cottage shell and roof',app);house.root.addChild(this.roof);const r=primitives(app,this.roof),roofMat=outdoorSurface(app,'roof');
   for(const [x,z,w,d] of [[3.85,4.8,14.65,17.1],[-.35,14.7,6.4,3.8]]){r('Exterior upper wall','box',[x,1.8,z],[w,1.9,d],material('Exterior cottage cream','#ecd8b2'));r('Ivory eaves','box',[x,2.83,z],[w+.55,.16,d+.55],edge);const pitch=Math.atan2(1.3,w/2)*180/Math.PI;for(const side of [-1,1]){const e=r('Pitched cottage roof','box',[x+side*w*.25,3.60,z],[Math.hypot(w/2,1.3)+.5,.16,d+.75],roofMat);e.setLocalEulerAngles(0,0,-side*pitch);}r('Roof ridge','box',[x,4.28,z],[.20,.16,d+.85],pink);}
   for(const z of [-1.7,2.2,5.6,11.1]){r('Exterior window frame','box',[-3.51,1.70,z],[.10,1.18,1.25],edge);r('Exterior blue glass','box',[-3.57,1.70,z],[.05,.98,1.05],material('Cottage sky glass','#accacf'));r('Exterior window mullion','box',[-3.61,1.70,z],[.05,1.03,.06],edge);r('Exterior window ledge','box',[-3.65,1.08,z],[.3,.10,1.42],wood);}
   r('Chimney','box',[7,4.0,8],[.75,1.4,.75],cream);r('Chimney cap','box',[7,4.73,8],[.95,.14,.95],edge);this.roof.enabled=false;
-  for(const [x,z,hx,hz] of [[-1.4,-7,.85,.34],[-2.8,-11.4,.12,.12],[20,-18,.35,.35],[16.5,-28.5,1.5,1],[28,-28.5,1.5,1],[17,-29.8,3.05,.12],[27.5,-29.8,3.55,.12],[19.8,-30,.23,.23],[24.2,-30,.23,.23]])this.obstacles.push(new BoundingBox(new Vec3(x,.6,z),new Vec3(hx,1,hz)));
+  for(const [x,z,hx,hz] of [[-1.4,-7,.85,.34],[-2.8,-11.4,.12,.12],[20,-18,.35,.35],[28,-28.5,1.5,1],[16.65,-29.8,2.78,.15],[14,-28.4,.15,1.28],[27.5,-29.8,3.55,.12],[19.8,-30,.23,.23],[24.2,-30,.23,.23]])this.obstacles.push(new BoundingBox(new Vec3(x,.6,z),new Vec3(hx,1,hz)));
   app.batcher.generate([group.id]);this.root.enabled=false;this.ready=Promise.resolve();
  }
  installDoor(){

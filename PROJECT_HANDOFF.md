@@ -1,3 +1,9 @@
+## School-gate release authorization — September 26
+
+The user explicitly requested pushing and deploying the reviewed school-gate play update. The local-only statements in the review history below describe the earlier review stage. Deploy this pass through origin/main and verify the live SHA/runtime at https://dumpling-sandy.vercel.app/release.json. Preserve established arianna.* saves and original character quality. Physical-phone and child playtests remain outstanding.
+## Latest: school-gate shared play — September 26, local only
+
+Read `docs/school-gate-play-local-review.md`. User rejected the disconnected numbered activity pads; the local game now retires those visible stations and adds one coherent Poppy/ball/wall/leaves scene at the existing school entrance. Actual kicks, nudges, pickup/carry/drop, returns, wall rebounds, leaf scattering, and NPC yielding. Original Arianna quality and saves preserved. Preview: http://127.0.0.1:5192/dist/index.html?preview=outdoors . No commit, push, Editor upload, or public deployment for this pass. Physical-phone and child playtests remain outstanding. Earlier deployment permission below applies to earlier work.
 ## Release authorization — September 26
 
 The user explicitly requested deployment of the reviewed daily-play and restored-outdoors pass. Earlier preview-only statements below are historical. Preserve production arianna.* saves; verify the deployed commit at https://dumpling-sandy.vercel.app/release.json. Physical-phone testing remains outstanding.

@@ -18,3 +18,7 @@ student-jules.glb, student-remy.glb and student-poppy.glb replace the students' 
 The three sculpts contain 19,194 / 18,500 / 21,258 triangles, respectively, with two surface types per character and vertex colors instead of texture maps. Hair is fused and reduced before export; trousers have continuous knee weighting. These are real-time interpretations, not exact replicas of the concept render.
 
 Rebuild: Blender 5.2, blender --background --python scripts/build-student-sculpts.py. Inputs are the existing Hoodie.gltf, CasualBoy.gltf, and CasualWoman.gltf source rigs in ignored artifacts/npc-upgrade/source. The report goes to artifacts/refinement/student-build.json.
+
+## School-gate play variant (September 26, 2026)
+
+`student-poppy-play.glb` retains the original Poppy sculpt, skeleton, materials, skin weights, and three existing animation clips. It adds the matching Quaternius `CasualWoman.gltf` Walk and Kick_Right clips for standing outdoor play. The classroom/cafeteria continue to use `student-poppy.glb` unchanged. Rebuild with `node scripts/build-poppy-play.mjs`; the ignored source is `artifacts/npc-upgrade/source/CasualWoman.gltf`. Original ball panels, schoolbag, bottle, and maple leaves are procedural game geometry/materials in `SchoolGatePlay.ts`.
