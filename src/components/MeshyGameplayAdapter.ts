@@ -87,7 +87,19 @@ export function meshyGameplay(model: Entity, source: AnimTrack[], chore?:ChoreCa
     aim(shin,foot,shin.getPosition().clone().add(new Vec3(0,-lower,.035)));
   }
   arms(.67,.27,.12);const seated=capture();
+  const breakfastHands=['Left','Right'].map(side=>model.findByName(side+'Hand')!.getPosition().clone());
   arms(.94,.22,.10);const eating=capture();restore();
+  // Keep breakfast intact. Its first seated pose already brings the palms to
+  // the mouth; the later lift overshoots when used with a visible food prop.
+  // Rest meal hands in the authored carry pose, keeping breakfast's seated legs.
+  const mealRest=channels.map(({node},i)=>/^(Left|Right)(Shoulder|Arm|ForeArm|Hand)/.test(node.name)?carry[i]:seated[i]);
+  channels.forEach(({node,property},i)=>{const v=mealRest[i];if(property==='localRotation')node.setLocalRotation(v[0],v[1],v[2],v[3]);else if(property==='localPosition')node.setLocalPosition(v[0],v[1],v[2]);else node.setLocalScale(v[0],v[1],v[2]);});
+  // Only bend the elbows toward the existing breakfast contact. Shoulders and
+  // upper arms stay in the authored carry pose so the coat cannot lift with them.
+  for(const [i,side]of ['Left','Right'].entries())aim(model.findByName(side+'ForeArm')!,model.findByName(side+'Hand')!,breakfastHands[i]);
+  const mealHead=model.findByName('Head')!;
+  mealHead.setRotation(new Quat().mul2(new Quat().setFromAxisAngle(axis,25),mealHead.getRotation()));
+  const mealContact=capture();restore();
   // Blender exported a 1/15s lead-in. Shift runtime copies so the matching loop endpoints meet.
   const loop = (track:AnimTrack,name:string) => {
     const start=Math.min(...track.inputs.map(input=>input.data[0]));
@@ -97,6 +109,11 @@ export function meshyGameplay(model: Entity, source: AnimTrack[], chore?:ChoreCa
     loop(walking,'Walk'),balancedRun(model,running),loop(authoredCarryWalk,'CarryWalk'),loop(authoredCarryRun,'CarryRun'),loop(idle,'Idle'),
     pose('CarryIdle',[carry,carry],[0,2]),
     pose('EatSit',[rest,seated,seated,eating,seated,seated,rest],[0,.55,.9,1.55,2.15,3.6,4.2]),
+    // Keep the existing upper-arm carry pose throughout the meal.
+    pose('MealSit',[rest,mealRest],[0,.65]),pose('MealIdle',[mealRest,mealRest],[0,2]),
+    pose('MealBite',[mealRest,mealContact,mealRest],[0,.65,1.25]),
+    pose('MealDrink',[mealRest,mealContact,mealRest],[0,.65,1.25]),
+    pose('MealStand',[mealRest,rest],[0,.65]),
     pose('PickUp',[rest,reach,carry],[0,.4,.8]),pose('PutDown',[carry,reach,rest],[0,.4,.8]),
     pose('Celebrate',[rest,happy,happy,rest],[0,.3,.7,1]),pose('SitCar',[rest,rest],[0,2])];
   if(chore)for(const [kind,name,y,z,bend] of [['wipe','Wipe',.02,.29,80],['vacuum','Vacuum',.60,.32,12]] as const){
@@ -110,7 +127,7 @@ export function meshyGameplay(model: Entity, source: AnimTrack[], chore?:ChoreCa
   const manifest:CharacterManifest={
     animations:tracks.map(track=>({name:track.name,duration_seconds:track.duration,loop:!['PickUp','PutDown','Celebrate'].includes(track.name)})),
     scale:{rest_height_m:1.20309758},locomotion:{Walk:{travel_speed_mps:WALK_SPEED},Run:{travel_speed_mps:RUN_SPEED},CarryWalk:{travel_speed_mps:WALK_SPEED},CarryRun:{travel_speed_mps:RUN_SPEED}},
-    interaction_events:{PickUp:[{time_seconds:.4,event:'attach'}],PutDown:[{time_seconds:.4,event:'release'}]},
+    interaction_events:{PickUp:[{time_seconds:.4,event:'attach'}],PutDown:[{time_seconds:.4,event:'release'}],MealBite:[{time_seconds:.65,event:'mouth-contact'}],MealDrink:[{time_seconds:.65,event:'mouth-contact'}]},
     hand_joints:['LeftHand','RightHand'],action_playback:1,walk_playback:1,
   };
   return {tracks,manifest};

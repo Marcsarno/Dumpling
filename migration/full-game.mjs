@@ -87,7 +87,7 @@ var init_SaveNamespace = __esm({
     SCHOOL_REVIEW = new URLSearchParams(globalThis.location?.search ?? "").get("preview") === "school";
     OPENING_REVIEW = new URLSearchParams(globalThis.location?.search ?? "").get("preview") === "opening";
     OUTDOOR_REVIEW = new URLSearchParams(globalThis.location?.search ?? "").get("preview") === "outdoors";
-    SAVE_PREFIX = OUTDOOR_REVIEW ? "dumpling.outdoorReview" : OPENING_REVIEW ? "dumpling.openingReview" : SCHOOL_REVIEW ? "dumpling.schoolReview" : globalThis.__productionRelease ? "arianna" : "dumpling.editorMigration";
+    SAVE_PREFIX = new URLSearchParams(globalThis.location?.search ?? "").get("preview") === "home-play" ? "dumpling.homePlayReview" : OUTDOOR_REVIEW ? "dumpling.outdoorReview" : OPENING_REVIEW ? "dumpling.openingReview" : SCHOOL_REVIEW ? "dumpling.schoolReview" : globalThis.__productionRelease ? "arianna" : "dumpling.editorMigration";
     saveKey = (suffix) => `${SAVE_PREFIX}.${suffix}`;
   }
 });
@@ -479,7 +479,67 @@ var init_DogRoaming = __esm({
       state = "roaming";
       bowlWait = 20 + Math.random() * 20;
       meals = 0;
+      fetch = null;
+      fetchToy(toy2, player, drop) {
+        if (this.fetch || this.state !== "roaming" || this.daily.hasDogFood || toy2.getPosition().distance(this.root.getPosition()) > 7) return false;
+        const p = toy2.getPosition(), route = this.path.route(this.root.getPosition().clone().set(this.root.getPosition().x, 0, this.root.getPosition().z), new Vec34(p.x, 0, p.z));
+        if (!route.length) return false;
+        this.fetch = { toy: toy2, player, drop, carrying: false, time: 0 };
+        this.route = route;
+        this.wait = 0;
+        this.state = "fetch";
+        return true;
+      }
       update(dt, active, people) {
+        if (this.fetch) {
+          const job = this.fetch;
+          job.time += dt;
+          if (!active || job.time > 15) {
+            job.drop();
+            this.fetch = null;
+            this.route = [];
+            this.state = "roaming";
+            return;
+          }
+          const p2 = this.root.getPosition(), next2 = this.route[0];
+          if (next2) {
+            const delta2 = new Vec34(next2.x - p2.x, 0, next2.z - p2.z), d = delta2.length();
+            if (d < 0.08) this.route.shift();
+            else {
+              delta2.normalize();
+              const q2 = p2.clone().add(delta2.clone().mulScalar(Math.min(d, dt * 0.8)));
+              if (!people.some((v) => Math.hypot(q2.x - v.x, q2.z - v.z) < 0.38) && this.path.free(q2.x, q2.z)) {
+                this.root.setPosition(q2);
+                this.root.setEulerAngles(0, Math.atan2(delta2.x, delta2.z) * 180 / Math.PI, 0);
+              }
+            }
+          } else if (!job.carrying) {
+            const a = job.player.getPosition();
+            for (const [dx, dz] of [[0.7, 0], [-0.7, 0], [0, 0.7], [0, -0.7]]) {
+              const route = this.path.route(new Vec34(p2.x, 0, p2.z), new Vec34(a.x + dx, 0, a.z + dz));
+              if (route.length) {
+                this.route = route;
+                job.carrying = true;
+                break;
+              }
+            }
+            if (!job.carrying) {
+              job.drop();
+              this.fetch = null;
+              this.state = "roaming";
+            }
+          } else {
+            job.drop();
+            this.fetch = null;
+            this.state = "roaming";
+            this.wait = 4;
+          }
+          if (job.carrying) {
+            const f = this.root.forward;
+            job.toy.setPosition(p2.x - f.x * 0.22, 0.22, p2.z - f.z * 0.22);
+          }
+          return;
+        }
         if (!active) {
           this.route = [];
           this.wait = 3;
@@ -978,10 +1038,10 @@ function material(name, hex) {
   return mat;
 }
 function primitives(app, parent, batchGroupId = -1) {
-  return (name, shape, position, scale, mat, shadows = true) => {
+  return (name, shape, position2, scale, mat, shadows = true) => {
     const entity = new Entity3(name, app);
     entity.addComponent("render", { type: shape, material: mat, castShadows: shadows, receiveShadows: true, batchGroupId });
-    entity.setLocalPosition(...position);
+    entity.setLocalPosition(...position2);
     entity.setLocalScale(...scale);
     parent.addChild(entity);
     recordLayout(entity, parent);
@@ -1170,7 +1230,7 @@ var init_HouseArt = __esm({
       loaded = 0;
       errors = [];
       lampMaterials = [];
-      add(pack, name, position, size, yaw = 0, dimension = "height", colors = {}, exterior = pack === "nature", pitch = 0, finish = "natural") {
+      add(pack, name, position2, size, yaw = 0, dimension = "height", colors = {}, exterior = pack === "nature", pitch = 0, finish = "natural") {
         const key = `${pack}/${name}`;
         if (!this.assets.has(key)) this.assets.set(key, new Promise((resolve, reject) => {
           const path = `${"/"}assets/environment/${pack === "nursery" || pack === "school" ? "" : "kenney/"}${key}.glb`;
@@ -1215,9 +1275,9 @@ var init_HouseArt = __esm({
           this.root.addChild(anchor);
           normalization.setLocalScale(scale, scale, scale);
           normalization.setLocalPosition(-bounds.center.x * scale, -(bounds.center.y - bounds.halfExtents.y) * scale, -bounds.center.z * scale);
-          anchor.setLocalPosition(...position);
+          anchor.setLocalPosition(...position2);
           anchor.setLocalEulerAngles(pitch, yaw, 0);
-          if (this.root.name === "Maple cottage" && position[0] === 5.95 && position[2] === 4.9 && ["bookcaseOpenLow", "books"].includes(name)) anchor.enabled = false;
+          if (this.root.name === "Maple cottage" && position2[0] === 5.95 && position2[2] === 4.9 && ["bookcaseOpenLow", "books"].includes(name)) anchor.enabled = false;
           recordArt(anchor, this.root, `environment/${pack === "nursery" || pack === "school" ? "" : "kenney/"}${key}.glb`);
           for (const render of renderers) render.batchGroupId = this.group.id;
           this.loaded++;
@@ -1258,10 +1318,10 @@ var init_HouseLighting = __esm({
         this.shades = [bedside, shade];
         const shape = primitives(app, root);
         const brass = material("Light fixture brass", "#b59169");
-        const addLight = (name, position, intensity, range) => {
+        const addLight = (name, position2, intensity, range) => {
           const entity = new Entity6(name, app);
           root.addChild(entity);
-          entity.setLocalPosition(...position);
+          entity.setLocalPosition(...position2);
           entity.addComponent("light", {
             type: "omni",
             color: new Color5(1, 0.84, 0.67),
@@ -1925,8 +1985,21 @@ function meshyGameplay(model, source, chore) {
   }
   arms(0.67, 0.27, 0.12);
   const seated = capture();
+  const breakfastHands = ["Left", "Right"].map((side) => model.findByName(side + "Hand").getPosition().clone());
   arms(0.94, 0.22, 0.1);
   const eating = capture();
+  restore();
+  const mealRest = channels.map(({ node }, i) => /^(Left|Right)(Shoulder|Arm|ForeArm|Hand)/.test(node.name) ? carry[i] : seated[i]);
+  channels.forEach(({ node, property }, i) => {
+    const v = mealRest[i];
+    if (property === "localRotation") node.setLocalRotation(v[0], v[1], v[2], v[3]);
+    else if (property === "localPosition") node.setLocalPosition(v[0], v[1], v[2]);
+    else node.setLocalScale(v[0], v[1], v[2]);
+  });
+  for (const [i, side] of ["Left", "Right"].entries()) aim(model.findByName(side + "ForeArm"), model.findByName(side + "Hand"), breakfastHands[i]);
+  const mealHead = model.findByName("Head");
+  mealHead.setRotation(new Quat2().mul2(new Quat2().setFromAxisAngle(axis, 25), mealHead.getRotation()));
+  const mealContact = capture();
   restore();
   const loop = (track, name) => {
     const start = Math.min(...track.inputs.map((input) => input.data[0]));
@@ -1941,6 +2014,12 @@ function meshyGameplay(model, source, chore) {
     loop(idle, "Idle"),
     pose("CarryIdle", [carry, carry], [0, 2]),
     pose("EatSit", [rest, seated, seated, eating, seated, seated, rest], [0, 0.55, 0.9, 1.55, 2.15, 3.6, 4.2]),
+    // Keep the existing upper-arm carry pose throughout the meal.
+    pose("MealSit", [rest, mealRest], [0, 0.65]),
+    pose("MealIdle", [mealRest, mealRest], [0, 2]),
+    pose("MealBite", [mealRest, mealContact, mealRest], [0, 0.65, 1.25]),
+    pose("MealDrink", [mealRest, mealContact, mealRest], [0, 0.65, 1.25]),
+    pose("MealStand", [mealRest, rest], [0, 0.65]),
     pose("PickUp", [rest, reach, carry], [0, 0.4, 0.8]),
     pose("PutDown", [carry, reach, rest], [0, 0.4, 0.8]),
     pose("Celebrate", [rest, happy, happy, rest], [0, 0.3, 0.7, 1]),
@@ -1962,7 +2041,7 @@ function meshyGameplay(model, source, chore) {
     animations: tracks2.map((track) => ({ name: track.name, duration_seconds: track.duration, loop: !["PickUp", "PutDown", "Celebrate"].includes(track.name) })),
     scale: { rest_height_m: 1.20309758 },
     locomotion: { Walk: { travel_speed_mps: WALK_SPEED }, Run: { travel_speed_mps: RUN_SPEED }, CarryWalk: { travel_speed_mps: WALK_SPEED }, CarryRun: { travel_speed_mps: RUN_SPEED } },
-    interaction_events: { PickUp: [{ time_seconds: 0.4, event: "attach" }], PutDown: [{ time_seconds: 0.4, event: "release" }] },
+    interaction_events: { PickUp: [{ time_seconds: 0.4, event: "attach" }], PutDown: [{ time_seconds: 0.4, event: "release" }], MealBite: [{ time_seconds: 0.65, event: "mouth-contact" }], MealDrink: [{ time_seconds: 0.65, event: "mouth-contact" }] },
     hand_joints: ["LeftHand", "RightHand"],
     action_playback: 1,
     walk_playback: 1
@@ -2891,7 +2970,7 @@ var init_PlayerController = __esm({
       }
       setRoom(room) {
         this.room = room;
-        this.bounds = room.obstacles.map((box) => {
+        this.bounds = room.obstacles.filter((box) => !box.homePlayDynamic).map((box) => {
           const expanded = box.clone();
           expanded.halfExtents.x += this.radius;
           expanded.halfExtents.z += this.radius;
@@ -3633,9 +3712,9 @@ var init_LilahMesses = __esm({
         const i = this.kinds.indexOf(kind);
         return !!this.records[i] && !this.records[i].done;
       }
-      add(position) {
+      add(position2) {
         if (this.count >= 3 || this.activeCount >= 2) return false;
-        const records2 = [...this.records, { x: position.x, z: position.z, done: false }];
+        const records2 = [...this.records, { x: position2.x, z: position2.z, done: false }];
         if (!this.save(records2)) return false;
         this.records = records2;
         this.refresh();
@@ -3724,10 +3803,10 @@ var init_DailyLife = __esm({
         plate("Breakfast plate", "cylinder", [0, 0.021, 0], [0.46, 0.012, 0.46], m.trim);
         plate("Plated egg white", "sphere", [0, 0.039, 0], [0.35, 0.025, 0.3], m.trim);
         plate("Plated egg yolk", "sphere", [0, 0.06, 0], [0.15, 0.055, 0.15], m.yellow);
-        const makeSpill = (name, position) => {
+        const makeSpill = (name, position2) => {
           const root = new Entity20(name, app);
           this.root.addChild(root);
-          root.setLocalPosition(...position);
+          root.setLocalPosition(...position2);
           const s = primitives(app, root);
           for (let i = 0; i < 7; i++) s("Puddle", "sphere", [Math.sin(i * 2) * 0.22, 0.01, Math.cos(i * 2) * 0.16], [0.35, 0.022, 0.3], i === 0 ? m.yellow : m.trim, false);
           return root;
@@ -4156,7 +4235,7 @@ var init_RoundMesses = __esm({
         const pools = { bedroom, living, kitchen: [[0.2, 10.6], [1.5, 11.4], [-0.6, 11.6], [0.15, 12]], laundry: [[4.55, 10.5], [4.65, 11.8], [5.35, 11.65]], hall: [[4.4, 2.4], [4.5, 1.5], [5.3, 1.8]], bath: [[4.6, -1.4], [4.6, -2.15], [5.1, -0.7]] };
         const choose = (id, pool) => {
           const candidates = pool.map(([x, z]) => new Vec321(x, 0, z)).filter((p2) => this.planner.free(p2.x, p2.z) && used.every((q) => q.distance(p2) > 0.65) && this.planner.route(new Vec321(0, 0, 0.9), p2).length);
-          const fresh2 = candidates.filter((p2) => p2.x + "," + p2.z !== this.previous.get(id)), options = fresh2.length ? fresh2 : candidates;
+          const fresh3 = candidates.filter((p2) => p2.x + "," + p2.z !== this.previous.get(id)), options = fresh3.length ? fresh3 : candidates;
           const p = options[Math.floor(random() * options.length)];
           if (p) {
             used.push(p);
@@ -4457,12 +4536,12 @@ var init_CarrySystem = __esm({
         item.entity.setLocalEulerAngles(0, 0, 0);
         return true;
       }
-      release(parent, position) {
+      release(parent, position2) {
         if (!this.item) return null;
         const item = this.item;
         item.entity.reparent(parent);
         item.entity.setLocalScale(1, 1, 1);
-        item.entity.setLocalPosition(...position);
+        item.entity.setLocalPosition(...position2);
         item.entity.setLocalEulerAngles(0, 0, 0);
         this.item = null;
         return item;
@@ -4573,15 +4652,15 @@ var init_InteractionSystem = __esm({
         if (target.kind === "pickup") return !mission.completed.has(target.item === "vacuum" ? "dirt" : target.item);
         return true;
       }
-      distance(target, position) {
-        return Math.hypot(target.anchor.x - position.x, target.anchor.z - position.z);
+      distance(target, position2) {
+        return Math.hypot(target.anchor.x - position2.x, target.anchor.z - position2.z);
       }
-      update(position, carried, mission) {
+      update(position2, carried, mission) {
         let nearest = null;
         let nearestDistance = Infinity;
         for (const target of this.interactions) {
           if (!this.available(target, carried, mission)) continue;
-          const distance = this.distance(target, position);
+          const distance = this.distance(target, position2);
           const range = target.range + (target === this.focus ? 0.1 : 0);
           const score = distance + (target.id === "put-tool-away" ? 100 : 0);
           if (distance <= range && score < nearestDistance) {
@@ -4739,8 +4818,8 @@ var init_CleanupFeedback = __esm({
         const carried = carry.item?.id ?? null;
         const availableTargets = this.markers.map((m) => m.target).filter((t) => interactions.available(t, carried, mission));
         const candidates = guidanceCandidates(availableTargets, carried);
-        const position = carry.socket.getPosition();
-        const primary = candidates.sort((a, b) => interactions.distance(a, position) - interactions.distance(b, position))[0];
+        const position2 = carry.socket.getPosition();
+        const primary = candidates.sort((a, b) => interactions.distance(a, position2) - interactions.distance(b, position2))[0];
         for (const { target, ring, label } of this.markers) {
           const available = availableTargets.includes(target);
           const destination = target === primary;
@@ -5028,6 +5107,7 @@ var init_CleanupGame = __esm({
       resetMovement;
       controller;
       interactionCamera;
+      externalAction = () => false;
       roundId = saveId();
       onFinished = () => {
       };
@@ -5071,6 +5151,7 @@ var init_CleanupGame = __esm({
         this.interactions.update(this.character.player.getPosition(), this.carry.item?.id ?? null, this.mission);
       }
       press = () => {
+        if (this.externalAction()) return;
         const now = performance.now();
         this.mission.tick(now);
         this.refreshFocus();
@@ -5326,9 +5407,10 @@ var init_CleanupGame = __esm({
       replay = () => {
         if (!this.beforeReplay()) return;
         this.roundId = saveId();
+        const freePlayItem = this.carry.item?.id.startsWith("home-") ? this.carry.item : null;
         this.action.reset();
         this.cancelActivity();
-        this.carry.item = null;
+        this.carry.item = freePlayItem;
         if (this.mode === "house") {
           const tasks = this.props.roundMesses.houseTasks();
           this.mission.configure(tasks, true);
@@ -5342,6 +5424,7 @@ var init_CleanupGame = __esm({
         if (this.mode === "day") for (const id of this.props.daily.completed) this.mission.completed.add(id);
         this.character.animator.reset();
         this.character.player.setPosition(0, 0.09, 0.9);
+        this.character.animator.setCarrying(!!freePlayItem);
         this.character.visual.setLocalEulerAngles(0, 30, 0);
         this.finishedHandled = false;
         this.celebrationStarted = false;
@@ -5365,12 +5448,12 @@ var init_CleanupGame = __esm({
         this.aligning = null;
         this.resetMovement();
         this.character.animator.cancelAction();
-        if (this.carry.item) {
+        if (this.carry.item && !this.carry.item.id.startsWith("home-")) {
           const item = this.carry.item;
           this.carry.release(this.props.root, item.home);
           item.entity.enabled = true;
         }
-        this.character.animator.setCarrying(false);
+        this.character.animator.setCarrying(!!this.carry.item);
       }
       developerComplete() {
         this.developerCancel();
@@ -7422,6 +7505,9 @@ var init_TradingUI = __esm({
 
 // src/game/SchoolPerson.ts
 import { Asset as Asset5, AnimCurve as AnimCurve7, AnimData as AnimData7, AnimTrack as AnimTrack7, BoundingBox as BoundingBox12, Entity as Entity28, Quat as Quat7, Vec3 as Vec329, INTERPOLATION_LINEAR as INTERPOLATION_LINEAR7 } from "playcanvas";
+function personMeshes(root) {
+  return [...root.findComponents("render").flatMap((r) => r.meshInstances), ...root.findComponents("model").flatMap((m) => m.model?.meshInstances ?? [])];
+}
 function releaseSchoolStudents(app) {
   const records2 = studentAssets.get(app);
   if (!records2) return;
@@ -7505,9 +7591,15 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
     app.assets.add(a);
     app.assets.load(a);
   }));
-  const res = await cache.get(file), model = res.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox12();
+  const res = await cache.get(file), model = res.instantiateModelEntity({ castShadows: true }), bounds = new BoundingBox12();
+  for (const component of model.findComponents("model")) {
+    const owned = component.model;
+    const used = new Set(owned.meshInstances.map((m) => m.skinInstance));
+    for (const skin of owned.skinInstances) if (!used.has(skin)) skin.destroy();
+    owned.skinInstances = [...new Set(owned.skinInstances.filter((s) => used.has(s)))];
+  }
   let first = true;
-  for (const render of model.findComponents("render")) for (const m of render.meshInstances) {
+  for (const m of personMeshes(model)) {
     if (first) {
       bounds.copy(m.aabb);
       first = false;
@@ -7516,7 +7608,7 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
   if (seated && !file.startsWith("student-")) {
     model.findByName("Head").setLocalScale(1.2, 1.2, 1.2);
     const palette = { jules: { Purple: "#9d88bf", LightBlue: "#587995", White: "#eee4d8" }, remy: { LightBrown: "#9dbda6", Red_Dark: "#6c8d78", LightBlue: "#567188" }, poppy: { White: "#ead2e6", Orange: "#b88aac", Grey: "#ede3d7" } };
-    for (const render of model.findComponents("render")) for (const mesh of render.meshInstances) {
+    for (const mesh of personMeshes(model)) {
       const color = palette[file]?.[mesh.material.name];
       if (color) {
         const mat = mesh.material.clone();
@@ -7538,7 +7630,7 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
   model.anim.baseLayer.play("Idle_Neutral");
   let waving = false, until = 0, lastBlink = -1;
   const blinkOffset = file.includes("poppy") ? 1.2 : file.includes("remy") ? 2.6 : 0;
-  const morphs = model.findComponents("render").flatMap((r) => r.meshInstances.map((m) => m.morphInstance).filter((m) => m != null));
+  const morphs = personMeshes(model).map((m) => m.morphInstance).filter((m) => m != null);
   return { root, model, height, scale, update(time, greeting = false) {
     if (file.startsWith("student-")) {
       const phase = (time + blinkOffset) % 4.6, blink = phase < 0.2 ? Math.sin(phase / 0.2 * Math.PI) : 0;
@@ -7569,10 +7661,11 @@ var init_SchoolPerson = __esm({
 });
 
 // src/game/SchoolCook.ts
+import { Vec3 as Vec330, Quat as Quat8 } from "playcanvas";
 async function schoolCook(app, parent) {
   const person = await schoolPerson(app, parent, "remy", "Friendly lunch cook", 1.84);
   person.root.setLocalPosition(0.3, 0.37, -6.18);
-  for (const render of person.model.findComponents("render")) for (const mesh of render.meshInstances) {
+  for (const mesh of personMeshes(person.model)) {
     if (/red|LightBrown/i.test(mesh.material.name)) {
       const mat = mesh.material.clone();
       mat.diffuse.set(0.93, 0.91, 0.84);
@@ -7584,6 +7677,35 @@ async function schoolCook(app, parent) {
   shape("Chef hat band", "cylinder", [0, size * 0.96, 0], [size * 1.65, size * 0.32, size * 1.4], white);
   for (const x of [-0.5, 0, 0.5]) shape("Soft chef cap", "sphere", [x * size, size * 1.25, 0], [size * 0.95, size * 0.66, size * 1.5], white);
   primitives(app, parent)("Kitchen standing platform", "box", [0.3, 0.175, -6.18], [1.1, 0.35, 0.8], material("Kitchen platform", "#b6bac2"));
+  let serving = 0;
+  const begin = () => {
+    serving = 1.1;
+  };
+  const aim = (node, child, target, weight) => {
+    const original = node.getRotation().clone(), from = child.getPosition().clone().sub(node.getPosition()).normalize(), to = target.clone().sub(node.getPosition()).normalize();
+    node.setRotation(new Quat8().slerp(original, new Quat8().mul2(new Quat8().setFromDirections(from, to), original), weight));
+  };
+  const update = (dt) => {
+    if (serving <= 0) return;
+    serving = Math.max(0, serving - dt);
+    const t = 1 - serving / 1.1, weight = Math.sin(Math.PI * t);
+    for (const [side, sign] of [["L", 1], ["R", -1]]) {
+      const arm = person.model.findByName("UpperArm." + side), fore = person.model.findByName("LowerArm." + side), hand = person.model.findByName("Wrist." + side), origin = arm.getPosition().clone(), target = new Vec330(4.6 + sign * 0.18, 1.4, -21.5 + Math.max(0, (t - 0.4) / 0.6) * 0.7), a = origin.distance(fore.getPosition()), b = fore.getPosition().distance(hand.getPosition()), delta = target.clone().sub(origin), d = Math.min(delta.length(), a + b - 5e-3);
+      delta.normalize();
+      const pole = new Vec330(sign, -0.5, 0);
+      pole.sub(delta.clone().mulScalar(pole.dot(delta))).normalize();
+      const along = (a * a - b * b + d * d) / (2 * d), elbow = origin.clone().add(delta.clone().mulScalar(along)).add(pole.mulScalar(Math.sqrt(Math.max(0, a * a - along * along))));
+      aim(arm, fore, elbow, weight);
+      aim(fore, hand, target, weight);
+    }
+  };
+  app.on("home-play:serve", begin);
+  app.on("postupdate", update);
+  person.root.once("destroy", () => {
+    app.off("home-play:serve", begin);
+    app.off("postupdate", update);
+    white.destroy();
+  });
   return person.root;
 }
 var init_SchoolCook = __esm({
@@ -7595,14 +7717,14 @@ var init_SchoolCook = __esm({
 });
 
 // src/game/Classmates.ts
-import { Entity as Entity29, Texture as Texture3, StandardMaterial as StandardMaterial7, CULLFACE_NONE as CULLFACE_NONE3 } from "playcanvas";
-function classroomSign(app, parent, name, text, position, width = 1, height = 0.26, color = "#5c496e") {
+import { Entity as Entity29, Texture as Texture3, StandardMaterial as StandardMaterial8, CULLFACE_NONE as CULLFACE_NONE3 } from "playcanvas";
+function classroomSign(app, parent, name, text, position2, width = 1, height = 0.26, color = "#5c496e") {
   const canvas = document.createElement("canvas");
   canvas.width = 768;
   canvas.height = 256;
   const texture = new Texture3(app.graphicsDevice, { mipmaps: false });
   texture.setSource(canvas);
-  const material2 = new StandardMaterial7();
+  const material2 = new StandardMaterial8();
   material2.diffuseMap = texture;
   material2.emissiveMap = texture;
   material2.emissive.set(0.45, 0.45, 0.45);
@@ -7611,7 +7733,7 @@ function classroomSign(app, parent, name, text, position, width = 1, height = 0.
   const sign = new Entity29(name, app);
   parent.addChild(sign);
   sign.addComponent("render", { type: "plane", material: material2, castShadows: false });
-  sign.setLocalPosition(...position);
+  sign.setLocalPosition(...position2);
   sign.setLocalEulerAngles(90, 0, 0);
   sign.setLocalScale(width, 1, height);
   sign.once("destroy", () => {
@@ -7707,7 +7829,7 @@ var init_cafeteria_collision = __esm({
 });
 
 // src/game/recess.ts
-import { Asset as Asset6, BoundingBox as BoundingBox13, Entity as Entity30, Vec3 as Vec330 } from "playcanvas";
+import { Asset as Asset6, BoundingBox as BoundingBox13, Entity as Entity30, Vec3 as Vec331 } from "playcanvas";
 function buildRecess(app) {
   const root = new Entity30("Classroom trading club", app);
   app.root.addChild(root);
@@ -7744,6 +7866,13 @@ function buildRecess(app) {
   const desks = [{ x: -3.1, z: -1.75 }, { x: 2.65, z: -1.75 }, { x: 0, z: 1.5 }];
   const classmates = new Classmates(app, classroom, desks.map((p) => ({ x: p.x - 0.51, z: p.z - 0.8 })));
   const lunchFriends = new Classmates(app, cafeteria, [{ x: -4.15, y: 0.085, z: -2.5 }, { x: -1.85, y: 0.085, z: -2.5 }, { x: 2.55, y: 0.085, z: -2.5 }], false);
+  let lunchGreeting = "", lunchGreetingUntil = 0;
+  const greet = (id) => {
+    lunchGreeting = id;
+    lunchGreetingUntil = performance.now() + 2200;
+  };
+  app.on("home-play:lunch-arrive", greet);
+  root.once("destroy", () => app.off("home-play:lunch-arrive", greet));
   const offers = new Entity30("Today\u2019s trading squishies", app);
   classroom.addChild(offers);
   const display = new Entity30("Squishy friends display", app);
@@ -7754,11 +7883,11 @@ function buildRecess(app) {
     model.setLocalPosition(1.82 + i * 0.49, 0.855, 4.55);
   }
   const seats = TRADERS.map((trader, i) => {
-    const d = desks[i], anchor = new Vec330(d.x, 0, d.z + 1.55);
+    const d = desks[i], anchor = new Vec331(d.x, 0, d.z + 1.55);
     const glow = primitives(app, classroom)("Trading spot", "cylinder", [anchor.x, 0.016, anchor.z], [0.82, 0.022, 0.82], material(trader.name + " cue", trader.color), false);
     return { id: trader.id, anchor, glow };
   });
-  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec330(...b.center), new Vec330(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec330(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec330(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec330(x, 0, -8), new Vec330(0.05, 1, 1.05)))];
+  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec331(...b.center), new Vec331(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec331(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec331(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec331(x, 0, -8), new Vec331(0.05, 1, 1.05)))];
   const room = { root, halfWidth: 12, halfDepth: 24, walkable: [{ minX: -5.9, maxX: 5.9, minZ: -6.96, maxZ: 6.9 }, { minX: 3.7, maxX: 5.5, minZ: -9.2, maxZ: -6.7 }, { minX: -1.3, maxX: 10.5, minZ: -22.9, maxZ: -9 }], obstacles, ready: Promise.all([load("classroom", classroom), load("cafeteria", cafeteria), classmates.ready, lunchFriends.ready, schoolCook(app, cafeteria).catch((e) => {
     errors.push("School cook");
     console.error(e);
@@ -7793,15 +7922,15 @@ function buildRecess(app) {
     classroom.enabled = p.z > -9.2;
     cafeteria.enabled = p.z < -5.8;
     classmates.update(now, focus);
-    lunchFriends.update(now, "");
-  }, door: new Vec330(4.6, 0, -8), cafeteriaCenter: new Vec330(4.6, 0, -15) };
+    lunchFriends.update(now, now < lunchGreetingUntil ? lunchGreeting : "");
+  }, door: new Vec331(4.6, 0, -8), cafeteriaCenter: new Vec331(4.6, 0, -15) };
 }
 function createRecess(app) {
   const root = new Entity30("Classroom trading club", app);
   app.root.addChild(root);
   root.enabled = false;
   let actual = null, pending = null, day = null, ready = false, error = "";
-  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec330(...b.center), new Vec330(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec330(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec330(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec330(x, 0, -8), new Vec330(0.05, 1, 1.05)))];
+  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec331(...b.center), new Vec331(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec331(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec331(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec331(x, 0, -8), new Vec331(0.05, 1, 1.05)))];
   const ensure = () => {
     if (pending) return pending;
     actual = buildRecess(app);
@@ -7830,7 +7959,7 @@ function createRecess(app) {
   }, update(now, focus, p) {
     if (ready) actual?.update(now, focus, p);
   }, bindLayout: (_group) => {
-  }, door: new Vec330(4.6, 0, -8), cafeteriaCenter: new Vec330(4.6, 0, -15), artStats: () => actual?.artStats?.() ?? { loaded: 0, models: 0, errors: error ? [error] : [] }, sleep() {
+  }, door: new Vec331(4.6, 0, -8), cafeteriaCenter: new Vec331(4.6, 0, -15), artStats: () => actual?.artStats?.() ?? { loaded: 0, models: 0, errors: error ? [error] : [] }, sleep() {
     const previous = actual;
     void pending?.then(() => {
       if (actual === previous && !root.enabled) {
@@ -9272,7 +9401,7 @@ var init_OutdoorArt = __esm({
 });
 
 // src/game/CrossingGuard.ts
-import { Entity as Entity33, Texture as Texture5, StandardMaterial as StandardMaterial10, CULLFACE_NONE as CULLFACE_NONE4 } from "playcanvas";
+import { Entity as Entity33, Texture as Texture5, StandardMaterial as StandardMaterial11, CULLFACE_NONE as CULLFACE_NONE4 } from "playcanvas";
 async function crossingGuard(app, parent) {
   const person = await schoolPerson(app, parent, "crossing-guard", "Ms Maple crossing guard", 1.8);
   person.root.setLocalPosition(20, 0.09, -18);
@@ -9301,7 +9430,7 @@ async function crossingGuard(app, parent) {
   c.fillText("STOP", 128, 131);
   const texture = new Texture5(app.graphicsDevice, { mipmaps: false });
   texture.setSource(canvas);
-  const mat = new StandardMaterial10();
+  const mat = new StandardMaterial11();
   mat.diffuseMap = texture;
   mat.opacityMap = texture;
   mat.opacityMapChannel = "a";
@@ -9333,7 +9462,7 @@ var init_CrossingGuard = __esm({
 });
 
 // src/game/Outdoors.ts
-import { BoundingBox as BoundingBox15, Entity as Entity34, Vec3 as Vec332, Mesh as Mesh4, MeshInstance as MeshInstance4 } from "playcanvas";
+import { BoundingBox as BoundingBox15, Entity as Entity34, Vec3 as Vec333, Mesh as Mesh4, MeshInstance as MeshInstance4 } from "playcanvas";
 var POND, SCHOOL_GATE, Outdoors;
 var init_Outdoors = __esm({
   "src/game/Outdoors.ts"() {
@@ -9343,8 +9472,8 @@ var init_Outdoors = __esm({
     init_OutdoorArt();
     init_Classmates();
     init_CrossingGuard();
-    POND = { stand: new Vec332(-4.1, 0.09, -10), bobber: new Vec332(-7.15, 0.12, -11.9), center: new Vec332(-8, 0, -12) };
-    SCHOOL_GATE = new Vec332(22, 0.09, -29.4);
+    POND = { stand: new Vec333(-4.1, 0.09, -10), bobber: new Vec333(-7.15, 0.12, -11.9), center: new Vec333(-8, 0, -12) };
+    SCHOOL_GATE = new Vec333(22, 0.09, -29.4);
     Outdoors = class {
       constructor(app, house) {
         this.app = app;
@@ -9397,7 +9526,7 @@ var init_Outdoors = __esm({
         pondLayer("Grassy pond lip", 3.95, 3.25, 0.018, soil);
         pondLayer("Pond shallows", 3.72, 3.02, 0.055, material("Pond shallow turquoise", "#a4d4c6"));
         this.water = pondLayer("Pond water", 3.45, 2.77, 0.077, material("Pond blue", "#78bac5"));
-        this.obstacles.push(new BoundingBox15(new Vec332(-8, 0.5, -12), new Vec332(3.45, 2, 2.8)));
+        this.obstacles.push(new BoundingBox15(new Vec333(-8, 0.5, -12), new Vec333(3.45, 2, 2.8)));
         for (let i = 0; i < 15; i++) {
           const a = i * Math.PI * 2 / 15;
           if (a < 0.7 || a > 5.75) continue;
@@ -9471,7 +9600,7 @@ var init_Outdoors = __esm({
         const trees = [[-12, -6, 3.8], [-13, -16, 4.8], [-10, -18, 3.6], [0, -5.2, 3.8], [4, -7, 4.7], [10, -10, 4.5], [13, -15, 3.8], [28, -31, 4.5], [15, -31, 4.7], [30, -18, 4.1]];
         trees.forEach(([x, z, h], i) => {
           this.art.add(i % 2 ? "CommonTree_1" : "CommonTree_3", x, z, h, i * 67);
-          this.obstacles.push(new BoundingBox15(new Vec332(x, 1, z), new Vec332(0.38, 2, 0.38)));
+          this.obstacles.push(new BoundingBox15(new Vec333(x, 1, z), new Vec333(0.38, 2, 0.38)));
         });
         for (let x = -13; x < 14; x += 1.15) if (x < 4 || x > 8) this.art.add("Bush_Common", x, -18.7, 0.65, x * 17);
         for (let z = -17; z < -4; z += 1.15) this.art.add("Bush_Common_Flowers", -13.4, z, 0.65, z * 9);
@@ -9505,7 +9634,7 @@ var init_Outdoors = __esm({
         r("Chimney", "box", [7, 4, 8], [0.75, 1.4, 0.75], cream);
         r("Chimney cap", "box", [7, 4.73, 8], [0.95, 0.14, 0.95], edge);
         this.roof.enabled = false;
-        for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [28, -28.5, 1.5, 1], [16.65, -29.8, 2.78, 0.15], [14, -28.4, 0.15, 1.28], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox15(new Vec332(x, 0.6, z), new Vec332(hx, 1, hz)));
+        for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [28, -28.5, 1.5, 1], [16.65, -29.8, 2.78, 0.15], [14, -28.4, 0.15, 1.28], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox15(new Vec333(x, 0.6, z), new Vec333(hx, 1, hz)));
         app.batcher.generate([group.id]);
         this.root.enabled = false;
         this.ready = Promise.resolve();
@@ -9551,7 +9680,7 @@ var init_Outdoors = __esm({
         for (const [a, b] of [[3.6, 7.6], [8.95, 9.5]]) {
           shapes("Open entry wall", "box", [-3.3, 1.325, (a + b) / 2], [0.14, 2.65, b - a], wall);
           shapes("Open entry skirting", "box", [-3.28, 0.12, (a + b) / 2], [0.16, 0.16, b - a], trim);
-          this.house.obstacles.push(new BoundingBox15(new Vec332(-3.3, 0.7, (a + b) / 2), new Vec332(0.07, 1.4, (b - a) / 2)));
+          this.house.obstacles.push(new BoundingBox15(new Vec333(-3.3, 0.7, (a + b) / 2), new Vec333(0.07, 1.4, (b - a) / 2)));
         }
         this.house.walkable.push(...this.walkable);
         this.house.obstacles.push(...this.obstacles);
@@ -9561,7 +9690,7 @@ var init_Outdoors = __esm({
       }
       update(dt, p, enabled) {
         const camera = this.app.root.findByTag("migration.camera")[0];
-        const near = enabled && (p.x > -42 || !!camera?.camera?.frustum.containsAabb(new BoundingBox15(new Vec332(7, 2, -13), new Vec332(31, 8, 29))));
+        const near = enabled && (p.x > -42 || !!camera?.camera?.frustum.containsAabb(new BoundingBox15(new Vec333(7, 2, -13), new Vec333(31, 8, 29))));
         this.root.enabled = near;
         this.roof.enabled = near && (p.x < -5.2 || p.z < -5);
         if (near && !this.visible) void this.art.finish().catch((e) => console.error("Outdoor plants", e));
@@ -9584,7 +9713,7 @@ var init_Outdoors = __esm({
 });
 
 // src/game/Scooter.ts
-import { Asset as Asset9, Entity as Entity35, Quat as Quat8, Vec3 as Vec333 } from "playcanvas";
+import { Asset as Asset9, Entity as Entity35, Quat as Quat9, Vec3 as Vec334 } from "playcanvas";
 var Scooter;
 var init_Scooter = __esm({
   "src/game/Scooter.ts"() {
@@ -9705,12 +9834,12 @@ var init_Scooter = __esm({
         if (!this.controller.riding || !this.steering) return;
         const model = this.character.visual.findComponents("anim")[0]?.entity;
         if (!model) return;
-        const rotate = (a, b, target) => a.setRotation(new Quat8().mul2(new Quat8().setFromDirections(b.getPosition().clone().sub(a.getPosition()).normalize(), target.clone().sub(a.getPosition()).normalize()), a.getRotation()));
+        const rotate = (a, b, target) => a.setRotation(new Quat9().mul2(new Quat9().setFromDirections(b.getPosition().clone().sub(a.getPosition()).normalize(), target.clone().sub(a.getPosition()).normalize()), a.getRotation()));
         for (const side of ["Left", "Right"]) {
           const sign = side === "Left" ? 1 : -1, arm = model.findByName(side + "Arm"), fore = model.findByName(side + "ForeArm"), hand = model.findByName(side + "Hand"), wrist = hand.getRotation().clone();
-          const target = this.steering.getWorldTransform().transformPoint(new Vec333(sign * 0.209, 0.913, -0.185)), origin = arm.getPosition().clone(), a = origin.distance(fore.getPosition()), b = fore.getPosition().distance(hand.getPosition()), dir = target.clone().sub(origin), d = Math.min(dir.length(), a + b - 1e-3);
+          const target = this.steering.getWorldTransform().transformPoint(new Vec334(sign * 0.209, 0.913, -0.185)), origin = arm.getPosition().clone(), a = origin.distance(fore.getPosition()), b = fore.getPosition().distance(hand.getPosition()), dir = target.clone().sub(origin), d = Math.min(dir.length(), a + b - 1e-3);
           dir.normalize();
-          const pole = this.root.getRotation().transformVector(new Vec333(sign * 0.65, -1, -0.3));
+          const pole = this.root.getRotation().transformVector(new Vec334(sign * 0.65, -1, -0.3));
           pole.sub(dir.clone().mulScalar(pole.dot(dir))).normalize();
           const along = (a * a - b * b + d * d) / (2 * d);
           const elbow = origin.clone().add(dir.clone().mulScalar(along)).add(pole.mulScalar(Math.sqrt(Math.max(0, a * a - along * along))));
@@ -9733,7 +9862,7 @@ var init_Scooter = __esm({
 });
 
 // src/game/Neighborhood.ts
-import { Entity as Entity36, Vec3 as Vec334, BoundingBox as BoundingBox16 } from "playcanvas";
+import { Entity as Entity36, Vec3 as Vec335, BoundingBox as BoundingBox16 } from "playcanvas";
 var ROAD_Z, SHOP_DOOR_Z, PLAY_SPOTS, SHOP_STOPS, Neighborhood;
 var init_Neighborhood = __esm({
   "src/game/Neighborhood.ts"() {
@@ -9764,7 +9893,7 @@ var init_Neighborhood = __esm({
       }
       update(p, outside) {
         for (let i = 0; i < this.maxSections; i++) {
-          const center = -16 - i * 24, camera = this.app.root.findByTag("migration.camera")[0], near = outside && (Math.abs(p.x - center) < 30 || !!camera?.camera?.frustum.containsAabb(new BoundingBox16(new Vec334(center, 2, -23), new Vec334(16, 8, 16))));
+          const center = -16 - i * 24, camera = this.app.root.findByTag("migration.camera")[0], near = outside && (Math.abs(p.x - center) < 30 || !!camera?.camera?.frustum.containsAabb(new BoundingBox16(new Vec335(center, 2, -23), new Vec335(16, 8, 16))));
           if (near && !this.sections.has(i)) this.sections.set(i, this.create(i));
           if (!near && this.sections.has(i)) {
             const s = this.sections.get(i);
@@ -9851,7 +9980,7 @@ var init_Neighborhood = __esm({
         return { root, art, group: group.id, materials, leases };
       }
       destroy() {
-        this.update(new Vec334(), false);
+        this.update(new Vec335(), false);
       }
       snapshot() {
         return { loadedSections: [...this.sections.keys()], totalSections: this.maxSections, roadZ: ROAD_Z, joinX: -4 };
@@ -10200,7 +10329,7 @@ var init_PlayAudio = __esm({
 });
 
 // src/game/DailyPlay.ts
-import { BoundingBox as BoundingBox17, Entity as Entity38, Vec3 as Vec335 } from "playcanvas";
+import { BoundingBox as BoundingBox17, Entity as Entity38, Vec3 as Vec336 } from "playcanvas";
 var goalCopy, DailyPlay;
 var init_DailyPlay = __esm({
   "src/game/DailyPlay.ts"() {
@@ -10362,7 +10491,7 @@ var init_DailyPlay = __esm({
       }
       world(s, x = 0, y = 0.075, z = 0) {
         const p = PLAY_SPOTS[s.index];
-        return new Vec335(p.x + x, y, p.z + z);
+        return new Vec336(p.x + x, y, p.z + z);
       }
       localPlayer(s) {
         const p = this.character.player.getPosition(), spot = PLAY_SPOTS[s.index];
@@ -10398,7 +10527,7 @@ var init_DailyPlay = __esm({
         return s;
       }
       solid(s, x, z, hx, hz) {
-        const b = new BoundingBox17(this.world(s, x, 0.5, z), new Vec335(hx, 1, hz));
+        const b = new BoundingBox17(this.world(s, x, 0.5, z), new Vec336(hx, 1, hz));
         s.solids.push(b);
         return b;
       }
@@ -10451,7 +10580,7 @@ var init_DailyPlay = __esm({
         }
         if (s.id === "bubbles") this.solid(s, 0, 0.65, 0.33, 0.28);
         if (s.id === "cart") {
-          s.cartBox = new BoundingBox17(this.world(s, 0, 0.5, 0.6), new Vec335(0.4, 1, 0.4));
+          s.cartBox = new BoundingBox17(this.world(s, 0, 0.5, 0.6), new Vec336(0.4, 1, 0.4));
           this.part(s, "Surprise").entity.enabled = false;
         }
         if (["duck", "pinwheel", "jack", "picnic"].includes(s.id) && !this.save.progress(s.id).done) s.count = this.save.progress(s.id).step;
@@ -10630,9 +10759,9 @@ var init_DailyPlay = __esm({
         if (!model) return;
         const l = model.findByName("LeftHand"), r = model.findByName("RightHand");
         if (!l || !r) return;
-        const position = new Vec335().add2(l.getPosition(), r.getPosition()).mulScalar(0.5), forward = this.character.visual.getWorldTransform().transformVector(new Vec335(0, 0, 0.055));
-        position.add(forward);
-        this.holding.part.entity.setPosition(position);
+        const position2 = new Vec336().add2(l.getPosition(), r.getPosition()).mulScalar(0.5), forward = this.character.visual.getWorldTransform().transformVector(new Vec336(0, 0, 0.055));
+        position2.add(forward);
+        this.holding.part.entity.setPosition(position2);
         this.holding.part.entity.setRotation(this.character.visual.getRotation());
         if (this.holding.station.phase === "watering") this.holding.part.entity.rotateLocal(0, 0, -30);
       }
@@ -10869,7 +10998,7 @@ var init_DailyPlay = __esm({
         if (s.id === "flamingo" && s.phase === "bowing") {
           const a = Math.sin(Math.min(1, t / 2) * Math.PI) * 18;
           part("Bird").setLocalEulerAngles(a, 0, 0);
-          const q = part("Bird").getLocalRotation(), v = q.transformVector(new Vec335(0.03, 1.48, 0.07));
+          const q = part("Bird").getLocalRotation(), v = q.transformVector(new Vec336(0.03, 1.48, 0.07));
           part("Hat").setLocalPosition(0.45 + v.x, v.y, -0.6 + v.z);
           part("Hat").setLocalEulerAngles(a, 0, Math.sin(t * 15) * 3);
           if (t > 2.5) this.complete(s);
@@ -10989,7 +11118,7 @@ var init_SchoolBallPhysics = __esm({
 });
 
 // src/game/SchoolGatePlay.ts
-import { Entity as Entity39, Vec3 as Vec336, BoundingBox as BoundingBox18, Texture as Texture6, Mesh as Mesh5, MeshInstance as MeshInstance5, CULLFACE_NONE as CULLFACE_NONE5 } from "playcanvas";
+import { Entity as Entity39, Vec3 as Vec337, BoundingBox as BoundingBox18, Texture as Texture6, Mesh as Mesh5, MeshInstance as MeshInstance5, CULLFACE_NONE as CULLFACE_NONE5 } from "playcanvas";
 var HOME, LEAVES, SchoolGatePlay;
 var init_SchoolGatePlay = __esm({
   "src/game/SchoolGatePlay.ts"() {
@@ -11000,8 +11129,8 @@ var init_SchoolGatePlay = __esm({
     init_HousePath();
     init_PlayAudio();
     init_SchoolBallPhysics();
-    HOME = new Vec336(19.15, 0.075, -28.2);
-    LEAVES = new Vec336(15.55, 0.075, -28.65);
+    HOME = new Vec337(19.15, 0.075, -28.2);
+    LEAVES = new Vec337(15.55, 0.075, -28.65);
     SchoolGatePlay = class {
       constructor(app, character, controller, room, camera) {
         this.app = app;
@@ -11042,8 +11171,8 @@ var init_SchoolGatePlay = __esm({
       lastSay = -100;
       npcState = "waiting";
       npcTimer = 0;
-      npcTarget = new Vec336();
-      npcKickTo = new Vec336();
+      npcTarget = new Vec337();
+      npcKickTo = new Vec337();
       kicked = false;
       npcPractice = false;
       invited = false;
@@ -11054,7 +11183,7 @@ var init_SchoolGatePlay = __esm({
       abort = new AbortController();
       pickup = document.createElement("button");
       speech = document.createElement("div");
-      screen = new Vec336();
+      screen = new Vec337();
       ballFloors = [];
       ballSolids = [];
       stats = { playerKicks: 0, passes: 0, returns: 0, nudges: 0, wallBounces: 0, leafBursts: 0, pickups: 0, putdowns: 0, practiceKicks: 0, loads: 0, releases: 0 };
@@ -11138,11 +11267,11 @@ var init_SchoolGatePlay = __esm({
           const e = new Entity39("Fallen maple leaf " + i, this.app);
           root.addChild(e);
           e.addComponent("render", { meshInstances: [new MeshInstance5(mesh, leafMats[i % 4])], castShadows: false });
-          const home = new Vec336(LEAVES.x + Math.cos(angle) * r, 0.087 + i % 4 * 0.018, LEAVES.z + Math.sin(angle) * r * 0.66);
+          const home = new Vec337(LEAVES.x + Math.cos(angle) * r, 0.087 + i % 4 * 0.018, LEAVES.z + Math.sin(angle) * r * 0.66);
           e.setPosition(home);
           e.setLocalEulerAngles(0, i * 73, (i % 3 - 1) * 12);
           e.setLocalScale(0.85 + i % 3 * 0.2, 0.85 + i % 3 * 0.2, 0.85 + i % 3 * 0.2);
-          leaves.push({ entity: e, home, v: new Vec336(), spin: (i % 2 ? 1 : -1) * (110 + i * 7) });
+          leaves.push({ entity: e, home, v: new Vec337(), spin: (i % 2 ? 1 : -1) * (110 + i * 7) });
         }
         const person = new Entity39("Poppy at the school gate", this.app);
         root.addChild(person);
@@ -11204,7 +11333,7 @@ var init_SchoolGatePlay = __esm({
         }
         this.pending = true;
         this.controller.reset();
-        const target = new Vec336(this.body.x, 0.075, this.body.z);
+        const target = new Vec337(this.body.x, 0.075, this.body.z);
         const act = () => {
           if (!this.active) {
             this.pending = false;
@@ -11245,7 +11374,7 @@ var init_SchoolGatePlay = __esm({
           this.npcTimer = 0;
           this.lastPlayerContact = this.time;
           this.say("Can I have a turn?");
-        }, new Vec336(this.body.x, 0.075, this.body.z));
+        }, new Vec337(this.body.x, 0.075, this.body.z));
       }
       putDown() {
         const s = this.stage;
@@ -11254,7 +11383,7 @@ var init_SchoolGatePlay = __esm({
         const yaw = this.character.animator.snapshot().yaw * Math.PI / 180;
         let point = null;
         for (const a of [0, 0.6, -0.6, 1.3, -1.3, Math.PI]) {
-          const q = new Vec336(p.x + Math.sin(yaw + a) * 0.55, 0.075, p.z + Math.cos(yaw + a) * 0.55);
+          const q = new Vec337(p.x + Math.sin(yaw + a) * 0.55, 0.075, p.z + Math.cos(yaw + a) * 0.55);
           if (ballFits(q.x, q.z, this.ballFloors, this.ballSolids)) {
             point = q;
             break;
@@ -11282,8 +11411,8 @@ var init_SchoolGatePlay = __esm({
         if (!s || !this.held) return;
         const hands = this.character.animator.snapshot().hands;
         if (hands.length === 2) {
-          const h = new Vec336().add2(new Vec336(...hands[0]), new Vec336(...hands[1])).mulScalar(0.5);
-          h.add(this.character.visual.getWorldTransform().transformVector(new Vec336(0, 0.05, 0.14)));
+          const h = new Vec337().add2(new Vec337(...hands[0]), new Vec337(...hands[1])).mulScalar(0.5);
+          h.add(this.character.visual.getWorldTransform().transformVector(new Vec337(0, 0.05, 0.14)));
           s.ball.setPosition(h);
           this.body.x = h.x;
           this.body.z = h.z;
@@ -11297,8 +11426,8 @@ var init_SchoolGatePlay = __esm({
         target.y = 0;
         const player = this.character.player.getPosition();
         if (s.routeClock <= 0) {
-          const planner = new HousePath({ walkable: [{ minX: 14.35, maxX: 30.65, minZ: -29.42, maxZ: -26.38 }], obstacles: [...this.room.obstacles, new BoundingBox18(new Vec336(player.x, 0.6, player.z), new Vec336(0.48, 0.7, 0.48))] }, 0.23);
-          s.route = planner.route(new Vec336(at.x, 0, at.z), target);
+          const planner = new HousePath({ walkable: [{ minX: 14.35, maxX: 30.65, minZ: -29.42, maxZ: -26.38 }], obstacles: [...this.room.obstacles, new BoundingBox18(new Vec337(player.x, 0.6, player.z), new Vec337(0.48, 0.7, 0.48))] }, 0.23);
+          s.route = planner.route(new Vec337(at.x, 0, at.z), target);
           s.routeClock = 0.6;
         }
         s.routeClock -= dt;
@@ -11308,14 +11437,14 @@ var init_SchoolGatePlay = __esm({
         }
         const next = s.route[0];
         if (!next) return false;
-        const delta = new Vec336(next.x - at.x, 0, next.z - at.z), distance = delta.length();
+        const delta = new Vec337(next.x - at.x, 0, next.z - at.z), distance = delta.length();
         if (distance < 0.09) {
           s.route.shift();
           return false;
         }
         delta.normalize();
-        const step = Math.min(distance, 1 * dt), q = new Vec336(at.x + delta.x * step, 0.075, at.z + delta.z * step);
-        if (q.distance(new Vec336(player.x, 0.075, player.z)) < 0.7) {
+        const step = Math.min(distance, 1 * dt), q = new Vec337(at.x + delta.x * step, 0.075, at.z + delta.z * step);
+        if (q.distance(new Vec337(player.x, 0.075, player.z)) < 0.7) {
           s.routeClock = 0;
           return false;
         }
@@ -11338,12 +11467,12 @@ var init_SchoolGatePlay = __esm({
         this.npcPractice = practice;
       }
       updatePoppy(dt) {
-        const s = this.stage, p = s.person.getPosition(), player = this.character.player.getPosition(), ball = new Vec336(this.body.x, 0.075, this.body.z), speed = Math.hypot(this.body.vx, this.body.vz);
+        const s = this.stage, p = s.person.getPosition(), player = this.character.player.getPosition(), ball = new Vec337(this.body.x, 0.075, this.body.z), speed = Math.hypot(this.body.vx, this.body.vz);
         const space = Math.hypot(p.x - player.x, p.z - player.z);
         if (space < 0.7 || space < 0.95 && this.controller.input.lengthSq() > 0.01) {
           const away = Math.atan2(p.x - player.x, p.z - player.z);
           for (const offset of [0, 0.6, -0.6, 1.2, -1.2, 1.55, -1.55]) {
-            const a = away + offset, q = new Vec336(p.x + Math.sin(a) * 1.3 * dt, 0.075, p.z + Math.cos(a) * 1.3 * dt);
+            const a = away + offset, q = new Vec337(p.x + Math.sin(a) * 1.3 * dt, 0.075, p.z + Math.cos(a) * 1.3 * dt);
             if (s.planner.free(q.x, q.z) && Math.hypot(q.x - player.x, q.z - player.z) > space) {
               s.person.setPosition(q);
               s.person.setEulerAngles(0, a * 180 / Math.PI, 0);
@@ -11383,7 +11512,7 @@ var init_SchoolGatePlay = __esm({
         if (this.held) {
           const dx = player.x - p.x, dz = player.z - p.z, d2 = Math.hypot(dx, dz);
           if (d2 > 1.7 && player.z < -25.6 && player.x > 13.5 && player.x < 31) {
-            const goal = new Vec336(player.x - dx / Math.max(d2, 0.01) * 1.45, 0, player.z - dz / Math.max(d2, 0.01) * 1.45);
+            const goal = new Vec337(player.x - dx / Math.max(d2, 0.01) * 1.45, 0, player.z - dz / Math.max(d2, 0.01) * 1.45);
             if (this.movePoppy(goal, dt)) return;
           }
           this.clip("Interact");
@@ -11419,14 +11548,14 @@ var init_SchoolGatePlay = __esm({
           return;
         }
         const joined = this.invited && player.distance(HOME) < 8.5;
-        const target = joined ? new Vec336(player.x, 0.075, player.z) : new Vec336(17.6, 0.075, -30.3);
-        const d = new Vec336().sub2(target, ball);
+        const target = joined ? new Vec337(player.x, 0.075, player.z) : new Vec337(17.6, 0.075, -30.3);
+        const d = new Vec337().sub2(target, ball);
         d.y = 0;
         d.normalize();
         const behind = Math.atan2(-d.x, -d.z);
         let approach = null;
         for (const angle of [0, 0.4, -0.4, 0.8, -0.8, 1.3, -1.3, 2, -2, Math.PI]) {
-          const q = new Vec336(ball.x + Math.sin(behind + angle) * 0.56, 0.075, ball.z + Math.cos(behind + angle) * 0.56);
+          const q = new Vec337(ball.x + Math.sin(behind + angle) * 0.56, 0.075, ball.z + Math.cos(behind + angle) * 0.56);
           if (s.planner.free(q.x, q.z) && q.distance(player) > 0.75) {
             approach = q;
             break;
@@ -11486,7 +11615,7 @@ var init_SchoolGatePlay = __esm({
             l.entity.setPosition(p);
             l.entity.rotateLocal(l.spin * dt * 0.3, l.spin * dt, l.spin * dt * 0.18);
           } else if (player.distance(LEAVES) > 6) {
-            l.entity.setPosition(new Vec336().lerp(p, l.home, 1 - Math.exp(-0.3 * dt)));
+            l.entity.setPosition(new Vec337().lerp(p, l.home, 1 - Math.exp(-0.3 * dt)));
           }
         }
         if (touched && !this.leafSound) {
@@ -11569,7 +11698,7 @@ var init_SchoolGatePlay = __esm({
           const min = Math.min(lf.getPosition().y, rf.getPosition().y), local = s.model.getLocalPosition();
           s.model.setLocalPosition(local.x, local.y + (0.11 - min), local.z);
           const pp = s.person.getPosition();
-          this.controller.dynamicObstacles.push(new BoundingBox18(new Vec336(pp.x, 0.6, pp.z), new Vec336(0.24, 0.7, 0.24)));
+          this.controller.dynamicObstacles.push(new BoundingBox18(new Vec337(pp.x, 0.6, pp.z), new Vec337(0.24, 0.7, 0.24)));
         }
         this.leaves(dt);
         this.nodTime = Math.max(0, this.nodTime - dt);
@@ -11628,11 +11757,1826 @@ var init_SchoolGatePlay = __esm({
   }
 });
 
+// src/data/homePlay.ts
+var toy, HOME_TOYS;
+var init_homePlay = __esm({
+  "src/data/homePlay.ts"() {
+    "use strict";
+    toy = (id, name, kind, home, color = "#d4addb", fixed = false) => ({ id, name, kind, home, color, fixed });
+    HOME_TOYS = [
+      toy("sofa", "Sofa", "sofa", [-2, 0.72, 6], "#96b5a5", true),
+      toy("desk-surface", "Bedroom desk", "surface", [2.2, 1.19, 1.3], "#fff0d5", true),
+      toy("basket", "Toy basket", "basket", [1.8, 0.48, 8.55], "#d4b18a", true),
+      toy("ball", "Soft ball", "ball", [1.48, 0.67, 8.45], "#c68cc5"),
+      ...[0, 1, 2].map((i) => toy("cup" + i, ["Mint cup", "Rose cup", "Honey cup"][i], "cup", [1.78 + i * 0.19, 0.7, 8.48], ["#96c7b5", "#ebafbd", "#e8c16f"][i])),
+      toy("beanbag", "Beanbag", "beanbag", [2.05, 0.7, 8.69], "#de9c85"),
+      toy("teddy", "Teddy", "teddy", [1.46, 0.7, 8.72], "#bd8e63"),
+      toy("picnic-plate", "Toy plate", "plate", [2.4, 0.1, 8.2], "#d698bf"),
+      toy("cake", "Pretend cake", "cake", [2.4, 0.16, 8.2], "#eea0bb"),
+      toy("pitcher", "Tea pitcher", "pitcher", [2.65, 0.1, 8.25], "#96c7b5"),
+      toy("wagon", "Toy wagon", "wagon", [2.6, 0.08, 7.75], "#dc9385"),
+      ...[0, 1, 2, 3, 4].map((i) => toy("block" + i, "Wooden block", "block", [2.7 + i % 2 * 0.23, 0.13 + Math.floor(i / 2) * 0.2, 8.8], ["#edc577", "#a8c5d8", "#cbaccf"][i % 3])),
+      toy("car", "Little car", "car", [3.1, 0.08, 8.1], "#96c7b5"),
+      toy("ramp0", "Wooden ramp", "ramp", [3.3, 0.08, 8.55], "#d4b18a"),
+      toy("ramp1", "Wooden ramp", "ramp", [3.3, 0.08, 8.85], "#d4b18a"),
+      toy("cushion0", "Play cushion", "cushion", [-1.25, 0.09, 7.4], "#b5a1ce"),
+      toy("cushion1", "Play cushion", "cushion", [-1.25, 0.09, 8.15], "#dfa7b7"),
+      toy("blanket", "Den blanket", "blanket", [-1.1, 0.12, 8.75], "#99bdc7"),
+      toy("toy-bed", "Teddy\u2019s bed", "bed", [2.85, 0.08, 7], "#d4b18a", true),
+      toy("paper", "Drawing paper", "paper", [2.22, 1.19, 1.35], "#fff0d5"),
+      toy("book", "Picture book", "book", [0.81, 0.99, -2.99], "#a9bbd4"),
+      toy("hat", "Dress-up hat", "hat", [2.45, 0.91, -1.5], "#e9b9d5"),
+      toy("pinwheel", "Pinwheel", "pinwheel", [-4.44, 0.27, 5.8], "#e5b271"),
+      toy("board", "Picture board", "board", [1.7, 1.55, -3.22], "#c09b73", true),
+      toy("jack", "Jack-in-the-box", "jack", [2.35, 0.1, 7.1], "#a6c8b1"),
+      toy("duck", "Wind-up duck", "duck", [5.15, 0.1, 5.2], "#f2ca66"),
+      toy("fetch", "Sunny\u2019s soft toy", "fetch", [1.85, 0.7, 8.78], "#a3cbd2"),
+      toy("basin", "Toy basin", "basin", [4.85, 0.09, 12], "#a0c6d3"),
+      toy("boat", "Paper boat", "boat", [5.65, 0.99, 12.5], "#f3d698"),
+      toy("bubbles", "Bubble bottle", "bubbles", [1.97, 0.75, 8.75], "#95c9bd"),
+      toy("flower", "Doorstep flowers", "flower", [-4.4, 0.07, 5.75], "#dfa0bb", true),
+      toy("can", "Watering can", "can", [-4.8, 0.08, 5.5], "#9bbab8"),
+      toy("flamingo", "Garden flamingo", "flamingo", [-4.45, 0.07, 4.8], "#df9ead", true),
+      toy("rake", "Little rake", "rake", [-4.5, 0.08, 3.9], "#d1ae80"),
+      toy("marker0", "Garden goal marker", "marker", [-4.5, 0.08, 3.2], "#ead3a2"),
+      toy("marker1", "Garden goal marker", "marker", [-4.5, 0.08, 2.6], "#ead3a2")
+    ];
+  }
+});
+
+// src/systems/HomePlayStore.ts
+var fresh2, position, HomePlayStore;
+var init_HomePlayStore = __esm({
+  "src/systems/HomePlayStore.ts"() {
+    "use strict";
+    init_homePlay();
+    fresh2 = (day) => ({ version: 1, day, toys: Object.fromEntries(HOME_TOYS.map((t) => [t.id, { position: [...t.home], yaw: 0, owner: "world", kind: t.kind, value: 0, marks: [], tilt: 0 }])), dinner: { served: false, portions: Array(8).fill(true), plate: null }, lunch: null, serial: 0, water: 0, puddle: 0, leafPile: 1 });
+    position = (p) => Array.isArray(p) && p.length === 3 && p.every(Number.isFinite) && Math.abs(p[0]) < 40 && p[1] >= 0 && p[1] < 3 && p[2] > -24 && p[2] < 22;
+    HomePlayStore = class {
+      constructor(storage, key, day) {
+        this.storage = storage;
+        this.key = key;
+        this.data = fresh2(day);
+        let saved;
+        try {
+          saved = JSON.parse(storage.getItem(key) || "null") ?? void 0;
+        } catch {
+        }
+        if (saved?.version !== 1) return;
+        for (const def of HOME_TOYS) {
+          const t = saved.toys?.[def.id];
+          if (t && position(t.position) && Number.isFinite(t.value) && Number.isFinite(t.yaw)) this.data.toys[def.id] = { ...this.data.toys[def.id], ...t, marks: Array.isArray(t.marks) ? t.marks.filter(Number.isFinite).slice(0, 16) : [], kind: def.id === "paper" && t.kind === "plane" ? "plane" : def.kind };
+        }
+        for (const [id, t] of Object.entries(this.data.toys)) {
+          const seen = /* @__PURE__ */ new Set([id]);
+          let owner = t.owner;
+          while (owner !== "world" && owner !== "held") {
+            if (!this.data.toys[owner] || seen.has(owner)) {
+              t.owner = "world";
+              t.position = [...HOME_TOYS.find((d) => d.id === id).home];
+              break;
+            }
+            seen.add(owner);
+            owner = this.data.toys[owner].owner;
+          }
+        }
+        let held = false;
+        for (const t of Object.values(this.data.toys)) if (t.owner === "held") {
+          if (held) t.owner = "world";
+          held = true;
+        }
+        if (saved.day === day) {
+          const validPlate = (p) => p && typeof p.id === "string" && position(p.position) && ["pizza", "taco", "turkey", "sandwich"].includes(p.food) && Number.isInteger(p.bites) && p.bites >= 0 && p.bites <= 3 ? { ...p, owner: ["world", "held", "counter", "home-north", "lunch-left", "lunch-right"].includes(p.owner) ? p.owner : "world", fruit: p.fruit === "orange" ? "orange" : "apple", drink: Math.max(0, Math.min(3, p.drink || 0)), fruitBites: Math.max(0, Math.min(2, p.fruitBites || 0)) } : null;
+          this.data.dinner = { served: !!saved.dinner?.served, portions: Array.isArray(saved.dinner?.portions) && saved.dinner.portions.length === 8 ? saved.dinner.portions.map(Boolean) : Array(8).fill(true), plate: validPlate(saved.dinner?.plate) };
+          this.data.lunch = validPlate(saved.lunch);
+          this.data.water = Math.max(0, Math.min(1, saved.water || 0));
+          this.data.puddle = Math.max(0, Math.min(1, saved.puddle || 0));
+          this.data.serial = Number.isSafeInteger(saved.serial) ? Math.max(0, saved.serial) : 0;
+          this.data.leafPile = saved.leafPile ? 1 : 0;
+          for (const plate of [this.data.dinner.plate, this.data.lunch]) if (plate?.owner === "held") {
+            if (held) plate.owner = "world";
+            held = true;
+          }
+        }
+      }
+      storage;
+      key;
+      data;
+      transact(change) {
+        const next = structuredClone(this.data);
+        if (change(next) === false) return false;
+        this.storage.setItem(this.key, JSON.stringify(next));
+        this.data = next;
+        return true;
+      }
+      day(day) {
+        if (day === this.data.day) return false;
+        return this.transact((s) => {
+          s.day = day;
+          s.dinner = { served: false, portions: Array(8).fill(true), plate: null };
+          s.lunch = null;
+          s.puddle = 0;
+        });
+      }
+      get held() {
+        return Object.keys(this.data.toys).find((id) => this.data.toys[id].owner === "held") ?? (this.data.dinner.plate?.owner === "held" ? "dinner-plate" : this.data.lunch?.owner === "held" ? "lunch-tray" : null);
+      }
+      take(id) {
+        return this.transact((s) => {
+          if (this.held || !s.toys[id] || s.toys[id].owner === "sunny" || s.toys[id].owner === "lilah" || HOME_TOYS.find((t) => t.id === id)?.fixed) return false;
+          s.toys[id].owner = "held";
+        });
+      }
+      place(id, p, owner = "world") {
+        return this.transact((s) => {
+          const t = s.toys[id];
+          if (!t || !position(p) || id === owner) return false;
+          if (owner !== "world") {
+            const parent = s.toys[owner];
+            if (!parent || parent.owner === "held") return false;
+            const seen = /* @__PURE__ */ new Set([id]);
+            let cursor = owner;
+            while (s.toys[cursor]) {
+              if (seen.has(cursor)) return false;
+              seen.add(cursor);
+              cursor = s.toys[cursor].owner;
+            }
+            if (owner === "wagon" && Object.values(s.toys).filter((t2) => t2.owner === "wagon").length >= 4) return false;
+          }
+          t.owner = owner;
+          t.position = [...p];
+          t.tilt = 0;
+        });
+      }
+      claimDinner() {
+        return this.transact((s) => {
+          if (this.held || s.dinner.plate || !s.dinner.served) return false;
+          const index = s.dinner.portions.indexOf(true);
+          if (index < 0) return false;
+          s.dinner.portions[index] = false;
+          s.dinner.plate = { id: `dinner-${s.day}-${index}`, food: ["pizza", "taco", "turkey"][(s.day - 1) % 3], bites: 0, drink: 0, fruit: "apple", fruitBites: 2, owner: "held", position: [0.55, 1, 13.28] };
+        });
+      }
+      refillDinner() {
+        return this.transact((s) => {
+          const plate = s.dinner.plate, index = s.dinner.portions.indexOf(true);
+          if (!plate || plate.bites < 3 || index < 0) return false;
+          s.dinner.portions[index] = false;
+          plate.id = `dinner-${s.day}-${index}`;
+          plate.bites = 0;
+        });
+      }
+      lunch(food, fruit, counter = false) {
+        return this.transact((s) => {
+          if (this.held || s.lunch) return false;
+          s.lunch = { id: `lunch-${s.day}-${++s.serial}`, food, fruit, bites: 0, drink: 0, fruitBites: 0, owner: counter ? "counter" : "held", position: [4.6, 1.34, -20.8] };
+        });
+      }
+      bite(context, identity, expected, fruit = false) {
+        return this.transact((s) => {
+          const p = context === "dinner" ? s.dinner.plate : s.lunch;
+          if (!p || p.id !== identity || p[fruit ? "fruitBites" : "bites"] !== expected || p[fruit ? "fruitBites" : "bites"] >= (fruit ? 2 : 3)) return false;
+          p[fruit ? "fruitBites" : "bites"]++;
+        });
+      }
+      plate(context) {
+        return context === "dinner" ? this.data.dinner.plate : this.data.lunch;
+      }
+      returnPlate(context) {
+        return this.transact((s) => {
+          if (context === "dinner") s.dinner.plate = null;
+          else s.lunch = null;
+        });
+      }
+    };
+  }
+});
+
+// src/game/HomeToyArt.ts
+import { Entity as Entity40 } from "playcanvas";
+var HomeToyArt;
+var init_HomeToyArt = __esm({
+  "src/game/HomeToyArt.ts"() {
+    "use strict";
+    init_primitives();
+    HomeToyArt = class {
+      constructor(app) {
+        this.app = app;
+      }
+      app;
+      materials = /* @__PURE__ */ new Map();
+      mat(color) {
+        let m = this.materials.get(color);
+        if (!m) {
+          m = material("Home toy " + color, color);
+          this.materials.set(color, m);
+        }
+        return m;
+      }
+      make(kind, color) {
+        const root = new Entity40("Toy " + kind, this.app), s = primitives(this.app, root);
+        const part = (name, type, p, size, c = color) => s(name, type, p, size, this.mat(c));
+        const ball = (name, p, size, c = color) => part(name, "sphere", p, size, c);
+        const box = (name, p, size, c = color) => part(name, "box", p, size, c);
+        const cyl = (name, p, size, c = color) => part(name, "cylinder", p, size, c);
+        const eyes = (y, z) => {
+          for (const x of [-0.055, 0.055]) ball("Eye", [x, y, z], [0.026, 0.032, 0.02], "#453c48");
+        };
+        if (kind === "ball" || kind === "fetch") {
+          ball("Soft toy", [0, 0.14, 0], [0.28, 0.28, 0.28]);
+          for (const x of [-0.07, 0.07]) ball("Stitch", [x, 0.25, 0.045], [0.015, 0.025, 0.17], "#fff3dc");
+        }
+        if (kind === "cup" || kind === "pitcher" || kind === "can" || kind === "bubbles") {
+          const h = kind === "cup" ? 0.17 : 0.26;
+          cyl("Body", [0, h / 2, 0], [0.19, h, 0.19]);
+          cyl("Open rim", [0, h, 0], [0.215, 0.028, 0.215], "#fff0d8");
+          cyl("Inside", [0, h + 4e-3, 0], [0.16, 0.01, 0.16], "#76617d");
+          if (kind !== "cup") {
+            const handle = ball("Handle", [0.13, 0.13, 0], [0.14, 0.16, 0.045]);
+            if (kind === "bubbles") {
+              handle.setLocalPosition(0, 0.34, 0);
+              box("Wand", [0, 0.24, 0], [0.025, 0.16, 0.025], "#fff0d8");
+            } else {
+              const spout = cyl("Spout", [-0.14, 0.17, 0], [0.065, 0.22, 0.065]);
+              spout.setLocalEulerAngles(0, 0, 50);
+            }
+          }
+        }
+        if (kind === "beanbag" || kind === "cushion") {
+          const f = kind === "cushion" ? 3 : 1;
+          ball("Fabric", [0, 0.06 * f, 0], [0.28 * f, 0.12 * f, 0.23 * f]);
+          box("Seam", [0, 0.08 * f, 0.108 * f], [0.22 * f, 0.013, 0.018], "#eee0cd");
+        }
+        if (kind === "teddy") {
+          ball("Body", [0, 0.19, 0], [0.29, 0.35, 0.22]);
+          ball("Head", [0, 0.42, 0], [0.29, 0.27, 0.25]);
+          ball("Muzzle", [0, 0.39, 0.11], [0.16, 0.1, 0.09], "#e5c79f");
+          eyes(0.44, 0.12);
+          ball("Nose", [0, 0.4, 0.16], [0.04, 0.035, 0.025], "#453c48");
+          for (const x of [-0.14, 0.14]) {
+            ball("Ear", [x * 0.8, 0.53, 0], [0.11, 0.12, 0.09]);
+            ball("Paw", [x, 0.08, 0.1], [0.13, 0.12, 0.2]);
+            ball("Arm", [x, 0.23, 0.03], [0.12, 0.22, 0.13]);
+          }
+        }
+        if (kind === "plate") {
+          cyl("Toy china", [0, 0.025, 0], [0.35, 0.035, 0.35]);
+          cyl("Center", [0, 0.045, 0], [0.26, 9e-3, 0.26], "#f4d6e4");
+        }
+        if (kind === "cake") {
+          cyl("Pretend sponge", [0, 0.06, 0], [0.19, 0.11, 0.19], "#c99c70");
+          cyl("Painted icing", [0, 0.12, 0], [0.2, 0.04, 0.2]);
+          ball("Wooden cherry", [0, 0.165, 0], [0.06, 0.06, 0.06], "#ad646e");
+        }
+        if (kind === "block") {
+          box("Wooden block", [0, 0.11, 0], [0.22, 0.22, 0.22]);
+          box("Grain", [0, 0.224, 0], [0.15, 3e-3, 0.013], "#fff0d8");
+        }
+        if (kind === "car" || kind === "wagon") {
+          const wagon = kind === "wagon";
+          box("Body", [0, 0.19, 0], wagon ? [0.56, 0.12, 0.7] : [0.22, 0.12, 0.34]);
+          if (wagon) {
+            for (const x of [-0.27, 0.27]) box("Side", [x, 0.29, 0], [0.04, 0.19, 0.7]);
+            for (const z of [-0.33, 0.33]) box("End", [0, 0.29, z], [0.56, 0.19, 0.04]);
+            const h = cyl("Pull handle", [0, 0.32, 0.53], [0.035, 0.58, 0.035], "#76617d");
+            h.setLocalEulerAngles(55, 0, 0);
+          } else {
+            box("Cabin", [0, 0.29, -0.015], [0.17, 0.12, 0.16]);
+            box("Window", [0, 0.3, 0.07], [0.135, 0.07, 9e-3], "#d8e9df");
+          }
+          for (const x of [-1, 1]) for (const z of [-1, 1]) {
+            const w = cyl("Wheel", [x * (wagon ? 0.3 : 0.13), 0.11, z * (wagon ? 0.23 : 0.11)], [wagon ? 0.19 : 0.12, 0.065, wagon ? 0.19 : 0.12], "#76617d");
+            w.setLocalEulerAngles(0, 0, 90);
+          }
+        }
+        if (kind === "ramp") {
+          const p = box("Ramp", [0, 0.15, 0], [0.35, 0.045, 0.68]);
+          p.setLocalEulerAngles(18, 0, 0);
+          box("Support", [0, 0.13, -0.26], [0.32, 0.25, 0.07]);
+        }
+        if (kind === "blanket") {
+          box("Quilt", [0, 0.025, 0], [1.1, 0.04, 0.85]);
+          for (const x of [-0.4, 0, 0.4]) box("Quilt stripe", [x, 0.048, 0], [0.07, 6e-3, 0.82], "#e6d8cc");
+        }
+        if (kind === "paper" || kind === "book") {
+          box("Cover", [0, 0.02, 0], [0.33, 0.035, 0.43]);
+          box("Pages", [0, 0.043, 0], [0.3, 9e-3, 0.4], "#fff6dc");
+          if (kind === "book") {
+            box("Spine", [-0.15, 0.06, 0], [0.025, 0.035, 0.4]);
+            for (const x of [-0.08, 0.08]) ball("Picture", [x, 0.055, 0], [0.1, 6e-3, 0.15], x < 0 ? "#c399c5" : "#91bcb0");
+          }
+        }
+        if (kind === "plane" || kind === "boat") {
+          if (kind === "plane") {
+            for (const x of [-1, 1]) {
+              const w = box("Paper wing", [x * 0.1, 0.045, 0], [0.23, 0.012, 0.39]);
+              w.setLocalEulerAngles(0, x * 22, x * 12);
+            }
+            const spine = box("Fold", [0, 0.03, 0], [0.016, 0.08, 0.32]);
+            spine.setLocalEulerAngles(0, 0, 0);
+          } else {
+            box("Hull", [0, 0.045, 0], [0.3, 0.04, 0.19]);
+            for (const x of [-1, 1]) {
+              const side = box("Folded bow", [x * 0.11, 0.08, 0], [0.14, 0.015, 0.2]);
+              side.setLocalEulerAngles(0, 0, x * -40);
+            }
+            const sail = part("Fold", "cone", [0, 0.13, 0], [0.16, 0.2, 0.015], "#fff2da");
+            sail.setLocalEulerAngles(0, 0, 0);
+          }
+        }
+        if (kind === "hat") {
+          cyl("Brim", [0, 0.015, 0], [0.34, 0.025, 0.29]);
+          cyl("Crown", [0, 0.075, 0], [0.21, 0.13, 0.18]);
+          cyl("Ribbon", [0, 0.04, 0], [0.215, 0.03, 0.185], "#a976ac");
+        }
+        if (kind === "flamingo") {
+          for (const x of [-0.055, 0.055]) cyl("Leg", [x, 0.25, 0], [0.018, 0.5, 0.018], "#a77b74");
+          ball("Body", [0, 0.51, 0], [0.25, 0.21, 0.38]);
+          const neck = cyl("Neck", [0, 0.7, 0.15], [0.06, 0.38, 0.06]);
+          neck.setLocalEulerAngles(14, 0, 0);
+          ball("Head", [0, 0.87, 0.2], [0.16, 0.14, 0.17]);
+          ball("Beak", [0, 0.85, 0.3], [0.08, 0.07, 0.14], "#453c48");
+        }
+        if (kind === "duck") {
+          ball("Body", [0, 0.12, 0], [0.24, 0.2, 0.3]);
+          ball("Head", [0, 0.25, 0.1], [0.19, 0.18, 0.18]);
+          ball("Beak", [0, 0.23, 0.21], [0.13, 0.055, 0.1], "#d99155");
+          eyes(0.27, 0.175);
+          for (const x of [-0.075, 0.075]) ball("Foot", [x, 0.025, 0.04], [0.1, 0.035, 0.15], "#d99155");
+          box("Key", [0.17, 0.13, 0], [0.12, 0.02, 0.055], "#fff0d8");
+        }
+        if (kind === "jack") {
+          box("Box", [0, 0.16, 0], [0.31, 0.3, 0.31]);
+          box("Lid", [0, 0.32, 0], [0.33, 0.035, 0.33]);
+          cyl("Crank", [0.21, 0.17, 0], [0.035, 0.15, 0.035], "#e5ba73");
+          ball("Surprise", [0, 0.5, 0], [0.2, 0.18, 0.17], "#96bd90");
+          root.findByName("Surprise").enabled = false;
+        }
+        if (kind === "basin" || kind === "basket" || kind === "bed") {
+          const w = kind === "basin" ? 0.78 : kind === "bed" ? 0.43 : 0.62, d = kind === "basin" ? 0.62 : kind === "bed" ? 0.65 : 0.5;
+          box("Bottom", [0, 0.035, 0], [w, 0.07, d]);
+          for (const x of [-w / 2, w / 2]) box("Side", [x, 0.12, 0], [0.04, 0.22, d]);
+          for (const z of [-d / 2, d / 2]) box("End", [0, 0.12, z], [w, 0.22, 0.04]);
+          if (kind === "basin") {
+            const water = box("Water", [0, 0.15, 0], [w - 0.04, 0.016, d - 0.04], "#9bd4d9");
+            water.enabled = false;
+          }
+          if (kind === "bed") ball("Pillow", [0, 0.13, -0.2], [0.35, 0.1, 0.2], "#dfa7b7");
+        }
+        if (kind === "flower") {
+          cyl("Pot", [0, 0.14, 0], [0.32, 0.28, 0.32], "#be9179");
+          cyl("Stem", [0, 0.42, 0], [0.03, 0.4, 0.03], "#7eac85");
+          for (let i = 0; i < 5; i++) ball("Petal", [Math.sin(i * 1.256) * 0.11, 0.63 + Math.cos(i * 1.256) * 0.11, 0], [0.14, 0.14, 0.055]);
+          ball("Pollen", [0, 0.63, 0.025], [0.1, 0.1, 0.08], "#e9c57a");
+        }
+        if (kind === "pinwheel") {
+          cyl("Stick", [0, 0.23, 0], [0.018, 0.46, 0.018], "#d4b18a");
+          const rotor = new Entity40("Rotor", this.app);
+          root.addChild(rotor);
+          rotor.setLocalPosition(0, 0.48, 0);
+          for (let i = 0; i < 4; i++) {
+            const b = primitives(this.app, rotor)("Blade", "box", [0, 0, 0], [0.23, 0.1, 0.015], this.mat(i % 2 ? color : "#b8cddd"));
+            b.setLocalPosition(Math.sin(i * Math.PI / 2) * 0.095, Math.cos(i * Math.PI / 2) * 0.095, 0);
+            b.setLocalEulerAngles(0, 0, i * 90 + 25);
+          }
+          ball("Pin", [0, 0.48, 0.025], [0.045, 0.045, 0.04], "#fff0d8");
+        }
+        if (kind === "rake") {
+          cyl("Handle", [0, 0.25, 0], [0.025, 0.5, 0.025]);
+          box("Rake head", [0, 0.02, 0], [0.3, 0.04, 0.04]);
+          for (const x of [-0.12, -0.06, 0, 0.06, 0.12]) box("Tooth", [x, 0.02, 0.04], [0.02, 0.025, 0.11]);
+        }
+        if (kind === "marker") {
+          part("Marker", "cone", [0, 0.15, 0], [0.22, 0.3, 0.22]);
+        }
+        if (kind === "board") {
+          box("Frame", [0, 0, 0], [0.55, 0.65, 0.04]);
+          box("Cork", [0, 0, 0.026], [0.49, 0.59, 0.015], "#e7cdac");
+        }
+        return root;
+      }
+      destroy() {
+        for (const m of this.materials.values()) m.destroy();
+        this.materials.clear();
+      }
+    };
+  }
+});
+
+// src/game/HomePlay.ts
+import { BoundingBox as BoundingBox19, Entity as Entity41, Vec3 as Vec338 } from "playcanvas";
+var HomePlay;
+var init_HomePlay = __esm({
+  "src/game/HomePlay.ts"() {
+    "use strict";
+    init_homePlay();
+    init_HomePlayStore();
+    init_SaveNamespace();
+    init_HousePath();
+    init_HomeToyArt();
+    init_primitives();
+    init_PlayAudio();
+    init_house();
+    HomePlay = class {
+      constructor(app, character, controller, house, cleanup, daily, say, camera) {
+        this.app = app;
+        this.character = character;
+        this.controller = controller;
+        this.house = house;
+        this.cleanup = cleanup;
+        this.daily = daily;
+        this.say = say;
+        this.camera = camera;
+        this.store = new HomePlayStore(localStorage, saveKey("home-play.v1"), daily.clock.state.day);
+        this.lastDay = daily.clock.state.day;
+        this.root = new Entity41("Home free play", app);
+        app.root.addChild(this.root);
+        this.art = new HomeToyArt(app);
+        this.planner = new HousePath(house, 0.12);
+        this.wagonPlanner = new HousePath(house, 0.38);
+        for (const def of HOME_TOYS) {
+          const t = this.state(def.id);
+          if (t.owner !== "world" || t.position.every((v, i) => v === def.home[i])) continue;
+          if (!this.planner.free(t.position[0], t.position[2])) t.position = [...def.home];
+          else t.position[1] = 0.08;
+        }
+        for (const def of HOME_TOYS) {
+          const entity = new Entity41(def.name, app);
+          this.root.addChild(entity);
+          this.items.set(def.id, { id: "home-" + def.id, name: def.name, icon: "\u273F", entity, home: [...def.home], carryGrip: [0, 0.12, 0], carryPace: "walk" });
+        }
+        const shape = primitives(app, this.root);
+        this.cue = shape("Selected toy", "cylinder", [0, 0, 0], [0.4, 9e-3, 0.4], this.art.mat("#f3dfae"), false);
+        this.preview = shape("Placement preview", "cylinder", [0, 0, 0], [0.3, 8e-3, 0.3], this.art.mat("#b6dbc6"), false);
+        this.puddle = shape("Watering puddle", "sphere", [-5, 0.065, 5.6], [0.65, 0.015, 0.52], this.art.mat("#a5cbd1"), false);
+        for (let i = 0; i < 18; i++) {
+          const leaf = shape("Garden leaf", "sphere", [-8.1 + Math.sin(i * 2.4) * 0.6, 0.075, 2 + Math.cos(i * 1.7) * 0.7], [0.13, 0.018, 0.07], this.art.mat(i % 2 ? "#c6a46d" : "#b88767"), false);
+          leaf.setLocalEulerAngles(0, i * 29, 0);
+          this.leaves.push(leaf);
+        }
+        this.controls.id = "home-play-controls";
+        this.controls.hidden = true;
+        this.next.type = this.other.type = "button";
+        this.next.id = "home-next-action";
+        this.other.id = "home-next-object";
+        this.next.textContent = "More \xB7 Q";
+        this.other.textContent = "Select \xB7 R";
+        this.controls.append(this.next, this.other);
+        document.querySelector("#action-button").parentElement.prepend(this.controls);
+        this.next.onclick = () => {
+          this.commandIndex = (this.commandIndex + 1) % Math.max(1, this.allCommands.length);
+        };
+        this.other.onclick = () => {
+          const stand = this.extraCommands.find((c) => c.title === "Stand up");
+          if (stand) {
+            this.safe(stand.run);
+            return;
+          }
+          const options = [...this.nearby, ""], n = options.indexOf(this.selected);
+          this.selected = options[(n + 1) % options.length];
+          this.manualTarget = true;
+          this.lastSelectPosition.copy(this.character.player.getPosition());
+          this.commandIndex = 0;
+        };
+        window.addEventListener("keydown", (e) => {
+          if (e.repeat || document.querySelector("dialog[open]") || !this.allowed) return;
+          if (e.code === "KeyQ") {
+            e.preventDefault();
+            this.next.click();
+          }
+          if (e.code === "KeyR") {
+            e.preventDefault();
+            this.other.click();
+          }
+        }, { signal: this.abort.signal });
+        this.sync();
+        Object.assign(this.wagonObstacle, { homePlayDynamic: true });
+        this.house.obstacles.push(this.wagonObstacle);
+      }
+      app;
+      character;
+      controller;
+      house;
+      cleanup;
+      daily;
+      say;
+      camera;
+      store;
+      root;
+      art;
+      items = /* @__PURE__ */ new Map();
+      versions = /* @__PURE__ */ new Map();
+      motion = /* @__PURE__ */ new Map();
+      spin = /* @__PURE__ */ new Map();
+      controls = document.createElement("div");
+      next = document.createElement("button");
+      other = document.createElement("button");
+      cue;
+      preview;
+      planner;
+      selected = "";
+      commandIndex = 0;
+      commands = [];
+      active = false;
+      allowed = false;
+      pushing = false;
+      nextPersist = 0;
+      clock = 0;
+      effectClock = 0;
+      abort = new AbortController();
+      effects = [];
+      leaves = [];
+      puddle;
+      lastPlayer = new Vec338();
+      nearby = [];
+      dirty = false;
+      lastDay = 0;
+      fetchAfter = 0;
+      goalCooldown = 0;
+      jumpEffect = false;
+      audio = new PlayAudio();
+      manualTarget = false;
+      lastSelectPosition = new Vec338();
+      wagonObstacle = new BoundingBox19(new Vec338(2.6, 0, 7.75), new Vec338(0.3, 1, 0.39));
+      wagonPlanner;
+      resting = null;
+      sceneMode = "";
+      jumpParent = null;
+      shared = null;
+      extraFocus = null;
+      extraCommands = [];
+      onInvite = () => {
+      };
+      onFetch = () => false;
+      get carrying() {
+        return this.cleanup.carry.item?.id.startsWith("home-") ?? false;
+      }
+      get movementLocked() {
+        return this.pushing && !!this.character.animator.busy;
+      }
+      get sitting() {
+        return !!this.resting;
+      }
+      applyObstacles() {
+        this.wagonObstacle.center.copy(this.active ? this.pos("wagon") : new Vec338(9999, 0, 9999));
+        this.controller.dynamicObstacles = this.controller.dynamicObstacles.filter((b) => b !== this.wagonObstacle);
+        if (this.active) this.controller.dynamicObstacles.push(this.wagonObstacle);
+      }
+      get allCommands() {
+        return this.extraCommands.length ? this.extraCommands : this.commands;
+      }
+      get focus() {
+        if (!this.allowed) return null;
+        const command = this.allCommands[this.commandIndex % Math.max(1, this.allCommands.length)];
+        return command ? { title: command.title, detail: this.extraFocus?.detail ?? this.items.get(this.held() ?? this.selected)?.name ?? "Home play", icon: "\u273F", enabled: !this.character.animator.busy || ["Stand up", "Stop bite"].includes(command.title) } : null;
+      }
+      safe(run) {
+        try {
+          run();
+          this.sync();
+        } catch (e) {
+          this.say("Your play could not be saved. Please try again.");
+          console.error("Home play transaction", e);
+        }
+      }
+      press() {
+        if (!this.focus?.enabled) return false;
+        this.audio.unlock();
+        const c = this.allCommands[this.commandIndex % this.allCommands.length];
+        this.safe(c.run);
+        this.audio.tone(330, 0.09, "sine", 1.2);
+        return true;
+      }
+      pos(id) {
+        return this.items.get(id).entity.getPosition().clone();
+      }
+      state(id) {
+        return this.store.data.toys[id];
+      }
+      held() {
+        const id = this.store.held;
+        return id && this.items.has(id) ? id : null;
+      }
+      reactToVisit(id, person, socket) {
+        if (!this.items.has(id) || person.getPosition().distance(this.pos(id)) > 1.8) return false;
+        let shared = false;
+        this.safe(() => {
+          if (id === "jack" && this.state(id).value < 1) this.animate(id, 1);
+          else if (["bubbles", "cup", "book"].includes(this.state(id).kind) && !this.shared) {
+            this.store.transact((s) => {
+              s.toys[id].owner = "lilah";
+            });
+            if (this.cleanup.carry.item === this.items.get(id)) this.detachCarry();
+            this.shared = { id, person, socket, time: 3, burst: false };
+            shared = true;
+          } else this.burst(this.pos(id), "#e9c989", 4);
+        });
+        return shared;
+      }
+      returnShared() {
+        if (!this.shared) return;
+        const { id, person } = this.shared, p = person.getPosition();
+        for (const [dx, dz] of [[0.55, 0], [-0.55, 0], [0, 0.55], [0, -0.55]]) if (this.planner.free(p.x + dx, p.z + dz)) {
+          this.store.place(id, [p.x + dx, 0.08, p.z + dz]);
+          this.shared = null;
+          this.sync();
+          return;
+        }
+        this.store.place(id, HOME_TOYS.find((d) => d.id === id).home);
+        this.shared = null;
+        this.sync();
+      }
+      finishFetch(id) {
+        this.motion.delete(id);
+        const p = this.pos(id);
+        this.safe(() => {
+          this.store.place(id, [p.x, 0.08, p.z]);
+        });
+      }
+      facing() {
+        const v = this.character.visual.forward.clone().mulScalar(-1);
+        v.y = 0;
+        return v.normalize();
+      }
+      destination() {
+        const p = this.character.player.getPosition(), f = this.facing();
+        for (const d of [0.57, 0.42, 0.75]) {
+          const q = p.clone().add(f.clone().mulScalar(d));
+          if (this.planner.free(q.x, q.z)) return [q.x, 0.08, q.z];
+        }
+        for (const angle of [-45, 45, -90, 90, 180]) {
+          const a = angle * Math.PI / 180, q = p.clone().add(new Vec338(f.x * Math.cos(a) - f.z * Math.sin(a), 0, f.x * Math.sin(a) + f.z * Math.cos(a)).mulScalar(0.6));
+          if (this.planner.free(q.x, q.z)) return [q.x, 0.08, q.z];
+        }
+        return this.planner.free(p.x, p.z) ? [p.x, 0.08, p.z] : null;
+      }
+      pickup(id) {
+        if (this.cleanup.carry.item) return;
+        this.character.animator.playAction("PickUp", 0.8, () => this.safe(() => {
+          if (this.store.take(id)) {
+            this.motion.delete(id);
+            this.sync();
+            this.character.animator.setCarrying(true);
+          }
+        }), this.pos(id));
+      }
+      put(id, owner = "world") {
+        const target = owner === "world" ? this.destination() : this.pos(owner).toArray();
+        if (!target) {
+          this.say("Step into a little clear floor space to put this down.");
+          return;
+        }
+        if (id === "wagon" && HOUSE_DOORS.some((d) => Math.hypot(target[0] - d.x, target[2] - d.z) < 0.8)) {
+          this.say("A little farther from the doorway will leave room to walk.");
+          return;
+        }
+        if (owner !== "world") target[1] += owner.startsWith("cup") || owner.startsWith("block") ? 0.2 : owner === "teddy" ? 0.22 : owner === "flamingo" ? 0.95 : owner === "wagon" ? 0.24 : owner === "board" ? 0 : 0.16;
+        if (owner === "world" && ["cup", "block", "ramp"].includes(this.state(id).kind)) {
+          const near = [...this.items.keys()].find((k) => k !== id && ["cup", "block"].includes(this.state(k).kind) && this.state(k).owner === "world" && Math.hypot(this.pos(k).x - target[0], this.pos(k).z - target[2]) < 0.23 && this.pos(k).y < 0.7);
+          if (near) {
+            const p = this.pos(near);
+            target[0] = p.x;
+            target[1] = p.y + (this.state(near).kind === "cup" ? 0.17 : 0.22);
+            target[2] = p.z;
+            owner = near;
+          }
+        }
+        if (this.store.place(id, target, owner)) {
+          if (owner === "basin") {
+            this.motion.delete(id);
+            if (id === "duck") this.animate(id, 0);
+          }
+          this.detachCarry();
+          this.sync();
+          this.character.animator.playAction("PutDown", 0.8);
+        }
+      }
+      detachCarry() {
+        if (this.carrying) this.cleanup.carry.release(this.root, [0, 0.08, 0]);
+        this.character.animator.setCarrying(!!this.cleanup.carry.item);
+      }
+      throw(id, strong = false) {
+        if (!this.destination()) return;
+        const kind = this.state(id).kind;
+        this.character.animator.playAction(kind === "ball" ? "PlayRoll" : "PlayThrow", 0.8, () => this.safe(() => {
+          if (this.held() !== id || !this.active) return;
+          const p = this.destination();
+          if (!p) return;
+          const f = this.facing();
+          p[1] = ["ball", "car"].includes(kind) ? 0.08 : Math.max(0.3, this.cleanup.carry.socket.getPosition().y);
+          if (this.store.place(id, p)) {
+            this.detachCarry();
+            this.sync();
+            const speed = kind === "plane" ? strong ? 3.8 : 2.1 : kind === "ball" ? 2.8 : 2;
+            this.motion.set(id, { vx: f.x * speed, vy: kind === "plane" ? 0.8 : kind === "ball" ? 0 : 1.5, vz: f.z * speed, time: 0 });
+            if (kind === "fetch") this.fetchAfter = 1.8;
+          }
+        }));
+      }
+      animate(id, value) {
+        this.store.transact((s) => {
+          s.toys[id].value = value;
+        });
+      }
+      gather() {
+        const members = HOME_TOYS.filter((d) => ["cup", "ball", "beanbag", "teddy", "block", "fetch", "cake", "plate", "pitcher"].includes(d.kind));
+        this.store.transact((s) => {
+          for (const d of members) {
+            if (s.toys[d.id].owner === "held") continue;
+            Object.assign(s.toys[d.id], { owner: "world", position: [...d.home], tilt: 0 });
+            this.motion.delete(d.id);
+          }
+        });
+      }
+      buildCommands() {
+        this.commands = [];
+        const add = (title, run) => this.commands.push({ title, run }), id = this.selected, t = id ? this.state(id) : null, h = this.held(), ht = h ? this.state(h) : null;
+        if (this.resting) {
+          if (h && ht?.kind === "book") add("Turn page", () => this.animate(h, (ht.value + 1) % 4));
+          add("Stand up", () => {
+            this.character.animator.setIdleClip("Idle");
+            this.character.animator.playAction("MealStand", 0.65);
+            this.resting = null;
+          });
+          return;
+        }
+        if (this.pushing) {
+          add("Let go", () => {
+            this.pushing = false;
+            this.savePositions();
+            this.character.animator.setWorkClip(null);
+          });
+          return;
+        }
+        if (h && ht) {
+          const k = ht.kind;
+          if (id && id !== h && t && this.pos(id).distance(this.character.player.getPosition()) < 1.5) {
+            if (id === "basket") add("Put in basket", () => {
+              const def = HOME_TOYS.find((d) => d.id === h);
+              this.store.place(h, def.home);
+              this.detachCarry();
+            });
+            if (id === "wagon" && ["teddy", "cup", "block", "duck", "cake"].includes(k) || k === "hat" && ["teddy", "flamingo"].includes(id) || k === "teddy" && ["cushion", "bed", "sofa"].includes(t.kind) || id === "board" && k === "paper") add(id === "wagon" ? "Load wagon" : k === "hat" ? "Put hat on" : id === "board" ? "Display picture" : "Seat Teddy", () => this.put(h, id));
+            if (t.kind === "surface" && ["paper", "plane", "cup", "block", "book"].includes(k)) add("Place on desk", () => this.put(h, id));
+            if (id === "teddy" && k === "beanbag") add("Set in Teddy\u2019s lap", () => this.put(h, id));
+            if (id === "basin" && ["boat", "duck"].includes(k) && this.store.data.water) add("Float toy", () => this.put(h, "basin"));
+            if (["pitcher", "cup", "cake"].includes(k) && id === "teddy") add(k === "cake" ? "Offer pretend bite" : "Offer tea", () => {
+              this.animate("teddy", k === "cake" ? 2 : 1);
+              this.burst(this.pos("teddy"), "#e9c989", 3);
+            });
+            if (k === "pitcher" && t.kind === "cup") add("Pour tea", () => {
+              this.animate(id, 1);
+              this.spin.set(h, 1);
+              this.burst(this.pos(id), "#bbd7d5", 4);
+            });
+            if (k === "can" && id === "flower") add("Water flower", () => {
+              if (!ht.value) {
+                this.say("The watering can is empty. Fill it at the sink.");
+                return;
+              }
+              this.store.transact((s) => {
+                s.toys[h].value--;
+                s.toys.flower.value = Math.min(3, s.toys.flower.value + 1);
+                s.puddle = Math.min(1, s.puddle + 0.3);
+              });
+              this.burst(this.pos(id), "#aad5e0", 8);
+            });
+            if (k === "pinwheel" && id === "flower") add("Plant pinwheel", () => this.put(h, id));
+          }
+          if (k === "can" && this.character.player.getPosition().distance(new Vec338(-1.7, 0.09, 11.45)) < 1.15) add("Refill can", () => {
+            this.animate(h, 3);
+            this.burst(this.pos(h), "#acd6de", 5);
+          });
+          if (k === "paper") {
+            add("Draw a mark", () => this.store.transact((s) => {
+              const a = s.toys[h].marks;
+              if (a.length < 16) a.push((s.toys[h].value + a.length) % 4);
+            }));
+            add("Choose color", () => this.animate(h, (ht.value + 1) % 4));
+            add("Fold plane", () => this.store.transact((s) => {
+              s.toys[h].kind = "plane";
+            }));
+          }
+          if (k === "plane") {
+            add("Gentle toss", () => this.throw(h));
+            add("Strong throw", () => this.throw(h, true));
+            add("Unfold paper", () => this.store.transact((s) => {
+              s.toys[h].kind = "paper";
+            }));
+          }
+          if (["beanbag", "ball", "fetch"].includes(k)) add(k === "ball" ? "Roll ball" : "Toss", () => this.throw(h));
+          if (k === "book") add("Turn page", () => this.animate(h, (ht.value + 1) % 4));
+          if (k === "book" && id && t?.kind === "cushion") add("Read beside cushion", () => {
+            this.resting = this.character.player.getPosition().clone();
+            this.character.animator.setIdleClip("MealIdle");
+            this.character.animator.playAction("MealSit", 0.65);
+          });
+          if (k === "pitcher") add("Pour here", () => {
+            this.spin.set(h, 1);
+            const p = this.destination();
+            if (p) this.burst(new Vec338(...p), "#bbd7d5", 4);
+          });
+          if (k === "pinwheel") add("Blow", () => this.spin.set(h, 9));
+          if (k === "bubbles") add("Blow bubbles", () => this.blow());
+          if (this.daily.lilahAvailable && this.daily.lilahTarget.anchor.distance(this.character.player.getPosition()) < 4 && ["bubbles", "book", "cup", "teddy", "duck", "jack"].includes(k)) add("Invite Lilah", () => this.onInvite(h, this.pos(h)));
+          if (k === "rake" && this.character.player.getPosition().x < -6) add("Gather leaves", () => {
+            const p = this.character.player.getPosition(), f = this.facing();
+            for (let i = 0; i < this.leaves.length; i++) this.leaves[i].setPosition(p.x + f.x * 0.65 + Math.sin(i * 2) * 0.2, 0.08, p.z + f.z * 0.65 + Math.cos(i * 2) * 0.2);
+            this.store.transact((s) => {
+              s.leafPile = 1;
+            });
+          });
+          add("Place here", () => this.put(h));
+          add("Turn", () => {
+            this.store.transact((s) => {
+              s.toys[h].yaw += 45;
+            });
+            this.items.get(h).entity.setLocalEulerAngles(0, this.state(h).yaw, 0);
+          });
+          return;
+        }
+        if (!id || !t || this.cleanup.carry.item) return;
+        const fixed = HOME_TOYS.find((d) => d.id === id).fixed;
+        if (t.kind === "ball") add("Kick softly", () => {
+          const p = this.pos(id), a = this.character.player.getPosition(), f = p.sub(a);
+          f.y = 0;
+          f.normalize();
+          this.motion.set(id, { vx: f.x * 3, vy: 0, vz: f.z * 3, time: 0 });
+        });
+        if (t.kind === "duck") add("Wind duck", () => {
+          this.animate(id, Math.min(8, t.value + 2.7));
+          const yaw = t.yaw * Math.PI / 180;
+          this.motion.set(id, { vx: Math.sin(yaw) * 0.28, vy: 0, vz: Math.cos(yaw) * 0.28, time: 0 });
+        });
+        if (t.kind === "jack") add(t.value >= 1 ? "Close lid" : "Turn handle", () => {
+          this.animate(id, t.value >= 1 ? 0 : Math.min(1, t.value + 0.18 + Math.random() * 0.13));
+        });
+        if (t.kind === "wagon") add("Pull wagon", () => {
+          this.pushing = true;
+        });
+        if (t.kind === "car") add("Push car", () => {
+          const f = this.facing();
+          this.motion.set(id, { vx: f.x * 1.6, vy: 0, vz: f.z * 1.6, time: 0 });
+        });
+        if (t.kind === "ramp") add("Run car down ramp", () => {
+          const car = this.pos("car"), ramp = this.pos(id);
+          if (car.distance(ramp) < 1.1 && this.state("car").owner === "world") {
+            const a = t.yaw * Math.PI / 180;
+            this.items.get("car").entity.setPosition(ramp.x, ramp.y + 0.24, ramp.z);
+            this.motion.set("car", { vx: Math.sin(a) * Math.sqrt(4 * (ramp.y + 0.24)), vy: 0, vz: Math.cos(a) * Math.sqrt(4 * (ramp.y + 0.24)), time: 0 });
+          } else this.say("Place the little car beside the ramp.");
+        });
+        if (t.kind === "basin") add(this.store.data.water ? "Empty basin" : "Fill basin", () => {
+          this.store.transact((s) => {
+            s.water = s.water ? 0 : 1;
+            if (!s.water) {
+              for (const [key, toy2] of Object.entries(s.toys)) if (toy2.owner === "basin") {
+                toy2.owner = "world";
+                toy2.position = [5.65, 0.99, 12.5 + (key === "duck" ? -0.25 : 0)];
+                this.motion.delete(key);
+              }
+            }
+          });
+          this.burst(this.pos(id), "#aed6dd", 8);
+        });
+        if (t.kind === "boat" && t.owner === "basin") add("Blow boat", () => {
+          const p = this.pos(id), a = this.character.player.getPosition(), f = p.sub(a);
+          f.y = 0;
+          f.normalize();
+          this.motion.set(id, { vx: f.x * 0.3, vy: 0, vz: f.z * 0.3, time: 0 });
+        });
+        if (t.kind === "pinwheel") add("Blow", () => this.spin.set(id, 9));
+        if (t.kind === "cushion") add("Stand cushion", () => this.animate(id, t.value ? 0 : 1));
+        if (t.kind === "blanket") add("Drape den", () => {
+          const a = this.pos("cushion0"), b = this.pos("cushion1");
+          if (a.distance(b) > 0.55 && a.distance(b) < 1.4 && this.state("cushion0").value && this.state("cushion1").value) {
+            this.store.place(id, [(a.x + b.x) / 2, 0.69, (a.z + b.z) / 2]);
+          } else this.say("Stand the two play cushions nearby for the blanket.");
+        });
+        if (id === "basket") add("Gather basket toys", () => this.gather());
+        if (this.daily.lilahAvailable && this.daily.lilahTarget.anchor.distance(this.character.player.getPosition()) < 4 && ["teddy", "duck", "jack"].includes(t.kind)) add("Invite Lilah", () => this.onInvite(id, this.pos(id)));
+        if (!fixed) add(t.tilt ? "Right and pick up" : "Pick up", () => this.pickup(id));
+        if (!fixed) add("Turn", () => this.store.transact((s) => {
+          s.toys[id].yaw += 45;
+        }));
+      }
+      sync() {
+        for (const def of HOME_TOYS) {
+          const t = this.state(def.id), item = this.items.get(def.id), signature = t.kind + ":" + t.marks.join(",") + ":" + (t.kind === "book" ? t.value : 0);
+          if (this.versions.get(def.id) !== signature) {
+            for (const child of [...item.entity.children]) child.destroy();
+            item.entity.addChild(this.art.make(t.kind, def.color));
+            this.versions.set(def.id, signature);
+            if (t.kind === "paper" || t.kind === "plane") for (const [i, c] of t.marks.entries()) primitives(this.app, item.entity)("Crayon mark", "sphere", [(i % 4 - 1.5) * 0.06, 0.055, ((i / 4 | 0) - 1.5) * 0.07], [0.045, 3e-3, 0.065], this.art.mat(["#d49aaf", "#9bbbad", "#e2be75", "#b2a4d1"][c % 4]), false);
+            if (t.kind === "book") {
+              const page = primitives(this.app, item.entity);
+              for (let i = 0; i < 3; i++) page("Picture story", "sphere", [(i - 1) * 0.08, 0.065, Math.sin(i + t.value) * 0.12], [0.07, 3e-3, 0.07], this.art.mat(["#c69abb", "#9bbbad", "#e1bd79", "#a8b5d3"][(i + t.value) % 4]), false);
+            }
+          }
+          if (t.owner === "held") {
+            if (!this.cleanup.carry.item) {
+              this.cleanup.carry.pickUp(item);
+              this.character.animator.setCarrying(true);
+            }
+            continue;
+          }
+          if (item.entity.parent !== this.root) item.entity.reparent(this.root);
+          item.entity.setPosition(...t.position);
+          item.entity.setEulerAngles(0, t.yaw, t.tilt || 0);
+        }
+      }
+      burst(p, color, count) {
+        for (let i = 0; i < count && this.effects.length < 36; i++) {
+          const e = primitives(this.app, this.root)("Play splash", "sphere", [p.x, p.y + 0.2, p.z], [0.04, 0.04, 0.04], this.art.mat(color), false);
+          this.effects.push({ entity: e, life: 0.5 + Math.random() * 0.35, vx: (Math.random() - 0.5) * 0.7, vz: (Math.random() - 0.5) * 0.7, vy: 0.6 });
+        }
+      }
+      blow(origin) {
+        const p = origin ?? this.character.player.getPosition(), f = this.facing();
+        for (let i = 0; i < 5 && this.effects.length < 30; i++) {
+          const size = 0.055 + Math.random() * 0.08, e = primitives(this.app, this.root)("Soap bubble", "sphere", [p.x + f.x * 0.4, (origin ? p.y + 0.15 : 1) + i * 0.05, p.z + f.z * 0.4], [size, size, size], this.art.mat(i % 2 ? "#d9e9df" : "#dbcce5"), false);
+          this.effects.push({ entity: e, life: 2 + Math.random() * 3, vx: f.x * 0.2 + 0.06, vz: f.z * 0.2, vy: 0.1 });
+        }
+      }
+      savePositions() {
+        if (!this.dirty) return;
+        this.store.transact((s) => {
+          for (const [id, item] of this.items) {
+            if (s.toys[id].owner !== "held") s.toys[id].position = item.entity.getPosition().toArray();
+          }
+        });
+        this.dirty = false;
+      }
+      suspend() {
+        this.pushing = false;
+        this.returnShared();
+        if (this.resting) {
+          this.resting = null;
+          this.character.animator.setIdleClip("Idle");
+        }
+        this.savePositions();
+        this.extraCommands = [];
+        this.extraFocus = null;
+        this.character.animator.setWorkClip(null);
+        for (const e of this.effects) e.entity.destroy();
+        this.effects = [];
+      }
+      update(dt, mode, available) {
+        this.sceneMode = mode;
+        this.active = (mode === "cleanup" || mode === "outdoors") && this.cleanup.mode === "day";
+        this.allowed = this.active && available && !this.controller.riding;
+        if (this.lastDay !== this.daily.clock.state.day) {
+          this.detachCarry();
+          this.store.day(this.daily.clock.state.day);
+          this.lastDay = this.daily.clock.state.day;
+          this.sync();
+        }
+        this.root.enabled = this.active;
+        this.controls.hidden = !this.allowed && !this.extraCommands.length;
+        if (!this.active) {
+          this.allowed = available && mode === "recess";
+          this.controls.hidden = !this.extraCommands.length;
+          return;
+        }
+        const p = this.character.player.getPosition();
+        this.clock += dt;
+        if (this.allowed) {
+          this.step(Math.min(0.04, dt), p);
+          this.nextPersist -= dt;
+          if (this.nextPersist <= 0) {
+            this.safe(() => this.savePositions());
+            this.nextPersist = 2;
+          }
+        }
+        const held = this.held();
+        this.nearby = HOME_TOYS.filter((d) => d.id !== held && !["held", "sunny", "lilah"].includes(this.state(d.id).owner) && Math.hypot(this.pos(d.id).x - p.x, this.pos(d.id).z - p.z) < 1.25).sort((a, b) => this.pos(a.id).distance(p) - this.pos(b.id).distance(p)).map((d) => d.id);
+        if (this.manualTarget && p.distance(this.lastSelectPosition) > 0.45) this.manualTarget = false;
+        if (!this.nearby.includes(this.selected) && !(this.manualTarget && !this.selected)) {
+          const selected = this.nearby[0] ?? "";
+          if (selected !== this.selected) {
+            this.selected = selected;
+            this.commandIndex = 0;
+          }
+        }
+        this.buildCommands();
+        this.controls.hidden = !this.allowed || !this.allCommands.length && !this.nearby.length;
+        this.next.hidden = this.allCommands.length < 2;
+        const seated = this.extraCommands.some((c) => c.title === "Stand up");
+        this.other.hidden = !seated && (this.nearby.length < 1 || !!this.extraCommands.length);
+        this.other.textContent = seated ? "Stand up \xB7 R" : "Select \xB7 R";
+        this.cue.enabled = this.allowed && !!this.selected;
+        if (this.selected) {
+          const q = this.pos(this.selected);
+          this.cue.setPosition(q.x, q.y + 6e-3, q.z);
+        }
+        const destination = held ? this.destination() : null;
+        this.preview.enabled = !!destination && this.allowed;
+        if (destination) this.preview.setPosition(...destination);
+        this.puddle.setLocalScale(0.65 + this.store.data.puddle, 0.012, 0.52 + this.store.data.puddle * 0.6);
+        this.lastPlayer.copy(p);
+      }
+      step(dt, p) {
+        if (!dt) return;
+        if (this.shared) {
+          const job = this.shared;
+          job.time -= dt;
+          this.items.get(job.id).entity.setPosition(job.socket.getPosition());
+          if (job.time < 1.8 && !job.burst) {
+            job.burst = true;
+            if (job.id === "bubbles") this.blow(job.socket.getPosition());
+            else this.burst(job.socket.getPosition(), "#e9c989", 3);
+          }
+          if (job.time <= 0 || !job.person.enabled || !this.daily.lilahAvailable) this.safe(() => this.returnShared());
+        }
+        this.wagonPlanner = new HousePath({ ...this.house, obstacles: this.house.obstacles.filter((b) => b !== this.wagonObstacle) }, 0.38);
+        this.goalCooldown = Math.max(0, this.goalCooldown - dt);
+        if (this.fetchAfter > 0) {
+          this.fetchAfter -= dt;
+          if (this.fetchAfter <= 0) {
+            this.motion.delete("fetch");
+            const at = this.pos("fetch");
+            if (this.onFetch("fetch", at)) this.safe(() => {
+              this.store.transact((s) => {
+                s.toys.fetch.owner = "sunny";
+                s.toys.fetch.position = at.toArray();
+              });
+            });
+          }
+        }
+        const ball = this.pos("ball");
+        if (this.state("ball").owner === "world" && Math.hypot(ball.x - p.x, ball.z - p.z) < 0.35 && this.controller.velocity.length() > 0.1) {
+          const f = ball.clone().sub(p);
+          f.y = 0;
+          f.normalize();
+          this.motion.set("ball", { vx: f.x * 0.9, vy: 0, vz: f.z * 0.9, time: 0 });
+        }
+        if (this.pushing) {
+          const e = this.items.get("wagon").entity, old = e.getPosition().clone(), f = this.facing(), target = p.clone().sub(f.mulScalar(0.8)), q = new Vec338().lerp(old, target, Math.min(1, dt * 1.8 / Math.max(1e-3, old.distance(target))));
+          if (this.wagonPlanner.line(old, q)) {
+            e.setPosition(q.x, 0.08, q.z);
+            e.setEulerAngles(0, this.character.visual.getEulerAngles().y, 0);
+            this.dirty = true;
+            for (const wheel of e.find((n) => n.name === "Wheel")) wheel.rotateLocal(0, 0, this.controller.velocity.length() * dt * 240);
+          }
+          if (old.distance(p) > 2) {
+            this.pushing = false;
+            this.say("The wagon stopped here. You can pull it back out.");
+          }
+          this.character.animator.setWorkClip(this.controller.velocity.length() > 0.1 ? "CarryWalk" : "CarryIdle");
+        }
+        for (const [id, m] of this.motion) {
+          const e = this.items.get(id).entity, t = this.state(id), q = e.getPosition().clone();
+          if (q.distance(p) > 12 || t.owner === "held") {
+            this.motion.delete(id);
+            continue;
+          }
+          m.time += dt;
+          const floating = t.owner === "basin";
+          if (floating) {
+            const basin = this.pos("basin");
+            if (Math.abs(q.x + m.vx * dt - basin.x) > 0.28) m.vx *= -0.8;
+            if (Math.abs(q.z + m.vz * dt - basin.z) > 0.2) m.vz *= -0.8;
+            q.x += m.vx * dt;
+            q.z += m.vz * dt;
+          } else {
+            const nx = q.x + m.vx * dt, nz = q.z + m.vz * dt;
+            if (this.planner.free(nx, q.z)) q.x = nx;
+            else m.vx *= -0.6;
+            if (this.planner.free(q.x, nz)) q.z = nz;
+            else m.vz *= -0.6;
+            if (q.y > 0.081 || m.vy > 0) {
+              m.vy -= dt * (t.kind === "plane" ? 1.25 : 5);
+              q.y = Math.max(0.08, q.y + m.vy * dt);
+              if (q.y === 0.08) m.vy = 0;
+            }
+          }
+          const friction = floating ? 0.7 : t.kind === "duck" ? 0 : q.y > 0.1 ? t.kind === "plane" ? 0.13 : 0.2 : Math.abs(q.x) < 2 && q.z > 5 && q.z < 7.5 ? 2.8 : 1.3;
+          m.vx *= Math.exp(-friction * dt);
+          m.vz *= Math.exp(-friction * dt);
+          e.setPosition(q);
+          this.dirty = true;
+          if (t.kind === "duck") {
+            e.findByName("Key")?.setLocalEulerAngles(0, 0, this.clock * 360);
+            e.setEulerAngles(0, t.yaw, Math.sin(this.clock * 12) * 5);
+            if (m.time > t.value || floating) this.motion.delete(id);
+          }
+          if (t.kind === "ball") {
+            const a = this.pos("marker0"), b = this.pos("marker1"), vx = b.x - a.x, vz = b.z - a.z, len = vx * vx + vz * vz, u = ((q.x - a.x) * vx + (q.z - a.z) * vz) / len;
+            if (len > 0.3 && u > 0 && u < 1 && Math.abs((q.x - a.x) * vz - (q.z - a.z) * vx) / Math.sqrt(len) < 0.16 && this.goalCooldown <= 0) {
+              this.burst(a, "#e9cc8a", 3);
+              this.burst(b, "#e9cc8a", 3);
+              this.goalCooldown = 2;
+            }
+            for (const leaf of this.leaves) {
+              const l = leaf.getPosition();
+              if (Math.hypot(l.x - q.x, l.z - q.z) < 0.3) {
+                leaf.setPosition(l.x + m.vx * 0.12, 0.08, l.z + m.vz * 0.12);
+                leaf.rotateLocal(0, 30, 0);
+              }
+            }
+          }
+          for (const [other, item] of this.items) {
+            if (other === id || this.state(other).owner === "held") continue;
+            const a = item.entity.getPosition();
+            if (Math.hypot(q.x - a.x, q.z - a.z) > 0.23 || Math.abs(q.y - a.y) > 0.32) continue;
+            const k = this.state(other).kind;
+            if (["cup", "block"].includes(k)) {
+              const dx = a.x - q.x, dy = a.y - q.y, dz = a.z - q.z, d = Math.max(0.01, Math.hypot(dx, dy, dz)), impact = Math.max(0, (m.vx * dx + m.vy * dy + m.vz * dz) / d), tilt = Math.max(this.state(other).tilt || 0, impact > 1 ? 78 : 24);
+              item.entity.setEulerAngles(0, this.state(other).yaw, tilt);
+              this.state(other).tilt = tilt;
+              this.motion.set(other, { vx: m.vx * 0.45, vy: 0.2, vz: m.vz * 0.45, time: 0 });
+              this.state(other).owner = "world";
+            }
+            if (k === "flamingo") this.spin.set(other, 1);
+            if (k === "cushion") {
+              m.vx *= 0.8;
+              m.vz *= 0.8;
+            }
+          }
+          if (m.time > 10 || Math.hypot(m.vx, m.vz) < 0.035 && q.y <= 0.081) this.motion.delete(id);
+        }
+        for (const [id, item] of this.items) {
+          const t = this.state(id), e = item.entity;
+          if (this.items.has(t.owner)) {
+            const parent = this.pos(t.owner), offset = Object.keys(this.store.data.toys).filter((k) => this.state(k).owner === t.owner).indexOf(id);
+            if (t.owner === "basin" && this.motion.has(id)) continue;
+            const height = t.owner === "wagon" ? 0.25 : t.owner === "flamingo" ? 0.95 : t.owner === "teddy" ? t.kind === "hat" ? 0.54 : 0.22 : t.owner.startsWith("block") ? 0.22 : t.owner.startsWith("cup") ? 0.17 : t.owner.startsWith("cushion") ? 0.32 : t.owner === "sofa" || t.owner === "board" || t.owner === "desk-surface" ? 0 : t.owner === "toy-bed" ? 0.08 : 0.16;
+            e.setPosition(parent.x + (t.owner === "wagon" ? (offset % 2 - 0.5) * 0.22 : 0), parent.y + height, parent.z + (t.owner === "wagon" ? (Math.floor(offset / 2) - 0.5) * 0.24 : t.owner === "board" ? 0.04 : 0));
+            if (t.owner === "board") e.setEulerAngles(90, 0, 0);
+          }
+          if (t.kind === "cushion") e.setEulerAngles(t.value ? 75 : 0, t.yaw, 0);
+          if (t.kind === "teddy" && t.value) e.setEulerAngles(Math.sin(this.clock * 4) * (t.value === 2 ? 9 : 4), t.yaw, 0);
+          if (t.kind === "jack") {
+            const jack = e.findByName("Surprise");
+            if (jack) {
+              jack.enabled = t.value >= 1;
+              jack.setLocalPosition(0, 0.5 + Math.sin(this.clock * 8) * 0.03, 0);
+            }
+            e.findByName("Lid")?.setLocalEulerAngles(t.value >= 1 ? -110 : 0, 0, 0);
+            e.findByName("Crank")?.setLocalEulerAngles(t.value * 1080, 0, 0);
+          }
+          if (t.kind === "basin") {
+            const water = e.findByName("Water");
+            if (water) water.enabled = !!this.store.data.water;
+          }
+          if (t.kind === "flower") e.findByName("Stem")?.setLocalEulerAngles(0, 0, t.value ? 0 : 16);
+          if (t.kind === "cup") {
+            const top = e.findByName("Inside");
+            if (top) top.setLocalPosition(0, t.value ? 0.175 : 0.171, 0);
+          }
+          if (t.kind === "pitcher" && (this.spin.get(id) || 0) > 0) {
+            const v = this.spin.get(id);
+            e.setLocalEulerAngles(0, 0, Math.sin(v * Math.PI) * -45);
+            this.spin.set(id, Math.max(0, v - dt));
+          }
+          if (t.kind === "pinwheel") {
+            let speed = this.spin.get(id) || 0;
+            if (t.owner === "held") speed = Math.max(speed, this.controller.velocity.length() * 3);
+            speed *= Math.exp(-dt * 0.8);
+            this.spin.set(id, speed);
+            e.findByName("Rotor")?.rotateLocal(0, 0, speed * dt * 100);
+          }
+          if (t.kind === "flamingo" && (this.spin.get(id) || 0) > 0) {
+            const a = this.spin.get(id);
+            e.setEulerAngles(0, 0, Math.sin(this.clock * 12) * a * 8);
+            this.spin.set(id, Math.max(0, a - dt));
+          }
+        }
+        this.effectClock -= dt;
+        const jumping = ["PlayJump", "JourneyJump"].includes(this.character.animator.actionName ?? "");
+        if (jumping && !this.jumpEffect) {
+          if (Math.hypot(p.x + 5, p.z - 5.6) < 0.7) this.burst(new Vec338(p.x, 0.09, p.z), "#b5d8df", 14);
+          for (const leaf of this.leaves) {
+            const q = leaf.getPosition();
+            if (Math.hypot(q.x - p.x, q.z - p.z) < 1) leaf.setPosition(q.x + (q.x - p.x) * 0.9, 0.08, q.z + (q.z - p.z) * 0.9);
+          }
+        }
+        this.jumpEffect = jumping;
+        if (this.effectClock <= 0 && this.controller.velocity.length() > 0.15) {
+          if (Math.hypot(p.x + 5, p.z - 5.6) < 0.5 + this.store.data.puddle * 0.4) {
+            this.burst(new Vec338(p.x, 0.08, p.z), "#bedde2", this.controller.velocity.length() > 1 ? 7 : 3);
+            this.effectClock = 0.25;
+            this.spin.set("wet-feet", 3);
+            this.audio.tone(this.controller.velocity.length() > 1 ? 170 : 260, 0.1, "sine", 0.5);
+          } else if ((this.spin.get("wet-feet") || 0) > 0 && this.effects.length < 30) {
+            const e = primitives(this.app, this.root)("Fading wet footprint", "sphere", [p.x, 0.077, p.z], [0.09, 6e-3, 0.18], this.art.mat("#b0c3bc"), false);
+            e.setEulerAngles(0, this.character.visual.getEulerAngles().y, 0);
+            this.effects.push({ entity: e, life: 2.5, vx: 0, vz: 0, vy: 0 });
+            this.effectClock = 0.35;
+            this.spin.set("wet-feet", this.spin.get("wet-feet") - 0.35);
+          }
+          for (const leaf of this.leaves) {
+            const q = leaf.getPosition();
+            if (Math.hypot(q.x - p.x, q.z - p.z) < 0.5) {
+              leaf.setPosition(q.x + (q.x - p.x) * 0.4, 0.08, q.z + (q.z - p.z) * 0.4);
+              leaf.rotateLocal(0, 35, 0);
+            }
+          }
+        }
+        for (let i = this.effects.length - 1; i >= 0; i--) {
+          const fx = this.effects[i], q = fx.entity.getPosition();
+          fx.life -= dt;
+          const bubble = fx.entity.name === "Soap bubble";
+          if (fx.life <= 0 || bubble && (Math.hypot(q.x - p.x, q.z - p.z) < 0.2 || !this.planner.free(q.x, q.z))) {
+            fx.entity.destroy();
+            this.effects.splice(i, 1);
+          } else {
+            fx.entity.setPosition(q.x + fx.vx * dt, q.y + fx.vy * dt, q.z + fx.vz * dt);
+            if (fx.entity.name === "Fading wet footprint") {
+              const s = Math.min(1, fx.life);
+              fx.entity.setLocalScale(0.09 * s, 6e-3, 0.18 * s);
+            }
+          }
+        }
+      }
+      paintHUD() {
+        const seated = this.extraCommands.some((c) => c.title === "Stand up");
+        this.controls.hidden = !this.allowed || !this.allCommands.length && !this.nearby.length;
+        this.next.hidden = this.allCommands.length < 2;
+        this.other.hidden = !seated && (this.nearby.length < 1 || !!this.extraCommands.length);
+        this.other.textContent = seated ? "Stand up \xB7 R" : "Select \xB7 R";
+        const jump = document.querySelector("#journey-jump");
+        if (jump) {
+          this.jumpParent ??= jump.parentElement;
+          if (this.sceneMode === "outdoors" && !this.controls.hidden) {
+            if (jump.parentElement !== this.controls) this.controls.append(jump);
+            this.next.textContent = "More";
+            this.other.textContent = "Select";
+            jump.textContent = "Jump";
+          } else if (jump.parentElement === this.controls) this.jumpParent.append(jump);
+        }
+        const f = this.focus;
+        if (!f) return false;
+        const player = this.character.player.getPosition();
+        this.camera.beginChore(player, this.selected ? this.pos(this.selected) : player);
+        const b = document.querySelector("#action-button");
+        b.dataset.target = "home-play";
+        b.disabled = !f.enabled;
+        document.querySelector("#action-title").textContent = f.title;
+        document.querySelector("#action-detail").textContent = f.detail;
+        document.querySelector("#action-icon").textContent = f.icon;
+        b.setAttribute("aria-label", f.title + ": " + f.detail);
+        return true;
+      }
+      snapshot() {
+        return { active: this.active, selected: this.selected, focus: this.focus, commands: this.allCommands.map((c) => c.title), held: this.store.held, pushing: this.pushing, moving: this.motion.size, effects: this.effects.length, state: this.store.data, objects: [...this.items].map(([id, item]) => ({ id, position: item.entity.getPosition().toArray() })) };
+      }
+      destroy() {
+        this.suspend();
+        const index = this.house.obstacles.indexOf(this.wagonObstacle);
+        if (index >= 0) this.house.obstacles.splice(index, 1);
+        this.abort.abort();
+        this.controls.remove();
+        this.root.destroy();
+        this.art.destroy();
+        this.audio.destroy();
+      }
+    };
+  }
+});
+
+// src/game/MealArt.ts
+import { BoundingBox as BoundingBox20, Entity as Entity42, Mesh as Mesh6, MeshInstance as MeshInstance6 } from "playcanvas";
+function mealGrip(prop, drink, fruit = false) {
+  prop.setLocalPosition(0, drink ? -0.025 : 0.035, -0.055);
+  prop.setLocalScale(drink ? 0.65 : 1, drink ? 0.65 : 1, drink ? 0.65 : 1);
+  prop.setLocalEulerAngles(drink ? -18 : fruit ? 0 : 35, 0, 0);
+}
+var MealArt;
+var init_MealArt = __esm({
+  "src/game/MealArt.ts"() {
+    "use strict";
+    init_ContainerLease();
+    init_AssetUrls();
+    init_primitives();
+    MealArt = class {
+      constructor(app, art) {
+        this.app = app;
+        this.art = art;
+      }
+      app;
+      art;
+      leases = /* @__PURE__ */ new Map();
+      meshes = [];
+      async pizzaPlatter(parent, portions) {
+        let lease = this.leases.get("pizza");
+        if (!lease) {
+          lease = leaseContainer(this.app, assetUrl("/assets/food/pizza.glb"), "Edible pizza");
+          this.leases.set("pizza", lease);
+        }
+        const res = await lease.ready;
+        if (!parent.parent) return;
+        const model = res.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox20();
+        let first = true;
+        for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
+          if (first) {
+            bounds.copy(m.aabb);
+            first = false;
+          } else bounds.add(m.aabb);
+        }
+        const size = 0.57 / (bounds.halfExtents.x * 2);
+        model.setLocalScale(size, size, size);
+        model.setLocalPosition(-bounds.center.x * size, -(bounds.center.y - bounds.halfExtents.y) * size, -bounds.center.z * size);
+        for (const r of model.findComponents("render")) {
+          const index = Number(r.entity.name.replace("slice", "")) - 1;
+          r.enabled = portions[index] ?? false;
+        }
+        parent.addChild(model);
+      }
+      async food(parent, kind, bites = 0, slice = 0, width = 0.28) {
+        if (bites >= 3) return;
+        if (kind === "sandwich") {
+          const serving = new Entity42("Sandwich serving", this.app);
+          parent.addChild(serving);
+          serving.setLocalScale(width / 0.28, width / 0.28, width / 0.28);
+          const s = primitives(this.app, serving), w = 0.25 * (1 - bites * 0.28);
+          for (const y of [0.025, 0.1]) s("Bread slice", "sphere", [0, y, 0], [w, 0.035, 0.22], this.art.mat("#ddbb80"));
+          s("Lettuce", "sphere", [0, 0.06, 0], [w + 0.01, 0.018, 0.23], this.art.mat("#91aa70"));
+          s("Tomato", "cylinder", [0, 0.08, 0], [w, 0.018, 0.19], this.art.mat("#cf8e75"));
+          return;
+        }
+        if (kind === "turkey" && slice >= 2) {
+          const s = primitives(this.app, parent), w = width * (1 - bites * 0.28);
+          s("Roasted turkey skin", "sphere", [0, 0.02, 0], [w, 0.04, width * 0.65], this.art.mat("#b88352"));
+          s("Carved turkey", "sphere", [0, 0.035, 0], [w * 0.86, 0.025, width * 0.53], this.art.mat("#ebd6b4"));
+          return;
+        }
+        const file = kind === "sandwich" ? "bread" : kind;
+        let lease = this.leases.get(file);
+        if (!lease) {
+          lease = leaseContainer(this.app, assetUrl(`/assets/food/${file}.glb`), "Edible " + file);
+          this.leases.set(file, lease);
+        }
+        const res = await lease.ready;
+        if (!parent.parent) return;
+        const model = res.instantiateRenderEntity({ castShadows: true });
+        const all = model.findComponents("render");
+        const visible = file === "pizza" ? all.filter((r) => r.entity.name === `slice${slice % 8 + 1}`) : file === "turkey" ? [all.filter((r) => r.entity.name === "leg")[slice % 2]].filter(Boolean) : all;
+        for (const r of all) r.enabled = visible.includes(r);
+        const bounds = new BoundingBox20();
+        let first = true;
+        for (const r of visible) for (const m of r.meshInstances) {
+          if (first) {
+            bounds.copy(m.aabb);
+            first = false;
+          } else bounds.add(m.aabb);
+        }
+        const size = width / Math.max(bounds.halfExtents.x * 2, bounds.halfExtents.z * 2, 1e-3);
+        model.setLocalScale(size, size, size);
+        model.setLocalPosition(-bounds.center.x * size, -(bounds.center.y - bounds.halfExtents.y) * size, -bounds.center.z * size);
+        parent.addChild(model);
+        if (bites) {
+          for (const r of visible) r.meshInstances = r.meshInstances.map((instance) => {
+            const positions = [], normals = [], uvs = [], indices = [];
+            instance.mesh.getPositions(positions);
+            instance.mesh.getNormals(normals);
+            instance.mesh.getUvs(0, uvs);
+            instance.mesh.getIndices(indices);
+            const zs = positions.filter((_, i) => i % 3 === 2), lo = Math.min(...zs), hi = Math.max(...zs), cut = lo + (hi - lo) * (bites === 1 ? 0.32 : 0.62), out = [];
+            for (let i = 0; i < indices.length; i += 3) if ((positions[indices[i] * 3 + 2] + positions[indices[i + 1] * 3 + 2] + positions[indices[i + 2] * 3 + 2]) / 3 >= cut) out.push(indices[i], indices[i + 1], indices[i + 2]);
+            const mesh = new Mesh6(this.app.graphicsDevice);
+            mesh.setPositions(positions);
+            if (normals.length) mesh.setNormals(normals);
+            if (uvs.length) mesh.setUvs(0, uvs);
+            mesh.setIndices(out);
+            mesh.update();
+            parent.once("destroy", () => mesh.destroy());
+            return new MeshInstance6(mesh, instance.material, instance.node);
+          });
+        }
+      }
+      plate(parent, lunch) {
+        const s = primitives(this.app, parent);
+        s("Plate", "cylinder", [0, 0, 0], [lunch ? 0.53 : 0.4, 0.025, lunch ? 0.44 : 0.4], this.art.mat(lunch ? "#a6c4bf" : "#fff1d8"));
+      }
+      destroy() {
+        for (const m of this.meshes) m.destroy();
+        for (const l of this.leases.values()) l.release();
+      }
+    };
+  }
+});
+
+// src/game/MealPlay.ts
+import { Entity as Entity43, Vec3 as Vec339 } from "playcanvas";
+var MealPlay;
+var init_MealPlay = __esm({
+  "src/game/MealPlay.ts"() {
+    "use strict";
+    init_PropSpace();
+    init_HousePath();
+    init_MealArt();
+    init_primitives();
+    MealPlay = class {
+      constructor(app, home, character, controller, cleanup, daily, school, house, say) {
+        this.app = app;
+        this.home = home;
+        this.character = character;
+        this.controller = controller;
+        this.cleanup = cleanup;
+        this.daily = daily;
+        this.house = house;
+        this.say = say;
+        this.school = school;
+        this.root = new Entity43("Optional meals", app);
+        app.root.addChild(this.root);
+        this.art = new MealArt(app, home.art);
+        this.platter = new Entity43("Dinner portions", app);
+        this.root.addChild(this.platter);
+        for (const context of ["dinner", "lunch"]) {
+          const e = new Entity43(context === "dinner" ? "Arianna\u2019s dinner plate" : "Arianna\u2019s lunch tray", app);
+          this.root.addChild(e);
+          this.plates.set(context, { id: "home-" + (context === "dinner" ? "dinner-plate" : "lunch-tray"), name: e.name, icon: "\u{1F37D}", entity: e, home: [0, 1, 0], carryGrip: [0, 0.08, 0], carryPace: "walk" });
+        }
+        const s = primitives(app, this.root);
+        this.mealCue = s("Vacant seat cue", "cylinder", [0, 0, 0], [0.38, 8e-3, 0.38], home.art.mat("#e5d2a1"), false);
+        this.menu = new Entity43("Lunch counter choices", app);
+        this.root.addChild(this.menu);
+        this.menu.setPosition(4.6, 1.34, -20.8);
+        for (const [i, food] of ["pizza", "sandwich"].entries()) {
+          const option = new Entity43(food, app);
+          this.menu.addChild(option);
+          option.setLocalPosition((i - 0.5) * 0.52, 0, 0);
+          this.art.plate(option, false);
+          void this.art.food(option, food);
+        }
+        for (const [i, color] of ["#c98276", "#dfaf67"].entries()) primitives(app, this.menu)(i ? "Orange option" : "Apple option", "sphere", [0.75 + i * 0.2, 0.065, 0], [0.12, 0.12, 0.12], home.art.mat(color));
+        const rack = new Entity43("Tray return rack", app);
+        this.root.addChild(rack);
+        rack.setPosition(9.5, 0.05, -20.3);
+        const r = primitives(app, rack);
+        r("Rack back", "box", [0, 0.65, 0], [0.6, 1.3, 0.06], home.art.mat("#a8bfc2"));
+        for (const y of [0.15, 0.55, 0.95]) r("Tray shelf", "box", [0, y, 0.2], [0.6, 0.05, 0.4], home.art.mat("#d3d0bd"));
+        for (const seat of this.seats()) {
+          const pad = s("Child seat cushion", "box", [seat.sit.x, seat.plate.y - 0.39, seat.sit.z], [0.36, 0.18, 0.32], home.art.mat("#c8b5d7"));
+          pad.setEulerAngles(0, seat.yaw, 0);
+          this.boosters.set(seat.id, pad);
+        }
+      }
+      app;
+      home;
+      character;
+      controller;
+      cleanup;
+      daily;
+      house;
+      say;
+      root;
+      art;
+      dinner;
+      plates = /* @__PURE__ */ new Map();
+      signatures = /* @__PURE__ */ new Map();
+      platter;
+      platterSignature = "";
+      seat = null;
+      entry = null;
+      seatTime = 0;
+      standing = false;
+      actionItem = null;
+      mode = "";
+      selectedMain = "pizza";
+      selectedFruit = "apple";
+      mealCue;
+      menu;
+      serveTime = 0;
+      serveStart = 1.1;
+      actionSource = "";
+      school;
+      lastGreeting = 0;
+      day = 0;
+      boosters = /* @__PURE__ */ new Map();
+      bindDinner(dinner) {
+        this.dinner = dinner;
+        dinner.portionManaged = true;
+        this.platter.reparent(dinner.tray);
+        this.platter.setLocalPosition(0, 0.025, 0);
+      }
+      get locked() {
+        return !!this.seat;
+      }
+      seats() {
+        return [
+          { id: "home-north", context: "dinner", approach: propPoint("dining", new Vec339(0.55, 0.09, 11.9)), sit: propPoint("dining", new Vec339(0.55, 0.09, 12.49)), plate: propPoint("dining", new Vec339(0.55, 0.99, 13.28)), yaw: propYaw("dining", 0) },
+          // The front stools of the two real north cafeteria tables; friends occupy the back stools.
+          { id: "lunch-left", context: "lunch", approach: new Vec339(1.6, 0.09, -15.65), sit: new Vec339(1.6, 0.09, -16.36), plate: new Vec339(1.6, 0.96, -17), yaw: 180 },
+          { id: "lunch-right", context: "lunch", approach: new Vec339(7.15, 0.09, -15.65), sit: new Vec339(7.15, 0.09, -16.36), plate: new Vec339(7.15, 0.96, -17), yaw: 180 }
+        ];
+      }
+      context() {
+        return this.mode === "recess" ? "lunch" : "dinner";
+      }
+      plate(context = this.context()) {
+        return this.home.store.plate(context);
+      }
+      commit(change) {
+        try {
+          change();
+          this.sync();
+        } catch (e) {
+          this.say("Your meal could not be saved. Please try again.");
+          console.error("Meal save", e);
+        }
+      }
+      sync() {
+        for (const [context, item] of this.plates) {
+          const p = this.plate(context);
+          item.entity.enabled = !!p && (p.owner === "held" || (context === "dinner" ? ["cleanup", "outdoors"].includes(this.mode) : this.mode === "recess"));
+          if (!p) continue;
+          const signature2 = JSON.stringify([p.id, p.bites, p.drink, p.fruitBites]);
+          if (this.signatures.get(context) !== signature2) {
+            for (const c of [...item.entity.children]) c.destroy();
+            this.art.plate(item.entity, context === "lunch");
+            const food = new Entity43("Edible serving", this.app);
+            item.entity.addChild(food);
+            food.setLocalPosition(context === "lunch" ? -0.09 : 0, 0.028, 0);
+            void this.art.food(food, p.food, p.bites, Number(p.id.split("-").at(-1)) || 0);
+            const cup = this.home.art.make("cup", "#bad4dc");
+            cup.name = "Drinking cup";
+            item.entity.addChild(cup);
+            cup.setLocalScale(0.65, 0.65, 0.65);
+            cup.setLocalPosition(0.15, 0.025, -0.14);
+            if (context === "lunch" && p.fruitBites < 2) {
+              const fruit = primitives(this.app, item.entity)("Fruit", "sphere", [0.15, 0.07, 0.08], [0.12 * (1 - p.fruitBites * 0.35), 0.11, 0.12], this.home.art.mat(p.fruit === "apple" ? "#c98276" : "#dfaf67"));
+              fruit.name = "Edible fruit";
+            }
+            this.signatures.set(context, signature2);
+          }
+          if (this.actionItem && context === this.context()) {
+            const source = item.entity.findByName(this.actionSource);
+            if (source) source.enabled = false;
+          }
+          if (p.owner === "held") {
+            if (!this.cleanup.carry.item) {
+              this.cleanup.carry.pickUp(item);
+              this.character.animator.setCarrying(true);
+            }
+          } else {
+            if (item.entity.parent !== this.root) item.entity.reparent(this.root);
+            item.entity.setPosition(...p.position);
+            item.entity.setEulerAngles(0, 0, 0);
+          }
+        }
+        const state = this.home.store.data.dinner, signature = JSON.stringify([this.daily.clock.state.day, state.served, state.portions]);
+        if (signature !== this.platterSignature) {
+          this.platterSignature = signature;
+          for (const c of [...this.platter.children]) c.destroy();
+          if (state.served) {
+            const food = ["pizza", "taco", "turkey"][(this.daily.clock.state.day - 1) % 3];
+            if (food === "pizza") void this.art.pizzaPlatter(this.platter, state.portions);
+            else for (let i = 0; i < state.portions.length; i++) if (state.portions[i]) {
+              const part = new Entity43("Remaining portion " + i, this.app);
+              this.platter.addChild(part);
+              part.setLocalPosition(Math.sin(i * Math.PI / 4) * 0.19, 0, Math.cos(i * Math.PI / 4) * 0.19);
+              part.setLocalEulerAngles(0, i * 45, 0);
+              void this.art.food(part, food, 0, i, 0.17);
+            }
+          }
+        }
+      }
+      transfer(owner, point) {
+        const context = this.context();
+        this.commit(() => {
+          this.home.store.transact((s) => {
+            const p = context === "dinner" ? s.dinner.plate : s.lunch;
+            if (p) {
+              p.owner = owner;
+              p.position = point.toArray();
+            }
+          });
+          if (this.cleanup.carry.item === this.plates.get(context)) this.cleanup.carry.release(this.root, point.toArray());
+          this.character.animator.setCarrying(!!this.cleanup.carry.item);
+        });
+      }
+      take() {
+        if (this.cleanup.carry.item) return;
+        this.transfer("held", this.character.player.getPosition());
+      }
+      sit(seat) {
+        if (this.seat || this.character.animator.busy) return;
+        const p = this.character.player.getPosition(), planner = new HousePath(seat.context === "dinner" ? this.house : this.school, 0.24);
+        if (!planner.free(seat.approach.x, seat.approach.z) || !planner.line(p, seat.approach)) {
+          this.say("Come around to the open side of this chair.");
+          return;
+        }
+        this.seat = seat;
+        this.entry = seat.approach.clone();
+        this.seatTime = 0;
+        this.standing = false;
+        this.controller.reset();
+        this.character.player.setPosition(seat.approach);
+        this.character.visual.setLocalEulerAngles(0, seat.yaw, 0);
+        this.character.animator.setCarrying(false);
+        this.character.animator.setIdleClip("MealIdle");
+        this.character.animator.playAction("MealSit", 0.65);
+        if (this.character.grounding) this.character.grounding.surfaceHeight = 0.07;
+        if (this.plate()?.owner === "held") this.transfer(seat.id, seat.plate);
+        if (seat.context === "lunch") this.app.fire("home-play:lunch-arrive", seat.id === "lunch-left" ? "series" : "cute");
+        if (performance.now() - this.lastGreeting > 15e3) {
+          this.say(seat.context === "lunch" ? "There\u2019s room beside us!" : "A little time together at the table.");
+          this.lastGreeting = performance.now();
+        }
+      }
+      stand() {
+        if (!this.seat) return;
+        this.cancelBite();
+        this.standing = true;
+        this.seatTime = 0;
+        this.character.animator.setIdleClip("Idle");
+        this.character.animator.playAction("MealStand", 0.65);
+      }
+      finishSeat() {
+        if (this.entry) this.character.player.setPosition(this.entry);
+        this.seat = null;
+        this.entry = null;
+        this.standing = false;
+        this.character.animator.setIdleClip("Idle");
+        if (this.character.grounding) this.character.grounding.surfaceHeight = null;
+        this.character.animator.setCarrying(!!this.cleanup.carry.item);
+      }
+      cancelBite() {
+        this.character.animator.cancelAction();
+        if (this.actionItem) {
+          this.actionItem.destroy();
+          this.actionItem = null;
+        }
+        this.signatures.clear();
+        this.sync();
+      }
+      bite(drink = false, fruit = false) {
+        const context = this.context(), p = this.plate(context);
+        if (!this.seat || !p || this.character.animator.busy || p.owner !== this.seat.id) return;
+        const identity = p.id, expected = p[fruit ? "fruitBites" : "bites"];
+        if (!drink && expected >= (fruit ? 2 : 3)) return;
+        const prop = new Entity43(drink ? "Cup at mouth" : "Food at mouth", this.app);
+        this.cleanup.carry.socket.addChild(prop);
+        mealGrip(prop, drink, fruit);
+        this.actionItem = prop;
+        if (drink) {
+          prop.addChild(this.home.art.make("cup", "#bad4dc"));
+        } else if (fruit) primitives(this.app, prop)("Fruit bite", "sphere", [0, 0, 0], [0.1, 0.1, 0.1], this.home.art.mat(p.fruit === "apple" ? "#c98276" : "#dfaf67"));
+        else void this.art.food(prop, p.food, p.bites, Number(p.id.split("-").at(-1)) || 0, 0.18);
+        this.actionSource = drink ? "Drinking cup" : fruit ? "Edible fruit" : "Edible serving";
+        const original = this.plates.get(context).entity.findByName(this.actionSource);
+        if (original) original.enabled = false;
+        this.character.animator.playAction(drink ? "MealDrink" : "MealBite", 1.35, () => this.commit(() => {
+          if (this.plate(context)?.id !== identity || !this.seat) return;
+          if (drink) this.home.store.transact((s) => {
+            const plate = context === "dinner" ? s.dinner.plate : s.lunch;
+            if (plate) plate.drink = Math.min(3, plate.drink + 1);
+          });
+          else this.home.store.bite(context, identity, expected, fruit);
+        }));
+      }
+      suspend() {
+        this.serveTime = 0;
+        if (this.seat) {
+          this.cancelBite();
+          this.finishSeat();
+        }
+        this.home.extraCommands = [];
+        this.home.extraFocus = null;
+      }
+      update(dt, mode, available) {
+        if (mode !== this.mode) {
+          this.suspend();
+          this.mode = mode;
+          this.sync();
+        }
+        this.home.extraCommands = [];
+        this.home.extraFocus = null;
+        const day = this.daily.clock.state, breakfastActive = day.phase === "morning" && day.breakfast !== "done";
+        if (this.day !== day.day) {
+          this.suspend();
+          this.day = day.day;
+        }
+        if (day.dinnerServed && !this.home.store.data.dinner.served) this.commit(() => {
+          this.home.store.transact((s) => {
+            s.dinner.served = true;
+          });
+        });
+        const p = this.character.player.getPosition(), context = this.context(), plate = this.plate(), item = this.plates.get(context);
+        this.menu.enabled = mode === "recess";
+        this.root.findByName("Tray return rack").enabled = mode === "recess";
+        this.mealCue.enabled = false;
+        for (const seat of this.seats()) this.boosters.get(seat.id).enabled = seat.context === "lunch" ? mode === "recess" : mode === "cleanup" && !breakfastActive;
+        if (this.serveTime > 0) {
+          this.serveTime -= dt;
+          if (this.serveTime <= 0 && this.plate("lunch")?.owner === "counter" && this.mode === "recess" && p.distance(new Vec339(4.6, 0.09, -20.15)) < 1.5 && !this.cleanup.carry.item) this.character.animator.playAction("PickUp", 0.8, () => {
+            if (this.mode === "recess" && this.plate("lunch")?.owner === "counter") this.take();
+          });
+        }
+        if (this.seat) {
+          this.seatTime += dt;
+          const t = Math.min(1, this.seatTime / 0.65), from = this.standing ? this.seat.sit : this.seat.approach, to = this.standing ? this.seat.approach : this.seat.sit;
+          this.character.player.setPosition(new Vec339().lerp(from, to, t));
+          if (this.character.grounding) this.character.grounding.surfaceHeight = 0.07 + 0.18 * (this.standing ? 1 - t : t);
+          if (this.standing && t >= 1) this.finishSeat();
+        }
+        if (this.actionItem && !this.character.animator.busy) {
+          this.actionItem.destroy();
+          this.actionItem = null;
+          this.signatures.clear();
+          this.sync();
+        }
+        if (!available || !["cleanup", "outdoors", "recess"].includes(mode) || this.cleanup.mode !== "day" || context === "dinner" && breakfastActive) return;
+        const add = (title, run) => this.home.extraCommands.push({ title, run });
+        let detail = "";
+        if (this.seat) {
+          detail = "At the table";
+          if (plate?.owner === this.seat.id) {
+            if (plate.bites < 3) add("Eat", () => this.bite());
+            if (context === "lunch" && plate.fruitBites < 2) add("Eat fruit", () => this.bite(false, true));
+            add("Drink", () => this.bite(true));
+          }
+          add("Stand up", () => this.stand());
+          if (this.character.animator.busy) add("Stop bite", () => this.cancelBite());
+        } else if (context === "dinner" && day.dinnerServed && Math.hypot(p.x - propPoint("dining", new Vec339(0.55, 0, 11.9)).x, p.z - propPoint("dining", new Vec339(0.55, 0, 11.9)).z) < 1 && !plate && !this.cleanup.carry.item) {
+          detail = "Dad\u2019s dinner";
+          if (this.home.store.data.dinner.portions.some(Boolean)) add("Take a portion", () => this.character.animator.playAction("PickUp", 0.8, () => this.commit(() => {
+            if (this.mode === "cleanup") this.home.store.claimDinner();
+          })));
+        }
+        if (!this.seat && context === "lunch" && Math.hypot(p.x - 4.6, p.z + 20.15) < 1.45 && !plate && !this.cleanup.carry.item) {
+          detail = `${this.selectedMain === "pizza" ? "Pizza" : "Sandwich"} \xB7 ${this.selectedFruit}`;
+          add("Take lunch", () => {
+            this.commit(() => {
+              if (this.home.store.lunch(this.selectedMain, this.selectedFruit, true)) {
+                this.serveTime = this.serveStart;
+                this.app.fire("home-play:serve");
+              }
+            });
+          });
+          add(this.selectedMain === "pizza" ? "Choose sandwich" : "Choose pizza", () => {
+            this.selectedMain = this.selectedMain === "pizza" ? "sandwich" : "pizza";
+          });
+          add(this.selectedFruit === "apple" ? "Choose orange" : "Choose apple", () => {
+            this.selectedFruit = this.selectedFruit === "apple" ? "orange" : "apple";
+          });
+        }
+        if (!this.seat) {
+          const nearest = this.seats().filter((s) => s.context === context && p.distance(s.approach) < 0.95)[0];
+          if (nearest) {
+            this.mealCue.enabled = true;
+            this.mealCue.setPosition(nearest.approach.x, 0.09, nearest.approach.z);
+            if (plate?.owner === "held") {
+              add("Set plate down", () => this.character.animator.playAction("PutDown", 0.8, () => this.transfer(nearest.id, nearest.plate)));
+              detail = "An open place";
+            }
+            if (!this.cleanup.carry.item || plate?.owner === "held") add("Sit down", () => this.sit(nearest));
+          }
+          if (nearest && context === "dinner" && plate?.owner === "held" && plate.bites === 3 && this.home.store.data.dinner.portions.some(Boolean)) add("Take another portion", () => this.character.animator.playAction("PickUp", 0.8, () => this.commit(() => {
+            this.home.store.refillDinner();
+          })));
+          if (plate && plate.owner !== "held" && !this.cleanup.carry.item && Math.hypot(p.x - plate.position[0], p.z - plate.position[2]) < 1.65) {
+            add("Pick up plate", () => this.character.animator.playAction("PickUp", 0.8, () => this.take()));
+            detail = "Your meal";
+          }
+          if (plate?.owner === "held") {
+            const atReturn = context === "dinner" ? p.distance(propPoint("sink", new Vec339(-1.7, 0.09, 11.45))) < 1.1 : p.distance(new Vec339(9.5, 0.09, -19.65)) < 1.15;
+            if (atReturn) {
+              add(context === "dinner" ? "Return plate" : "Return tray", () => this.commit(() => {
+                this.home.store.returnPlate(context);
+                this.cleanup.carry.release(this.root, [0, 0, 0]);
+                item.entity.enabled = false;
+                this.character.animator.setCarrying(false);
+              }));
+              detail = context === "dinner" ? "Kitchen sink" : "Tray rack";
+            }
+            add("Leave plate here", () => {
+              const planner = new HousePath(context === "dinner" ? this.house : this.school, 0.1);
+              if (planner.free(p.x, p.z)) this.transfer("world", new Vec339(p.x, 0.09, p.z));
+            });
+            detail = detail || "Your meal";
+          }
+        }
+        if (this.home.extraCommands.length) this.home.extraFocus = { title: "", detail: detail || "Meal time", icon: "\u{1F37D}", enabled: true };
+        this.sync();
+        if (this.serveTime > 0 && this.plate("lunch")?.owner === "counter") {
+          const phase = 1 - this.serveTime / this.serveStart, t = Math.max(0, (phase - 0.4) / 0.6), e = this.plates.get("lunch").entity;
+          e.setPosition(4.6, 1.34 + Math.sin(t * Math.PI) * 0.04, -21.5 + t * 0.7);
+          for (const name of ["Edible serving", "Edible fruit"]) {
+            const part = e.findByName(name);
+            if (part) part.enabled = phase >= 0.4;
+          }
+        }
+      }
+      snapshot() {
+        return { seat: this.seat?.id, standing: this.standing, plate: this.plate(), seats: this.seats().map((s) => ({ ...s, approach: s.approach.toArray(), sit: s.sit.toArray(), plate: s.plate.toArray() })), main: this.selectedMain, fruit: this.selectedFruit };
+      }
+      destroy() {
+        this.suspend();
+        this.root.destroy();
+        this.art.destroy();
+      }
+    };
+  }
+});
+
 // src/game/FishingRod.ts
-import { Entity as Entity40, Mat4 as Mat43, Mesh as Mesh6, MeshInstance as MeshInstance6, Vec3 as Vec337 } from "playcanvas";
+import { Entity as Entity44, Mat4 as Mat43, Mesh as Mesh7, MeshInstance as MeshInstance7, Vec3 as Vec340 } from "playcanvas";
 function flexibleRod(app, root, source) {
   const inverse = new Mat43().copy(root.getWorldTransform()).invert(), parts = [];
-  const output = new Entity40("Flexible rod mesh", app);
+  const output = new Entity44("Flexible rod mesh", app);
   root.addChild(output);
   const instances = [];
   for (const render of source.findComponents("render")) {
@@ -11644,17 +13588,17 @@ function flexibleRod(app, root, source) {
       original.mesh.getUvs(0, uv);
       const transform = new Mat43().mul2(inverse, original.node.getWorldTransform());
       for (let i = 0; i < positions.length; i += 3) {
-        const p = transform.transformPoint(new Vec337(positions[i], positions[i + 1], positions[i + 2])), n = transform.transformVector(new Vec337(normals[i], normals[i + 1], normals[i + 2])).normalize();
+        const p = transform.transformPoint(new Vec340(positions[i], positions[i + 1], positions[i + 2])), n = transform.transformVector(new Vec340(normals[i], normals[i + 1], normals[i + 2])).normalize();
         positions.splice(i, 3, p.x, p.y, p.z);
         normals.splice(i, 3, n.x, n.y, n.z);
       }
-      const mesh = new Mesh6(app.graphicsDevice);
+      const mesh = new Mesh7(app.graphicsDevice);
       mesh.setPositions(positions);
       mesh.setNormals(normals);
       if (uv.length) mesh.setUvs(0, uv);
       mesh.setIndices(indices);
       mesh.update();
-      instances.push(new MeshInstance6(mesh, original.material, output));
+      instances.push(new MeshInstance7(mesh, original.material, output));
       parts.push({ mesh, positions, normals });
     }
     render.enabled = false;
@@ -11668,7 +13612,7 @@ function flexibleRod(app, root, source) {
       for (let i = 0; i < positions.length; i += 3) {
         const t = Math.max(0, Math.min(1, (positions[i + 1] - 0.35) / 1.47));
         positions[i + 2] += bend * t * t;
-        const n = new Vec337(normals[i], normals[i + 1] - 2 * bend * t / 1.47 * normals[i + 2], normals[i + 2]).normalize();
+        const n = new Vec340(normals[i], normals[i + 1] - 2 * bend * t / 1.47 * normals[i + 2], normals[i + 2]).normalize();
         normals[i] = n.x;
         normals[i + 1] = n.y;
         normals[i + 2] = n.z;
@@ -11677,7 +13621,7 @@ function flexibleRod(app, root, source) {
       p.mesh.setNormals(normals);
       p.mesh.update();
     }
-  }, tip: () => root.getWorldTransform().transformPoint(new Vec337(0, 1.82, bend)) };
+  }, tip: () => root.getWorldTransform().transformPoint(new Vec340(0, 1.82, bend)) };
 }
 var init_FishingRod = __esm({
   "src/game/FishingRod.ts"() {
@@ -11686,7 +13630,7 @@ var init_FishingRod = __esm({
 });
 
 // src/game/Fishing.ts
-import { Asset as Asset10, Entity as Entity41, Vec3 as Vec338, Quat as Quat10, BoundingBox as BoundingBox19, AnimData as AnimData8, AnimTrack as AnimTrack8 } from "playcanvas";
+import { Asset as Asset10, Entity as Entity45, Vec3 as Vec341, Quat as Quat11, BoundingBox as BoundingBox21, AnimData as AnimData8, AnimTrack as AnimTrack8 } from "playcanvas";
 function uprightCatch(source, swim) {
   const output = [...source.outputs];
   for (const curve of source.curves) {
@@ -11727,10 +13671,10 @@ var init_Fishing = __esm({
         this.save = save;
         this.splash = new Audio(assetUrl("assets/outdoors/pond-splash.mp3"));
         this.splash.preload = "auto";
-        this.root = new Entity41("Pond fishing presentation", app);
+        this.root = new Entity45("Pond fishing presentation", app);
         parent.addChild(this.root);
         const shape = primitives(app, this.root), wood = material("Fishing rod cork", "#ac8762"), red = material("Bobber coral", "#f1958c"), cream = material("Fishing cream", "#fff1d7");
-        this.rod = new Entity41("Hand fitted fishing rod", app);
+        this.rod = new Entity45("Hand fitted fishing rod", app);
         this.root.addChild(this.rod);
         const r = primitives(app, this.rod);
         r("Cork grip", "cylinder", [0, 0.12, 0], [0.07, 0.24, 0.07], wood);
@@ -11745,7 +13689,7 @@ var init_Fishing = __esm({
         this.root.enabled = false;
         this.setupControls();
         const rodReady = this.load("fishingrod_lvl1").then((res) => {
-          const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity41("Rod normalization", app);
+          const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity45("Rod normalization", app);
           this.rod.addChild(pivot);
           pivot.addChild(e);
           pivot.setLocalScale(scale, scale, scale);
@@ -11754,9 +13698,9 @@ var init_Fishing = __esm({
           for (const name of ["Cork grip", "Slender rod", "Reel"]) this.rod.findByName(name).enabled = false;
         });
         this.ready = Promise.all(FISH.map(async ([file], i) => {
-          const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity41(file, app);
+          const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity45(file, app);
           this.root.addChild(anchor);
-          const normalization = new Entity41("Fish size and origin", app);
+          const normalization = new Entity45("Fish size and origin", app);
           anchor.addChild(normalization);
           normalization.addChild(e);
           const scale = 0.8 / Math.max(bounds.halfExtents.x * 2, bounds.halfExtents.y * 2, bounds.halfExtents.z * 2);
@@ -11800,7 +13744,7 @@ var init_Fishing = __esm({
       prev = "";
       lastClip = "";
       settle = 0;
-      startPoint = new Vec338();
+      startPoint = new Vec341();
       caught = false;
       saveError = "";
       side = 0;
@@ -11841,7 +13785,7 @@ var init_Fishing = __esm({
         });
       }
       bounds(e) {
-        const b = new BoundingBox19();
+        const b = new BoundingBox21();
         let first = true;
         for (const r of e.findComponents("render")) for (const m of r.meshInstances) {
           if (first) {
@@ -11980,7 +13924,7 @@ var init_Fishing = __esm({
         }
         this.settle += dt;
         const blend = Math.min(1, this.settle / 0.7), ease = blend * blend * (3 - 2 * blend);
-        this.character.player.setPosition(new Vec338().lerp(this.startPoint, POND.stand, ease));
+        this.character.player.setPosition(new Vec341().lerp(this.startPoint, POND.stand, ease));
         this.round.update(dt);
         const r = this.round;
         if (!this.active) {
@@ -12066,7 +14010,7 @@ var init_Fishing = __esm({
         this.lastFish.copy(this.fishPoint);
         this.fishPoint.copy(POND.bobber);
         if (r.phase === "reel") {
-          const near = new Vec338(-4.85, 0.16, -10.35), far = POND.bobber;
+          const near = new Vec341(-4.85, 0.16, -10.35), far = POND.bobber;
           this.fishPoint.lerp(near, far, r.distance);
           const target = r.pullSide * 0.68 + Math.sin(r.fightTime * 2) * 0.13;
           this.side += (target - this.side) * Math.min(1, dt * 3);
@@ -12078,22 +14022,22 @@ var init_Fishing = __esm({
         }
         const hands = this.character.animator.snapshot().hands;
         if (hands.length === 2) {
-          const hand = new Vec338(...hands[1]);
+          const hand = new Vec341(...hands[1]);
           this.rod.setPosition(hand);
-          const tip = new Vec338().lerp(hand, this.fishPoint, 0.58);
+          const tip = new Vec341().lerp(hand, this.fishPoint, 0.58);
           tip.y += 1.35 + (r.phase === "cast" ? Math.sin(r.elapsed / 1.93 * Math.PI) * 0.7 : 0);
-          this.rod.setRotation(new Quat10().setFromDirections(Vec338.UP, tip.sub(hand).normalize()));
+          this.rod.setRotation(new Quat11().setFromDirections(Vec341.UP, tip.sub(hand).normalize()));
         }
         this.flexible?.update(r.phase === "reel" ? r.tension * 0.3 + (r.pullSide ? Math.sin(r.total * 18) * 0.018 : 0) : 0.015, dt);
         this.rod.enabled = !["catch", "release"].includes(r.phase);
-        const rodTip = this.flexible?.tip() ?? this.rod.getWorldTransform().transformPoint(new Vec338(0, 1.82, 0));
+        const rodTip = this.flexible?.tip() ?? this.rod.getWorldTransform().transformPoint(new Vec341(0, 1.82, 0));
         let bob = this.fishPoint.clone();
         if (r.phase === "wait") {
           const twitch = Math.max(0, 1 - Math.abs(r.elapsed - 1.05) / 0.22);
           bob.y -= twitch * 0.035;
         }
         bob.y += r.phase === "bite" ? -0.08 + Math.sin(r.elapsed * 24) * 0.04 : Math.sin(r.total * 3) * 0.025;
-        if (r.phase === "prepare") bob.copy(rodTip).add(new Vec338(0, -0.35, 0));
+        if (r.phase === "prepare") bob.copy(rodTip).add(new Vec341(0, -0.35, 0));
         if (r.phase === "cast") {
           const t = Math.min(1, r.elapsed / 1.5);
           bob.lerp(rodTip, bob, t);
@@ -12113,8 +14057,8 @@ var init_Fishing = __esm({
           w.setLocalScale(s, s * 0.7, s);
         });
         const delta = bob.clone().sub(rodTip);
-        this.line.setPosition(new Vec338().lerp(bob, rodTip, 0.5));
-        this.line.setRotation(new Quat10().setFromDirections(Vec338.UP, delta.clone().normalize()));
+        this.line.setPosition(new Vec341().lerp(bob, rodTip, 0.5));
+        this.line.setRotation(new Quat11().setFromDirections(Vec341.UP, delta.clone().normalize()));
         this.line.setLocalScale(8e-3, delta.length(), 8e-3);
         this.line.enabled = !["catch", "release"].includes(r.phase);
         const reward = this.receipt ? this.reward : this.fishes[r.fishIndex];
@@ -12127,7 +14071,7 @@ var init_Fishing = __esm({
           if (move.lengthSq() > 1e-6) fish.setEulerAngles(0, Math.atan2(move.x, move.z) * 180 / Math.PI, Math.sin(r.total * 7) * 6);
         }
         if (reward && ["catch", "release"].includes(r.phase)) {
-          const landing = new Vec338(-5.55, 1.55, -10.65), release = r.phase === "release", t = Math.min(1, release ? r.elapsed / 0.95 : this.catchTime / 0.8), ease = t * t * (3 - 2 * t), point = new Vec338().lerp(release ? landing : this.landingPoint, release ? POND.bobber : landing, ease);
+          const landing = new Vec341(-5.55, 1.55, -10.65), release = r.phase === "release", t = Math.min(1, release ? r.elapsed / 0.95 : this.catchTime / 0.8), ease = t * t * (3 - 2 * t), point = new Vec341().lerp(release ? landing : this.landingPoint, release ? POND.bobber : landing, ease);
           if (this.receipt) {
             reward.setPosition(point);
             reward.rotateLocal(0, dt * 24, 0);
@@ -12265,7 +14209,7 @@ var init_TicketShop = __esm({
 });
 
 // src/game/GameLoop.ts
-import { Vec3 as Vec339 } from "playcanvas";
+import { Vec3 as Vec342 } from "playcanvas";
 var el, GameLoop;
 var init_GameLoop = __esm({
   "src/game/GameLoop.ts"() {
@@ -12290,6 +14234,8 @@ var init_GameLoop = __esm({
     init_OutdoorEncounters();
     init_DailyPlay();
     init_SchoolGatePlay();
+    init_HomePlay();
+    init_MealPlay();
     init_Fishing();
     init_TicketShop();
     el = (id) => document.querySelector(id);
@@ -12335,6 +14281,9 @@ var init_GameLoop = __esm({
         this.encounters = new OutdoorEncounters(app, character, controller, (s) => this.message(s));
         this.dailyPlay = new DailyPlay(app, character, controller, camera, (s) => this.message(s));
         this.schoolGate = new SchoolGatePlay(app, character, controller, room, camera);
+        this.homePlay = new HomePlay(app, character, controller, room, cleanup, props.daily, (s) => this.message(s), camera);
+        this.meals = new MealPlay(app, this.homePlay, character, controller, cleanup, props.daily, this.recess, room, (s) => this.message(s));
+        cleanup.externalAction = () => !!this.homePlay.focus && (this.homePlay.press() || true);
         this.popUI.onPrizes = () => {
           void this.ticketShop.open();
           this.controller.reset();
@@ -12372,11 +14321,11 @@ var init_GameLoop = __esm({
           const away = this.mode !== "cleanup";
           if (away && daily.clock.state.phase !== "night") return;
           this.huntUI.dialog.close();
-          const position = this.character.player.getPosition().clone();
+          const position2 = this.character.player.getPosition().clone();
           if (this.mode !== "cleanup" && daily.clock.state.phase === "night") this.startCleanup();
           this.cleanup.configure("day");
           if (daily.clock.state.phase === "afternoon" || away) this.character.player.setPosition(-2.1, 0.09, 8.2);
-          else if (daily.clock.state.phase !== "morning") this.character.player.setPosition(position);
+          else if (daily.clock.state.phase !== "morning") this.character.player.setPosition(position2);
         };
         el("#game").dataset.scene = "cleanup";
         this.action = new ActionButton(el("#action-button"), this.press, () => {
@@ -12469,6 +14418,8 @@ var init_GameLoop = __esm({
       recessFromGate = false;
       dailyPlay;
       schoolGate;
+      homePlay;
+      meals;
       recessFromSchool = false;
       travelUntil = 0;
       inspecting = null;
@@ -12482,8 +14433,8 @@ var init_GameLoop = __esm({
       messageUntil = 0;
       pendingCredit = null;
       baseZoom = 9;
-      screen = new Vec339();
-      markerPoint = new Vec339();
+      screen = new Vec342();
+      markerPoint = new Vec342();
       developerPaused = false;
       developerClockFrozen = false;
       destination = "";
@@ -12572,6 +14523,8 @@ var init_GameLoop = __esm({
         el("#collection-button").textContent = `Collection \xB7 ${discovered} / ${DUMPLINGS.length}${data.boxes.length ? ` \xB7 \u{1F381} ${data.boxes.length}` : ""}`;
       }
       transition(mode, continuous = false) {
+        this.meals.suspend();
+        this.homePlay.suspend();
         if (this.mode === "outdoors" && mode !== "outdoors") {
           this.dailyPlay.leave();
           this.schoolGate.leave();
@@ -12584,8 +14537,9 @@ var init_GameLoop = __esm({
         if (mode !== "outdoors" && this.controller.riding) this.scooter.dismount();
         if (this.mode === "cleanup" && mode !== "cleanup") {
           this.props.reset();
-          this.cleanup.carry.item = null;
+          if (!this.homePlay.carrying) this.cleanup.carry.item = null;
           this.character.animator.reset();
+          this.character.animator.setCarrying(this.homePlay.carrying);
         }
         this.mode = mode;
         this.cleanup.setActive(mode === "cleanup");
@@ -12785,6 +14739,10 @@ var init_GameLoop = __esm({
       }
       press = () => this.attempt(() => {
         if (this.travelUntil || this.inspecting) return;
+        if (this.homePlay.focus) {
+          this.homePlay.press();
+          return;
+        }
         if (this.mode === "recess") {
           const seat = this.recess.seats.find((s) => s.id === this.focus && this.character.player.getPosition().distance(s.anchor) < 1.05);
           if (seat) {
@@ -12865,7 +14823,7 @@ var init_GameLoop = __esm({
         const p = this.character.player.getPosition();
         if (this.mode === "outdoors") this.room.root.enabled = p.x > -36 && p.z > -35;
         if (this.mode === "cleanup" && p.x < -3.5 && p.z > 7.5 && p.z < 9.1) {
-          if (this.cleanup.carry.item) {
+          if (this.cleanup.carry.item && !this.homePlay.carrying) {
             this.character.player.setPosition(-3.05, p.y, p.z);
             this.message("Put your things away before heading outside.");
           } else this.enterOutdoors();
@@ -12887,8 +14845,10 @@ var init_GameLoop = __esm({
         this.outdoors.update(outdoorDt, p, this.mode === "outdoors");
         this.neighborhood.update(p, this.mode === "outdoors");
         const playAvailable = !this.fishing.active && !this.huntUI.dialog.open && !this.popUI.isOpen && !el("#collection-dialog").open;
+        this.homePlay.update(document.hidden ? 0 : outdoorDt, this.mode, playAvailable && !this.ticketShop.dialog.open && !this.tradingUI.dialog.open && !this.tornado?.active && !document.querySelector("dialog[open]") && !this.cleanup.activeInteractionId);
+        this.meals.update(document.hidden ? 0 : outdoorDt, this.mode, playAvailable && !document.querySelector("dialog[open]") && !this.tornado?.active && !this.cleanup.activeInteractionId);
         this.dailyPlay.update(0, false, false, this.props.daily.clock.state.day);
-        this.schoolGate.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors" && this.props.daily.clock.state.phase !== "night", playAvailable && !this.ticketShop.dialog.open && !this.character.placeholder.enabled);
+        this.schoolGate.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors" && this.props.daily.clock.state.phase !== "night", playAvailable && !this.homePlay.carrying && !this.ticketShop.dialog.open && !this.character.placeholder.enabled);
         this.encounters.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors", playAvailable && !this.dailyPlay.occupied && !this.schoolGate.carrying && !this.schoolGate.busy, this.props.daily.clock.state.day);
         this.fishing.update(document.hidden ? 0 : outdoorDt);
         el("#game").dataset.fishing = String(this.fishing.active);
@@ -12917,6 +14877,7 @@ var init_GameLoop = __esm({
         if (this.mode === "cleanup") this.cleanup.mission.tick(now);
         this.controller.enabled = (!school || this.mode === "recess") && (this.mode !== "recess" || this.recess.isReady) && !this.ticketShop.dialog.open && !this.tradingUI.dialog.open && !this.travelUntil && !this.inspecting && !this.huntUI.dialog.open && (this.mode === "outdoors" || this.mode === "recess" || this.mode === "store" || this.mode === "cleanup" && this.cleanup.mission.state !== "finished" && !this.cleanup.movementLocked) && !el("#collection-dialog").open;
         if (this.mode === "outdoors" && (this.dailyPlay.movementLocked || this.schoolGate.movementLocked)) this.controller.enabled = false;
+        if (this.meals.locked || this.homePlay.sitting) this.controller.enabled = false;
       }
       update(now) {
         this.nextStore.hidden = this.mode !== "store" || this.popUI.isOpen || !!this.travelUntil || Object.values(this.save.data.hunt?.stores ?? {}).filter((s) => s.visited).length >= 2;
@@ -12955,6 +14916,7 @@ var init_GameLoop = __esm({
         if (this.mode === "cleanup") {
           el("#task-list").hidden = this.cleanup.mode === "practice";
           this.cleanup.update(now, this.controller.input.lengthSq() > 0);
+          this.homePlay.paintHUD();
           if (this.cleanup.mode === "day") {
             el("#allowance").textContent = `$${this.save.data.balance}`;
             el("#day-label").textContent = `Day ${this.props.daily.clock.state.day} \xB7 ${this.props.daily.clock.state.phase === "afternoon" ? "After school" : this.props.daily.clock.state.phase}`;
@@ -12965,7 +14927,7 @@ var init_GameLoop = __esm({
         let title = "Action", detail = "Come closer", icon = "\u270B", enabled = false;
         if (this.mode === "outdoors") {
           const p = this.character.player.getPosition();
-          this.focus = p.distance(POND.stand) < 1.25 ? "pond-fish" : p.distance(SCHOOL_GATE) < 1.8 ? "school-gate" : p.distance(new Vec339(-6.3, 0.09, 8.25)) < 1.2 && clock.canShop ? "outdoor-shops" : "";
+          this.focus = p.distance(POND.stand) < 1.25 ? "pond-fish" : p.distance(SCHOOL_GATE) < 1.8 ? "school-gate" : p.distance(new Vec342(-6.3, 0.09, 8.25)) < 1.2 && clock.canShop ? "outdoor-shops" : "";
           const stop = SHOP_STOPS.find((s) => Math.hypot(s.x - p.x, p.z - SHOP_DOOR_Z) < 1.7);
           if (stop) this.focus = "neighborhood-shop-" + stop.id;
           title = this.focus === "pond-fish" ? "FISH" : this.focus === "school-gate" ? "Enter school" : this.focus === "outdoor-shops" ? "Visit shops" : "Explore";
@@ -13092,6 +15054,7 @@ var init_GameLoop = __esm({
         el("#action-detail").textContent = detail;
         el("#action-icon").textContent = icon;
         button2.setAttribute("aria-label", `${title}: ${detail}`);
+        this.homePlay.paintHUD();
       }
       developerHold(paused) {
         this.tornado?.pause(paused);
@@ -13239,12 +15202,12 @@ var init_GameLoop = __esm({
             break;
           case "restock":
             this.save.developerEdit((data) => {
-              const fresh2 = createHuntDay(daily.clock.state.day);
+              const fresh3 = createHuntDay(daily.clock.state.day);
               if (data.hunt) {
-                fresh2.activeStore = data.hunt.activeStore;
-                fresh2.clockFloor = data.hunt.clockFloor;
+                fresh3.activeStore = data.hunt.activeStore;
+                fresh3.clockFloor = data.hunt.clockFloor;
               }
-              data.hunt = fresh2;
+              data.hunt = fresh3;
               data.trip.purchases = 0;
             });
             for (const store of this.stores) store.sync(this.save.data.hunt.stores[store.definition.id]);
@@ -13271,6 +15234,8 @@ var init_GameLoop = __esm({
           phase: this.opening.phase,
           reveal: this.save.data.reveal ? { ...this.save.data.reveal } : null,
           focus: this.focus,
+          meals: this.meals.snapshot(),
+          homePlay: this.homePlay.snapshot(),
           schoolGate: this.schoolGate.snapshot(),
           dailyPlay: this.dailyPlay.snapshot(),
           neighborhood: this.neighborhood.snapshot(),
@@ -13288,6 +15253,8 @@ var init_GameLoop = __esm({
         };
       }
       destroy() {
+        this.meals.destroy();
+        this.homePlay.destroy();
         this.dailyPlay.destroy();
         this.schoolGate.destroy();
         this.neighborhood.destroy();
@@ -13307,7 +15274,7 @@ var init_GameLoop = __esm({
 });
 
 // src/ui/HouseNavigation.ts
-import { Vec3 as Vec340 } from "playcanvas";
+import { Vec3 as Vec343 } from "playcanvas";
 var HouseNavigation;
 var init_HouseNavigation = __esm({
   "src/ui/HouseNavigation.ts"() {
@@ -13316,19 +15283,19 @@ var init_HouseNavigation = __esm({
     HouseNavigation = class {
       current = "bedroom";
       root = document.querySelector("#house-doors");
-      point = new Vec340();
-      screen = new Vec340();
+      point = new Vec343();
+      screen = new Vec343();
       labels = HOUSE_DOORS.map((door) => {
         const label = document.createElement("span");
         label.className = "door-label";
         this.root.append(label);
         return { door, label };
       });
-      update(position, camera, enabled, mission) {
+      update(position2, camera, enabled, mission) {
         this.root.hidden = true;
         document.querySelector("#room-connections").hidden = true;
         if (!enabled) return;
-        const room = HOUSE_ROOMS.find((room2) => position.x >= room2.minX && position.x <= room2.maxX && position.z >= room2.minZ && position.z <= room2.maxZ);
+        const room = HOUSE_ROOMS.find((room2) => position2.x >= room2.minX && position2.x <= room2.maxX && position2.z >= room2.minZ && position2.z <= room2.maxZ);
         if (room) this.current = room.id;
         const current = HOUSE_ROOMS.find((room2) => room2.id === this.current);
         document.querySelector("h1").textContent = current.title;
@@ -13354,7 +15321,7 @@ var init_HouseNavigation = __esm({
 });
 
 // src/game/Lilah.ts
-import { Asset as Asset11, BoundingBox as BoundingBox20, Entity as Entity42, Vec3 as Vec341 } from "playcanvas";
+import { Asset as Asset11, BoundingBox as BoundingBox22, Entity as Entity46, Vec3 as Vec344 } from "playcanvas";
 var Lilah;
 var init_Lilah = __esm({
   "src/game/Lilah.ts"() {
@@ -13372,16 +15339,16 @@ var init_Lilah = __esm({
         this.app = app;
         this.house = house;
         this.daily = daily;
-        this.root = new Entity42("Lilah \xB7 age 2", app);
+        this.root = new Entity46("Lilah \xB7 age 2", app);
         app.root.addChild(this.root);
         this.root.setPosition(1, 0.09, 0.7);
-        this.visual = new Entity42("Lilah visual", app);
+        this.visual = new Entity46("Lilah visual", app);
         this.root.addChild(this.visual);
-        const placeholder = new Entity42("Lilah loading", app);
+        const placeholder = new Entity46("Lilah loading", app);
         this.visual.addChild(placeholder);
         this.animator = new CharacterAnimator(this.visual, placeholder);
         this.planner = new HousePath(house);
-        this.socket = new Entity42("Lilah toy grip", app);
+        this.socket = new Entity46("Lilah toy grip", app);
         this.visual.addChild(this.socket);
         this.animator.bindCarrySocket(this.socket);
         this.toy = primitives(app, this.socket)("Favorite block", "box", [0, 0, 0], [0.13, 0.13, 0.13], material("Lilah favorite block", "#edb867"));
@@ -13430,6 +15397,29 @@ var init_Lilah = __esm({
       speechUntil = 0;
       visited = /* @__PURE__ */ new Set();
       scripted = false;
+      playArrival = null;
+      playUntil = 0;
+      sharedUntil = 0;
+      get playSocket() {
+        return this.socket;
+      }
+      sharePlayToy() {
+        this.animator.cancelAction();
+        this.animator.setCarrying(true);
+        this.sharedUntil = this.time + 3.2;
+        this.nextDecision = this.sharedUntil + 2;
+      }
+      inviteToy(point, onArrival) {
+        if (!this.daily.lilahAvailable || this.scripted || this.job || this.carrying || this.playArrival || this.time < this.sharedUntil + 3 || this.daily.clock.state.minutes >= 1095 || this.root.getPosition().distance(point) > 5) return false;
+        for (const [dx, dz] of [[0, 0.6], [0.6, 0], [0, -0.6], [-0.6, 0]]) if (this.go(new Vec344(point.x + dx, 0, point.z + dz), "free-play")) {
+          this.playArrival = onArrival;
+          this.playUntil = this.time + 12;
+          this.state = "looking";
+          this.say("Let me see!");
+          return true;
+        }
+        return false;
+      }
       job = null;
       get ready() {
         return this.loaded;
@@ -13478,7 +15468,7 @@ var init_Lilah = __esm({
         const job = this.job;
         if (!job || this.animator.busy) return;
         if (this.route.length) {
-          const p = this.root.getPosition(), next = this.route[0], delta = new Vec341(next.x - p.x, 0, next.z - p.z), distance = delta.length();
+          const p = this.root.getPosition(), next = this.route[0], delta = new Vec344(next.x - p.x, 0, next.z - p.z), distance = delta.length();
           if (distance < 0.035) {
             this.route.shift();
             return;
@@ -13489,11 +15479,11 @@ var init_Lilah = __esm({
           if (separation < 0.43 && separation <= previousSeparation) {
             job.blocked += dt;
             if (job.blocked > 0.45) {
-              const obstacle = new BoundingBox20(new Vec341(arianna.x, 0, arianna.z), new Vec341(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec341(p.x, 0, p.z);
+              const obstacle = new BoundingBox22(new Vec344(arianna.x, 0, arianna.z), new Vec344(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec344(p.x, 0, p.z);
               let path = planner.route(start, job.point);
               if (!path.length) {
                 for (let i = 0; i < 16; i++) {
-                  const angle = i * Math.PI / 8, escape = new Vec341(p.x + Math.sin(angle) * 0.65, 0, p.z + Math.cos(angle) * 0.65);
+                  const angle = i * Math.PI / 8, escape = new Vec344(p.x + Math.sin(angle) * 0.65, 0, p.z + Math.cos(angle) * 0.65);
                   if (Math.hypot(escape.x - arianna.x, escape.z - arianna.z) < 0.55 || (escape.x - p.x) * (p.x - arianna.x) + (escape.z - p.z) * (p.z - arianna.z) <= 0 || !this.planner.line(start, escape)) continue;
                   const rest = planner.route(escape, job.point);
                   if (rest.length) {
@@ -13511,7 +15501,7 @@ var init_Lilah = __esm({
             this.root.setPosition(q);
             velocity.copy(delta).mulScalar(1.05);
           } else {
-            this.route = this.planner.route(new Vec341(p.x, 0, p.z), job.point);
+            this.route = this.planner.route(new Vec344(p.x, 0, p.z), job.point);
           }
         } else {
           if (!job.wait) {
@@ -13529,7 +15519,7 @@ var init_Lilah = __esm({
             this.job = null;
             job.drop();
             this.say(job.icon === "\u{1F9FA}" ? "Oops! ALL the toys!" : "Ta-da! Your turn, Ari!");
-          }, new Vec341(job.point.x, 0.1, job.point.z + 0.3));
+          }, new Vec344(job.point.x, 0.1, job.point.z + 0.3));
         }
       }
       async load() {
@@ -13555,7 +15545,7 @@ var init_Lilah = __esm({
           walk_playback: 1
         };
         for (const required of ["Idle", "Walk", "CarryIdle", "CarryWalk", "PickUp", "PutDown", "Celebrate"]) if (!tracks2.some((t) => t.name === required)) throw new Error("Missing Lilah clip " + required);
-        const alignment = new Entity42("Lilah ground alignment", this.app);
+        const alignment = new Entity46("Lilah ground alignment", this.app);
         this.visual.addChild(alignment);
         alignment.addChild(model);
         model.setLocalScale(this.height / 1.03, this.height / 1.03, this.height / 1.03);
@@ -13612,17 +15602,17 @@ var init_Lilah = __esm({
           this.carrying = false;
           this.toy.enabled = false;
           this.animator.setCarrying(false);
-          this.go(propPoint("crib", new Vec341(8.55, 0, -1.3)), "bedtime");
+          this.go(propPoint("crib", new Vec344(8.55, 0, -1.3)), "bedtime");
           this.nextDecision = this.time + 30;
           return;
         }
         if (Math.random() < 0.55) {
-          for (const [x, z] of [[0.9, 0.7], [-0.9, 0.7], [0.9, -0.7], [-0.9, -0.7]]) if (this.go(new Vec341(arianna.x + x, 0, arianna.z + z), "follow")) break;
+          for (const [x, z] of [[0.9, 0.7], [-0.9, 0.7], [0.9, -0.7], [-0.9, -0.7]]) if (this.go(new Vec344(arianna.x + x, 0, arianna.z + z), "follow")) break;
           this.state = "following";
           this.say(["Ari! Wait for me!", "I do it too!", "Whatcha doing?"][Math.floor(Math.random() * 3)]);
         } else {
           const spots = [[1.1, 1.3], [3.8, 2], [1.4, 5.6], [0.5, 10.8], [4.3, 11.4], [8.4, 0.5]], p = spots[Math.floor(Math.random() * spots.length)];
-          this.go(new Vec341(p[0], 0, p[1]), "explore");
+          this.go(new Vec344(p[0], 0, p[1]), "explore");
           this.state = "exploring";
           this.say("Ooh! What\u2019s that?");
         }
@@ -13647,12 +15637,12 @@ var init_Lilah = __esm({
           this.carrying = false;
           this.toy.enabled = false;
           if (this.grounding) this.grounding.surfaceHeight = null;
-          if (this.state === "sleeping" || this.bedStart) this.root.setPosition(propPoint("crib", new Vec341(8.55, 0.09, -1.3)));
+          if (this.state === "sleeping" || this.bedStart) this.root.setPosition(propPoint("crib", new Vec344(8.55, 0.09, -1.3)));
           this.bedStart = null;
           this.state = "watching";
         }
         if ((this.state === "sleeping" || this.bedStart) && !this.daily.clock.state.lilahAsleep && this.daily.clock.state.minutes < 1095) {
-          this.root.setPosition(propPoint("crib", new Vec341(8.55, 0.09, -1.3)));
+          this.root.setPosition(propPoint("crib", new Vec344(8.55, 0.09, -1.3)));
           this.state = "watching";
           this.bedStart = null;
           this.animator.setWorkClip(null);
@@ -13661,12 +15651,20 @@ var init_Lilah = __esm({
         }
         if (this.daily.clock.state.lilahAsleep && this.state !== "sleeping") this.restInCrib();
         if (canMischief) this.time += dt;
+        if (this.sharedUntil && this.time >= this.sharedUntil) {
+          this.sharedUntil = 0;
+          this.animator.setCarrying(false);
+        }
+        if (this.playArrival && (!canMischief || this.time > this.playUntil || this.daily.clock.state.lilahAsleep)) {
+          this.playArrival = null;
+          this.route = [];
+        }
         if (!this.scripted && canMischief && this.daily.clock.state.minutes >= 1095 && this.state !== "sleepy" && this.state !== "sleeping" && !this.bedStart) {
           this.route = [];
           this.animator.cancelAction();
           this.decide(arianna);
         }
-        const velocity = new Vec341();
+        const velocity = new Vec344();
         if (this.scripted) this.updateTornado(dt, arianna, velocity);
         else if (this.bedStart) {
           const entry = this.bedStart;
@@ -13695,6 +15693,10 @@ var init_Lilah = __esm({
                 velocity.set(dx / distance * 0.7, 0, dz / distance * 0.7);
               } else {
                 this.route = [];
+                if (this.playArrival) {
+                  this.playArrival = null;
+                  this.say("A little more room, Ari?");
+                }
                 this.nextDecision = this.time + 2;
               }
             }
@@ -13704,13 +15706,22 @@ var init_Lilah = __esm({
         this.animator.update(dt, velocity, elapsed);
         const p = this.root.getPosition();
         this.visited.add(p.z < 3 ? "bedroom" : p.z < 9 ? "living" : "kitchen");
-        const screen = camera.camera.worldToScreen(new Vec341(p.x, p.y + this.height + 0.12, p.z));
+        const screen = camera.camera.worldToScreen(new Vec344(p.x, p.y + this.height + 0.12, p.z));
         const viewport = document.querySelector("#game").getBoundingClientRect();
         this.label.hidden = performance.now() > this.speechUntil || screen.x < 10 || screen.x > viewport.width - 10 || screen.y < 130 || screen.y > viewport.height - 130;
         this.label.style.transform = `translate(${Math.max(4, Math.min(viewport.width - this.label.offsetWidth - 4, screen.x - this.label.offsetWidth / 2))}px,${screen.y - this.label.offsetHeight}px)`;
       }
       arrive() {
         this.nextDecision = this.time + 7;
+        if (this.destination === "free-play" && this.playArrival) {
+          const done = this.playArrival;
+          this.playArrival = null;
+          this.state = "playing";
+          this.say("I found it! My turn!");
+          this.animator.playAction("Celebrate", 1.6);
+          done();
+          return;
+        }
         if (this.destination === "mess") {
           this.animator.playAction("PutDown", 0.8, () => {
             const made = this.daily.clock.state.phase !== "night" && this.daily.lilahMesses.add(this.root.getPosition());
@@ -13780,7 +15791,7 @@ var init_TornadoRules = __esm({
 });
 
 // src/game/LilahTornado.ts
-import { Entity as Entity43, Vec3 as Vec342 } from "playcanvas";
+import { Entity as Entity47, Vec3 as Vec345 } from "playcanvas";
 var roomOf, TYPES, get, LilahTornado;
 var init_LilahTornado = __esm({
   "src/game/LilahTornado.ts"() {
@@ -13921,7 +15932,7 @@ var init_LilahTornado = __esm({
         this.action.enabled = true;
         this.notice = "Follow Lilah\u2019s thought bubbles. Tap Action near a mess!";
         this.noticeUntil = 6;
-        this.spots = [[1.1, 2.1], [1.1, 4.8], [0.7, 8.1], [0.5, 10.3], [1.8, 11.3], [4.8, 11.5], [3.7, 6.4], [3.8, 2], [8.4, 0.8], [8.1, 7]].map(([x, z]) => new Vec342(x, 0, z)).filter((p) => this.planner.free(p.x, p.z) && this.planner.route(new Vec342(this.character.player.getPosition().x, 0, this.character.player.getPosition().z), p).length > 0);
+        this.spots = [[1.1, 2.1], [1.1, 4.8], [0.7, 8.1], [0.5, 10.3], [1.8, 11.3], [4.8, 11.5], [3.7, 6.4], [3.8, 2], [8.4, 0.8], [8.1, 7]].map(([x, z]) => new Vec345(x, 0, z)).filter((p) => this.planner.free(p.x, p.z) && this.planner.route(new Vec345(this.character.player.getPosition().x, 0, this.character.player.getPosition().z), p).length > 0);
         this.lilah.beginTornado();
         void this.audio.unlock();
         this.audio.pause(false);
@@ -13950,9 +15961,9 @@ var init_LilahTornado = __esm({
           return;
         }
         if (!this.lilah.working && this.elapsed >= this.nextDrop && this.messes.length < 3) {
-          const position = this.lilah.root.getPosition();
-          const candidates = this.spots.map((p, i) => ({ p, i, d: Math.hypot(p.x - position.x, p.z - position.z) })).filter((v) => v.i !== this.lastSpot && v.d > 0.8 && v.d < 12 && !this.messes.some((m) => m.point.distance(v.p) < 1));
-          const room = roomOf(position);
+          const position2 = this.lilah.root.getPosition();
+          const candidates = this.spots.map((p, i) => ({ p, i, d: Math.hypot(p.x - position2.x, p.z - position2.z) })).filter((v) => v.i !== this.lastSpot && v.d > 0.8 && v.d < 12 && !this.messes.some((m) => m.point.distance(v.p) < 1));
+          const room = roomOf(position2);
           candidates.sort((a, b) => Number(roomOf(a.p) === room) - Number(roomOf(b.p) === room) || Number(this.recentSpots.includes(a.i)) - Number(this.recentSpots.includes(b.i)) || a.d - b.d);
           const otherRooms = candidates.filter((c) => roomOf(c.p) !== room);
           if (otherRooms.length) {
@@ -14006,7 +16017,7 @@ var init_LilahTornado = __esm({
       }
       spawn(point, type, special) {
         if (this.messes.length >= 3) return;
-        const root = new Entity43("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
+        const root = new Entity47("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
         this.props.root.addChild(root);
         root.setPosition(point.x, 0.06, point.z);
         const shape = primitives(this.app, root), n = special === "basket" ? 12 : type === 3 ? 5 : 6;
@@ -14035,7 +16046,7 @@ var init_LilahTornado = __esm({
       }
       focus() {
         const p = this.character.player.getPosition();
-        return this.messes.filter((m) => Math.hypot(p.x - m.point.x, p.z - m.point.z) < 1.15 && this.sight.line(new Vec342(p.x, 0, p.z), m.point)).sort((a, b) => a.point.distance(p) - b.point.distance(p))[0];
+        return this.messes.filter((m) => Math.hypot(p.x - m.point.x, p.z - m.point.z) < 1.15 && this.sight.line(new Vec345(p.x, 0, p.z), m.point)).sort((a, b) => a.point.distance(p) - b.point.distance(p))[0];
       }
       clean() {
         if (!this.playing || this.cleaning || this.character.animator.busy) return;
@@ -14073,7 +16084,7 @@ var init_LilahTornado = __esm({
         if (!pet.loaded) return;
         const p = pet.dog.getPosition(), point = this.spots.filter((v) => !this.messes.some((m) => m.point.distance(v) < 1)).sort((a, b) => a.distance(p) - b.distance(p))[0];
         if (!point) return;
-        const path = this.planner.route(new Vec342(p.x, 0, p.z), point);
+        const path = this.planner.route(new Vec345(p.x, 0, p.z), point);
         if (!path.length) {
           this.specialStarted = true;
           return;
@@ -14088,7 +16099,7 @@ var init_LilahTornado = __esm({
         if (!dog || dog.wait < 0 && !dog.route.length) return;
         const root = this.props.pet.dog;
         if (dog.route.length) {
-          const p = root.getPosition(), next = dog.route[0], delta = new Vec342(next.x - p.x, 0, next.z - p.z), distance = delta.length();
+          const p = root.getPosition(), next = dog.route[0], delta = new Vec345(next.x - p.x, 0, next.z - p.z), distance = delta.length();
           if (distance < 0.04) {
             dog.route.shift();
             return;
@@ -14102,7 +16113,7 @@ var init_LilahTornado = __esm({
             root.setPosition(dog.point.x, 0.04, dog.point.z);
             this.spawn(dog.point, 0, "dog");
             dog.wait = -1;
-            dog.route = this.planner.route(dog.point, new Vec342(dog.home.x, 0, dog.home.z));
+            dog.route = this.planner.route(dog.point, new Vec345(dog.home.x, 0, dog.home.z));
           }
         }
       }
@@ -14128,7 +16139,7 @@ var init_LilahTornado = __esm({
         set("[data-notice]", this.elapsed < this.noticeUntil ? this.notice : this.messes.length === 3 ? "Lilah takes a breather. Pick any mess!" : "\u{1F463} Follow Lilah \xB7 \u2728 Tap Action to tidy");
         const bounds = get("#game").getBoundingClientRect();
         for (const m of this.messes) {
-          const p = this.camera.entity.camera.worldToScreen(new Vec342(m.point.x, 0.4, m.point.z)), x = Math.max(24, Math.min(bounds.width - 24, p.x)), y = Math.max(this.hud.offsetTop + this.hud.offsetHeight + 40, Math.min(bounds.height - 180, p.y));
+          const p = this.camera.entity.camera.worldToScreen(new Vec345(m.point.x, 0.4, m.point.z)), x = Math.max(24, Math.min(bounds.width - 24, p.x)), y = Math.max(this.hud.offsetTop + this.hud.offsetHeight + 40, Math.min(bounds.height - 180, p.y));
           m.label.classList.toggle("near", m === nearest);
           m.label.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
           m.label.classList.toggle("edge", x !== p.x || y !== p.y);
@@ -14230,7 +16241,7 @@ var init_LilahTornado = __esm({
 });
 
 // src/game/FamilyDinner.ts
-import { Asset as Asset12, BoundingBox as BoundingBox21, Entity as Entity44, Vec3 as Vec343 } from "playcanvas";
+import { BoundingBox as BoundingBox23, Entity as Entity48, Vec3 as Vec346 } from "playcanvas";
 var FamilyDinner;
 var init_FamilyDinner = __esm({
   "src/game/FamilyDinner.ts"() {
@@ -14239,6 +16250,7 @@ var init_FamilyDinner = __esm({
     init_PropSpace();
     init_HousePath();
     init_primitives();
+    init_ContainerLease();
     FamilyDinner = class {
       constructor(app, house, daily, root, visual, animator, say) {
         this.app = app;
@@ -14249,22 +16261,18 @@ var init_FamilyDinner = __esm({
         this.animator = animator;
         this.say = say;
         this.planner = new HousePath(house, 0.25);
-        this.socket = new Entity44("Dad serving hands", app);
+        this.socket = new Entity48("Dad serving hands", app);
         visual.addChild(this.socket);
         animator.bindCarrySocket(this.socket);
-        this.tray = new Entity44("Family dinner", app);
+        this.tray = new Entity48("Family dinner", app);
         house.root.addChild(this.tray);
         this.tray.enabled = false;
         primitives(app, this.tray)("Dinner platter", "cylinder", [0, 0, 0], [0.72, 0.025, 0.58], material("Dinner china", "#fff2d9"), false);
         void Promise.all(["pizza", "taco", "turkey"].map(async (name) => {
-          const a = new Asset12("Family " + name, "container", { url: assetUrl(`/assets/food/${name}.glb`) });
-          app.assets.add(a);
-          await new Promise((resolve, reject) => {
-            a.once("load", resolve);
-            a.once("error", reject);
-            app.assets.load(a);
-          });
-          const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox21();
+          const lease = leaseContainer(app, assetUrl(`/assets/food/${name}.glb`), "Family " + name);
+          this.leases.push(lease);
+          const resource = await lease.ready;
+          const model = resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox23();
           let first = true;
           for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
             if (first) {
@@ -14291,6 +16299,8 @@ var init_FamilyDinner = __esm({
       visual;
       animator;
       say;
+      portionManaged = false;
+      leases = [];
       tray;
       socket;
       models = [];
@@ -14298,7 +16308,7 @@ var init_FamilyDinner = __esm({
       day = 0;
       stage = "idle";
       route = [];
-      goal = new Vec343();
+      goal = new Vec346();
       timer = 0;
       blocked = 0;
       retry = 0;
@@ -14306,14 +16316,14 @@ var init_FamilyDinner = __esm({
       serving = "pizza";
       table() {
         this.tray.reparent(this.house.root);
-        this.tray.setPosition(propPoint("dining", new Vec343(0.55, 0.99, 14.35)));
+        this.tray.setPosition(propPoint("dining", new Vec346(0.55, 0.99, 14.35)));
         this.tray.setEulerAngles(0, propYaw("dining", 0), 0);
         this.tray.enabled = true;
       }
       go(p, stage) {
         const at = this.root.getPosition();
         this.goal.copy(p);
-        this.route = this.planner.route(new Vec343(at.x, 0, at.z), p);
+        this.route = this.planner.route(new Vec346(at.x, 0, at.z), p);
         this.stage = stage;
         this.blocked = 0;
         return this.route.length > 0;
@@ -14347,11 +16357,11 @@ var init_FamilyDinner = __esm({
           if (s.dinnerServed) this.table();
         }
         if (!this.ready) return false;
-        this.models.forEach((m) => m.enabled = m.name === this.serving);
+        this.models.forEach((m) => m.enabled = (!this.portionManaged || !s.dinnerServed) && m.name === this.serving);
         if (this.stage === "idle") {
           if (s.dinnerServed && !this.tray.enabled) this.table();
           if (!canStart || !this.due()) return false;
-          if (!this.go(propPoint("fridge", new Vec343(-1.65, 0, 14.55)), "fetch")) {
+          if (!this.go(propPoint("fridge", new Vec346(-1.65, 0, 14.55)), "fetch")) {
             this.finish();
             return false;
           }
@@ -14360,13 +16370,13 @@ var init_FamilyDinner = __esm({
         if (["fetch", "carry", "seat"].includes(this.stage)) {
           const p = this.root.getPosition(), next = this.route[0];
           if (next) {
-            const delta = new Vec343(next.x - p.x, 0, next.z - p.z), distance = delta.length(), step = Math.min(distance, dt * 1.05);
+            const delta = new Vec346(next.x - p.x, 0, next.z - p.z), distance = delta.length(), step = Math.min(distance, dt * 1.05);
             delta.normalize();
             const q = p.clone().add(delta.clone().mulScalar(step));
             if (people.some((v) => Math.hypot(v.x - q.x, v.z - q.z) < 0.6) || !this.planner.free(q.x, q.z)) {
               this.blocked += dt;
               if (this.blocked > 3) {
-                this.route = this.planner.route(new Vec343(p.x, 0, p.z), this.goal);
+                this.route = this.planner.route(new Vec346(p.x, 0, p.z), this.goal);
                 this.blocked = 0;
               }
               return true;
@@ -14385,11 +16395,11 @@ var init_FamilyDinner = __esm({
             this.stage = "pickup";
             this.timer = 1.4;
             this.animator.setIdleClip("Cleaning");
-            this.animator.faceTowards(propPoint("fridge", new Vec343(-2.65, 1, 14.55)));
+            this.animator.faceTowards(propPoint("fridge", new Vec346(-2.65, 1, 14.55)));
           } else if (this.stage === "carry") {
             this.stage = "place";
             this.timer = 1.1;
-            this.animator.faceTowards(propPoint("dining", new Vec343(0.55, 1, 13.85)));
+            this.animator.faceTowards(propPoint("dining", new Vec346(0.55, 1, 13.85)));
           } else {
             this.stage = "sitting";
             this.timer = 1.3;
@@ -14401,7 +16411,7 @@ var init_FamilyDinner = __esm({
           this.timer -= dt;
           if (this.stage === "sitting" || this.stage === "standing") {
             const down = this.stage === "sitting", t = Math.max(0, Math.min(1, 1 - this.timer / (down ? 1.3 : 1.2))), z = down ? 15.65 - 0.55 * t : 15.1 + 0.55 * t;
-            this.root.setPosition(propPoint("dining", new Vec343(0.55, 0.09, z)));
+            this.root.setPosition(propPoint("dining", new Vec346(0.55, 0.09, z)));
           }
           if (this.timer > 0) return true;
           if (this.stage === "pickup") {
@@ -14412,7 +16422,7 @@ var init_FamilyDinner = __esm({
             this.tray.setLocalPosition(0, 0.035, 0.06);
             this.tray.setLocalEulerAngles(0, 0, 0);
             this.tray.enabled = true;
-            if (!this.go(propPoint("dining", new Vec343(0.55, 0, 15.65)), "carry")) {
+            if (!this.go(propPoint("dining", new Vec346(0.55, 0, 15.65)), "carry")) {
               this.tray.enabled = false;
               this.finish();
             }
@@ -14431,14 +16441,14 @@ var init_FamilyDinner = __esm({
           } else if (this.stage === "sitting") {
             this.stage = "seated";
             this.timer = 12 + s.day % 4 * 2;
-            this.root.setPosition(propPoint("dining", new Vec343(0.55, 0.09, 15.1)));
+            this.root.setPosition(propPoint("dining", new Vec346(0.55, 0.09, 15.1)));
           } else if (this.stage === "seated") {
             this.stage = "standing";
             this.timer = 1.2;
             this.animator.setIdleClip("Idle");
             this.animator.playAction("StandUp", 1.2);
           } else if (this.stage === "standing") {
-            this.root.setPosition(propPoint("dining", new Vec343(0.55, 0.09, 15.65)));
+            this.root.setPosition(propPoint("dining", new Vec346(0.55, 0.09, 15.65)));
             this.finish();
             return false;
           }
@@ -14451,13 +16461,14 @@ var init_FamilyDinner = __esm({
       destroy() {
         this.tray.destroy();
         this.socket.destroy();
+        for (const lease of this.leases) lease.release();
       }
     };
   }
 });
 
 // src/game/Marc.ts
-import { Asset as Asset13, AnimData as AnimData9, AnimTrack as AnimTrack9, Entity as Entity45, Quat as Quat11, Vec3 as Vec344 } from "playcanvas";
+import { Asset as Asset13, AnimData as AnimData9, AnimTrack as AnimTrack9, Entity as Entity49, Quat as Quat12, Vec3 as Vec347 } from "playcanvas";
 var SEAT, YAW, FORWARD, ENTRY, SEATED, PATROL, REMARKS, Marc;
 var init_Marc = __esm({
   "src/game/Marc.ts"() {
@@ -14470,9 +16481,9 @@ var init_Marc = __esm({
     init_HousePath();
     init_house();
     init_primitives();
-    SEAT = new Vec344(4.5, 0, 7.35);
+    SEAT = new Vec347(4.5, 0, 7.35);
     YAW = -35;
-    FORWARD = new Vec344(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
+    FORWARD = new Vec347(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
     ENTRY = SEAT.clone().add(FORWARD.clone().mulScalar(1.02));
     SEATED = SEAT.clone().add(FORWARD.clone().mulScalar(0.28));
     PATROL = [[8.4, 0.5], [8.1, 9.6], [0.4, 11.2], [3.8, 2], [1.25, 5.6]];
@@ -14482,12 +16493,12 @@ var init_Marc = __esm({
         this.app = app;
         this.house = house;
         this.daily = daily;
-        this.root = new Entity45("Marc", app);
+        this.root = new Entity49("Marc", app);
         app.root.addChild(this.root);
         this.root.setPosition(3.5, 0.09, 6.2);
-        this.visual = new Entity45("Marc visual", app);
+        this.visual = new Entity49("Marc visual", app);
         this.root.addChild(this.visual);
-        const placeholder = new Entity45("Marc loading", app);
+        const placeholder = new Entity49("Marc loading", app);
         this.visual.addChild(placeholder);
         this.animator = new CharacterAnimator(this.visual, placeholder);
         this.planner = new HousePath(house, 0.25);
@@ -14498,7 +16509,7 @@ var init_Marc = __esm({
         document.querySelector("#game").append(this.label);
         const colors = ["#cda678", "#c5d9dd", "#b8c39d"];
         for (let i = 0; i < 3; i++) {
-          const tool = new Entity45(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
+          const tool = new Entity49(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
           this.root.addChild(tool);
           const shape = primitives(app, tool);
           shape("Dad cleanup tool", "box", [0, 0, 0], i === 0 ? [0.25, 0.16, 0.23] : i === 1 ? [0.3, 0.025, 0.23] : [0.3, 0.07, 0.13], material("Dad tool " + i, colors[i]));
@@ -14539,7 +16550,7 @@ var init_Marc = __esm({
       standCount = 0;
       sitCount = 0;
       visited = /* @__PURE__ */ new Set();
-      velocity = new Vec344();
+      velocity = new Vec347();
       blockedFor = 0;
       nextScan = 0;
       async load() {
@@ -14570,7 +16581,7 @@ var init_Marc = __esm({
           if (paths.some((p) => p.entityPath.at(-1) === "Spine02" && p.propertyPath[0] === "localRotation")) {
             const data = outputs[curve.output].data;
             for (let i = 0; i < data.length; i += 4) {
-              const q = new Quat11(data[i], data[i + 1], data[i + 2], data[i + 3]).mul(new Quat11().setFromEulerAngles(24, 0, 0));
+              const q = new Quat12(data[i], data[i + 1], data[i + 2], data[i + 3]).mul(new Quat12().setFromEulerAngles(24, 0, 0));
               data[i] = q.x;
               data[i + 1] = q.y;
               data[i + 2] = q.z;
@@ -14580,7 +16591,7 @@ var init_Marc = __esm({
         }
         tracks2.push(new AnimTrack9("Cleaning", idle.duration, idle.inputs, outputs, idle.curves));
         const manifest = { animations: tracks2.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: !["SitDown", "StandUp"].includes(t.name) })), locomotion: { Walk: { travel_speed_mps: 1.2 }, CarryWalk: { travel_speed_mps: 1.05 } }, interaction_events: {}, scale: { rest_height_m: 1.8 }, hand_joints: ["LeftHand", "RightHand"], walk_playback: 1 };
-        const alignment = new Entity45("Marc ground alignment", this.app);
+        const alignment = new Entity49("Marc ground alignment", this.app);
         this.visual.addChild(alignment);
         alignment.addChild(model);
         model.setLocalScale(this.height / 1.8, this.height / 1.8, this.height / 1.8);
@@ -14614,7 +16625,7 @@ var init_Marc = __esm({
         if (!m) return false;
         const p = this.root.getPosition(), candidates = [];
         for (const radius of [0.65, 0.85]) for (let i = 0; i < 12; i++) {
-          const a = i * Math.PI / 6, v = new Vec344(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
+          const a = i * Math.PI / 6, v = new Vec347(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
           if (this.planner.free(v.x, v.z)) candidates.push(v);
         }
         candidates.sort((a, b) => a.distance(p) - b.distance(p));
@@ -14642,7 +16653,7 @@ var init_Marc = __esm({
         this.label.hidden = true;
         if (!this.root.enabled || document.hidden) return;
         if (!active) {
-          this.animator.update(0, new Vec344(), Math.max(elapsed, 1e-3));
+          this.animator.update(0, new Vec347(), Math.max(elapsed, 1e-3));
           return;
         }
         this.time += dt;
@@ -14711,7 +16722,7 @@ var init_Marc = __esm({
                       this.until = this.time + 3;
                       this.animator.setIdleClip("Cleaning");
                       const mess = this.mess();
-                      this.animator.faceTowards(new Vec344(mess.x, 0, mess.z));
+                      this.animator.faceTowards(new Vec347(mess.x, 0, mess.z));
                       this.say(["These blocks are plotting against my feet.", "Ah, floor juice. My least favorite flavor.", "Crumbs: the glitter of snack time."][Number(mess.id.at(-1))]);
                     } else {
                       this.state = "idle";
@@ -14732,7 +16743,7 @@ var init_Marc = __esm({
             }
           } else if (this.state === "sitting-down" || this.state === "standing-up") {
             const down = this.state === "sitting-down", t = Math.min(1, (this.time - this.transitionStart) / (down ? 1.3 : 1)), smooth2 = t * t * (3 - 2 * t);
-            const p2 = new Vec344().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
+            const p2 = new Vec347().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
             this.root.setPosition(p2.x, 0.09, p2.z);
             this.visual.setLocalEulerAngles(0, propYaw("marc-seat", YAW), 0);
             if (this.time >= this.until && !this.animator.busy) {
@@ -14764,7 +16775,7 @@ var init_Marc = __esm({
           } else if (this.time >= this.until) {
             if (this.purpose === "seat" || this.purpose === "mess") {
               const point = PATROL[this.patrolIndex++ % PATROL.length];
-              if (!this.go(new Vec344(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
+              if (!this.go(new Vec347(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
             } else if (!this.go(propPoint("marc-seat", ENTRY), "seat")) this.until = this.time + 3;
           }
           if (this.time < 2 && this.state === "idle") {
@@ -14776,7 +16787,7 @@ var init_Marc = __esm({
         this.animator.update(dt, this.velocity, elapsed);
         const p = this.root.getPosition(), room = HOUSE_ROOMS.find((r) => p.x >= r.minX && p.x <= r.maxX && p.z >= r.minZ && p.z <= r.maxZ);
         if (room) this.visited.add(room.id);
-        const screen = camera.camera.worldToScreen(new Vec344(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
+        const screen = camera.camera.worldToScreen(new Vec347(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
         this.label.hidden = performance.now() > this.speechUntil || screen.x < 0 || screen.x > viewport.width || screen.y < 135 || screen.y > viewport.height - 145;
         this.label.style.transform = `translate(${Math.max(6, Math.min(viewport.width - this.label.offsetWidth - 6, screen.x - this.label.offsetWidth / 2))}px,${screen.y - this.label.offsetHeight}px)`;
       }
@@ -14998,6 +17009,191 @@ var init_AdventureHUD = __esm({
         this.game.classList.remove("adventure-ui");
       }
     };
+  }
+});
+
+// src/dev/MealReview.ts
+var MealReview_exports = {};
+__export(MealReview_exports, {
+  mealReview: () => mealReview
+});
+import { Vec3 as Vec348 } from "playcanvas";
+function mealReview(app, character, camera, loop, daily) {
+  const params = new URLSearchParams(location.search), context = params.get("meal-review");
+  if (params.get("preview") !== "home-play" || !["dinner", "lunch"].includes(context ?? "")) return;
+  if (context === "dinner") {
+    loop.developerCommand("phase", "afternoon");
+    daily.clock.state.dinnerServed = true;
+    daily.save();
+    character.player.setPosition(propPoint("dining", new Vec348(0.55, 0.09, 11.9)));
+  } else {
+    loop.developerCommand("recess");
+    character.player.setPosition(4.6, 0.09, -20.15);
+  }
+  if (!loop.developerSummary().clockFrozen) loop.developerCommand("freeze-clock");
+  const cameraControls = document.createElement("div");
+  cameraControls.style.cssText = "position:fixed;top:70px;left:12px;z-index:50;display:flex;gap:6px";
+  let side = false;
+  for (const label of ["Front view", "Side view"]) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.onclick = () => {
+      side = label === "Side view";
+    };
+    cameraControls.append(b);
+  }
+  document.body.append(cameraControls);
+  let stopAtContact = false;
+  const contact = document.createElement("button");
+  contact.textContent = "Inspect next bite";
+  contact.onclick = () => {
+    stopAtContact = true;
+    app.timeScale = 1;
+  };
+  cameraControls.append(contact);
+  const resume = document.createElement("button");
+  resume.textContent = "Resume";
+  resume.onclick = () => {
+    stopAtContact = false;
+    app.timeScale = 1;
+  };
+  cameraControls.append(resume);
+  app.on("postrender", () => {
+    const animation = character.animator.snapshot();
+    if (stopAtContact && ["MealBite", "MealDrink"].includes(animation.action ?? "") && animation.clipTime >= 0.65) {
+      app.timeScale = 0;
+      stopAtContact = false;
+    }
+  });
+  const diagnostic = document.createElement("output");
+  diagnostic.id = "meal-review-state";
+  diagnostic.style.cssText = "position:fixed;top:102px;left:12px;z-index:50;background:#fff8edcc;color:#493958;padding:4px;font:12px system-ui";
+  document.body.append(diagnostic);
+  app.on("prerender", () => {
+    const s = loop.meals.snapshot();
+    if (s.seat) {
+      const p = character.player.getPosition(), yaw = context === "lunch" ? -1 : 1;
+      camera.setPosition(p.x + (side ? 3 : 0), 2, p.z + (side ? 0 : 3 * yaw));
+      camera.lookAt(p.x, 0.7, p.z);
+      camera.camera.orthoHeight = 1.6;
+    }
+    diagnostic.value = `${s.plate?.food ?? "No plate"} \xB7 ${s.plate?.owner ?? "unclaimed"} \xB7 bites ${s.plate?.bites ?? 0} \xB7 drink ${s.plate?.drink ?? 0}`;
+  });
+}
+var init_MealReview = __esm({
+  "src/dev/MealReview.ts"() {
+    "use strict";
+    init_PropSpace();
+  }
+});
+
+// src/dev/MotionReview.ts
+var MotionReview_exports = {};
+__export(MotionReview_exports, {
+  motionReview: () => motionReview
+});
+import { Entity as Entity50, Vec3 as Vec349, Vec4 } from "playcanvas";
+function motionReview(app, character, camera, loop) {
+  loop.developerHold(true);
+  character.player.setPosition(0.55, 0.09, 4.5);
+  character.visual.setLocalEulerAngles(0, 0, 0);
+  character.grounding?.update();
+  const anim = character.player.findComponents("anim")[0], layer = anim.baseLayer;
+  const grip = new Entity50("Review hand grip", app), prop = new Entity50("Review meal prop", app);
+  app.root.addChild(grip);
+  grip.addChild(prop);
+  const art = new MealArt(app, loop.homePlay.art);
+  const showProp = (drink) => {
+    for (const child of [...prop.children]) child.destroy();
+    mealGrip(prop, drink);
+    if (drink) prop.addChild(loop.homePlay.art.make("cup", "#bad4dc"));
+    else void art.food(prop, "pizza", 0, 0, 0.18);
+  };
+  const panel = document.createElement("div");
+  panel.style.cssText = "position:fixed;z-index:100;left:12px;right:12px;bottom:12px;background:#fff8ed;color:#493958;padding:14px;border-radius:12px;font:14px system-ui;display:flex;flex-wrap:wrap;gap:10px;align-items:center";
+  panel.innerHTML = '<strong>Original-rig motion review</strong><select aria-label="Animation"><option value="EatSit">Existing breakfast</option><option value="MealBite">Reused dinner bite</option><option value="MealDrink">Reused drink</option><option value="CarryIdle">Original carry</option><option value="PickUp">Existing pickup</option><option value="PutDown">Existing putdown</option><option value="PlayThrow">Existing throw</option></select><button>Play slowly</button><button>Pause</button><button>Front</button><button>Side</button><button>Contact</button><input aria-label="Animation time" type="range" min="0" max="4.2" value="0" step="0.01"><output>0.00 s</output>';
+  document.body.append(panel);
+  const select = panel.querySelector("select"), slider = panel.querySelector("input"), output = panel.querySelector("output");
+  let side = false, playing = false;
+  const seek = (time2) => {
+    try {
+      layer.pause();
+      playing = false;
+      layer.activeStateCurrentTime = time2;
+      slider.value = String(time2);
+      output.value = time2.toFixed(2) + " s";
+    } catch (error) {
+      output.value = String(error);
+    }
+  };
+  const choose = () => {
+    layer.play(select.value);
+    anim.speed = 0.35;
+    layer.pause();
+    slider.max = String(layer.activeStateDuration);
+    prop.enabled = select.value === "MealBite" || select.value === "MealDrink";
+    if (prop.enabled) showProp(select.value === "MealDrink");
+    seek(0);
+  };
+  select.onchange = choose;
+  slider.oninput = () => seek(Number(slider.value));
+  const buttons = panel.querySelectorAll("button");
+  buttons[0].addEventListener("click", () => {
+    layer.play();
+    playing = true;
+  });
+  buttons[1].addEventListener("click", () => seek(layer.activeStateCurrentTime));
+  buttons[2].addEventListener("click", () => {
+    side = false;
+  });
+  buttons[3].addEventListener("click", () => {
+    side = true;
+  });
+  buttons[4].addEventListener("click", () => seek(select.value === "EatSit" ? 1.55 : select.value.startsWith("Meal") ? 0.65 : 0.4));
+  const frame = () => {
+    const p = character.player.getPosition(), reserved = Math.min(0.55, (panel.getBoundingClientRect().height + 24) / innerHeight);
+    camera.camera.rect = new Vec4(0, reserved, 1, 1 - reserved);
+    camera.setPosition(p.x + (side ? 3 : 0), 1.3, p.z + (side ? 0 : 3));
+    camera.lookAt(new Vec349(p.x, 0.65, p.z));
+    camera.camera.orthoHeight = 0.85;
+    const left = anim.entity.findByName("LeftHand"), right = anim.entity.findByName("RightHand");
+    grip.setPosition(new Vec349().add2(left.getPosition(), right.getPosition()).mulScalar(0.5).add(new Vec349(0, 0, 0.025)));
+    if (playing) {
+      slider.value = String(layer.activeStateCurrentTime);
+      output.value = layer.activeStateCurrentTime.toFixed(2) + " s";
+    }
+  };
+  app.on("prerender", frame);
+  choose();
+  const style = document.createElement("style");
+  style.textContent = "#adventure-hud,.adventure-hud,#controls,#character-label,#home-play-controls,#save-message,#action-button,#joystick{visibility:hidden!important}button,select{min-height:36px}";
+  document.head.append(style);
+  app.on("framerender", () => {
+    app.autoRender = true;
+    app.renderNextFrame = true;
+  });
+  const apply = document.createElement("button");
+  apply.textContent = "Apply clip";
+  apply.onclick = choose;
+  panel.append(apply);
+  const time = document.createElement("input");
+  time.type = "number";
+  time.min = "0";
+  time.max = "4.2";
+  time.step = ".05";
+  time.value = "1.2";
+  time.style.width = "70px";
+  time.setAttribute("aria-label", "Exact frame time");
+  panel.append(time);
+  const exact = document.createElement("button");
+  exact.textContent = "Show frame";
+  exact.onclick = () => seek(Number(time.value));
+  panel.append(exact);
+}
+var init_MotionReview = __esm({
+  "src/dev/MotionReview.ts"() {
+    "use strict";
+    init_MealArt();
   }
 });
 
@@ -15298,7 +17494,7 @@ var main_exports = {};
 __export(main_exports, {
   startGame: () => startGame
 });
-import { Application, Color as Color12, Entity as Entity46, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec345 } from "playcanvas";
+import { Application, Color as Color12, Entity as Entity51, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec350 } from "playcanvas";
 async function startGame(editorApp) {
   const canvas = document.querySelector("#game-canvas");
   const app = editorApp ?? new Application(canvas, { graphicsDeviceOptions: { alpha: false, antialias: true, powerPreference: "low-power" } });
@@ -15308,7 +17504,7 @@ async function startGame(editorApp) {
   await loadSquishyArt(app);
   const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color12(0.72, 0.68, 0.77);
   app.scene.ambientLight = ambientBase.clone();
-  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity46("Soft afternoon sunlight", app);
+  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity51("Soft afternoon sunlight", app);
   if (!sun.light) sun.addComponent("light", {
     type: "directional",
     color: new Color12(1, 0.92, 0.83),
@@ -15338,11 +17534,12 @@ async function startGame(editorApp) {
   const navigation = new HouseNavigation();
   const lilah = new Lilah(app, room, props.daily);
   const marc = new Marc(app, room, props.daily);
+  loop.meals.bindDinner(marc.dinner);
   const tornado = new LilahTornado(app, room, props, cleanup, loop, character, controller, camera, lilah);
   loop.tornado = tornado;
   const label = document.querySelector("#player-label");
-  const screenPoint = new Vec345();
-  const headPoint = new Vec345();
+  const screenPoint = new Vec350();
+  const headPoint = new Vec350();
   const viewport = document.querySelector("#game");
   const resize = () => {
     app.graphicsDevice.maxPixelRatio = window.devicePixelRatio || 1;
@@ -15364,6 +17561,12 @@ async function startGame(editorApp) {
     loop.resetUIInput();
   });
   const dogRoaming = new DogRoaming(room, props.pet.dog, props.daily);
+  loop.homePlay.onInvite = (id, point) => {
+    lilah.inviteToy(point, () => {
+      if (loop.homePlay.reactToVisit(id, lilah.root, lilah.playSocket)) lilah.sharePlayToy();
+    });
+  };
+  loop.homePlay.onFetch = (id) => !tornado.active && !props.pet?.active && dogRoaming.fetchToy(loop.homePlay.items.get(id).entity, character.player, () => loop.homePlay.finishFetch(id));
   app.on("update", (elapsed) => {
     houseMusic.update({ mode: loop.mode, phase: props.daily.clock.state.phase, store: loop.mode === "store" ? loop.store.definition.id : "", paused: loop.popUI.isOpen || loop.developerPaused || tornado.active, revealing: loop.opening.phase === "opening" }, Math.min(elapsed, 0.1));
     const now = performance.now();
@@ -15373,6 +17576,7 @@ async function startGame(editorApp) {
       return;
     }
     loop.beforeMovement(now);
+    loop.homePlay.applyObstacles();
     if (document.querySelector("dialog[open]")) controller.enabled = false;
     if (loop.popUI.isOpen) return;
     const bulky = cleanup.carry.item?.carryPace === "walk" || loop.dailyPlay.carrying || loop.schoolGate.carrying;
@@ -15390,12 +17594,12 @@ async function startGame(editorApp) {
     if (loop.mode !== "home") camera.follow(character.player.getPosition(), dt);
     loop.update(now);
     tornado.update(document.hidden ? 0 : Math.min(elapsed, 0.1));
-    dogRoaming.update(dt, loop.mode === "cleanup" && !tornado.active && !!props.pet?.loaded, [character.player.getPosition(), lilah.root.getPosition(), marc.root.getPosition()]);
+    dogRoaming.update(dt, ["cleanup", "outdoors"].includes(loop.mode) && !tornado.active && !!props.pet?.loaded, [character.player.getPosition(), lilah.root.getPosition(), marc.root.getPosition()]);
     props.pet?.dogAnimator?.update(dt);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === "cleanup", cleanup.mode);
     const day = props.daily.clock;
-    const position = character.player.getPosition();
-    const location2 = loop.mode === "cleanup" ? HOUSE_ROOMS.find((room2) => room2.id === navigation.current)?.name ?? "Home" : loop.mode === "store" ? loop.store.definition.name : loop.mode === "recess" ? loop.recess.area : loop.mode === "home" ? "Little surprises" : position.z < -26 && position.x > 14 ? "School garden" : position.x < -9 ? "Maple Lane" : "Home garden";
+    const position2 = character.player.getPosition();
+    const location2 = loop.mode === "cleanup" ? HOUSE_ROOMS.find((room2) => room2.id === navigation.current)?.name ?? "Home" : loop.mode === "store" ? loop.store.definition.name : loop.mode === "recess" ? loop.recess.area : loop.mode === "home" ? "Little surprises" : position2.z < -26 && position2.x > 14 ? "School garden" : position2.x < -9 ? "Maple Lane" : "Home garden";
     hud.update({
       scene: loop.mode,
       location: location2,
@@ -15417,7 +17621,7 @@ async function startGame(editorApp) {
     }
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
-    loop.scooter.update(dt, loop.mode === "outdoors", !loop.fishing.active && !loop.huntUI.dialog.open && !loop.dailyPlay.occupied && !loop.schoolGate.carrying && !loop.schoolGate.busy, loop.encounters.hop);
+    loop.scooter.update(dt, loop.mode === "outdoors", !loop.homePlay.carrying && !loop.fishing.active && !loop.huntUI.dialog.open && !loop.dailyPlay.occupied && !loop.schoolGate.carrying && !loop.schoolGate.busy, loop.encounters.hop);
     lilah.update(dt, elapsed, loop.mode === "cleanup" && props.daily.clock.state.phase !== "school", cleanup.mode === "day" && !cleanup.movementLocked, character.player.getPosition(), camera.entity);
     marc.update(dt, elapsed, loop.mode === "cleanup" && props.daily.clock.state.phase !== "school", cleanup.mode === "day" && !tornado.active, character.player.getPosition(), lilah.root.getPosition(), cleanup.activeInteractionId, camera.entity);
     headPoint.copy(character.player.getPosition());
@@ -15443,10 +17647,19 @@ async function startGame(editorApp) {
     loop.developerCommand("recess");
     if (new URLSearchParams(location.search).get("room") === "cafeteria") character.player.setPosition(4.6, 0.09, -14.8);
   }
+  if (new URLSearchParams(location.search).has("meal-review")) {
+    const { mealReview: mealReview2 } = await Promise.resolve().then(() => (init_MealReview(), MealReview_exports));
+    mealReview2(app, character, camera.entity, loop, props.daily);
+  }
   if (!editorApp) app.start();
   document.querySelector("#loading").remove();
   document.querySelector("#game").setAttribute("data-ready", "true");
-  void loadArianna(app, character).catch((error) => console.warn("Keeping the Arianna placeholder:", error));
+  void loadArianna(app, character).then(async () => {
+    if (new URLSearchParams(location.search).get("preview") === "home-play" && new URLSearchParams(location.search).get("motion-review") === "1") {
+      const { motionReview: motionReview2 } = await Promise.resolve().then(() => (init_MotionReview(), MotionReview_exports));
+      motionReview2(app, character, camera.entity, loop);
+    }
+  }).catch((error) => console.warn("Keeping the Arianna placeholder:", error));
   if (true) {
     Object.defineProperty(window, "__roomTest", { configurable: true, value: {
       characterGeometry: () => character.animator.geometrySnapshot(),
@@ -15626,7 +17839,7 @@ var index_default = `<!doctype html>
 `;
 
 // migration/local.css
-var local_default = '/* src/ui/hunt.css */\n#hunt-routes {\n  width: min(420px, calc(100% - 24px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  border: 2px solid white;\n  border-radius: 26px;\n  padding: 23px 16px 14px;\n  color: #57496b;\n  background: #faf5ef;\n}\n#hunt-routes::backdrop {\n  background: #46395480;\n  backdrop-filter: blur(4px);\n}\n#hunt-routes h2 {\n  font-size: 25px;\n  letter-spacing: -.8px;\n  margin: 12px 0 7px;\n}\n.hunt-budget {\n  font-size: 13px;\n  color: #59765e;\n  font-weight: 800;\n  margin: 0 0 15px;\n}\n.store-choice {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  width: 100%;\n  padding: 13px 10px;\n  margin: 9px 0;\n  text-align: left;\n  border: 1px solid #fff;\n  border-radius: 18px;\n  background:\n    linear-gradient(\n      110deg,\n      var(--shop-color),\n      #fff7ee);\n  color: #514863;\n  box-shadow: 0 3px 8px #69546710;\n  cursor: pointer;\n}\n.store-choice:disabled {\n  opacity: .5;\n  cursor: default;\n}\n.store-icon {\n  display: grid;\n  place-items: center;\n  width: 43px;\n  min-width: 43px;\n  height: 43px;\n  border-radius: 50%;\n  background: #fff8;\n  font-size: 28px;\n}\n.store-choice strong {\n  display: block;\n  font-size: 17px;\n  margin-bottom: 4px;\n}\n.store-choice small {\n  display: block;\n  font-size: 10px;\n  line-height: 1.5;\n}\n.store-choice em {\n  display: block;\n  font-size: 11px;\n  line-height: 1.35;\n  margin: 7px 0 4px;\n  font-style: normal;\n  font-weight: 700;\n}\n.route-status {\n  color: #5e795b;\n}\n.hunt-explainer {\n  font-size: 10px;\n  line-height: 1.5;\n  color: #8d7b8b;\n  margin: 12px 4px;\n}\n#shopping-time {\n  display: inline-block;\n  padding: 6px 10px;\n  margin: 3px 0;\n  background: #fffaeeed;\n  color: #66795b;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 700;\n  pointer-events: none;\n}\n#hunt-find {\n  position: absolute;\n  left: 16px;\n  right: 16px;\n  bottom: 220px;\n  max-width: 360px;\n  margin: auto;\n  padding: 12px 14px;\n  border: 1px solid white;\n  border-radius: 18px;\n  background: #fff8eff2;\n  color: #655371;\n  box-shadow: 0 4px 18px #56466320;\n  pointer-events: none;\n}\n#hunt-find strong {\n  font-size: 17px;\n}\n#hunt-find p {\n  font-size: 12px;\n  margin: 5px 0;\n  color: #59816b;\n  font-weight: 700;\n}\n#hunt-find small {\n  font-size: 10px;\n}\n#game[data-scene=store] #save-message {\n  bottom: auto;\n  top: 190px;\n  left: 16px;\n  width: calc(100% - 32px);\n  padding: 9px 12px;\n}\n#game[data-scene=store] #cleanup-hint {\n  background: #fff9efdf;\n  border-radius: 12px;\n  padding: 7px 9px;\n}\n#game[data-scene=store] #shop-display-marker {\n  background: transparent;\n  color: #ffe6a0;\n  border: 0;\n  padding: 0;\n  box-shadow: none;\n  font-size: 23px;\n  text-shadow: 0 0 4px white, 0 0 9px #e6b761;\n}\n#hunt-travel {\n  position: absolute;\n  inset: 0;\n  z-index: 45;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  background: #f5edf7f5;\n  color: #705b83;\n}\n#hunt-travel span {\n  font-size: 65px;\n  animation: hunt-bob .6s ease-in-out infinite alternate;\n}\n#hunt-travel h2 {\n  font-size: 27px;\n}\n@keyframes hunt-bob {\n  to {\n    transform: translateY(-10px) rotate(6deg);\n  }\n}\n.series-heading {\n  grid-column: 1/-1;\n  text-align: left;\n  padding: 10px 3px 4px;\n  font-size: 14px;\n}\n#game[data-scene=store] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] #day-label,\n#game[data-scene=store] #scene-subtitle {\n  display: none;\n}\n#game[data-scene=store] .room-title .eyebrow {\n  font-size: 12px;\n  letter-spacing: .7px;\n  margin-bottom: 4px;\n}\n@media (max-height: 740px) {\n  #hunt-find {\n    bottom: 190px;\n    padding: 8px 12px;\n  }\n  #hunt-routes {\n    padding-top: 14px;\n  }\n  .store-choice {\n    padding: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #hunt-travel span {\n    animation: none;\n  }\n}\n#hunt-routes .dialog-top-action {\n  position: sticky;\n  top: 0;\n  z-index: 2;\n  box-shadow: 0 0 0 5px #faf5fb;\n}\n\n/* src/ui/trading.css */\n#trading-dialog {\n  box-sizing: border-box;\n  width: min(460px, calc(100% - 16px));\n  max-height: calc(100dvh - 16px);\n  padding: 0;\n  border: 2px solid white;\n  border-radius: 24px;\n  background: #fcf7ef;\n  color: #514365;\n  overflow: hidden;\n}\n#trading-dialog[open] {\n  display: flex;\n  flex-direction: column;\n}\n#trading-dialog::backdrop {\n  background: #44355288;\n  backdrop-filter: blur(3px);\n}\n#trading-dialog button {\n  font: inherit;\n  color: inherit;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#trading-dialog button:disabled {\n  opacity: .48;\n  cursor: default;\n}\n.trade-header {\n  padding: 14px 18px 10px;\n  background:\n    linear-gradient(\n      120deg,\n      #fff,\n      var(--trader));\n  flex-shrink: 0;\n}\n.trade-header h2 {\n  margin: 4px 0;\n  font-size: 27px;\n}\n.trade-header strong {\n  font-size: 12px;\n}\n.trade-header p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  line-height: 1.4;\n}\n.trade-scroll {\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  padding: 0 14px 12px;\n  min-height: 0;\n}\n#trading-dialog h3 {\n  font-size: 13px;\n  margin: 12px 0 7px;\n  display: flex;\n  justify-content: space-between;\n  gap: 4px;\n}\n#trading-dialog h3 small {\n  font-size: 10px;\n  font-weight: normal;\n}\n.trade-slots {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n  gap: 6px;\n  min-height: 65px;\n  background: #e9dfef;\n  padding: 7px;\n  border-radius: 15px;\n}\n.trade-item {\n  border: 1px solid #fff;\n  background: #fffbf8;\n  border-radius: 12px;\n  padding: 4px;\n  text-align: center;\n  min-width: 0;\n}\n.trade-item img {\n  width: 100%;\n  height: 52px;\n  object-fit: contain;\n}\n.trade-item strong,\n.trade-item small {\n  display: block;\n  font-size: 10px;\n}\n.trade-item small {\n  font-size: 9px;\n  margin-top: 3px;\n}\n.trade-speech {\n  font-size: 12px;\n  line-height: 1.45;\n  background: #fff1cd;\n  border-radius: 13px;\n  padding: 10px;\n  margin: 10px 0;\n}\n.trade-empty {\n  grid-column: 1/-1;\n  margin: 10px;\n  font-size: 12px;\n  line-height: 1.5;\n}\n.trade-bag-heading label {\n  display: flex;\n  gap: 6px;\n  align-items: center;\n  font-size: 12px;\n  min-height: 32px;\n}\n.trade-bag-heading input {\n  width: 20px;\n  height: 20px;\n  accent-color: #8573a2;\n}\n.trade-safety {\n  font-size: 10px;\n  line-height: 1.4;\n  margin: 5px 0 10px;\n  color: #796b87;\n}\n#trade-inventory {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 6px;\n}\n.trade-bag-item {\n  display: flex;\n  align-items: center;\n  min-height: 62px;\n  padding: 4px;\n  border: 1px solid #ded2e6;\n  background: white;\n  border-radius: 12px;\n  text-align: left;\n  min-width: 0;\n}\n.trade-bag-item img {\n  width: 38px;\n  flex-shrink: 0;\n}\n.trade-bag-item strong {\n  font-size: 11px;\n  display: block;\n}\n.trade-bag-item small {\n  font-size: 9px;\n  display: block;\n  margin-top: 3px;\n}\n.trade-footer {\n  flex-shrink: 0;\n  padding: 8px 12px 12px;\n  background: #fcf7ef;\n  border-top: 1px solid #e8ddea;\n}\n.trade-footer p {\n  margin: 0 0 8px;\n  text-align: center;\n  font-size: 12px;\n  font-weight: bold;\n}\n.trade-controls {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  gap: 9px;\n}\n.trade-controls button {\n  border: 2px solid white;\n  border-radius: 18px;\n  font-size: 32px !important;\n  font-weight: bold !important;\n  min-height: 68px;\n  background: #f0c6cc;\n}\n.trade-controls button small {\n  display: block;\n  font-size: 10px;\n}\n.trade-controls #trade-add {\n  background: #f6dfa1;\n}\n.trade-controls #trade-accept {\n  background: #bad6b9;\n}\n#leave-recess {\n  position: absolute;\n  top: 76px;\n  right: 14px;\n  width: auto;\n  font-size: 12px;\n  padding: 9px 13px;\n  z-index: 5;\n}\n.collection-protection {\n  border: 0;\n  background: #fff9;\n  border-radius: 8px;\n  margin: 4px 1px 0;\n  min-width: 30px;\n  min-height: 32px;\n  font-size: 14px;\n  cursor: pointer;\n}\n.collection-protection[aria-pressed=true] {\n  background: #e5c6e9;\n  outline: 1px solid #b68ec0;\n}\n#game[data-scene=recess] #trip-wallet,\n#game[data-scene=recess] #mission-clock {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  .trade-header {\n    padding: 8px 12px;\n  }\n  .trade-header h2 {\n    font-size: 21px;\n  }\n  .trade-header p {\n    font-size: 11px;\n  }\n  .trade-item img {\n    height: 42px;\n  }\n  .trade-controls button {\n    min-height: 60px;\n  }\n  .trade-footer {\n    padding: 6px 10px;\n  }\n}\n#trade-suggest {\n  width: 100%;\n  min-height: 44px;\n  border: 2px solid #b4d4bd;\n  border-radius: 16px;\n  background: #edf8ed;\n  font-weight: 800;\n}\n.trade-help {\n  font-size: 11px;\n  color: #6d6477;\n}\n.trade-loved {\n  border-color: #bad8bb !important;\n}\n.trade-header > small {\n  display: block;\n  margin-top: 7px;\n  font-size: 11px;\n}\n\n/* src/ui/squishy-pop.css */\n.pop-launch {\n  position: fixed;\n  z-index: 20;\n  bottom: max(160px, 22vh);\n  left: 50%;\n  transform: translateX(-50%);\n  width: min(310px, 85vw);\n  border: 3px solid #fff9;\n  border-radius: 30px;\n  padding: 13px 16px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe7ee,\n      #efa6d4);\n  color: #655082;\n  box-shadow: 0 6px 22px #4f3b6240;\n  font-weight: 900;\n  font-size: 17px;\n  cursor: pointer;\n}\n.pop-launch span {\n  margin-right: 8px;\n}\n.pop-launch small {\n  display: block;\n  font-size: 11px;\n  letter-spacing: .5px;\n  margin-top: 5px;\n  font-weight: 600;\n}\n#squishy-pop {\n  padding: 0;\n  border: 0;\n  background: transparent;\n  color: #5d497d;\n  max-width: none;\n  max-height: none;\n  width: 100%;\n  height: 100dvh;\n  inset: 0;\n  margin: 0;\n  overflow: auto;\n  font-family: inherit;\n}\n#squishy-pop::backdrop {\n  background: #46345495;\n  backdrop-filter: blur(9px);\n}\n#squishy-pop * {\n  box-sizing: border-box;\n}\n#squishy-pop button {\n  font: inherit;\n  cursor: pointer;\n  min-height: 44px;\n  color: #654e83;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: linear-gradient(#ffe1ef, #f9aed5);\n  font-weight: 800;\n  padding: 9px 17px;\n  box-shadow: 0 3px 0 #c997c136;\n}\n#squishy-pop button:active {\n  transform: scale(.96);\n}\n#squishy-pop button:focus-visible {\n  outline: 3px solid #8a5fb4;\n  outline-offset: 2px;\n}\n.pop-shell {\n  width: min(100%, 480px);\n  min-height: 100%;\n  margin: auto;\n  padding: max(16px, env(safe-area-inset-top)) 18px max(14px, env(safe-area-inset-bottom));\n  background:\n    radial-gradient(\n      ellipse at 10% 45%,\n      #fff5d2aa,\n      transparent 60%),\n    linear-gradient(\n      155deg,\n      #fff8f1f5,\n      #f1e5fff5 60%,\n      #ffe9f1f5);\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 14px;\n}\n.pop-title {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.pop-title > div {\n  flex: 1;\n}\n.pop-title small {\n  font-size: 9px;\n  letter-spacing: 2px;\n}\n.pop-title h2 {\n  font-size: 30px;\n  letter-spacing: -1px;\n  line-height: 1.1;\n  margin: 6px 0;\n  font-weight: 1000;\n  color: #9878b9;\n  text-shadow: 0 2px 0 white;\n}\n.pop-title em {\n  font-style: normal;\n  color: #ed83b0;\n}\n.pop-title button {\n  width: 44px;\n  padding: 5px !important;\n  background: #ffffffad !important;\n}\n.pop-stats {\n  display: grid;\n  grid-template-columns: 1fr 1.1fr 1.1fr;\n  gap: 8px;\n}\n.pop-stats > div {\n  border-radius: 22px;\n  padding: 11px 5px;\n  background: #ffffffc7;\n  border: 2px solid #fff;\n  text-align: center;\n  box-shadow: 0 4px 0 #cbb4e227;\n}\n.pop-stats small {\n  display: block;\n  font-size: 10px;\n  letter-spacing: 1.6px;\n  color: #957bad;\n  font-weight: 800;\n}\n.pop-stats strong {\n  display: block;\n  font-size: 27px;\n  line-height: 1.3;\n}\n.pop-stats progress {\n  height: 6px;\n  width: 65%;\n  display: block;\n  margin: 4px auto 0;\n}\n.pop-tray {\n  position: relative;\n  border: 6px solid #f6eeff;\n  border-radius: 35px;\n  background:\n    linear-gradient(\n      135deg,\n      #d1b9ee,\n      #c4a6df);\n  padding: 9px;\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #bca1d8,\n    0 14px 25px #76609330;\n  isolation: isolate;\n}\n.pop-tray canvas {\n  width: 100%;\n  aspect-ratio: 1;\n  display: block;\n  touch-action: none;\n  border-radius: 21px;\n  background:\n    radial-gradient(\n      ellipse,\n      #fff2 40%,\n      transparent 70%);\n  user-select: none;\n}\n.pop-feedback {\n  position: absolute;\n  pointer-events: none;\n  inset: 40% 0 auto;\n  text-align: center;\n  font-size: 29px;\n  font-weight: 1000;\n  color: #ec65a9;\n  text-shadow:\n    2px 3px white,\n    -2px -2px white,\n    0 4px 6px #8a5fad;\n  transform: rotate(-6deg);\n  z-index: 2;\n}\n.pop-cover {\n  position: absolute;\n  inset: 0;\n  z-index: 3;\n  border-radius: 28px;\n  background: #fff5f2ef;\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  align-items: center;\n  text-align: center;\n  gap: 10px;\n  padding: 20px;\n  backdrop-filter: blur(4px);\n}\n.pop-cover[hidden] {\n  display: none;\n}\n.pop-cover h3 {\n  font-size: 23px;\n  line-height: 1.2;\n  margin: 0;\n}\n.pop-cover p {\n  font-size: 12px;\n  margin: 0;\n  max-width: 260px;\n}\n.pop-cover button {\n  width: 85%;\n  font-size: 14px !important;\n}\n.pop-cover .pop-link {\n  border: 0;\n  background: none;\n  box-shadow: none;\n  font-size: 12px !important;\n}\n.pop-count {\n  font-size: 80px;\n  color: #e778af;\n  animation: pop-count .8s infinite;\n}\n.pop-demo {\n  position: relative;\n  display: flex;\n  gap: 15px;\n  padding: 8px 10px 25px;\n  font-size: 40px;\n  color: #ec87b6;\n}\n.pop-demo b {\n  position: absolute;\n  left: 10%;\n  bottom: 0;\n  font-size: 32px;\n  animation: pop-finger 2s infinite;\n}\n.pop-frenzy {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 10px;\n  letter-spacing: 1px;\n  font-weight: 900;\n  margin-top: 3px;\n}\n.pop-frenzy progress {\n  flex: 1;\n  min-width: 0;\n}\n.pop-frenzy b {\n  color: #e788b5;\n}\n.pop-hint {\n  text-align: center;\n  font-size: 14px;\n  font-weight: 700;\n  margin: 0;\n}\n.pop-friends {\n  display: flex;\n  justify-content: center;\n  gap: 7px;\n}\n.pop-friends span {\n  width: 40px;\n  text-align: center;\n}\n.pop-friends img {\n  width: 40px;\n  height: 35px;\n  object-fit: contain;\n  display: block;\n}\n.pop-friends small {\n  font-size: 9px;\n  color: #b18a52;\n  display: block;\n}\n.pop-footer {\n  text-align: center;\n  font-size: 10px;\n  color: #a58fb0;\n  letter-spacing: 1px;\n}\n.pop-result-star {\n  font-size: 35px;\n  color: #f5c960;\n}\n.pop-result-numbers {\n  display: flex;\n  justify-content: space-around;\n  width: 100%;\n  font-size: 11px;\n}\n.pop-result-numbers b {\n  display: block;\n  font-size: 24px;\n}\n.pop-ticket-prize {\n  font-size: 15px;\n  color: #d26f9f;\n}\n.pop-cover progress {\n  width: 70%;\n  height: 9px;\n}\n#squishy-pop progress {\n  appearance: none;\n  border: 0;\n  border-radius: 20px;\n  background: #e1d4ed;\n  height: 9px;\n  overflow: hidden;\n}\n#squishy-pop progress::-webkit-progress-bar {\n  background: #e1d4ed;\n  border-radius: 20px;\n}\n#squishy-pop progress::-webkit-progress-value {\n  background:\n    linear-gradient(\n      90deg,\n      #bd95e0,\n      #f49abe);\n  border-radius: 20px;\n  transition: width .2s;\n}\n.urgent {\n  color: #df608a;\n  animation: pop-count 1s infinite;\n}\n@keyframes pop-finger {\n  0%, 15% {\n    left: 10%;\n  }\n  70%, 100% {\n    left: 75%;\n  }\n}\n@keyframes pop-count {\n  0% {\n    transform: scale(1.08);\n  }\n  70% {\n    transform: scale(1);\n  }\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 9px;\n    padding: 10px 15px;\n  }\n  .pop-title h2 {\n    font-size: 25px;\n  }\n  .pop-stats > div {\n    padding: 7px 3px;\n  }\n  .pop-stats strong {\n    font-size: 23px;\n  }\n  .pop-friends {\n    display: none;\n  }\n  .pop-footer {\n    display: none;\n  }\n  .pop-tray {\n    border-width: 5px;\n    padding: 6px;\n  }\n  .pop-cover {\n    gap: 7px;\n    padding: 10px;\n  }\n  .pop-cover h3 {\n    font-size: 20px;\n  }\n  .pop-result-star {\n    display: none;\n  }\n}\n@media (min-width: 500px) {\n  .pop-shell {\n    max-width: min(480px, 70dvh);\n    border-radius: 32px;\n    min-height: 0;\n    margin: 20px auto;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #squishy-pop * {\n    animation: none !important;\n  }\n}\n.pop-demo img {\n  width: 58px;\n  height: 58px;\n  object-fit: contain;\n}\n.pop-demo:before {\n  content: "";\n  position: absolute;\n  height: 5px;\n  background: #ffaad4;\n  left: 25px;\n  right: 25px;\n  top: 45%;\n  z-index: -1;\n  border-radius: 10px;\n}\n.pop-demo {\n  isolation: isolate;\n}\n.is-frenzy .pop-tray {\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #e7afd5,\n    0 0 30px #ffb8d5;\n}\n.is-frenzy .pop-frenzy {\n  color: #cf639e;\n}\n.pop-launch[hidden] {\n  display: none;\n}\n.pop-cover .pop-result-star {\n  animation: pop-count .8s 2;\n}\n#squishy-pop {\n  font-family:\n    "Trebuchet MS",\n    "Arial Rounded MT Bold",\n    Arial,\n    sans-serif;\n}\n[data-tickets] {\n  background-repeat: no-repeat;\n  background-position: calc(50% - 15px) center;\n  background-size: 35px;\n  padding-left: 26px;\n}\n.pop-launch {\n  animation: pop-entrance .3s ease-out;\n}\n@keyframes pop-entrance {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n.pop-frenzy span {\n  padding: 7px 0 7px 24px;\n  background-repeat: no-repeat;\n  background-position: left center;\n  background-size: 25px;\n}\n#squishy-pop[open] .pop-shell {\n  animation: pop-entrance .2s ease-out;\n}\n.pop-chain-cue {\n  position: absolute;\n  z-index: 4;\n  transform: translate(-50%, -100%);\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 5px 10px 5px 5px;\n  border: 2px solid white;\n  border-radius: 22px;\n  background: #fff6fc;\n  color: #6c4487;\n  box-shadow: 0 3px 12px #855a9955;\n  pointer-events: none;\n  white-space: nowrap;\n  font-size: 11px;\n  font-weight: 800;\n}\n.pop-chain-cue[hidden] {\n  display: none;\n}\n.pop-chain-cue > b {\n  display: grid;\n  place-items: center;\n  background: #e88bbb;\n  color: white;\n  border-radius: 50%;\n  width: 30px;\n  height: 30px;\n  font-size: 20px;\n}\n.pop-chain-cue span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-chain-cue img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n}\n.pop-chain-cue.pulse > b {\n  animation: pop-count .22s ease-out;\n}\n.pop-feedback {\n  inset: 3px 0 auto;\n  font-size: 22px;\n  transform: none;\n  line-height: 1.2;\n}\n.is-frenzy .pop-tray {\n  border-color: #fff0b5;\n  box-shadow:\n    inset 0 4px 10px #9973bb40,\n    0 7px 0 #e6a6d6,\n    0 0 24px #ffc8d7;\n}\n.is-frenzy .pop-frenzy {\n  background: #fff6d4;\n  border-radius: 18px;\n  padding: 3px 8px;\n}\n.pop-frenzy b {\n  min-width: 46px;\n  text-align: right;\n}\n.pop-hint {\n  font-size: 13px;\n  min-height: 18px;\n}\n.pop-previous-best {\n  font-size: 11px;\n  color: #957aac;\n}\n.pop-ticket-flight {\n  height: 34px;\n  width: 100%;\n  position: relative;\n  overflow: hidden;\n}\n.pop-ticket-flight img {\n  position: absolute;\n  left: calc(18% + var(--i)*8%);\n  width: 35px;\n  height: 28px;\n  object-fit: contain;\n  animation: pop-ticket-bank .95s calc(var(--i)*.07s) both;\n}\n.pop-ticket-prize {\n  font-size: 17px;\n}\n@keyframes pop-ticket-bank {\n  0% {\n    transform: translateY(23px) rotate(-18deg);\n    opacity: 0;\n  }\n  30% {\n    opacity: 1;\n  }\n  70% {\n    transform: translateY(-4px) rotate(8deg);\n    opacity: 1;\n  }\n  100% {\n    transform: translateY(8px) scale(.65);\n    opacity: 0;\n  }\n}\n.showing-results .pop-stats,\n.showing-results .pop-frenzy,\n.showing-results .pop-hint,\n.showing-results .pop-friends {\n  display: none;\n}\n.showing-results .pop-tray {\n  height: min(480px, calc(100dvh - 140px));\n  flex-shrink: 0;\n}\n.showing-results .pop-tray canvas {\n  position: absolute;\n  visibility: hidden;\n}\n.showing-results .pop-cover {\n  gap: 12px;\n  padding: 18px;\n  overflow: auto;\n}\n.showing-results .pop-cover h3 {\n  font-size: 24px;\n}\n.showing-results .pop-result-star {\n  display: block;\n  line-height: 1;\n  font-size: 32px;\n}\n.showing-results .pop-cover button {\n  flex-shrink: 0;\n  min-height: 44px;\n}\n.showing-results .pop-cover p {\n  line-height: 1.4;\n}\n@media (max-height: 700px) {\n  .showing-results .pop-cover {\n    gap: 8px;\n    padding: 12px;\n  }\n  .showing-results .pop-cover h3 {\n    font-size: 21px;\n  }\n  .showing-results .pop-result-star {\n    font-size: 24px;\n  }\n  .pop-chain-cue {\n    font-size: 10px;\n  }\n  .pop-feedback {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .pop-ticket-flight img {\n    animation: none;\n    opacity: 1;\n  }\n  .pop-chain-cue.pulse > b {\n    animation: none;\n  }\n}\n@media (max-width: 360px) {\n  .pop-title {\n    gap: 5px;\n  }\n  .pop-title > div {\n    min-width: 0;\n  }\n  .pop-title small {\n    font-size: 7px;\n    letter-spacing: .6px;\n  }\n  .pop-title h2 {\n    font-size: 20px;\n  }\n  .showing-results .pop-tray {\n    height: calc(100dvh - 145px);\n  }\n}\n#squishy-pop-shortcut {\n  pointer-events: auto;\n  border: 2px solid #fff;\n  border-radius: 22px;\n  padding: 9px 14px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe6f0,\n      #efb5dd);\n  color: #604c80;\n  font: 800 13px "Trebuchet MS", sans-serif;\n  box-shadow: 0 3px 10px #72538b26;\n  cursor: pointer;\n}\n#squishy-pop-shortcut:hover {\n  background: #f6c7e5;\n}\n#squishy-pop-shortcut:focus-visible {\n  outline: 3px solid #7855ae;\n  outline-offset: 3px;\n}\n@media (max-width: 600px) {\n  footer .asset-credits {\n    display: none;\n  }\n  #squishy-pop-shortcut {\n    font-size: 11px;\n    padding: 8px 10px;\n  }\n}\n#squishy-pop-shortcut {\n  min-height: 44px;\n}\n.pop-result-actions {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 8px;\n  width: 100%;\n}\n.pop-cover .pop-result-actions button {\n  width: 100%;\n  font-size: 12px !important;\n  padding: 8px;\n  line-height: 1.2;\n}\n.pop-result-actions button:first-child:last-child {\n  grid-column: 1/-1;\n}\n.pop-goals {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  padding: 7px 9px;\n  border: 2px solid white;\n  border-radius: 18px;\n  background: #fff6dc;\n  font-size: 12px;\n  font-weight: 800;\n  flex-wrap: wrap;\n}\n.pop-goals[hidden],\n.showing-results .pop-goals {\n  display: none;\n}\n.pop-goals small {\n  font-size: 9px;\n  color: #9878b9;\n}\n.pop-goals span,\n.pop-objectives span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-goals img,\n.pop-objectives img,\n.pop-previous-best img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n  vertical-align: middle;\n}\n.pop-goals .done {\n  color: #487865;\n}\n.pop-level-list {\n  display: flex;\n  flex-direction: column;\n  gap: 9px;\n  width: 100%;\n}\n.pop-level-list button {\n  width: 100%;\n  text-align: left;\n}\n.pop-level-list small {\n  display: block;\n  margin-top: 4px;\n  font-size: 11px;\n  font-weight: 600;\n}\n#squishy-pop button:disabled {\n  opacity: .55;\n  cursor: default;\n  transform: none;\n  background: #e5dfeb;\n}\n.pop-objectives {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 12px;\n  padding: 12px;\n  font-size: 18px;\n  font-weight: 800;\n}\n.showing-results .pop-cover {\n  justify-content: flex-start;\n}\n.showing-results .pop-cover > h3:first-child {\n  margin-top: 8px;\n}\n.pop-previous-best {\n  line-height: 1.5;\n}\n.showing-results .pop-cover > * {\n  flex-shrink: 0;\n}\n.showing-results .pop-cover .pop-link {\n  min-height: 44px;\n  padding: 7px;\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 7px;\n  }\n  .pop-goals {\n    font-size: 11px;\n    padding: 4px 6px;\n    gap: 5px;\n  }\n  .pop-goals img {\n    width: 24px;\n    height: 24px;\n  }\n  .showing-results .pop-cover {\n    gap: 7px;\n  }\n  .pop-level-list {\n    gap: 6px;\n  }\n}\n.pop-prizes {\n  min-height: 44px !important;\n  width: auto !important;\n  padding: 5px 10px !important;\n  font-size: 12px !important;\n}\n.pop-feedback[data-tier=great] {\n  font-size: clamp(22px, 6vw, 32px);\n  color: #fff6a0;\n  text-shadow: 0 3px 0 #7d4690, 0 0 18px #fff;\n}\n.pop-feedback[data-tier=super] {\n  font-size: clamp(26px, 7vw, 38px);\n  color: #fff;\n  border: 3px solid #ffdf65;\n  border-radius: 20px;\n  background: #9554bde8;\n  padding: 12px;\n  box-shadow: 0 0 24px #ffda6a;\n}\n.pop-feedback[data-tier=rainbow] {\n  font-size: clamp(24px, 6.5vw, 36px);\n  color: #fff;\n  background:\n    linear-gradient(\n      110deg,\n      #ea76a7,\n      #d0a554,\n      #61bca4,\n      #618ddb,\n      #a278c8);\n  border: 3px solid white;\n  border-radius: 20px;\n  padding: 12px;\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-tray[data-celebration=super] {\n  box-shadow: 0 0 0 5px #ffe393, 0 0 35px #f1abde;\n}\n.pop-tray[data-celebration=rainbow] {\n  box-shadow:\n    -10px 0 24px #ff9cad,\n    0 -8px 24px #fff09e,\n    10px 0 24px #98daff,\n    0 8px 24px #b5a1ff;\n}\n.pop-feedback[hidden] {\n  display: none;\n}\n.pop-feedback[data-tier=great],\n.pop-feedback[data-tier=super],\n.pop-feedback[data-tier=rainbow] {\n  animation: pop-reward .32s ease-out;\n}\n@keyframes pop-reward {\n  from {\n    transform: translateY(8px) scale(.88);\n    opacity: .5;\n  }\n  to {\n    transform: none;\n    opacity: 1;\n  }\n}\n.pop-feedback[data-tier=super] {\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-launch {\n  position: absolute;\n  top: 175px;\n  bottom: auto;\n  left: 18px;\n  transform: none;\n  width: auto;\n  max-width: 180px;\n  padding: 9px 13px;\n  font-size: 12px;\n  border-width: 2px;\n  box-shadow: 0 3px 10px #4f3b6220;\n}\n.pop-launch small {\n  display: none;\n}\n@media (max-height: 650px) {\n  .pop-launch {\n    top: 135px;\n  }\n}\n\n/* src/ui/ticket-shop.css */\n#ticket-shop {\n  width: min(92vw, 520px);\n  max-height: 88dvh;\n  overflow: auto;\n  border: 3px solid #efb6d2;\n  border-radius: 26px;\n  background: #fff8ed;\n  color: #604861;\n  padding: 22px;\n  text-align: center;\n}\n#ticket-shop::backdrop {\n  background: #403347a8;\n}\n.ticket-prizes {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px;\n  margin: 16px 0;\n}\n.ticket-prizes article {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 10px;\n  border-radius: 18px;\n  background: #f1e7fa;\n}\n.ticket-prizes img {\n  width: 96px;\n  height: 96px;\n  object-fit: contain;\n}\n#ticket-shop button {\n  min-height: 44px;\n  border: 0;\n  border-radius: 16px;\n  padding: 10px 14px;\n  background: #805ba6;\n  color: white;\n  font-weight: 700;\n  cursor: pointer;\n}\n#ticket-shop button:disabled {\n  background: #d3c4d5;\n  color: #665b69;\n  cursor: default;\n}\n#ticket-shop [data-close] {\n  display: block;\n  width: 100%;\n  margin-top: 16px;\n}\n#ticket-shop [role=status] {\n  font-weight: 700;\n  color: #566b40;\n}\n#travel-next-store {\n  position: absolute;\n  right: 12px;\n  top: 175px;\n  z-index: 12;\n  max-width: 170px;\n  min-height: 44px;\n  border: 2px solid #d9c5ec;\n  border-radius: 15px;\n  padding: 8px 12px;\n  background: #fff4e6;\n  color: #604861;\n  font-weight: 700;\n}\n#ticket-shop {\n  box-sizing: border-box;\n}\n#ticket-shop [data-close] {\n  position: sticky;\n  bottom: 0;\n  box-shadow: 0 0 0 5px #fff8ed;\n}\n.ticket-prizes article {\n  min-width: 0;\n}\n.ticket-prizes button {\n  width: 100%;\n}\n@media (max-width: 360px) {\n  #ticket-shop {\n    padding: 14px;\n  }\n  .ticket-prizes {\n    gap: 8px;\n  }\n  .ticket-prizes img {\n    width: 76px;\n    height: 76px;\n  }\n  .ticket-prizes article {\n    padding: 8px;\n  }\n  .ticket-prizes button {\n    padding: 8px;\n    font-size: 12px;\n  }\n}\n#ticket-shop [data-close] {\n  top: 0;\n  bottom: auto;\n  z-index: 2;\n}\n\n/* src/ui/tornado.css */\n#game[data-tornado] .room-title,\n#game[data-tornado] #cleanup-effects,\n#game[data-tornado] #house-doors,\n#game[data-tornado] #move-tip,\n#game[data-tornado] .mission-stats {\n  visibility: hidden;\n}\n#tornado-hud {\n  position: absolute;\n  z-index: 8;\n  top: 110px;\n  left: 22px;\n  width: min(340px, calc(100% - 44px));\n  padding: 15px 18px;\n  border: 2px solid #fff9;\n  border-radius: 23px;\n  background: #fff9f1ef;\n  color: #59476e;\n  box-shadow: 0 8px 25px #52416620;\n  pointer-events: none;\n  box-sizing: border-box;\n}\n#tornado-hud[hidden] {\n  display: none;\n}\n#tornado-hud header {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n#tornado-hud small {\n  font-size: 8px;\n  letter-spacing: 1.6px;\n  color: #907ca6;\n}\n#tornado-hud h2 {\n  font-size: 23px;\n  margin: 3px 0 10px;\n}\n#tornado-hud [data-time] {\n  font-size: 28px;\n  font-variant-numeric: tabular-nums;\n  margin-left: auto;\n}\n#tornado-hud [data-sound] {\n  pointer-events: auto;\n  border: 0;\n  background: #ece0f3;\n  color: #69517e;\n  border-radius: 50%;\n  width: 32px;\n  height: 32px;\n  cursor: pointer;\n}\n.tornado-meter-row,\n.tornado-score {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  font-size: 11px;\n}\n.tornado-score {\n  margin-top: 7px;\n  color: #71865c;\n}\n.tornado-score [data-streak] {\n  color: #a65585;\n  font-size: 10px;\n}\n#tornado-hud meter {\n  display: block;\n  width: 100%;\n  height: 17px;\n  margin-top: 4px;\n}\n#tornado-hud meter::-webkit-meter-bar {\n  background: #eee5f3;\n  border: 0;\n  border-radius: 10px;\n}\n#tornado-hud meter::-webkit-meter-optimum-value {\n  background:\n    linear-gradient(\n      90deg,\n      #c3cde8,\n      #e8adbe);\n  border-radius: 10px;\n}\n#tornado-hud p {\n  font-size: 11px;\n  line-height: 1.4;\n  min-height: 30px;\n  margin: 9px 0 0;\n}\n#tornado-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n  z-index: 7;\n}\n.tornado-marker {\n  position: absolute;\n  font-size: 24px;\n  border: 2px solid #fff;\n  background: #fff4d9ed;\n  box-shadow: 0 4px 12px #71603c30;\n  border-radius: 14px;\n  padding: 3px 7px;\n}\n.tornado-marker.near {\n  background: #dcf3c8;\n  box-shadow: 0 0 20px #fff3a1;\n}\n.tornado-marker.edge::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #9c729d;\n  transform: translate(-50%, -50%) rotate(var(--angle)) translateX(32px);\n}\n.tornado-sparkles {\n  position: absolute;\n  color: #8a599f;\n  text-shadow: 0 2px #fff;\n  font-weight: bold;\n  font-size: 26px;\n  animation: tornado-pop 1s ease-out forwards;\n  white-space: nowrap;\n}\n@keyframes tornado-pop {\n  from {\n    transform: translate(-50%, 0) scale(.6);\n  }\n  50% {\n    opacity: 1;\n  }\n  to {\n    transform: translate(-50%, -80px) scale(1.2);\n    opacity: 0;\n  }\n}\n#tornado-dialog {\n  box-sizing: border-box;\n  width: min(430px, calc(100% - 28px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  padding: 28px;\n  border: 2px solid white;\n  border-radius: 28px;\n  background: #fff8f1;\n  color: #5c4773;\n  text-align: center;\n  box-shadow: 0 20px 80px #51416650;\n}\n#tornado-dialog::backdrop {\n  background: #594d7666;\n  backdrop-filter: blur(3px);\n}\n#tornado-dialog small {\n  font-size: 9px;\n  letter-spacing: 1.4px;\n}\n#tornado-dialog h2 {\n  font-size: 29px;\n  line-height: 1.1;\n  margin: 12px 0;\n}\n#tornado-dialog p {\n  font-size: 14px;\n  line-height: 1.6;\n  color: #8b7094;\n}\n.tornado-emblem {\n  font-size: 60px;\n}\n.tornado-stars {\n  font-size: 48px;\n  color: #e4ae4e;\n  letter-spacing: 7px;\n}\n.tornado-instructions {\n  display: grid;\n  gap: 10px;\n  background: #efe6f4;\n  padding: 16px;\n  border-radius: 18px;\n  text-align: left;\n}\n.tornado-totals {\n  display: flex;\n  justify-content: space-around;\n  background: #efe6f4;\n  padding: 16px 4px;\n  border-radius: 18px;\n  font-size: 11px;\n}\n.tornado-totals b {\n  display: block;\n  font-size: 25px;\n  margin-bottom: 5px;\n}\n#tornado-dialog button {\n  display: block;\n  width: 100%;\n  padding: 14px;\n  border: 2px solid white;\n  border-radius: 16px;\n  margin-top: 10px;\n  background: #b8cfae;\n  color: #466240;\n  font: 700 16px system-ui;\n  cursor: pointer;\n}\n#tornado-dialog button.secondary {\n  background: #eee3f1;\n  color: #705285;\n}\n#tornado-dialog .tornado-earned {\n  color: #5b824e;\n  font-weight: bold;\n}\n@media (max-width: 500px) {\n  #tornado-hud {\n    top: 87px;\n    left: 12px;\n    width: calc(100% - 24px);\n    padding: 10px 13px;\n  }\n  #tornado-hud h2 {\n    font-size: 20px;\n    margin-bottom: 5px;\n  }\n  #tornado-hud p {\n    min-height: 16px;\n    margin-top: 5px;\n  }\n  #tornado-hud [data-time] {\n    font-size: 25px;\n  }\n  .tornado-marker {\n    font-size: 20px;\n  }\n}\n@media (max-height: 600px) and (orientation: landscape) {\n  #tornado-hud {\n    top: 80px;\n    width: 275px;\n    padding: 9px 12px;\n  }\n  #tornado-hud p {\n    min-height: 0;\n  }\n  #tornado-hud h2 {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .tornado-sparkles {\n    animation: none;\n  }\n}\n\n/* src/ui/styles.css */\n:root {\n  font-family:\n    "Trebuchet MS",\n    ui-rounded,\n    system-ui,\n    sans-serif;\n  color: #51466a;\n  background: #ede6f4;\n  font-synthesis: none;\n  -webkit-tap-highlight-color: transparent;\n}\n* {\n  box-sizing: border-box;\n}\nhtml,\nbody,\n#game {\n  margin: 0;\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  overscroll-behavior: none;\n}\nbody {\n  position: fixed;\n  inset: 0;\n}\n#game {\n  height: 100dvh;\n  position: relative;\n  isolation: isolate;\n  user-select: none;\n  -webkit-user-select: none;\n}\n#game-canvas {\n  display: block;\n  width: 100%;\n  height: 100%;\n  outline: none;\n  touch-action: none;\n}\n#game-canvas:focus-visible {\n  outline: 3px solid #9b86bd;\n  outline-offset: -3px;\n}\n.topbar {\n  position: absolute;\n  top: max(22px, env(safe-area-inset-top));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.wordmark {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  font-size: 26px;\n  font-weight: 800;\n  letter-spacing: -1px;\n}\n.wordmark small {\n  display: block;\n  font-size: 7px;\n  letter-spacing: 1.8px;\n  margin-top: 2px;\n  font-weight: 700;\n}\n.flower {\n  color: #a18abd;\n  font-size: 43px;\n  line-height: 1;\n}\n.chapter {\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: 2px;\n}\n.chapter span {\n  color: #b8a8c9;\n  margin: 0 5px;\n}\n.room-title {\n  position: absolute;\n  top: 14%;\n  width: 100%;\n  text-align: center;\n  pointer-events: none;\n}\n.eyebrow {\n  font-size: 9px;\n  letter-spacing: 2.3px;\n  font-weight: 700;\n  color: #8c7a9f;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 7px;\n}\n.eyebrow i {\n  width: 5px;\n  height: 5px;\n  border-radius: 50%;\n  background: #90ac95;\n}\nh1 {\n  font-size: clamp(26px, 4vw, 37px);\n  letter-spacing: -1.2px;\n  margin: 10px 0 7px;\n  font-weight: 800;\n}\n.room-title p {\n  font-size: 12px;\n  color: #8c7a9f;\n  margin: 0;\n}\n.player-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  padding: 5px 10px;\n  background: #fffaf4ee;\n  border: 1px solid #fff;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 800;\n  pointer-events: none;\n  box-shadow: 0 3px 10px #71608518;\n  will-change: transform;\n}\n.player-label span {\n  color: #d592ad;\n  margin-left: 4px;\n}\n.room-caption {\n  position: absolute;\n  bottom: 26%;\n  width: 100%;\n  text-align: center;\n  font-size: 10px;\n  letter-spacing: .5px;\n  color: #9e8db0;\n  pointer-events: none;\n}\n.room-caption span {\n  margin: 0 12px;\n  color: #b9a3cc;\n}\n.move-tip {\n  position: absolute;\n  bottom: 19%;\n  left: 50%;\n  transform: translateX(-50%);\n  display: flex;\n  gap: 10px;\n  align-items: center;\n  width: max-content;\n  max-width: calc(100% - 36px);\n  transition: opacity .6s;\n  pointer-events: none;\n}\n.tip-icon {\n  display: grid;\n  place-items: center;\n  width: 34px;\n  height: 34px;\n  background: #fbf7fcbb;\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  font-size: 22px;\n  color: #a389bb;\n}\n.move-tip strong,\n.move-tip div > span {\n  display: block;\n}\n.move-tip strong {\n  font-size: 12px;\n  margin-bottom: 3px;\n}\n.move-tip div > span {\n  font-size: 10px;\n  color: #9686a7;\n}\n.move-tip.explored {\n  opacity: 0;\n}\n.controls {\n  position: absolute;\n  left: max(27px, env(safe-area-inset-left));\n  right: max(27px, env(safe-area-inset-right));\n  bottom: max(42px, calc(env(safe-area-inset-bottom) + 24px));\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.joystick-group {\n  text-align: center;\n  pointer-events: auto;\n}\n#joystick {\n  position: relative;\n  width: 120px;\n  height: 120px;\n  border: 2px solid #fff9;\n  background:\n    linear-gradient(\n      140deg,\n      #fffc,\n      #ded1ec99);\n  border-radius: 50%;\n  box-shadow: 0 7px 22px #82709516, inset 0 1px 8px #fff8;\n  touch-action: none;\n  cursor: grab;\n}\n#joystick.dragging {\n  cursor: grabbing;\n}\n#joystick-knob {\n  position: absolute;\n  left: 34px;\n  top: 34px;\n  width: 48px;\n  height: 48px;\n  border-radius: 50%;\n  border: 2px solid #fff;\n  background:\n    linear-gradient(\n      145deg,\n      #cdbce5,\n      #aa93c9);\n  box-shadow: 0 5px 8px #6c51813b;\n  pointer-events: none;\n  display: grid;\n  place-items: center;\n  will-change: transform;\n}\n#joystick-knob svg {\n  width: 22px;\n  height: 22px;\n  fill: none;\n  stroke: #fff;\n  stroke-width: 2;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n  opacity: .8;\n}\n.direction {\n  position: absolute;\n  color: #ae9abd;\n  font-size: 22px;\n  line-height: 20px;\n}\n.up {\n  top: 5px;\n  left: 51px;\n}\n.down {\n  bottom: 7px;\n  left: 51px;\n}\n.left {\n  top: 47px;\n  left: 9px;\n}\n.right {\n  top: 47px;\n  right: 9px;\n}\n.control-label {\n  display: block;\n  font-size: 8px;\n  letter-spacing: 1.5px;\n  font-weight: 800;\n  color: #9581a8;\n  margin-top: 11px;\n}\n.explore-note {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  margin-top: 30px;\n  color: #8f7ba3;\n}\n.tiny-house {\n  font-size: 31px;\n  color: #ad98bd;\n}\n.explore-note > span:last-child {\n  font-size: 12px;\n  font-weight: 700;\n}\n.explore-note small {\n  display: block;\n  font-size: 9px;\n  font-weight: 400;\n  margin-top: 5px;\n}\nfooter {\n  position: absolute;\n  bottom: max(12px, env(safe-area-inset-bottom));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  font-size: 8px;\n  color: #a591b7;\n  letter-spacing: .6px;\n  pointer-events: none;\n}\n.build-badge {\n  font-size: 7px;\n  letter-spacing: 1.4px;\n}\n.keyboard-hint {\n  font-size: 8px;\n}\n#loading,\n#error {\n  position: absolute;\n  inset: 0;\n  background: #ede6f4;\n  display: grid;\n  place-content: center;\n  text-align: center;\n  padding: 32px;\n  z-index: 9;\n}\n#loading .loading-flower {\n  font-size: 60px;\n  color: #a18abd;\n  animation: breathe 1.2s infinite alternate;\n}\n#loading p {\n  font-size: 14px;\n}\n#error[hidden] {\n  display: none;\n}\n#error h2 {\n  font-size: 22px;\n}\n#error p {\n  font-size: 14px;\n  max-width: 320px;\n  line-height: 1.6;\n}\n@keyframes breathe {\n  to {\n    transform: scale(.85);\n    opacity: .5;\n  }\n}\n@media (min-width: 700px) {\n  .topbar {\n    left: 40px;\n    right: 40px;\n    top: 28px;\n  }\n  .room-title {\n    top: 12%;\n  }\n  .controls {\n    left: 45px;\n    right: 45px;\n    bottom: 50px;\n  }\n  .room-caption {\n    bottom: 15%;\n  }\n  .move-tip {\n    bottom: 7%;\n  }\n  .explore-note {\n    margin-top: 0;\n  }\n  footer {\n    left: 40px;\n    right: 40px;\n  }\n  .keyboard-hint {\n    font-size: 10px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .topbar {\n    top: 14px;\n  }\n  .room-title {\n    top: 13%;\n  }\n  h1 {\n    font-size: 25px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: 23%;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n  .keyboard-hint {\n    display: none;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .room-title {\n    top: 24%;\n    text-align: left;\n    padding-left: 28px;\n    width: 220px;\n  }\n  .eyebrow {\n    justify-content: flex-start;\n    font-size: 7px;\n    letter-spacing: 1px;\n  }\n  h1 {\n    font-size: 24px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .topbar {\n    top: 14px;\n  }\n  .room-caption,\n  .move-tip,\n  .explore-note {\n    display: none;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  .wordmark {\n    font-size: 21px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #loading .loading-flower {\n    animation: none;\n  }\n  .move-tip {\n    transition: none;\n  }\n}\n@media (max-width: 699px) {\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: calc(max(42px, env(safe-area-inset-bottom)) + 156px);\n  }\n}\n@media (max-width: 380px) {\n  .topbar {\n    left: 18px;\n    right: 18px;\n  }\n  .wordmark {\n    font-size: 24px;\n  }\n  .wordmark small {\n    font-size: 6px;\n    letter-spacing: 1.2px;\n    white-space: nowrap;\n  }\n  .chapter {\n    font-size: 8px;\n    letter-spacing: 1px;\n    white-space: nowrap;\n  }\n  .eyebrow {\n    font-size: 7px;\n    letter-spacing: 1.6px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n  .explore-note {\n    max-width: 125px;\n  }\n  .room-title {\n    top: 15%;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n}\n#house-music {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 10px;\n  line-height: 1.2;\n  padding: 8px;\n  min-height: 40px;\n  min-width: 54px;\n  cursor: pointer;\n}\nfooter {\n  gap: 6px;\n}\nfooter .keyboard-hint {\n  display: none;\n}\n@media (max-width: 380px) {\n  footer {\n    left: 12px;\n    right: 12px;\n  }\n  #collection-button {\n    font-size: 9px !important;\n  }\n}\n#audio-settings {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 11px;\n  padding: 8px;\n  min-height: 40px;\n  cursor: pointer;\n}\n.audio-settings {\n  width: min(340px, 85vw);\n  border: 0;\n  border-radius: 22px;\n  background: #fff9f1;\n  color: #534565;\n  padding: 24px;\n  font-family: inherit;\n}\n.audio-settings::backdrop {\n  background: #30283880;\n}\n.audio-settings label {\n  display: block;\n  margin: 22px 0;\n  font-weight: 700;\n}\n.audio-settings output {\n  float: right;\n}\n.audio-settings input {\n  display: block;\n  width: 100%;\n  height: 40px;\n  accent-color: #9873b5;\n}\n.audio-settings button {\n  min-height: 44px;\n  width: 100%;\n  border: 0;\n  border-radius: 15px;\n  background: #e1d1ed;\n  color: #493659;\n  font-weight: 700;\n}\n.audio-settings p {\n  font-size: 12px;\n}\nfooter {\n  flex-wrap: wrap;\n}\n.audio-settings {\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  box-sizing: border-box;\n}\n.audio-mutes {\n  display: flex;\n  gap: 8px;\n}\n.audio-mutes button {\n  flex: 1;\n  width: auto !important;\n}\n.audio-settings summary {\n  font-size: 13px;\n  cursor: pointer;\n}\n.audio-settings details p {\n  line-height: 1.5;\n}\n@media (max-height: 650px) {\n  .audio-settings {\n    padding: 16px;\n  }\n  .audio-settings h2 {\n    font-size: 20px;\n    margin: 0 0 10px;\n  }\n  .audio-settings label {\n    margin: 10px 0;\n  }\n}\n#game[data-scene=recess] .room-title {\n  top: 84px;\n  left: 18px;\n  right: auto;\n  width: auto;\n  max-width: 65%;\n  text-align: left;\n  padding: 10px 16px;\n  background: #fff8ece8;\n  border-radius: 18px;\n  pointer-events: none;\n}\n#game[data-scene=recess] .room-title h1 {\n  font-size: 22px;\n  margin: 3px 0;\n}\n#game[data-scene=recess] #scene-subtitle,\n#game[data-scene=recess] #day-label,\n#game[data-scene=recess] #room-connections {\n  display: none;\n}\n#game[data-scene=recess] .topbar {\n  background: #fff8ece8;\n  border-radius: 20px;\n  padding: 10px 18px;\n}\n#game[data-scene=recess] .cleanup-tip {\n  max-width: 70%;\n  background: #fff8ece6;\n  border-radius: 16px;\n  padding: 9px;\n}\n#game[data-scene=recess] #leave-recess {\n  top: 36px;\n  right: 44px;\n}\n@media (max-width: 600px) {\n  #game[data-scene=recess] .topbar {\n    left: 12px;\n    right: 12px;\n    padding: 9px 12px;\n  }\n  #game[data-scene=recess] .wordmark {\n    font-size: 20px;\n    gap: 6px;\n  }\n  #game[data-scene=recess] .wordmark .flower {\n    font-size: 29px;\n  }\n  #game[data-scene=recess] .wordmark small {\n    display: none;\n  }\n  #game[data-scene=recess] #leave-recess {\n    top: 28px;\n    right: 24px;\n    font-size: 11px;\n    padding: 9px 10px;\n  }\n  #game[data-scene=recess] .room-title {\n    top: 78px;\n    padding: 6px 12px;\n  }\n  #game[data-scene=recess] .room-title .eyebrow {\n    display: none;\n  }\n  #game[data-scene=recess] .room-title h1 {\n    font-size: 20px;\n    margin: 0;\n  }\n}\n#daily-play-open {\n  left: 18px;\n  bottom: 175px;\n  right: auto;\n  max-width: 180px;\n  font-size: 14px;\n  padding: 12px 16px;\n  background: #fff6df;\n  color: #5e486f;\n}\n#daily-play-drop {\n  left: 18px;\n  bottom: 229px;\n  right: auto;\n  max-width: 180px;\n  font-size: 14px;\n  padding: 12px 16px;\n}\n.daily-play-journal {\n  max-width: 520px;\n  max-height: 80dvh;\n  overflow: auto;\n  border: 2px solid #bba5cb;\n  border-radius: 25px;\n  background: #fff8ea;\n  color: #594469;\n  padding: 24px;\n  box-shadow: 0 12px 60px #33214455;\n}\n.daily-play-journal::backdrop {\n  background: #31274466;\n}\n.daily-play-journal h2 {\n  margin: 0 0 12px;\n}\n.daily-play-journal p {\n  line-height: 1.45;\n}\n.daily-play-card {\n  background: #eee8f2;\n  border-radius: 14px;\n  padding: 12px 16px;\n  margin: 10px 0;\n}\n.daily-play-card p {\n  margin: 6px 0;\n}\n.daily-play-card small {\n  color: #756381;\n}\n.daily-play-journal > button {\n  display: block;\n  margin: 18px auto 0;\n  padding: 13px 26px;\n  border: 0;\n  border-radius: 24px;\n  background: #d5eadc;\n  color: #334d40;\n  font-size: 17px;\n  font-weight: 700;\n  cursor: pointer;\n}\n.daily-play-journal > button.daily-play-close {\n  float: right;\n  margin: 0 0 8px 12px;\n  padding: 8px 14px;\n  font-size: 24px;\n  line-height: 1;\n}\n\n/* src/ui/cleanup.css */\n.mission-stats {\n  display: flex;\n  flex-direction: column;\n  align-items: flex-end;\n  gap: 2px;\n}\n#mission-clock {\n  font-size: 23px;\n  font-weight: 800;\n  font-variant-numeric: tabular-nums;\n  letter-spacing: -1px;\n}\n#mission-clock.soon {\n  color: #b77795;\n}\n.allowance-label {\n  font-size: 7px;\n  letter-spacing: 1px;\n  color: #9581a8;\n}\n#allowance {\n  font-size: 13px;\n  color: #6e856c;\n  margin-left: 3px;\n}\n#task-count {\n  letter-spacing: 1px;\n  color: #6e856c;\n}\n.task-list {\n  display: flex;\n  list-style: none;\n  justify-content: center;\n  gap: 9px;\n  padding: 0;\n  margin: 6px 0 0;\n  height: 22px;\n}\n.task-list li {\n  display: flex;\n  align-items: center;\n  gap: 3px;\n  font-size: 9px;\n  color: #9784a6;\n  border-bottom: 2px solid transparent;\n}\n.task-list li > span:first-child {\n  font-size: 13px;\n}\n.task-list li.done {\n  color: #69866f;\n  border-color: #a6c5a6;\n}\n.task-list li.done > span:first-child {\n  color: #69866f;\n}\n.action-group {\n  pointer-events: auto;\n  text-align: center;\n}\n#action-button {\n  --hold-progress: 0deg;\n  width: 120px;\n  height: 120px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  gap: 3px;\n  border: 3px solid #fff9;\n  border-radius: 50%;\n  background:\n    linear-gradient(\n      145deg,\n      #f6b5d0,\n      #d888b6);\n  box-shadow: 0 6px 0 #ad739441, 0 8px 22px #82709522;\n  color: #663f6a;\n  cursor: pointer;\n  touch-action: none;\n  padding: 8px;\n  font-family: inherit;\n  position: relative;\n  -webkit-user-select: none;\n  user-select: none;\n}\n#action-button:disabled {\n  background:\n    linear-gradient(\n      145deg,\n      #f7f1f9,\n      #ddd0e8);\n  color: #a38caf;\n  box-shadow: 0 4px 0 #a58db222;\n  cursor: default;\n}\n#action-button:not(:disabled):active {\n  box-shadow: 0 2px 0 #ad739441;\n}\n#action-button:focus-visible,\n#replay:focus-visible {\n  outline: 3px solid #7960a5;\n  outline-offset: 4px;\n}\n#action-button.holding {\n  background: conic-gradient(#97c6a0 var(--hold-progress), #ecc0dd 0deg);\n}\n#action-icon {\n  font-size: 26px;\n  line-height: 29px;\n}\n#action-title {\n  font-size: 15px;\n  line-height: 18px;\n}\n#action-detail {\n  font-size: 10px;\n  max-width: 100%;\n  line-height: 13px;\n}\n.cleanup-tip {\n  text-align: center;\n  width: calc(100% - 36px);\n  max-width: 460px;\n  justify-content: center;\n  font-size: 11px;\n  line-height: 16px;\n  color: #887298;\n  min-height: 32px;\n}\n#cleanup-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n}\n.cleanup-marker {\n  position: absolute;\n  left: 0;\n  top: 0;\n  border-radius: 9px;\n  min-width: 22px;\n  padding: 3px 5px;\n  background: #fffaf2db;\n  border: 1px solid #fffc;\n  box-shadow: 0 2px 5px #62507722;\n  font-size: 13px;\n  line-height: 16px;\n  color: #775672;\n  will-change: transform;\n  white-space: nowrap;\n}\n.cleanup-marker[hidden] {\n  display: none;\n}\n.cleanup-marker.destination {\n  font-size: 16px !important;\n  border-radius: 50%;\n  padding: 7px !important;\n  box-shadow: 0 0 14px #fff2a8a0;\n}\n.cleanup-marker.offscreen::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #fff1aa;\n  font-size: 17px;\n  text-shadow: 0 1px 3px #504760;\n  transform: translate(-50%, -50%) rotate(var(--guide-angle)) translateX(26px);\n}\n.cleanup-marker.tool {\n  font-size: 10px;\n}\n.cleanup-marker.nearby {\n  background: #fff0b9;\n  border-color: #fff;\n  box-shadow: 0 0 10px #fff3a4bb;\n}\n.cleanup-marker.destination {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n.coin-popup {\n  position: absolute;\n  color: #63845d;\n  font-size: 22px;\n  font-weight: 800;\n  z-index: 2;\n  transform: translate(-50%, -100%);\n  animation: reward-rise .95s ease-out forwards;\n  text-shadow: 0 2px 0 #fff;\n}\n.coin-popup strong {\n  display: block;\n  padding: 3px 8px;\n  background: #fff9e4ed;\n  border-radius: 12px;\n}\n.coin-popup > span {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #e9bd61;\n  font-size: 17px;\n  animation: sparkle .75s ease-out forwards;\n}\n@keyframes reward-rise {\n  0% {\n    opacity: 0;\n    margin-top: 0;\n  }\n  20% {\n    opacity: 1;\n  }\n  75% {\n    opacity: 1;\n  }\n  100% {\n    opacity: 0;\n    margin-top: -40px;\n  }\n}\n@keyframes sparkle {\n  from {\n    transform: translate(-50%, -50%) scale(.3);\n    opacity: 1;\n  }\n  to {\n    transform: translate(var(--spark-x), var(--spark-y)) scale(.7);\n    opacity: 0;\n  }\n}\n.sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  clip-path: inset(50%);\n  overflow: hidden;\n  white-space: nowrap;\n}\n#results {\n  border: 2px solid #fff;\n  border-radius: 28px;\n  padding: 26px 22px 22px;\n  width: min(350px, calc(100% - 32px));\n  max-height: calc(100dvh - 32px);\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n  box-shadow: 0 16px 60px #55436140;\n}\n#results::backdrop {\n  background: #52416666;\n  backdrop-filter: blur(4px);\n}\n.results-flower {\n  font-size: 43px;\n  line-height: 1;\n  color: #af94cb;\n  margin-bottom: 16px;\n}\n#results .eyebrow {\n  font-size: 7px;\n  letter-spacing: 1.6px;\n}\n#results h2 {\n  margin: 12px 0 8px;\n  font-size: 30px;\n  letter-spacing: -1px;\n}\n#results-summary {\n  font-size: 12px;\n  line-height: 1.6;\n  color: #927d9e;\n}\n.results-totals {\n  display: flex;\n  justify-content: space-evenly;\n  padding: 14px 0;\n  margin: 12px 0 0;\n  background: #eee5f5;\n  border-radius: 17px;\n}\n.results-totals strong {\n  display: block;\n  font-size: 28px;\n}\n.results-totals span {\n  font-size: 10px;\n  color: #8e789f;\n}\n#results-money {\n  color: #708b6b;\n}\n#results-bonus {\n  font-size: 11px;\n  color: #788f6c;\n}\n#results-list {\n  list-style: none;\n  padding: 0;\n  display: flex;\n  justify-content: center;\n  flex-wrap: wrap;\n  gap: 6px 12px;\n  margin: 18px 0;\n  font-size: 10px;\n  color: #a58eb1;\n}\n#results-list .done {\n  color: #638269;\n}\n#replay {\n  width: 100%;\n  border: 2px solid #fff8;\n  border-radius: 17px;\n  padding: 15px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 16px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  box-shadow: 0 4px 0 #8caa8555;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#replay span {\n  margin-left: 7px;\n  font-size: 21px;\n}\n@media (max-width: 380px) {\n  .task-list {\n    gap: 6px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  #mission-clock {\n    font-size: 21px;\n  }\n  .allowance-label {\n    font-size: 6px;\n    letter-spacing: .5px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait), (orientation: landscape) and (max-height: 600px) {\n  #action-button {\n    width: 102px;\n    height: 102px;\n  }\n  #action-title {\n    font-size: 13px;\n  }\n  #action-icon {\n    font-size: 22px;\n    line-height: 24px;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .task-list {\n    height: 18px;\n    margin-top: 2px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  .task-list li > span:first-child {\n    font-size: 11px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .task-list {\n    flex-wrap: wrap;\n    height: auto;\n    justify-content: flex-start;\n    max-width: 175px;\n    gap: 5px 10px;\n  }\n  #results {\n    padding: 12px 18px;\n  }\n  .results-flower {\n    display: none;\n  }\n  #results h2 {\n    font-size: 24px;\n    margin: 7px 0;\n  }\n  .results-totals {\n    padding: 7px 0;\n  }\n  #results-list {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .coin-popup {\n    animation: none;\n  }\n  .coin-popup > span {\n    display: none;\n  }\n}\n\n/* src/ui/collection.css */\n[hidden] {\n  display: none !important;\n}\n#collection-button {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  padding: 8px 0 8px 10px;\n}\n#collection-button:disabled {\n  opacity: .45;\n}\n#wallet {\n  margin-left: 4px;\n  color: #638269;\n}\n.loop-button {\n  width: 100%;\n  border: 2px solid #fff9;\n  border-radius: 16px;\n  padding: 13px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 15px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  margin: 5px 0;\n  touch-action: manipulation;\n}\n.pink-button {\n  background: #e8b5d2;\n  color: #704b75;\n}\n.loop-button:disabled {\n  opacity: .55;\n  cursor: default;\n}\n#results-wallet {\n  font-size: 12px;\n  color: #6f8869;\n}\n#go-shopping {\n  margin-bottom: 10px;\n}\n#collection-dialog {\n  border: 2px solid #fff;\n  border-radius: 26px;\n  width: min(410px, calc(100% - 24px));\n  max-height: calc(100dvh - 24px);\n  padding: 22px 17px 17px;\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n}\n#collection-dialog::backdrop {\n  background: #52416688;\n  backdrop-filter: blur(4px);\n}\n#collection-dialog h2 {\n  margin: 10px 0 6px;\n  font-size: 28px;\n  letter-spacing: -1px;\n}\n#collection-summary {\n  font-size: 11px;\n  color: #947c9e;\n}\n#collection-grid {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 7px;\n  margin: 17px 0;\n}\n.dumpling-card {\n  background: #efe7f4;\n  border: 1px solid #fff;\n  border-radius: 14px;\n  padding: 6px 2px 9px;\n  min-width: 0;\n}\n.dumpling-card.owned {\n  background: linear-gradient(#fff9, var(--rarity));\n}\n.dumpling-card img {\n  width: 100%;\n  height: auto;\n  display: block;\n}\n.dumpling-card strong {\n  font-size: 10px;\n  display: block;\n}\n.dumpling-card small {\n  display: block;\n  font-size: 8px;\n  margin-top: 3px;\n}\n.dumpling-card .copies {\n  font-size: 10px;\n  font-weight: 800;\n  margin-top: 5px;\n}\n#store-markers {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n#shop-display-marker {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n#reveal-copy {\n  position: absolute;\n  top: 71%;\n  left: 6%;\n  width: 88%;\n  text-align: center;\n  color: var(--rarity-ink,#775887);\n  font-size: 13px;\n  pointer-events: none;\n}\n.reveal-badges {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n}\n#reveal-copy small {\n  color: var(--rarity-ink,#665070);\n  padding: 5px 10px;\n  border: 1px solid var(--rarity,#dacbdf);\n  border-radius: 20px;\n  background: var(--rarity-wash,#f4edf5);\n  font-size: 11px;\n  line-height: 1.2;\n  font-weight: 800;\n  letter-spacing: .4px;\n}\n#reveal-copy .reveal-status {\n  background: #fffc;\n  border-color: #fff;\n  color: #64556c;\n}\n#reveal-copy h2 {\n  margin: 7px 0 4px;\n  font-size: 32px;\n  line-height: 1.1;\n  letter-spacing: -.8px;\n}\n#reveal-copy p {\n  font-size: 11px;\n  margin: 0;\n  color: #74647e;\n}\n#reveal-copy[data-rarity=Legendary] .reveal-rarity {\n  box-shadow: 0 0 0 2px #fff8, 0 2px 10px #dbb14b30;\n}\n#reveal-copy.has-reveal {\n  animation: reveal-caption .4s ease-out;\n}\n@keyframes reveal-caption {\n  from {\n    transform: translateY(6px);\n    opacity: 0;\n  }\n  to {\n    transform: translateY(0);\n    opacity: 1;\n  }\n}\n#save-message {\n  position: absolute;\n  bottom: 26%;\n  left: 8%;\n  width: 84%;\n  padding: 12px;\n  border-radius: 14px;\n  background: #fff5de;\n  color: #796143;\n  font-size: 12px;\n  text-align: center;\n  z-index: 8;\n  pointer-events: none;\n}\n#game[data-scene=home] .joystick-group {\n  visibility: hidden;\n}\n#game[data-scene=home] .cleanup-tip {\n  display: none;\n}\n#squish-friend {\n  position: absolute;\n  left: 8%;\n  bottom: 12%;\n  min-width: 100px;\n  min-height: 48px;\n  padding: 12px 20px;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: #f1d6dd;\n  color: #795268;\n  font: 800 16px "Trebuchet MS", sans-serif;\n  box-shadow: 0 4px 12px #75534a15;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#home-vignette {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  background:\n    linear-gradient(\n      #ede6f4ed,\n      transparent 29%,\n      transparent 75%,\n      #ede6f4dd);\n}\n#trip-wallet {\n  font-size: 8px;\n  letter-spacing: 1px;\n  color: #887298;\n  text-align: right;\n}\n#trip-balance {\n  display: block;\n  font-size: 24px;\n  letter-spacing: -1px;\n  color: #638269;\n}\n#reveal-copy {\n  isolation: isolate;\n}\n#game[data-scene=home] .topbar,\n#game[data-scene=home] .room-title,\n#game[data-scene=home] footer {\n  text-shadow: 0 1px 8px #fff;\n}\n@media (max-height: 740px) {\n  #reveal-copy {\n    top: 68%;\n  }\n  #reveal-copy h2 {\n    font-size: 27px;\n  }\n  #collection-dialog {\n    padding-top: 15px;\n  }\n  #collection-grid {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #reveal-copy.has-reveal {\n    animation: none;\n  }\n}\n#game[data-scene=home] .controls {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  right: 18px;\n  justify-content: flex-end;\n}\n#game[data-scene=home] .joystick-group,\n#game[data-scene=home] .control-label {\n  display: none;\n}\n#game[data-scene=home] #action-button {\n  width: 136px;\n  height: 48px;\n  border-radius: 25px;\n  display: flex;\n  flex-direction: row;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n}\n#game[data-scene=home] #action-icon {\n  font-size: 20px;\n  margin: 0;\n}\n#game[data-scene=home] #action-title {\n  font-size: 13px;\n  margin: 0;\n}\n#game[data-scene=home] #action-detail {\n  display: none;\n}\n#game[data-scene=home] #squish-friend {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  left: 18px;\n  min-width: 130px;\n  font-size: 14px;\n}\nbody:has(#game[data-scene=home]) .dev-launch {\n  top: 77px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] .room-title {\n    top: 83px;\n    left: 20px;\n    right: 88px;\n    text-align: left;\n  }\n  #game[data-scene=home] .room-title .eyebrow,\n  #game[data-scene=home] #day-label {\n    display: none;\n  }\n  #game[data-scene=home] .room-title h1 {\n    font-size: 20px;\n    margin: 2px 0 4px;\n  }\n  #game[data-scene=home] .room-title p {\n    margin: 0;\n    font-size: 10px;\n  }\n  #game[data-scene=home] #reveal-copy {\n    top: 64%;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    margin: 7px 0 3px;\n    font-size: 24px;\n  }\n  #game[data-scene=home] #reveal-copy small {\n    font-size: 10px;\n    padding: 4px 8px;\n  }\n  #game[data-scene=home] #reveal-copy p {\n    font-size: 10px;\n  }\n}\n#collection-actions {\n  position: sticky;\n  top: -1px;\n  z-index: 2;\n  background: #faf5fb;\n  padding: 4px 0;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 5px;\n}\n#collection-actions .loop-button {\n  font-size: 12px;\n  padding: 10px 5px;\n  margin: 0;\n  min-height: 44px;\n}\n#collection-actions #open-next {\n  grid-column: 1/-1;\n}\n#reveal-copy {\n  background: #fff9;\n  border-radius: 18px;\n  padding: 8px;\n  left: 8%;\n  width: 84%;\n}\n#home-vignette {\n  background:\n    linear-gradient(\n      #ede6f4a0,\n      transparent 25%,\n      transparent 70%,\n      #ede6f4a0);\n}\n#game[data-scene=home] #home-vignette {\n  background:\n    linear-gradient(\n      180deg,\n      #21112465,\n      transparent 27%,\n      transparent 65%,\n      #21112450);\n}\n#game[data-scene=home] .room-title,\n#game[data-scene=home] .topbar,\n#game[data-scene=home] footer {\n  color: #fff7ee;\n  text-shadow: 0 2px 5px #341c40;\n}\n#game[data-scene=home] #reveal-copy {\n  background: #fff8f0ed;\n  box-shadow: 0 5px 24px #49254920;\n}\n#game[data-scene=home] #reveal-copy {\n  top: auto;\n  bottom: 140px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] #reveal-copy {\n    top: auto;\n    bottom: 132px;\n    padding: 6px;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    font-size: 20px;\n    margin: 5px 0 3px;\n  }\n}\n#game[data-scene=home] #reveal-copy {\n  width: min(84%, 380px);\n  left: 50%;\n  translate: -50% 0;\n}\n@media (min-height: 651px) {\n  #game[data-scene=home] #reveal-copy {\n    bottom: 125px;\n  }\n}\n#fishing-panel {\n  position: absolute;\n  bottom: 22px;\n  left: 50%;\n  translate: -50% 0;\n  width: min(92%, 420px);\n  padding: 14px;\n  border-radius: 22px;\n  border: 2px solid #fff7;\n  background: #fff8eefa;\n  box-shadow: 0 5px 25px #35555130;\n  text-align: center;\n  color: #4e5f69;\n  z-index: 25;\n}\n#fishing-panel p {\n  font-size: 15px;\n  line-height: 1.4;\n  margin: 0 0 10px;\n  font-weight: 700;\n}\n#fishing-panel button {\n  border: 2px solid #fff;\n  border-radius: 20px;\n  background: #afd7ca;\n  color: #335a54;\n  font: 800 16px system-ui;\n  padding: 13px 22px;\n  min-height: 48px;\n  margin: 3px;\n  touch-action: manipulation;\n}\n#fishing-panel button:last-child {\n  background: #ede3ea;\n  font-size: 12px;\n  padding: 10px 14px;\n}\n#fishing-panel progress {\n  width: 80%;\n  display: block;\n  margin: 8px auto;\n  accent-color: #81b6a2;\n}\n#game[data-fishing=true] .controls,\n#game[data-fishing=true] .joystick-group,\n#game[data-fishing=true] footer,\n#game[data-fishing=true] .room-title {\n  visibility: hidden;\n}\n#game[data-scene=outdoors] .room-title {\n  pointer-events: none;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 22px;\n}\n#game[data-scene=outdoors] .room-title .eyebrow {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title {\n  top: 84px;\n  left: 20px;\n  right: 20px;\n  text-align: left;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 18px;\n  margin: 3px 0;\n}\n#game[data-scene=outdoors] #day-label {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title p {\n  font-size: 11px;\n}\nbody:has(#game[data-fishing=true]) .dev-launch {\n  top: 78px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n#game[data-fishing=true] #move-tip {\n  visibility: hidden;\n}\n#fishing-panel progress[hidden] {\n  display: none;\n}\n#fishing-panel {\n  padding: 12px 14px;\n  bottom: 14px;\n  max-width: 390px;\n}\n#fishing-panel .fish-status {\n  display: block;\n  text-transform: uppercase;\n  font: 800 10px system-ui;\n  letter-spacing: 1.5px;\n  color: #738b87;\n  margin-bottom: 5px;\n}\n#fishing-panel p {\n  margin: 0 0 8px;\n  min-height: 22px;\n}\n#fishing-panel .fish-gauges {\n  display: flex;\n  gap: 12px;\n  margin: 8px 0;\n}\n#fishing-panel label {\n  flex: 1;\n  text-align: left;\n  font: 700 11px system-ui;\n}\n#fishing-panel progress {\n  width: 100%;\n  height: 9px;\n  margin: 5px 0;\n  appearance: none;\n  border: 0;\n  border-radius: 8px;\n  overflow: hidden;\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-bar {\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-value {\n  background: #7eaf9c;\n  border-radius: 8px;\n  transition: width .12s;\n}\n#fishing-panel[data-warning=true] label:last-child progress::-webkit-progress-value {\n  background: #d67976;\n}\n#fishing-panel[data-warning=true] p {\n  color: #ad535a;\n}\n#fishing-panel .fish-controls {\n  display: flex;\n  align-items: stretch;\n  gap: 5px;\n}\n#fishing-panel .fish-controls button {\n  touch-action: none;\n  user-select: none;\n  margin: 0;\n  padding: 13px 8px;\n  flex: 1;\n  border-radius: 15px;\n  font: 800 12px system-ui;\n  min-height: 52px;\n  background: #eee6f0;\n  color: #635470;\n}\n#fishing-panel #fish-action {\n  flex: 1.55;\n  background: #b1dac7;\n  color: #335e51;\n  font-size: 15px;\n}\n#fishing-panel .fish-controls button[data-held=true] {\n  background: #80bfa7 !important;\n  box-shadow: inset 0 2px 4px #416a6133;\n}\n#fishing-panel .fish-controls button[data-cue=true] {\n  border-color: #b194cf;\n  background: #e3d5f0;\n}\n#fishing-panel .fish-tip {\n  display: block;\n  font: 11px system-ui;\n  line-height: 1.4;\n  color: #79857f;\n  margin: 7px 0 2px;\n}\n#fishing-panel > button:last-child {\n  min-height: 32px;\n  padding: 5px 12px;\n  margin: 0;\n  background: transparent;\n  color: #797e83;\n  font-size: 11px;\n}\n#fishing-panel [hidden] {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  #fishing-panel {\n    bottom: 8px;\n    padding: 8px 12px;\n  }\n  #fishing-panel .fish-status,\n  #fishing-panel .fish-tip {\n    display: none;\n  }\n  #fishing-panel .fish-controls button {\n    min-height: 44px;\n    padding: 9px 6px;\n  }\n}\n#fish-direction-cue {\n  position: absolute;\n  bottom: calc(var(--panel-height,230px) + 25px);\n  left: 50%;\n  translate: -50% 0;\n  z-index: 26;\n  pointer-events: none;\n  background: #fff9e7ee;\n  border: 3px solid #e8bc60;\n  border-radius: 20px;\n  padding: 2px 15px 8px;\n  min-width: 85px;\n  text-align: center;\n  color: #725d36;\n  box-shadow: 0 4px 14px #405c5230;\n}\n#fish-direction-cue[hidden] {\n  display: none;\n}\n#fish-direction-cue[data-side=left] {\n  left: 19%;\n}\n#fish-direction-cue[data-side=right] {\n  left: 81%;\n}\n#fish-direction-cue span {\n  display: block;\n  font: 900 46px/1 system-ui;\n  letter-spacing: -6px;\n  padding-right: 6px;\n}\n#fish-direction-cue b {\n  display: block;\n  font: 900 11px system-ui;\n  letter-spacing: .7px;\n}\n#fish-direction-cue[data-side=left] .fish-arrows {\n  animation: pull-left .65s ease-in-out infinite;\n}\n#fish-direction-cue[data-side=right] .fish-arrows {\n  animation: pull-right .65s ease-in-out infinite;\n}\n#fish-direction-cue[data-correct=true] {\n  border-color: #80b7a0;\n  color: #417761;\n}\n#fish-direction-cue[data-correct=true] span {\n  font-size: 35px;\n  letter-spacing: 0;\n}\n#fish-direction-cue[data-side=rest] {\n  border-color: #d99485;\n  color: #a1574f;\n}\n#fish-direction-cue .fish-hand {\n  font-size: 30px;\n  letter-spacing: 0;\n  margin: 4px;\n}\n#fishing-panel .fish-controls button[data-cue=true] {\n  border: 3px solid #e1b45b;\n  background: #ffedb7;\n  color: #624f31;\n  box-shadow: 0 0 0 3px #f7d78b60;\n}\n#fishing-panel .fish-controls[data-pull="-1"] #fish-right,\n#fishing-panel .fish-controls[data-pull="1"] #fish-left {\n  opacity: .55;\n}\n#fishing-panel .fish-controls[data-pull=rest] #fish-action {\n  background: #efd2c8;\n  color: #945c51;\n}\n@keyframes pull-left {\n  0%, 100% {\n    transform: translateX(4px);\n  }\n  50% {\n    transform: translateX(-7px);\n  }\n}\n@keyframes pull-right {\n  0%, 100% {\n    transform: translateX(-4px);\n  }\n  50% {\n    transform: translateX(7px);\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #fish-direction-cue .fish-arrows {\n    animation: none !important;\n  }\n}\n\n/* src/ui/house.css */\n#mission-picker {\n  display: flex;\n  gap: 5px;\n  justify-content: center;\n  margin: 9px auto 0;\n  pointer-events: auto;\n}\n#mission-picker button {\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  background: #f6f0f9db;\n  padding: 5px 10px;\n  color: #8c739d;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#mission-picker button[aria-pressed=true] {\n  color: #614d7c;\n  background: #d6c4e8;\n}\n#mission-picker button:disabled {\n  opacity: .65;\n  cursor: default;\n}\n#room-connections {\n  margin: 7px 12px 0;\n  font-size: 10px;\n  color: #816b90;\n}\n#house-doors {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n.door-label {\n  position: absolute;\n  left: 0;\n  top: 0;\n  white-space: nowrap;\n  padding: 3px 6px;\n  font-size: 9px;\n  font-weight: 700;\n  color: #756085;\n  background: #fff6e7dc;\n  border: 1px solid #fff8;\n  border-radius: 7px;\n}\n.room-title {\n  text-shadow: 0 1px 6px #ede6f4;\n}\n#game[data-mission=practice] #task-count {\n  font-size: 9px;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #mission-picker {\n    margin-top: 5px;\n  }\n  #mission-picker button {\n    padding: 4px 8px;\n    font-size: 9px;\n  }\n  #room-connections {\n    margin-top: 4px;\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #mission-picker {\n    justify-content: flex-start;\n    flex-wrap: wrap;\n    width: 180px;\n    margin-left: 0;\n  }\n  #room-connections {\n    max-width: 165px;\n    margin-left: 0;\n  }\n}\n#game[data-scene=cleanup] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border: 1px solid #fff9;\n  border-radius: 20px;\n  background: #fff9efed;\n  box-shadow: 0 4px 20px #66564412;\n}\n#game[data-scene=cleanup] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=cleanup] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=cleanup] .flower {\n  font-size: 34px;\n}\n#game[data-scene=cleanup] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=cleanup] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1.1px;\n  color: #5c6e52;\n}\n#game[data-scene=cleanup] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n  letter-spacing: -.6px;\n}\n#game[data-scene=cleanup] .task-list {\n  justify-content: flex-start;\n  background: #fff8efdc;\n  border-radius: 9px;\n  padding: 4px 7px;\n  width: max-content;\n  max-width: 100%;\n  height: auto;\n}\n#game[data-scene=cleanup] #mission-picker {\n  justify-content: flex-start;\n  margin: 7px 0 0;\n}\n#game[data-scene=cleanup] #room-connections {\n  display: none;\n}\n#game[data-scene=cleanup] .player-label {\n  font-size: 9px;\n  padding: 3px 7px;\n}\n#game[data-scene=cleanup] .controls {\n  bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px));\n  left: 20px;\n  right: 20px;\n}\n#game[data-scene=cleanup] .control-label {\n  color: #50624c;\n  text-shadow: 0 1px 3px #ffff;\n}\n#game[data-scene=cleanup] #cleanup-hint {\n  background: #fff9efed;\n  width: calc(100% - 32px);\n  left: 16px;\n  padding: 7px 10px;\n  border-radius: 12px;\n  color: #596651;\n  bottom: calc(max(40px, env(safe-area-inset-bottom)) + 150px);\n  font-size: 10px;\n}\n#game[data-scene=cleanup] footer {\n  left: 16px;\n  right: 16px;\n  background: #fff9efed;\n  padding: 5px 9px;\n  border-radius: 12px;\n  bottom: 8px;\n  color: #6c795e;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #game[data-scene=cleanup] .room-title {\n    top: 85px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] #mission-picker {\n    margin-top: 5px;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    bottom: calc(max(36px, env(safe-area-inset-bottom)) + 144px);\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=cleanup] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=cleanup] .room-title {\n    top: 95px;\n    width: 210px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] .task-list {\n    flex-wrap: wrap;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    width: 40%;\n    left: 30%;\n    bottom: 12px;\n  }\n  #game[data-scene=cleanup] footer {\n    display: flex;\n    flex-wrap: wrap;\n    top: 12px;\n    bottom: auto;\n    left: 270px;\n    right: 16px;\n    justify-content: flex-end;\n  }\n}\n.asset-credits {\n  color: inherit;\n  font-size: 9px;\n  text-decoration: none;\n  padding: 5px;\n}\n#day-label {\n  margin: 5px 0;\n  font-size: 11px;\n  font-weight: 700;\n  color: #667b5b;\n  text-transform: capitalize;\n}\n#mission-picker {\n  flex-wrap: wrap;\n}\n#game[data-mission=day] .task-list {\n  flex-wrap: wrap;\n  font-size: 9px;\n}\n#game[data-mission=day] #mission-clock {\n  font-size: 19px;\n  white-space: nowrap;\n}\n#school-transition {\n  position: absolute;\n  z-index: 30;\n  inset: 0;\n  background: #f6eafaed;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  color: #65517b;\n}\n#school-transition[hidden] {\n  display: none;\n}\n#school-transition span {\n  font-size: 64px;\n}\n.lilah-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  max-width: 165px;\n  padding: 7px 10px;\n  border-radius: 15px 15px 15px 3px;\n  background: #fff2ceeF;\n  color: #735978;\n  font-size: 12px;\n  font-weight: 700;\n  pointer-events: none;\n  box-shadow: 0 3px 12px #7c627525;\n  z-index: 5;\n  text-align: center;\n}\n.lilah-label[hidden] {\n  display: none;\n}\n.marc-label {\n  background: #e7f0e4ef;\n  color: #4f655c;\n}\n#player-label,\n#house-doors,\n#room-connections {\n  display: none !important;\n}\n#game[data-scene=cleanup] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border-radius: 20px;\n  background: #fff9efed;\n}\n#game[data-scene=store] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=store] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=store] .flower {\n  font-size: 34px;\n}\n#game[data-scene=store] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=store] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1px;\n}\n#game[data-scene=store] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n}\n#game[data-scene=store] #scene-subtitle {\n  font-size: 11px;\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=store] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=store] .room-title {\n    width: 210px;\n  }\n}\n#bedtime-fade {\n  position: absolute;\n  inset: 0;\n  background: #161325;\n  z-index: 80;\n  pointer-events: none;\n}\n#house-effects {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font: 700 10px "Trebuchet MS", sans-serif;\n  min-height: 36px;\n  cursor: pointer;\n  padding: 4px 6px;\n}\n\n/* src/ui/adventure.css */\n:root {\n  --paper:#fff9ee;\n  --ink:#3c304a;\n  --muted-ink:#726778;\n  --plum:#655078;\n  --lavender:#dfd2eb;\n  --sage:#dce6d4;\n  --line:#dfd7cd;\n  --hud-edge:24px;\n  --hud-bottom:max(26px,calc(env(safe-area-inset-bottom) + 18px));\n}\n.adventure-ui {\n  font-family:\n    "Segoe UI",\n    ui-rounded,\n    system-ui,\n    sans-serif;\n  color: var(--ink);\n}\n.adventure-ui:not([data-input=keyboard]) #game-canvas:focus-visible {\n  outline: none;\n}\n.adventure-ui > .topbar,\n.adventure-ui > .room-title,\n.adventure-ui > footer,\n.adventure-ui > #move-tip {\n  display: none !important;\n}\n.adventure-ui .control-label,\n.adventure-ui #action-icon,\n.adventure-ui #joystick .direction,\n.adventure-ui .pop-launch,\n.adventure-ui #daily-play-open {\n  display: none !important;\n}\nbody:has(.adventure-ui) .dev-launch,\nbody:has(.adventure-ui) .dev-inline {\n  display: none !important;\n}\n#adventure-hud {\n  position: absolute;\n  inset: 0;\n  z-index: 31;\n  pointer-events: none;\n}\n#adventure-hud svg,\n.adventure-panel svg,\n.adventure-action-glyph svg {\n  width: 24px;\n  height: 24px;\n  flex-shrink: 0;\n}\n.adventure-status {\n  position: absolute;\n  top: max(var(--hud-edge), env(safe-area-inset-top));\n  left: max(var(--hud-edge), env(safe-area-inset-left));\n  display: grid;\n  grid-template-columns: 42px auto;\n  gap: 0 10px;\n  padding: 12px 16px 0 12px;\n  background: var(--paper);\n  border-radius: 8px 20px 20px 8px;\n  box-shadow: 0 3px 0 #46365120, 0 8px 28px #352a3912;\n  max-width: 290px;\n  border-left: 4px solid #b29abb;\n}\n.day-seal {\n  width: 40px;\n  height: 40px;\n  border: 1px solid #dcd1ba;\n  border-radius: 50%;\n  display: grid;\n  place-items: center;\n  color: #82673e;\n  background: #f4ead5;\n}\n.place-copy {\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  min-width: 0;\n}\n#adventure-time {\n  font-size: 12px;\n  color: var(--muted-ink);\n  font-weight: 600;\n  white-space: nowrap;\n  font-variant-numeric: tabular-nums;\n}\n#adventure-place {\n  font-size: 19px;\n  letter-spacing: -.5px;\n  line-height: 1.4;\n  max-width: 205px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n#adventure-today {\n  grid-column: 1/-1;\n  margin-top: 8px;\n  border: 0;\n  border-top: 1px solid var(--line);\n  background: transparent;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  color: var(--plum);\n  min-height: 44px;\n  padding: 8px 0;\n  font: 600 13px/1.2 "Segoe UI", sans-serif;\n  cursor: pointer;\n  pointer-events: auto;\n  text-align: left;\n}\n#adventure-today svg {\n  width: 19px;\n  height: 19px;\n}\n#adventure-today span {\n  display: flex;\n  gap: 10px;\n  align-items: center;\n  width: 100%;\n  font: 600 13px "Segoe UI", sans-serif;\n}\n#adventure-count {\n  margin-left: auto;\n  font-variant-numeric: tabular-nums;\n}\n.adventure-tools {\n  position: absolute;\n  top: max(var(--hud-edge), env(safe-area-inset-top));\n  right: max(var(--hud-edge), env(safe-area-inset-right));\n  display: flex;\n  align-items: center;\n  background: var(--paper);\n  border-radius: 16px 8px 8px 16px;\n  box-shadow: 0 3px 0 #46365120, 0 8px 28px #352a3912;\n  padding: 4px;\n}\n.adventure-wallet {\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 0 12px;\n  color: #4d6351;\n  font-size: 17px;\n  font-variant-numeric: tabular-nums;\n}\n.adventure-wallet svg {\n  width: 19px !important;\n}\n#adventure-menu-open {\n  border: 0;\n  border-left: 1px solid var(--line);\n  background: transparent;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  min-height: 44px;\n  color: var(--ink);\n  font: 600 13px "Segoe UI", sans-serif;\n  padding: 0 12px;\n  cursor: pointer;\n  pointer-events: auto;\n}\n.adventure-ui button:focus-visible,\n.adventure-ui summary:focus-visible,\n.adventure-ui a:focus-visible {\n  outline: 3px solid #9774ae;\n  outline-offset: 4px;\n}\n.adventure-timer {\n  position: absolute;\n  top: 145px;\n  left: var(--hud-edge);\n  background: var(--paper);\n  border-left: 4px solid #a5b49b;\n  border-radius: 8px 14px 14px 8px;\n  padding: 10px 18px;\n  display: flex;\n  gap: 16px;\n  align-items: center;\n}\n.adventure-timer small {\n  font-size: 11px;\n  letter-spacing: 1px;\n}\n.adventure-timer strong {\n  font-size: 24px;\n  font-variant-numeric: tabular-nums;\n}\n.adventure-timer.urgent {\n  border-color: #af4c55;\n  color: #913641;\n}\n.adventure-ui .controls {\n  left: max(var(--hud-edge), env(safe-area-inset-left)) !important;\n  right: max(var(--hud-edge), env(safe-area-inset-right)) !important;\n  bottom: var(--hud-bottom) !important;\n  align-items: flex-end;\n  z-index: 32;\n}\n.adventure-ui #joystick {\n  width: 112px;\n  height: 112px;\n  border: 1px solid #fffaf2b3;\n  background: #fff9ed45;\n  box-shadow: inset 0 0 0 9px #fff9ed20;\n  border-radius: 50%;\n}\n.adventure-ui #joystick-knob {\n  width: 46px;\n  height: 46px;\n  left: 32px;\n  top: 32px;\n  border: 2px solid #fff9eebf;\n  background: #bba6cb;\n  box-shadow: 0 3px 0 #55465c30, 0 4px 14px #463a5229;\n}\n.adventure-ui #joystick-knob svg {\n  width: 16px;\n  height: 16px;\n  opacity: .75;\n}\n.adventure-ui #action-button {\n  width: 184px !important;\n  min-height: 72px;\n  height: auto !important;\n  border: 1px solid #8c759d;\n  border-bottom: 4px solid #463652;\n  border-radius: 20px 20px 8px 20px;\n  background: var(--plum);\n  color: #fff9ee;\n  box-shadow: 0 5px 16px #3c304a29;\n  display: flex;\n  flex-direction: row !important;\n  justify-content: flex-start;\n  align-items: center;\n  gap: 10px;\n  padding: 18px 16px;\n  position: relative;\n  transition: background .16s, transform .12s;\n}\n.adventure-ui #action-button:not(:disabled):active {\n  transform: translateY(2px);\n  box-shadow: 0 2px 8px #3c304a20;\n}\n.adventure-ui #action-button:disabled {\n  background: #fff9eeea;\n  color: #746978;\n  border-color: #f7eee1;\n  border-bottom-color: #cfc3d0;\n  box-shadow: 0 3px 12px #3c304a14;\n}\n.adventure-ui #action-button.holding {\n  background: conic-gradient(#3b7259 var(--hold-progress), var(--plum) 0deg);\n}\n.adventure-ui #action-title {\n  font: 650 17px/1.2 "Segoe UI", sans-serif;\n  text-align: left;\n  flex: 1;\n  order: 2;\n  min-width: 0;\n}\n.adventure-action-glyph {\n  order: 1;\n  display: grid;\n  place-items: center;\n  color: #e6d6b5;\n}\n.adventure-ui #action-button:disabled .adventure-action-glyph {\n  color: #a99aaf;\n}\n.adventure-action-key {\n  display: none;\n  order: 3;\n  border: 1px solid #fff5;\n  border-radius: 5px;\n  padding: 3px 5px;\n  font-size: 12px;\n}\n.adventure-ui #action-detail {\n  position: absolute;\n  right: 0;\n  bottom: calc(100% + 10px);\n  max-width: 224px;\n  width: max-content;\n  min-width: 80px;\n  text-align: right;\n  background: #fff9eeeF;\n  color: #5b4d62;\n  padding: 8px 11px;\n  border-radius: 10px 10px 3px 10px;\n  font: 500 12px/1.35 "Segoe UI", sans-serif;\n  box-shadow: 0 2px 9px #352b4310;\n}\n.adventure-ui[data-action=idle] #action-detail {\n  display: none;\n}\n.adventure-ui[data-input=keyboard] #joystick {\n  visibility: hidden;\n}\n.adventure-ui[data-input=keyboard] .adventure-action-key {\n  display: block;\n}\n.adventure-keyboard {\n  position: absolute;\n  bottom: calc(var(--hud-bottom) + 25px);\n  left: var(--hud-edge);\n  display: none;\n  gap: 8px;\n  align-items: center;\n  font-size: 12px;\n  background: #fff9eeef;\n  padding: 8px 12px;\n  border-radius: 8px;\n}\n.adventure-keyboard kbd {\n  font: 600 11px "Segoe UI", sans-serif;\n  color: var(--plum);\n}\n.adventure-ui[data-input=keyboard] .adventure-keyboard {\n  display: flex;\n}\n.adventure-ui .journey-button {\n  right: var(--hud-edge) !important;\n  left: auto !important;\n  bottom: calc(var(--hud-bottom) + 124px) !important;\n  max-width: 184px;\n  min-height: 44px;\n  border: 1px solid #e2d6c4;\n  border-bottom: 3px solid #c7bca9;\n  border-radius: 12px 12px 5px 12px;\n  background: var(--paper);\n  color: var(--ink);\n  box-shadow: 0 3px 10px #40304012;\n  padding: 10px 15px;\n  font: 600 13px "Segoe UI", sans-serif;\n}\n.adventure-ui #school-ball-pickup,\n.adventure-ui #scooter-toggle,\n.adventure-ui #daily-play-drop {\n  bottom: calc(var(--hud-bottom) + 176px) !important;\n}\n.adventure-ui #scooter-brake {\n  right: calc(var(--hud-edge) + 132px) !important;\n  bottom: calc(var(--hud-bottom) + 176px) !important;\n}\n.adventure-ui #travel-next-store,\n.adventure-ui #leave-recess {\n  top: max(88px, calc(env(safe-area-inset-top) + 64px));\n  right: var(--hud-edge);\n  left: auto;\n  width: auto;\n  max-width: 190px;\n  background: var(--paper);\n  color: var(--plum);\n  border: 1px solid #ded2e3;\n  border-radius: 8px;\n  padding: 12px 14px;\n  min-height: 44px;\n  font: 600 13px "Segoe UI", sans-serif;\n}\n.adventure-ui #hunt-find {\n  bottom: calc(var(--hud-bottom) + 148px);\n  left: auto;\n  right: var(--hud-edge);\n  max-width: 280px;\n  border: 1px solid var(--line);\n  border-radius: 16px 16px 5px 16px;\n  background: var(--paper);\n  padding: 14px;\n  box-shadow: 0 5px 20px #352b4314;\n}\n.adventure-ui #hunt-find small {\n  font-size: 12px;\n  line-height: 1.5;\n}\n.adventure-ui #save-message,\n.adventure-ui[data-scene=store] #save-message {\n  top: auto;\n  left: 50%;\n  right: auto;\n  bottom: calc(var(--hud-bottom) + 130px);\n  transform: translateX(-50%);\n  width: max-content;\n  max-width: min(380px, calc(100% - 40px));\n  background: var(--paper);\n  color: var(--ink);\n  font-size: 14px;\n  border: 1px solid var(--line);\n  box-shadow: 0 4px 18px #352b4320;\n  z-index: 34;\n}\n.adventure-ui[data-modal=true] #adventure-hud,\n.adventure-ui[data-modal=true] > .controls,\n.adventure-ui[data-modal=true] > .journey-button {\n  visibility: hidden;\n}\n.adventure-ui[data-revealing=true] #adventure-hud,\n.adventure-ui[data-revealing=true] > .controls {\n  visibility: hidden;\n}\n.adventure-panel {\n  width: min(460px, calc(100vw - 32px));\n  max-height: calc(100dvh - 40px);\n  padding: 0;\n  border: 1px solid #e8dece;\n  border-radius: 22px 22px 10px 22px;\n  background: var(--paper);\n  color: var(--ink);\n  font-family:\n    "Segoe UI",\n    system-ui,\n    sans-serif;\n  box-shadow: 0 20px 90px #261e354a;\n  overflow: auto;\n}\n.adventure-panel::backdrop {\n  background: #29233773;\n}\n.adventure-panel-head {\n  position: sticky;\n  top: 0;\n  z-index: 2;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 14px;\n  padding: 28px 28px 20px;\n  border-bottom: 1px solid var(--line);\n  background: var(--paper);\n}\n.adventure-panel h2 {\n  font-size: 30px;\n  line-height: 1.2;\n  letter-spacing: -1px;\n  margin: 7px 0 0;\n  color: var(--ink);\n}\n.adventure-overline {\n  font-size: 10px;\n  letter-spacing: 1.7px;\n  font-weight: 700;\n  color: var(--muted-ink);\n}\n.brand-petal {\n  display: inline-flex;\n  margin-left: 12px;\n  color: #a58bb5;\n}\n.brand-petal svg {\n  width: 28px;\n  height: 28px;\n}\n.adventure-close {\n  display: grid;\n  place-items: center;\n  width: 44px;\n  min-width: 44px;\n  height: 44px;\n  border: 1px solid var(--line);\n  border-radius: 50%;\n  background: transparent;\n  color: var(--ink);\n  cursor: pointer;\n}\n.adventure-close svg {\n  width: 20px;\n}\n.adventure-panel-body {\n  padding: 22px 28px 26px;\n}\n.adventure-resume {\n  width: 100%;\n  min-height: 50px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  background: var(--plum);\n  color: var(--paper);\n  font: 600 15px "Segoe UI", sans-serif;\n  border: 0;\n  border-bottom: 3px solid #493654;\n  border-radius: 12px 12px 5px 12px;\n  padding: 13px 18px;\n  cursor: pointer;\n}\n.adventure-destinations {\n  margin: 16px 0;\n}\n.adventure-destinations button {\n  width: 100%;\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  border: 0;\n  border-bottom: 1px solid var(--line);\n  background: transparent;\n  padding: 17px 0;\n  color: var(--plum);\n  text-align: left;\n  cursor: pointer;\n  min-height: 68px;\n}\n.adventure-destinations button > svg:last-child {\n  margin-left: auto;\n  width: 16px;\n  color: #938499;\n}\n.adventure-destinations strong {\n  display: block;\n  font-size: 16px;\n  color: var(--ink);\n  font-weight: 600;\n}\n.adventure-destinations small {\n  display: block;\n  font-size: 12px;\n  color: var(--muted-ink);\n  margin-top: 3px;\n}\n.adventure-destinations button:disabled {\n  opacity: .5;\n  cursor: default;\n}\n.adventure-panel details {\n  border-bottom: 1px solid var(--line);\n}\n.adventure-panel summary {\n  min-height: 48px;\n  align-content: center;\n  cursor: pointer;\n  font-size: 14px;\n  font-weight: 600;\n}\n.adventure-panel details p {\n  font-size: 13px;\n  line-height: 1.6;\n  color: var(--muted-ink);\n}\n#adventure-menu #mission-picker {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 8px;\n  margin: 12px 0 18px;\n  pointer-events: auto;\n  width: 100%;\n}\n#adventure-menu #mission-picker button {\n  position: static;\n  width: auto;\n  min-height: 46px;\n  padding: 10px;\n  border: 1px solid #d8cce0;\n  border-radius: 9px;\n  background: #f2ebf6;\n  color: #4f3f60;\n  font: 600 13px "Segoe UI", sans-serif;\n  white-space: normal;\n}\n#adventure-menu #mission-picker button[aria-pressed=true] {\n  background: var(--plum);\n  color: var(--paper);\n  border-color: var(--plum);\n}\n.adventure-menu-foot {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  margin-top: 20px;\n}\n.adventure-menu-foot a,\n.adventure-menu-foot button {\n  font: 500 12px "Segoe UI", sans-serif;\n  color: var(--muted-ink);\n  border: 0;\n  background: none;\n  padding: 8px 0;\n  text-decoration: underline;\n  cursor: pointer;\n}\n.adventure-clock-note,\n.adventure-availability {\n  font-size: 12px;\n  line-height: 1.5;\n  color: var(--muted-ink);\n  margin: 12px 0;\n}\n.adventure-clock-note:empty {\n  display: none;\n}\n.journal-summary {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n  color: #576c54;\n  font-size: 14px;\n  padding-bottom: 16px;\n  border-bottom: 1px solid var(--line);\n}\n.journal-tasks {\n  list-style: none;\n  padding: 0;\n  margin: 0 0 20px;\n}\n.journal-tasks li {\n  display: flex;\n  gap: 14px;\n  align-items: center;\n  padding: 18px 0;\n  border-bottom: 1px solid var(--line);\n}\n.journal-check {\n  width: 25px;\n  height: 25px;\n  border: 1px solid #cdbcd6;\n  border-radius: 50%;\n  flex-shrink: 0;\n  color: #4b664a;\n  text-align: center;\n  line-height: 24px;\n}\n.journal-tasks .done .journal-check {\n  background: var(--sage);\n  border-color: #afc1a6;\n}\n.journal-tasks strong {\n  font-size: 16px;\n  font-weight: 600;\n}\n.journal-tasks small {\n  display: block;\n  color: var(--muted-ink);\n  font-size: 12px;\n  margin-top: 4px;\n}\n.journal-tasks .done strong {\n  color: #698164;\n}\n.journal-hint {\n  border-left: 3px solid #c6b1d4;\n  padding: 0 0 0 14px;\n  margin: 20px 0;\n}\n.journal-hint p {\n  font-size: 14px;\n  line-height: 1.6;\n  margin: 6px 0;\n}\n.adventure-ui #collection-dialog {\n  width: min(760px, calc(100% - 32px));\n  padding: 28px;\n  background: var(--paper);\n  color: var(--ink);\n  border: 1px solid var(--line);\n  border-radius: 22px;\n  max-height: calc(100dvh - 32px);\n  font-family: "Segoe UI", sans-serif;\n}\n.adventure-ui #collection-dialog h2 {\n  font-size: 30px;\n}\n.adventure-ui #collection-dialog > .eyebrow {\n  color: var(--muted-ink);\n  font-size: 10px;\n}\n.adventure-ui #collection-summary {\n  font-size: 13px;\n  color: var(--muted-ink);\n}\n.adventure-ui .collection-heading {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  text-align: left;\n}\n.adventure-ui .collection-heading .eyebrow {\n  justify-content: flex-start;\n  color: var(--muted-ink);\n  font-size: 10px;\n}\n.adventure-ui #back-cleanup {\n  border: 1px solid var(--line);\n  border-radius: 50%;\n  width: 44px;\n  height: 44px;\n  flex-shrink: 0;\n  background: var(--paper);\n  color: var(--ink);\n  font-size: 26px;\n  cursor: pointer;\n}\n.adventure-ui .collection-toolbar {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 8px;\n  position: sticky;\n  top: -28px;\n  z-index: 2;\n  background: var(--paper);\n  padding: 12px 0;\n  border-bottom: 1px solid var(--line);\n}\n.adventure-ui .collection-filters {\n  display: flex;\n  gap: 4px;\n}\n.adventure-ui .collection-filters button,\n.adventure-ui .collection-more summary {\n  font: 600 13px "Segoe UI", sans-serif;\n  min-height: 44px;\n  border: 0;\n  background: transparent;\n  padding: 12px;\n  color: var(--muted-ink);\n  cursor: pointer;\n  list-style: none;\n  border-radius: 8px;\n}\n.adventure-ui .collection-filters button[aria-pressed=true] {\n  background: var(--lavender);\n  color: var(--ink);\n}\n.adventure-ui .collection-more {\n  position: relative;\n}\n.adventure-ui .collection-more[open] summary {\n  background: #eee5f3;\n}\n.adventure-ui #collection-actions {\n  position: absolute;\n  top: 100%;\n  right: 0;\n  width: 230px;\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 8px;\n  padding: 12px;\n  background: var(--paper);\n  border: 1px solid var(--line);\n  border-radius: 12px;\n  box-shadow: 0 10px 30px #352b4320;\n}\n.adventure-ui #collection-dialog[data-filter=owned] .dumpling-card:not(.owned),\n.adventure-ui #collection-dialog[data-filter=owned] .series-heading,\n.adventure-ui #collection-dialog[data-filter=all] .collection-empty {\n  display: none;\n}\n.adventure-ui .collection-empty {\n  padding: 28px 16px;\n  font-size: 15px;\n  line-height: 1.6;\n}\n.adventure-ui #open-next {\n  background: var(--plum);\n  color: var(--paper);\n  font: 600 14px "Segoe UI", sans-serif;\n  min-height: 48px;\n  border-radius: 10px;\n}\n.adventure-ui #collection-actions .loop-button {\n  background: #eee5f3;\n  border: 1px solid #dbcfdf;\n  color: var(--ink);\n  border-radius: 9px;\n  font: 600 12px/1.3 "Segoe UI", sans-serif;\n  min-height: 48px;\n  padding: 10px;\n}\n.adventure-ui #collection-actions #open-next {\n  background: var(--plum);\n  color: var(--paper);\n}\n.adventure-ui #collection-grid {\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 14px;\n}\n.adventure-ui .dumpling-card {\n  padding: 10px 8px 12px;\n  border: 1px solid #e6dce9;\n  background: #f2edf2;\n  border-radius: 14px;\n}\n.adventure-ui .dumpling-card.owned {\n  background: linear-gradient(var(--paper), var(--rarity));\n}\n.adventure-ui .dumpling-card strong {\n  font: 600 14px/1.4 "Segoe UI", sans-serif;\n}\n.adventure-ui .dumpling-card small,\n.adventure-ui .dumpling-card .copies {\n  font: 500 12px/1.4 "Segoe UI", sans-serif;\n}\n.adventure-ui .collection-protection {\n  min-width: 44px;\n  min-height: 44px;\n  font-size: 17px;\n  margin: 6px 2px 0;\n}\n.adventure-ui .series-heading {\n  font: 650 17px "Segoe UI", sans-serif;\n  margin-top: 12px;\n  color: var(--plum);\n}\nbody:has(.adventure-ui) .audio-settings {\n  font-family: "Segoe UI", sans-serif;\n  background: var(--paper);\n  color: var(--ink);\n  border: 1px solid var(--line);\n  border-radius: 20px;\n  padding: 26px;\n  width: min(400px, calc(100vw - 32px));\n}\nbody:has(.adventure-ui) .audio-settings p {\n  font-size: 13px;\n}\n@media (max-width: 600px) {\n  :root {\n    --hud-edge:16px;\n  }\n  .adventure-status {\n    grid-template-columns: 28px auto;\n    padding: 10px 12px 0 9px;\n    gap: 0 7px;\n    max-width: calc(100% - 140px);\n  }\n  .day-seal {\n    width: 28px;\n    height: 28px;\n  }\n  .day-seal svg {\n    width: 19px !important;\n    height: 19px !important;\n  }\n  #adventure-time {\n    font-size: 11px;\n  }\n  #adventure-place {\n    font-size: 16px;\n    max-width: 150px;\n  }\n  .adventure-wallet {\n    padding: 0 9px;\n    font-size: 15px;\n  }\n  .adventure-wallet svg {\n    display: none;\n  }\n  #adventure-menu-open {\n    padding: 0 10px;\n  }\n  #adventure-menu-open > span {\n    display: none;\n  }\n  #adventure-menu-open svg {\n    width: 22px;\n  }\n  .adventure-ui #action-button {\n    width: 168px !important;\n    min-height: 68px;\n    padding: 15px 13px;\n  }\n  .adventure-ui #action-title {\n    font-size: 16px;\n  }\n  .adventure-ui #action-detail {\n    max-width: 186px;\n  }\n  .adventure-ui #joystick {\n    width: 104px;\n    height: 104px;\n  }\n  .adventure-ui #joystick-knob {\n    left: 28px;\n    top: 28px;\n  }\n  .adventure-ui #hunt-find {\n    max-width: 240px;\n  }\n  .adventure-panel-head {\n    padding: 22px 20px 18px;\n  }\n  .adventure-panel-body {\n    padding: 18px 20px 22px;\n  }\n  .adventure-panel h2 {\n    font-size: 27px;\n  }\n  .adventure-ui #collection-dialog {\n    padding: 18px;\n  }\n  .adventure-ui #collection-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n    gap: 8px;\n  }\n  .adventure-ui .collection-toolbar {\n    top: -18px;\n  }\n  .adventure-ui #collection-actions {\n    top: 100%;\n    grid-template-columns: 1fr;\n  }\n  .adventure-ui #collection-actions #visit-recess {\n    grid-column: 1/-1;\n  }\n  .adventure-ui .dumpling-card {\n    padding: 6px 3px 10px;\n  }\n  .adventure-ui .dumpling-card strong {\n    font-size: 13px;\n  }\n  .adventure-ui .collection-protection {\n    min-width: 40px;\n    margin: 6px 1px 0;\n  }\n}\n@media (max-width: 350px) {\n  :root {\n    --hud-edge:12px;\n  }\n  .adventure-status {\n    grid-template-columns: 1fr;\n    max-width: calc(100% - 112px);\n    padding: 9px 10px 0;\n  }\n  .day-seal {\n    display: none;\n  }\n  #adventure-today {\n    margin-top: 5px;\n  }\n  .adventure-tools {\n    padding: 2px;\n  }\n  #adventure-menu-open {\n    padding: 0 8px;\n  }\n  .adventure-wallet {\n    padding: 0 7px;\n  }\n  .adventure-ui #action-button {\n    width: 156px !important;\n  }\n  .adventure-ui #joystick {\n    width: 96px;\n    height: 96px;\n  }\n  .adventure-ui #joystick-knob {\n    left: 24px;\n    top: 24px;\n  }\n  .adventure-ui #collection-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n  .adventure-panel h2 {\n    font-size: 24px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  :root {\n    --hud-edge:14px;\n    --hud-bottom:max(18px,calc(env(safe-area-inset-bottom) + 10px));\n  }\n  .adventure-status {\n    grid-template-columns: 32px auto;\n    padding-top: 8px;\n  }\n  .day-seal {\n    width: 30px;\n    height: 30px;\n  }\n  #adventure-place {\n    font-size: 16px;\n  }\n  #adventure-today {\n    margin-top: 4px;\n    min-height: 40px;\n  }\n  .adventure-ui #action-button {\n    min-height: 56px;\n    width: 170px !important;\n    padding: 12px;\n  }\n  .adventure-ui #action-title {\n    font-size: 15px;\n  }\n  .adventure-ui #joystick {\n    width: 96px;\n    height: 96px;\n  }\n  .adventure-ui #joystick-knob {\n    left: 24px;\n    top: 24px;\n  }\n  .adventure-ui .journey-button {\n    bottom: calc(var(--hud-bottom) + 110px) !important;\n    min-height: 44px;\n  }\n  .adventure-ui #school-ball-pickup,\n  .adventure-ui #scooter-toggle,\n  .adventure-ui #daily-play-drop {\n    right: calc(var(--hud-edge) + 110px) !important;\n    bottom: calc(var(--hud-bottom) + 110px) !important;\n  }\n  .adventure-ui #scooter-brake {\n    right: calc(var(--hud-edge) + 240px) !important;\n    bottom: calc(var(--hud-bottom) + 110px) !important;\n  }\n  .adventure-ui #hunt-find {\n    right: 200px;\n    bottom: var(--hud-bottom);\n    max-width: 230px;\n  }\n  .adventure-timer {\n    top: 125px;\n    padding: 7px 12px;\n  }\n  .adventure-ui #save-message {\n    bottom: 20px;\n    max-width: calc(100% - 340px);\n  }\n  .adventure-panel {\n    max-height: calc(100dvh - 24px);\n  }\n  .adventure-panel-head {\n    padding: 14px 22px;\n  }\n  .adventure-panel h2 {\n    font-size: 25px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .adventure-ui #action-button {\n    transition: none;\n  }\n}\n\n/* src/dev/developer-panel.css */\n.dev-launch,\n.dev-inline {\n  font: 800 11px/1.2 system-ui, sans-serif !important;\n  letter-spacing: .08em;\n  background: #27263c !important;\n  color: #e6dcff !important;\n  border: 1px solid #b9a4e8 !important;\n  border-radius: 12px !important;\n  min-height: 44px;\n  min-width: 44px;\n  padding: 10px !important;\n  cursor: pointer;\n}\n.dev-launch {\n  position: fixed;\n  z-index: 90;\n  bottom: 64px;\n  left: 50%;\n  transform: translateX(-50%);\n  box-shadow: 0 4px 18px #29223a40;\n}\n.dev-launch {\n  bottom: calc(64px + env(safe-area-inset-bottom, 0px));\n}\n#developer-panel {\n  height: min(850px, calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));\n}\n.dev-inline {\n  margin: 6px;\n  flex-shrink: 0;\n}\n.pop-title .dev-inline {\n  font-size: 9px !important;\n  letter-spacing: 0;\n  margin: 0;\n  min-width: 38px;\n  padding: 5px !important;\n}\n#developer-panel {\n  width: min(720px, calc(100vw - 24px));\n  max-width: none;\n  max-height: none;\n  height: min(850px, calc(100dvh - 24px));\n  margin: auto;\n  padding: 0;\n  overflow: hidden;\n  border: 1px solid #b6a4d764;\n  border-radius: 24px;\n  background: #181926;\n  color: #eeeaf8;\n  box-shadow: 0 28px 100px #100c23a6;\n  font: 14px/1.45 system-ui, sans-serif;\n  text-align: left;\n}\n#developer-panel::backdrop {\n  background: #121020a6;\n  backdrop-filter: blur(5px);\n}\n#developer-panel * {\n  box-sizing: border-box;\n}\n#developer-panel [hidden] {\n  display: none !important;\n}\n#developer-panel .dev-shell {\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n}\n#developer-panel button {\n  font: 650 13px/1.35 system-ui, sans-serif;\n  cursor: pointer;\n  min-height: 44px;\n  border: 1px solid #494458;\n  background: #303043;\n  color: #f3efff;\n  border-radius: 12px;\n  padding: 11px 13px;\n  box-shadow: none;\n  text-transform: none;\n  letter-spacing: 0;\n  transition: background .12s;\n}\n#developer-panel button:hover {\n  background: #414057;\n}\n#developer-panel button:focus-visible,\n#developer-panel select:focus-visible {\n  outline: 3px solid #d1bcff;\n  outline-offset: 2px;\n}\n#developer-panel button:disabled {\n  opacity: .4;\n  cursor: not-allowed;\n}\n#developer-panel button[aria-pressed=true] {\n  background: #b5dccc;\n  color: #1d3830;\n  border-color: #b5dccc;\n}\n#developer-panel .dev-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n  padding: 24px 26px 16px;\n  background:\n    radial-gradient(\n      ellipse at 90% 10%,\n      #76588b45,\n      transparent 60%);\n}\n#developer-panel .dev-eyebrow {\n  color: #c0b7d5;\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: .16em;\n  display: flex;\n  align-items: center;\n  gap: 7px;\n}\n#developer-panel .dev-eyebrow i {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: #aaddc4;\n  box-shadow: 0 0 12px #aaddc440;\n}\n#developer-panel h2 {\n  color: #f5f0ff;\n  font-size: 29px;\n  letter-spacing: -1px;\n  margin: 5px 0 2px;\n  font-weight: 750;\n}\n#developer-panel h2 span {\n  color: #d9baf5;\n  margin-left: 10px;\n}\n#developer-panel .dev-header p {\n  color: #b7afc8;\n  margin: 0;\n  font-size: 12px;\n}\n#developer-panel .dev-close {\n  font-size: 25px;\n  padding: 2px;\n  width: 44px;\n  background: #ffffff08;\n  border-color: #ffffff20;\n}\n#developer-panel .dev-live {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 0 26px 16px;\n  color: #d2cddd;\n  font-size: 11px;\n}\n#developer-panel .dev-live span {\n  padding: 5px 9px;\n  border: 1px solid #ffffff15;\n  border-radius: 7px;\n  background: #ffffff05;\n}\n#developer-panel .dev-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 4px;\n  border-block: 1px solid #ffffff12;\n  padding: 6px 20px;\n  background: #20202e;\n}\n#developer-panel .dev-tabs button {\n  background: transparent;\n  border-color: transparent;\n  color: #aaa2bc;\n  border-radius: 9px;\n  padding: 10px 4px;\n  font-size: 12px;\n}\n#developer-panel .dev-tabs button[aria-selected=true] {\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-content {\n  overflow-y: auto;\n  min-height: 0;\n  padding: 20px 26px;\n  flex: 1;\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  scrollbar-color: #6b597f transparent;\n}\n#developer-panel .dev-hero {\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  width: 100%;\n  padding: 22px 18px;\n  text-align: left;\n  background:\n    linear-gradient(\n      120deg,\n      #d7c6f2,\n      #efc8da);\n  border: 0;\n  color: #392e4b;\n  margin-bottom: 16px;\n}\n#developer-panel .dev-hero:hover {\n  background:\n    linear-gradient(\n      120deg,\n      #e2d5f8,\n      #f6d8e5);\n}\n#developer-panel .dev-hero-icon {\n  font-size: 38px;\n  line-height: 1;\n}\n#developer-panel .dev-hero small {\n  display: block;\n  letter-spacing: .13em;\n  font-size: 9px;\n  font-weight: 800;\n  opacity: .75;\n}\n#developer-panel .dev-hero strong {\n  display: block;\n  font-size: 22px;\n  letter-spacing: -.6px;\n  margin: 3px 0;\n}\n#developer-panel .dev-hero span span {\n  display: block;\n  font-size: 11px;\n  font-weight: 500;\n}\n#developer-panel .dev-hero b {\n  font-size: 25px;\n  margin-left: auto;\n}\n#developer-panel .dev-card {\n  background: #232333;\n  border: 1px solid #ffffff10;\n  border-radius: 16px;\n  padding: 18px;\n  margin-bottom: 14px;\n}\n#developer-panel h3 {\n  font-size: 15px;\n  margin: 0 0 8px;\n  color: #f0eafa;\n  font-weight: 700;\n}\n#developer-panel p {\n  color: #b8b0c9;\n  font-size: 12px;\n  margin: 0 0 13px;\n  line-height: 1.55;\n}\n#developer-panel .dev-card > p:last-child {\n  margin: 12px 0 0;\n}\n#developer-panel .dev-grid {\n  display: grid;\n  grid-template-columns: repeat(2, minmax(0, 1fr));\n  gap: 8px;\n}\n#developer-panel .dev-grid button {\n  text-align: left;\n}\n#developer-panel .dev-select-label {\n  display: block;\n  font-size: 11px;\n  color: #b9b1ca;\n  margin: 15px 0 6px;\n}\n#developer-panel select {\n  display: block;\n  width: 100%;\n  border: 1px solid #58506b;\n  background: #181926;\n  color: #eeeaf8;\n  border-radius: 10px;\n  min-height: 44px;\n  padding: 10px;\n  margin-bottom: 8px;\n  font: 13px system-ui, sans-serif;\n}\n#developer-panel .dev-notice {\n  padding: 16px;\n  border-radius: 14px;\n  background: #30342f;\n  border: 1px solid #b8d4bb30;\n  margin-bottom: 14px;\n  color: #c8e5d1;\n}\n#developer-panel .dev-notice strong {\n  font-size: 12px;\n}\n#developer-panel .dev-notice p {\n  margin: 6px 0 0;\n  color: #b4c2b6;\n}\n#developer-panel .dev-resume {\n  width: 100%;\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-danger {\n  color: #ffc4bf;\n  border-color: #965e6455;\n}\n#developer-panel pre {\n  white-space: pre-wrap;\n  font: 11px/1.8 ui-monospace, monospace;\n  color: #bbb4cd;\n  margin: 16px 0 0;\n  overflow-wrap: anywhere;\n}\n#developer-panel .dev-bottom {\n  padding: 13px 26px 15px;\n  border-top: 1px solid #ffffff12;\n  background: #20202e;\n}\n#developer-panel .dev-bottom > span {\n  display: block;\n  font-size: 11px;\n  color: #bce1cd;\n}\n#developer-panel .dev-bottom small {\n  display: block;\n  font-size: 10px;\n  color: #aaa1bc;\n  margin-top: 3px;\n}\n#developer-panel [data-status] {\n  font-size: 11px;\n  color: #d6c4f3;\n  margin-top: 8px;\n}\n#developer-panel [data-status][data-error=true] {\n  color: #ffc1b7;\n}\n@media (max-width: 480px) {\n  #developer-panel {\n    width: calc(100vw - 12px);\n    height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));\n    border-radius: 18px;\n  }\n  #developer-panel .dev-header {\n    padding: 17px 16px 12px;\n  }\n  #developer-panel h2 {\n    font-size: 25px;\n  }\n  #developer-panel .dev-live {\n    padding: 0 16px 12px;\n    gap: 5px;\n  }\n  #developer-panel .dev-tabs {\n    padding: 5px 10px;\n  }\n  #developer-panel .dev-content {\n    padding: 14px;\n  }\n  #developer-panel .dev-card {\n    padding: 14px;\n  }\n  #developer-panel .dev-bottom {\n    padding: 11px 16px;\n  }\n  #developer-panel .dev-hero {\n    padding: 16px 13px;\n    gap: 10px;\n  }\n  #developer-panel .dev-hero strong {\n    font-size: 20px;\n  }\n  #developer-panel .dev-hero-icon {\n    font-size: 28px;\n  }\n  #developer-panel .dev-grid button {\n    font-size: 12px;\n    padding: 10px;\n  }\n  #developer-panel .dev-bottom small {\n    font-size: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #developer-panel button {\n    transition: none;\n  }\n}\n#developer-panel .dev-bottom {\n  position: static;\n  display: block;\n  flex-shrink: 0;\n  letter-spacing: 0;\n  pointer-events: auto;\n}\n#squishy-pop:has(.dev-inline) .pop-footer {\n  display: block;\n}\n#squishy-pop .pop-title .dev-inline {\n  background: #27263c !important;\n  color: #e6dcff !important;\n}\n';
+var local_default = '/* src/ui/hunt.css */\n#hunt-routes {\n  width: min(420px, calc(100% - 24px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  border: 2px solid white;\n  border-radius: 26px;\n  padding: 23px 16px 14px;\n  color: #57496b;\n  background: #faf5ef;\n}\n#hunt-routes::backdrop {\n  background: #46395480;\n  backdrop-filter: blur(4px);\n}\n#hunt-routes h2 {\n  font-size: 25px;\n  letter-spacing: -.8px;\n  margin: 12px 0 7px;\n}\n.hunt-budget {\n  font-size: 13px;\n  color: #59765e;\n  font-weight: 800;\n  margin: 0 0 15px;\n}\n.store-choice {\n  display: flex;\n  align-items: center;\n  gap: 12px;\n  width: 100%;\n  padding: 13px 10px;\n  margin: 9px 0;\n  text-align: left;\n  border: 1px solid #fff;\n  border-radius: 18px;\n  background:\n    linear-gradient(\n      110deg,\n      var(--shop-color),\n      #fff7ee);\n  color: #514863;\n  box-shadow: 0 3px 8px #69546710;\n  cursor: pointer;\n}\n.store-choice:disabled {\n  opacity: .5;\n  cursor: default;\n}\n.store-icon {\n  display: grid;\n  place-items: center;\n  width: 43px;\n  min-width: 43px;\n  height: 43px;\n  border-radius: 50%;\n  background: #fff8;\n  font-size: 28px;\n}\n.store-choice strong {\n  display: block;\n  font-size: 17px;\n  margin-bottom: 4px;\n}\n.store-choice small {\n  display: block;\n  font-size: 10px;\n  line-height: 1.5;\n}\n.store-choice em {\n  display: block;\n  font-size: 11px;\n  line-height: 1.35;\n  margin: 7px 0 4px;\n  font-style: normal;\n  font-weight: 700;\n}\n.route-status {\n  color: #5e795b;\n}\n.hunt-explainer {\n  font-size: 10px;\n  line-height: 1.5;\n  color: #8d7b8b;\n  margin: 12px 4px;\n}\n#shopping-time {\n  display: inline-block;\n  padding: 6px 10px;\n  margin: 3px 0;\n  background: #fffaeeed;\n  color: #66795b;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 700;\n  pointer-events: none;\n}\n#hunt-find {\n  position: absolute;\n  left: 16px;\n  right: 16px;\n  bottom: 220px;\n  max-width: 360px;\n  margin: auto;\n  padding: 12px 14px;\n  border: 1px solid white;\n  border-radius: 18px;\n  background: #fff8eff2;\n  color: #655371;\n  box-shadow: 0 4px 18px #56466320;\n  pointer-events: none;\n}\n#hunt-find strong {\n  font-size: 17px;\n}\n#hunt-find p {\n  font-size: 12px;\n  margin: 5px 0;\n  color: #59816b;\n  font-weight: 700;\n}\n#hunt-find small {\n  font-size: 10px;\n}\n#game[data-scene=store] #save-message {\n  bottom: auto;\n  top: 190px;\n  left: 16px;\n  width: calc(100% - 32px);\n  padding: 9px 12px;\n}\n#game[data-scene=store] #cleanup-hint {\n  background: #fff9efdf;\n  border-radius: 12px;\n  padding: 7px 9px;\n}\n#game[data-scene=store] #shop-display-marker {\n  background: transparent;\n  color: #ffe6a0;\n  border: 0;\n  padding: 0;\n  box-shadow: none;\n  font-size: 23px;\n  text-shadow: 0 0 4px white, 0 0 9px #e6b761;\n}\n#hunt-travel {\n  position: absolute;\n  inset: 0;\n  z-index: 45;\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  justify-content: center;\n  background: #f5edf7f5;\n  color: #705b83;\n}\n#hunt-travel span {\n  font-size: 65px;\n  animation: hunt-bob .6s ease-in-out infinite alternate;\n}\n#hunt-travel h2 {\n  font-size: 27px;\n}\n@keyframes hunt-bob {\n  to {\n    transform: translateY(-10px) rotate(6deg);\n  }\n}\n.series-heading {\n  grid-column: 1/-1;\n  text-align: left;\n  padding: 10px 3px 4px;\n  font-size: 14px;\n}\n#game[data-scene=store] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] #day-label,\n#game[data-scene=store] #scene-subtitle {\n  display: none;\n}\n#game[data-scene=store] .room-title .eyebrow {\n  font-size: 12px;\n  letter-spacing: .7px;\n  margin-bottom: 4px;\n}\n@media (max-height: 740px) {\n  #hunt-find {\n    bottom: 190px;\n    padding: 8px 12px;\n  }\n  #hunt-routes {\n    padding-top: 14px;\n  }\n  .store-choice {\n    padding: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #hunt-travel span {\n    animation: none;\n  }\n}\n#hunt-routes .dialog-top-action {\n  position: sticky;\n  top: 0;\n  z-index: 2;\n  box-shadow: 0 0 0 5px #faf5fb;\n}\n\n/* src/ui/trading.css */\n#trading-dialog {\n  box-sizing: border-box;\n  width: min(460px, calc(100% - 16px));\n  max-height: calc(100dvh - 16px);\n  padding: 0;\n  border: 2px solid white;\n  border-radius: 24px;\n  background: #fcf7ef;\n  color: #514365;\n  overflow: hidden;\n}\n#trading-dialog[open] {\n  display: flex;\n  flex-direction: column;\n}\n#trading-dialog::backdrop {\n  background: #44355288;\n  backdrop-filter: blur(3px);\n}\n#trading-dialog button {\n  font: inherit;\n  color: inherit;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#trading-dialog button:disabled {\n  opacity: .48;\n  cursor: default;\n}\n.trade-header {\n  padding: 14px 18px 10px;\n  background:\n    linear-gradient(\n      120deg,\n      #fff,\n      var(--trader));\n  flex-shrink: 0;\n}\n.trade-header h2 {\n  margin: 4px 0;\n  font-size: 27px;\n}\n.trade-header strong {\n  font-size: 12px;\n}\n.trade-header p {\n  margin: 6px 0 0;\n  font-size: 12px;\n  line-height: 1.4;\n}\n.trade-scroll {\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  padding: 0 14px 12px;\n  min-height: 0;\n}\n#trading-dialog h3 {\n  font-size: 13px;\n  margin: 12px 0 7px;\n  display: flex;\n  justify-content: space-between;\n  gap: 4px;\n}\n#trading-dialog h3 small {\n  font-size: 10px;\n  font-weight: normal;\n}\n.trade-slots {\n  display: grid;\n  grid-template-columns: repeat(3, minmax(0, 1fr));\n  gap: 6px;\n  min-height: 65px;\n  background: #e9dfef;\n  padding: 7px;\n  border-radius: 15px;\n}\n.trade-item {\n  border: 1px solid #fff;\n  background: #fffbf8;\n  border-radius: 12px;\n  padding: 4px;\n  text-align: center;\n  min-width: 0;\n}\n.trade-item img {\n  width: 100%;\n  height: 52px;\n  object-fit: contain;\n}\n.trade-item strong,\n.trade-item small {\n  display: block;\n  font-size: 10px;\n}\n.trade-item small {\n  font-size: 9px;\n  margin-top: 3px;\n}\n.trade-speech {\n  font-size: 12px;\n  line-height: 1.45;\n  background: #fff1cd;\n  border-radius: 13px;\n  padding: 10px;\n  margin: 10px 0;\n}\n.trade-empty {\n  grid-column: 1/-1;\n  margin: 10px;\n  font-size: 12px;\n  line-height: 1.5;\n}\n.trade-bag-heading label {\n  display: flex;\n  gap: 6px;\n  align-items: center;\n  font-size: 12px;\n  min-height: 32px;\n}\n.trade-bag-heading input {\n  width: 20px;\n  height: 20px;\n  accent-color: #8573a2;\n}\n.trade-safety {\n  font-size: 10px;\n  line-height: 1.4;\n  margin: 5px 0 10px;\n  color: #796b87;\n}\n#trade-inventory {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 6px;\n}\n.trade-bag-item {\n  display: flex;\n  align-items: center;\n  min-height: 62px;\n  padding: 4px;\n  border: 1px solid #ded2e6;\n  background: white;\n  border-radius: 12px;\n  text-align: left;\n  min-width: 0;\n}\n.trade-bag-item img {\n  width: 38px;\n  flex-shrink: 0;\n}\n.trade-bag-item strong {\n  font-size: 11px;\n  display: block;\n}\n.trade-bag-item small {\n  font-size: 9px;\n  display: block;\n  margin-top: 3px;\n}\n.trade-footer {\n  flex-shrink: 0;\n  padding: 8px 12px 12px;\n  background: #fcf7ef;\n  border-top: 1px solid #e8ddea;\n}\n.trade-footer p {\n  margin: 0 0 8px;\n  text-align: center;\n  font-size: 12px;\n  font-weight: bold;\n}\n.trade-controls {\n  display: grid;\n  grid-template-columns: repeat(3, 1fr);\n  gap: 9px;\n}\n.trade-controls button {\n  border: 2px solid white;\n  border-radius: 18px;\n  font-size: 32px !important;\n  font-weight: bold !important;\n  min-height: 68px;\n  background: #f0c6cc;\n}\n.trade-controls button small {\n  display: block;\n  font-size: 10px;\n}\n.trade-controls #trade-add {\n  background: #f6dfa1;\n}\n.trade-controls #trade-accept {\n  background: #bad6b9;\n}\n#leave-recess {\n  position: absolute;\n  top: 76px;\n  right: 14px;\n  width: auto;\n  font-size: 12px;\n  padding: 9px 13px;\n  z-index: 5;\n}\n.collection-protection {\n  border: 0;\n  background: #fff9;\n  border-radius: 8px;\n  margin: 4px 1px 0;\n  min-width: 30px;\n  min-height: 32px;\n  font-size: 14px;\n  cursor: pointer;\n}\n.collection-protection[aria-pressed=true] {\n  background: #e5c6e9;\n  outline: 1px solid #b68ec0;\n}\n#game[data-scene=recess] #trip-wallet,\n#game[data-scene=recess] #mission-clock {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  .trade-header {\n    padding: 8px 12px;\n  }\n  .trade-header h2 {\n    font-size: 21px;\n  }\n  .trade-header p {\n    font-size: 11px;\n  }\n  .trade-item img {\n    height: 42px;\n  }\n  .trade-controls button {\n    min-height: 60px;\n  }\n  .trade-footer {\n    padding: 6px 10px;\n  }\n}\n#trade-suggest {\n  width: 100%;\n  min-height: 44px;\n  border: 2px solid #b4d4bd;\n  border-radius: 16px;\n  background: #edf8ed;\n  font-weight: 800;\n}\n.trade-help {\n  font-size: 11px;\n  color: #6d6477;\n}\n.trade-loved {\n  border-color: #bad8bb !important;\n}\n.trade-header > small {\n  display: block;\n  margin-top: 7px;\n  font-size: 11px;\n}\n\n/* src/ui/squishy-pop.css */\n.pop-launch {\n  position: fixed;\n  z-index: 20;\n  bottom: max(160px, 22vh);\n  left: 50%;\n  transform: translateX(-50%);\n  width: min(310px, 85vw);\n  border: 3px solid #fff9;\n  border-radius: 30px;\n  padding: 13px 16px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe7ee,\n      #efa6d4);\n  color: #655082;\n  box-shadow: 0 6px 22px #4f3b6240;\n  font-weight: 900;\n  font-size: 17px;\n  cursor: pointer;\n}\n.pop-launch span {\n  margin-right: 8px;\n}\n.pop-launch small {\n  display: block;\n  font-size: 11px;\n  letter-spacing: .5px;\n  margin-top: 5px;\n  font-weight: 600;\n}\n#squishy-pop {\n  padding: 0;\n  border: 0;\n  background: transparent;\n  color: #5d497d;\n  max-width: none;\n  max-height: none;\n  width: 100%;\n  height: 100dvh;\n  inset: 0;\n  margin: 0;\n  overflow: auto;\n  font-family: inherit;\n}\n#squishy-pop::backdrop {\n  background: #46345495;\n  backdrop-filter: blur(9px);\n}\n#squishy-pop * {\n  box-sizing: border-box;\n}\n#squishy-pop button {\n  font: inherit;\n  cursor: pointer;\n  min-height: 44px;\n  color: #654e83;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: linear-gradient(#ffe1ef, #f9aed5);\n  font-weight: 800;\n  padding: 9px 17px;\n  box-shadow: 0 3px 0 #c997c136;\n}\n#squishy-pop button:active {\n  transform: scale(.96);\n}\n#squishy-pop button:focus-visible {\n  outline: 3px solid #8a5fb4;\n  outline-offset: 2px;\n}\n.pop-shell {\n  width: min(100%, 480px);\n  min-height: 100%;\n  margin: auto;\n  padding: max(16px, env(safe-area-inset-top)) 18px max(14px, env(safe-area-inset-bottom));\n  background:\n    radial-gradient(\n      ellipse at 10% 45%,\n      #fff5d2aa,\n      transparent 60%),\n    linear-gradient(\n      155deg,\n      #fff8f1f5,\n      #f1e5fff5 60%,\n      #ffe9f1f5);\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  gap: 14px;\n}\n.pop-title {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.pop-title > div {\n  flex: 1;\n}\n.pop-title small {\n  font-size: 9px;\n  letter-spacing: 2px;\n}\n.pop-title h2 {\n  font-size: 30px;\n  letter-spacing: -1px;\n  line-height: 1.1;\n  margin: 6px 0;\n  font-weight: 1000;\n  color: #9878b9;\n  text-shadow: 0 2px 0 white;\n}\n.pop-title em {\n  font-style: normal;\n  color: #ed83b0;\n}\n.pop-title button {\n  width: 44px;\n  padding: 5px !important;\n  background: #ffffffad !important;\n}\n.pop-stats {\n  display: grid;\n  grid-template-columns: 1fr 1.1fr 1.1fr;\n  gap: 8px;\n}\n.pop-stats > div {\n  border-radius: 22px;\n  padding: 11px 5px;\n  background: #ffffffc7;\n  border: 2px solid #fff;\n  text-align: center;\n  box-shadow: 0 4px 0 #cbb4e227;\n}\n.pop-stats small {\n  display: block;\n  font-size: 10px;\n  letter-spacing: 1.6px;\n  color: #957bad;\n  font-weight: 800;\n}\n.pop-stats strong {\n  display: block;\n  font-size: 27px;\n  line-height: 1.3;\n}\n.pop-stats progress {\n  height: 6px;\n  width: 65%;\n  display: block;\n  margin: 4px auto 0;\n}\n.pop-tray {\n  position: relative;\n  border: 6px solid #f6eeff;\n  border-radius: 35px;\n  background:\n    linear-gradient(\n      135deg,\n      #d1b9ee,\n      #c4a6df);\n  padding: 9px;\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #bca1d8,\n    0 14px 25px #76609330;\n  isolation: isolate;\n}\n.pop-tray canvas {\n  width: 100%;\n  aspect-ratio: 1;\n  display: block;\n  touch-action: none;\n  border-radius: 21px;\n  background:\n    radial-gradient(\n      ellipse,\n      #fff2 40%,\n      transparent 70%);\n  user-select: none;\n}\n.pop-feedback {\n  position: absolute;\n  pointer-events: none;\n  inset: 40% 0 auto;\n  text-align: center;\n  font-size: 29px;\n  font-weight: 1000;\n  color: #ec65a9;\n  text-shadow:\n    2px 3px white,\n    -2px -2px white,\n    0 4px 6px #8a5fad;\n  transform: rotate(-6deg);\n  z-index: 2;\n}\n.pop-cover {\n  position: absolute;\n  inset: 0;\n  z-index: 3;\n  border-radius: 28px;\n  background: #fff5f2ef;\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  align-items: center;\n  text-align: center;\n  gap: 10px;\n  padding: 20px;\n  backdrop-filter: blur(4px);\n}\n.pop-cover[hidden] {\n  display: none;\n}\n.pop-cover h3 {\n  font-size: 23px;\n  line-height: 1.2;\n  margin: 0;\n}\n.pop-cover p {\n  font-size: 12px;\n  margin: 0;\n  max-width: 260px;\n}\n.pop-cover button {\n  width: 85%;\n  font-size: 14px !important;\n}\n.pop-cover .pop-link {\n  border: 0;\n  background: none;\n  box-shadow: none;\n  font-size: 12px !important;\n}\n.pop-count {\n  font-size: 80px;\n  color: #e778af;\n  animation: pop-count .8s infinite;\n}\n.pop-demo {\n  position: relative;\n  display: flex;\n  gap: 15px;\n  padding: 8px 10px 25px;\n  font-size: 40px;\n  color: #ec87b6;\n}\n.pop-demo b {\n  position: absolute;\n  left: 10%;\n  bottom: 0;\n  font-size: 32px;\n  animation: pop-finger 2s infinite;\n}\n.pop-frenzy {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 10px;\n  letter-spacing: 1px;\n  font-weight: 900;\n  margin-top: 3px;\n}\n.pop-frenzy progress {\n  flex: 1;\n  min-width: 0;\n}\n.pop-frenzy b {\n  color: #e788b5;\n}\n.pop-hint {\n  text-align: center;\n  font-size: 14px;\n  font-weight: 700;\n  margin: 0;\n}\n.pop-friends {\n  display: flex;\n  justify-content: center;\n  gap: 7px;\n}\n.pop-friends span {\n  width: 40px;\n  text-align: center;\n}\n.pop-friends img {\n  width: 40px;\n  height: 35px;\n  object-fit: contain;\n  display: block;\n}\n.pop-friends small {\n  font-size: 9px;\n  color: #b18a52;\n  display: block;\n}\n.pop-footer {\n  text-align: center;\n  font-size: 10px;\n  color: #a58fb0;\n  letter-spacing: 1px;\n}\n.pop-result-star {\n  font-size: 35px;\n  color: #f5c960;\n}\n.pop-result-numbers {\n  display: flex;\n  justify-content: space-around;\n  width: 100%;\n  font-size: 11px;\n}\n.pop-result-numbers b {\n  display: block;\n  font-size: 24px;\n}\n.pop-ticket-prize {\n  font-size: 15px;\n  color: #d26f9f;\n}\n.pop-cover progress {\n  width: 70%;\n  height: 9px;\n}\n#squishy-pop progress {\n  appearance: none;\n  border: 0;\n  border-radius: 20px;\n  background: #e1d4ed;\n  height: 9px;\n  overflow: hidden;\n}\n#squishy-pop progress::-webkit-progress-bar {\n  background: #e1d4ed;\n  border-radius: 20px;\n}\n#squishy-pop progress::-webkit-progress-value {\n  background:\n    linear-gradient(\n      90deg,\n      #bd95e0,\n      #f49abe);\n  border-radius: 20px;\n  transition: width .2s;\n}\n.urgent {\n  color: #df608a;\n  animation: pop-count 1s infinite;\n}\n@keyframes pop-finger {\n  0%, 15% {\n    left: 10%;\n  }\n  70%, 100% {\n    left: 75%;\n  }\n}\n@keyframes pop-count {\n  0% {\n    transform: scale(1.08);\n  }\n  70% {\n    transform: scale(1);\n  }\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 9px;\n    padding: 10px 15px;\n  }\n  .pop-title h2 {\n    font-size: 25px;\n  }\n  .pop-stats > div {\n    padding: 7px 3px;\n  }\n  .pop-stats strong {\n    font-size: 23px;\n  }\n  .pop-friends {\n    display: none;\n  }\n  .pop-footer {\n    display: none;\n  }\n  .pop-tray {\n    border-width: 5px;\n    padding: 6px;\n  }\n  .pop-cover {\n    gap: 7px;\n    padding: 10px;\n  }\n  .pop-cover h3 {\n    font-size: 20px;\n  }\n  .pop-result-star {\n    display: none;\n  }\n}\n@media (min-width: 500px) {\n  .pop-shell {\n    max-width: min(480px, 70dvh);\n    border-radius: 32px;\n    min-height: 0;\n    margin: 20px auto;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #squishy-pop * {\n    animation: none !important;\n  }\n}\n.pop-demo img {\n  width: 58px;\n  height: 58px;\n  object-fit: contain;\n}\n.pop-demo:before {\n  content: "";\n  position: absolute;\n  height: 5px;\n  background: #ffaad4;\n  left: 25px;\n  right: 25px;\n  top: 45%;\n  z-index: -1;\n  border-radius: 10px;\n}\n.pop-demo {\n  isolation: isolate;\n}\n.is-frenzy .pop-tray {\n  box-shadow:\n    inset 0 6px 9px #9973bb50,\n    0 7px 0 #e7afd5,\n    0 0 30px #ffb8d5;\n}\n.is-frenzy .pop-frenzy {\n  color: #cf639e;\n}\n.pop-launch[hidden] {\n  display: none;\n}\n.pop-cover .pop-result-star {\n  animation: pop-count .8s 2;\n}\n#squishy-pop {\n  font-family:\n    "Trebuchet MS",\n    "Arial Rounded MT Bold",\n    Arial,\n    sans-serif;\n}\n[data-tickets] {\n  background-repeat: no-repeat;\n  background-position: calc(50% - 15px) center;\n  background-size: 35px;\n  padding-left: 26px;\n}\n.pop-launch {\n  animation: pop-entrance .3s ease-out;\n}\n@keyframes pop-entrance {\n  from {\n    opacity: 0;\n  }\n  to {\n    opacity: 1;\n  }\n}\n.pop-frenzy span {\n  padding: 7px 0 7px 24px;\n  background-repeat: no-repeat;\n  background-position: left center;\n  background-size: 25px;\n}\n#squishy-pop[open] .pop-shell {\n  animation: pop-entrance .2s ease-out;\n}\n.pop-chain-cue {\n  position: absolute;\n  z-index: 4;\n  transform: translate(-50%, -100%);\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 5px 10px 5px 5px;\n  border: 2px solid white;\n  border-radius: 22px;\n  background: #fff6fc;\n  color: #6c4487;\n  box-shadow: 0 3px 12px #855a9955;\n  pointer-events: none;\n  white-space: nowrap;\n  font-size: 11px;\n  font-weight: 800;\n}\n.pop-chain-cue[hidden] {\n  display: none;\n}\n.pop-chain-cue > b {\n  display: grid;\n  place-items: center;\n  background: #e88bbb;\n  color: white;\n  border-radius: 50%;\n  width: 30px;\n  height: 30px;\n  font-size: 20px;\n}\n.pop-chain-cue span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-chain-cue img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n}\n.pop-chain-cue.pulse > b {\n  animation: pop-count .22s ease-out;\n}\n.pop-feedback {\n  inset: 3px 0 auto;\n  font-size: 22px;\n  transform: none;\n  line-height: 1.2;\n}\n.is-frenzy .pop-tray {\n  border-color: #fff0b5;\n  box-shadow:\n    inset 0 4px 10px #9973bb40,\n    0 7px 0 #e6a6d6,\n    0 0 24px #ffc8d7;\n}\n.is-frenzy .pop-frenzy {\n  background: #fff6d4;\n  border-radius: 18px;\n  padding: 3px 8px;\n}\n.pop-frenzy b {\n  min-width: 46px;\n  text-align: right;\n}\n.pop-hint {\n  font-size: 13px;\n  min-height: 18px;\n}\n.pop-previous-best {\n  font-size: 11px;\n  color: #957aac;\n}\n.pop-ticket-flight {\n  height: 34px;\n  width: 100%;\n  position: relative;\n  overflow: hidden;\n}\n.pop-ticket-flight img {\n  position: absolute;\n  left: calc(18% + var(--i)*8%);\n  width: 35px;\n  height: 28px;\n  object-fit: contain;\n  animation: pop-ticket-bank .95s calc(var(--i)*.07s) both;\n}\n.pop-ticket-prize {\n  font-size: 17px;\n}\n@keyframes pop-ticket-bank {\n  0% {\n    transform: translateY(23px) rotate(-18deg);\n    opacity: 0;\n  }\n  30% {\n    opacity: 1;\n  }\n  70% {\n    transform: translateY(-4px) rotate(8deg);\n    opacity: 1;\n  }\n  100% {\n    transform: translateY(8px) scale(.65);\n    opacity: 0;\n  }\n}\n.showing-results .pop-stats,\n.showing-results .pop-frenzy,\n.showing-results .pop-hint,\n.showing-results .pop-friends {\n  display: none;\n}\n.showing-results .pop-tray {\n  height: min(480px, calc(100dvh - 140px));\n  flex-shrink: 0;\n}\n.showing-results .pop-tray canvas {\n  position: absolute;\n  visibility: hidden;\n}\n.showing-results .pop-cover {\n  gap: 12px;\n  padding: 18px;\n  overflow: auto;\n}\n.showing-results .pop-cover h3 {\n  font-size: 24px;\n}\n.showing-results .pop-result-star {\n  display: block;\n  line-height: 1;\n  font-size: 32px;\n}\n.showing-results .pop-cover button {\n  flex-shrink: 0;\n  min-height: 44px;\n}\n.showing-results .pop-cover p {\n  line-height: 1.4;\n}\n@media (max-height: 700px) {\n  .showing-results .pop-cover {\n    gap: 8px;\n    padding: 12px;\n  }\n  .showing-results .pop-cover h3 {\n    font-size: 21px;\n  }\n  .showing-results .pop-result-star {\n    font-size: 24px;\n  }\n  .pop-chain-cue {\n    font-size: 10px;\n  }\n  .pop-feedback {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .pop-ticket-flight img {\n    animation: none;\n    opacity: 1;\n  }\n  .pop-chain-cue.pulse > b {\n    animation: none;\n  }\n}\n@media (max-width: 360px) {\n  .pop-title {\n    gap: 5px;\n  }\n  .pop-title > div {\n    min-width: 0;\n  }\n  .pop-title small {\n    font-size: 7px;\n    letter-spacing: .6px;\n  }\n  .pop-title h2 {\n    font-size: 20px;\n  }\n  .showing-results .pop-tray {\n    height: calc(100dvh - 145px);\n  }\n}\n#squishy-pop-shortcut {\n  pointer-events: auto;\n  border: 2px solid #fff;\n  border-radius: 22px;\n  padding: 9px 14px;\n  background:\n    linear-gradient(\n      135deg,\n      #ffe6f0,\n      #efb5dd);\n  color: #604c80;\n  font: 800 13px "Trebuchet MS", sans-serif;\n  box-shadow: 0 3px 10px #72538b26;\n  cursor: pointer;\n}\n#squishy-pop-shortcut:hover {\n  background: #f6c7e5;\n}\n#squishy-pop-shortcut:focus-visible {\n  outline: 3px solid #7855ae;\n  outline-offset: 3px;\n}\n@media (max-width: 600px) {\n  footer .asset-credits {\n    display: none;\n  }\n  #squishy-pop-shortcut {\n    font-size: 11px;\n    padding: 8px 10px;\n  }\n}\n#squishy-pop-shortcut {\n  min-height: 44px;\n}\n.pop-result-actions {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 8px;\n  width: 100%;\n}\n.pop-cover .pop-result-actions button {\n  width: 100%;\n  font-size: 12px !important;\n  padding: 8px;\n  line-height: 1.2;\n}\n.pop-result-actions button:first-child:last-child {\n  grid-column: 1/-1;\n}\n.pop-goals {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n  padding: 7px 9px;\n  border: 2px solid white;\n  border-radius: 18px;\n  background: #fff6dc;\n  font-size: 12px;\n  font-weight: 800;\n  flex-wrap: wrap;\n}\n.pop-goals[hidden],\n.showing-results .pop-goals {\n  display: none;\n}\n.pop-goals small {\n  font-size: 9px;\n  color: #9878b9;\n}\n.pop-goals span,\n.pop-objectives span {\n  display: flex;\n  align-items: center;\n  gap: 4px;\n}\n.pop-goals img,\n.pop-objectives img,\n.pop-previous-best img {\n  width: 30px;\n  height: 30px;\n  object-fit: contain;\n  vertical-align: middle;\n}\n.pop-goals .done {\n  color: #487865;\n}\n.pop-level-list {\n  display: flex;\n  flex-direction: column;\n  gap: 9px;\n  width: 100%;\n}\n.pop-level-list button {\n  width: 100%;\n  text-align: left;\n}\n.pop-level-list small {\n  display: block;\n  margin-top: 4px;\n  font-size: 11px;\n  font-weight: 600;\n}\n#squishy-pop button:disabled {\n  opacity: .55;\n  cursor: default;\n  transform: none;\n  background: #e5dfeb;\n}\n.pop-objectives {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 12px;\n  padding: 12px;\n  font-size: 18px;\n  font-weight: 800;\n}\n.showing-results .pop-cover {\n  justify-content: flex-start;\n}\n.showing-results .pop-cover > h3:first-child {\n  margin-top: 8px;\n}\n.pop-previous-best {\n  line-height: 1.5;\n}\n.showing-results .pop-cover > * {\n  flex-shrink: 0;\n}\n.showing-results .pop-cover .pop-link {\n  min-height: 44px;\n  padding: 7px;\n}\n@media (max-height: 700px) {\n  .pop-shell {\n    gap: 7px;\n  }\n  .pop-goals {\n    font-size: 11px;\n    padding: 4px 6px;\n    gap: 5px;\n  }\n  .pop-goals img {\n    width: 24px;\n    height: 24px;\n  }\n  .showing-results .pop-cover {\n    gap: 7px;\n  }\n  .pop-level-list {\n    gap: 6px;\n  }\n}\n.pop-prizes {\n  min-height: 44px !important;\n  width: auto !important;\n  padding: 5px 10px !important;\n  font-size: 12px !important;\n}\n.pop-feedback[data-tier=great] {\n  font-size: clamp(22px, 6vw, 32px);\n  color: #fff6a0;\n  text-shadow: 0 3px 0 #7d4690, 0 0 18px #fff;\n}\n.pop-feedback[data-tier=super] {\n  font-size: clamp(26px, 7vw, 38px);\n  color: #fff;\n  border: 3px solid #ffdf65;\n  border-radius: 20px;\n  background: #9554bde8;\n  padding: 12px;\n  box-shadow: 0 0 24px #ffda6a;\n}\n.pop-feedback[data-tier=rainbow] {\n  font-size: clamp(24px, 6.5vw, 36px);\n  color: #fff;\n  background:\n    linear-gradient(\n      110deg,\n      #ea76a7,\n      #d0a554,\n      #61bca4,\n      #618ddb,\n      #a278c8);\n  border: 3px solid white;\n  border-radius: 20px;\n  padding: 12px;\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-tray[data-celebration=super] {\n  box-shadow: 0 0 0 5px #ffe393, 0 0 35px #f1abde;\n}\n.pop-tray[data-celebration=rainbow] {\n  box-shadow:\n    -10px 0 24px #ff9cad,\n    0 -8px 24px #fff09e,\n    10px 0 24px #98daff,\n    0 8px 24px #b5a1ff;\n}\n.pop-feedback[hidden] {\n  display: none;\n}\n.pop-feedback[data-tier=great],\n.pop-feedback[data-tier=super],\n.pop-feedback[data-tier=rainbow] {\n  animation: pop-reward .32s ease-out;\n}\n@keyframes pop-reward {\n  from {\n    transform: translateY(8px) scale(.88);\n    opacity: .5;\n  }\n  to {\n    transform: none;\n    opacity: 1;\n  }\n}\n.pop-feedback[data-tier=super] {\n  text-shadow: 0 2px 2px #65377c;\n}\n.pop-launch {\n  position: absolute;\n  top: 175px;\n  bottom: auto;\n  left: 18px;\n  transform: none;\n  width: auto;\n  max-width: 180px;\n  padding: 9px 13px;\n  font-size: 12px;\n  border-width: 2px;\n  box-shadow: 0 3px 10px #4f3b6220;\n}\n.pop-launch small {\n  display: none;\n}\n@media (max-height: 650px) {\n  .pop-launch {\n    top: 135px;\n  }\n}\n\n/* src/game/homePlay.css */\n#home-play-controls {\n  display: flex;\n  gap: 6px;\n  justify-content: flex-end;\n  margin-bottom: 46px;\n  max-width: 184px;\n  pointer-events: auto;\n}\n#home-play-controls[hidden] {\n  display: none;\n}\n#home-play-controls button {\n  min-height: 44px;\n  flex: 1;\n  border: 1px solid #c7b9ce;\n  border-radius: 10px;\n  background: #fff8e9;\n  color: #5b4468;\n  font: 600 12px "Segoe UI", sans-serif;\n  padding: 7px;\n}\n#home-play-controls #journey-jump {\n  position: static !important;\n  right: auto !important;\n  left: auto !important;\n  bottom: auto !important;\n  max-width: none;\n  min-width: 44px;\n  min-height: 44px;\n  margin: 0;\n  padding: 4px;\n  font-size: 12px;\n  box-shadow: none;\n  flex: 1;\n}\n.adventure-ui:has(#home-play-controls:not([hidden])) #save-message {\n  bottom: calc(var(--hud-bottom) + 238px);\n  left: 16px;\n  right: auto;\n  max-width: calc(100% - 32px);\n}\n@media (max-width: 600px) {\n  #home-play-controls {\n    max-width: 168px;\n  }\n}\n@media (max-width: 350px) {\n  #home-play-controls {\n    max-width: 156px;\n  }\n}\n\n/* src/ui/ticket-shop.css */\n#ticket-shop {\n  width: min(92vw, 520px);\n  max-height: 88dvh;\n  overflow: auto;\n  border: 3px solid #efb6d2;\n  border-radius: 26px;\n  background: #fff8ed;\n  color: #604861;\n  padding: 22px;\n  text-align: center;\n}\n#ticket-shop::backdrop {\n  background: #403347a8;\n}\n.ticket-prizes {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 12px;\n  margin: 16px 0;\n}\n.ticket-prizes article {\n  display: flex;\n  flex-direction: column;\n  align-items: center;\n  gap: 6px;\n  padding: 10px;\n  border-radius: 18px;\n  background: #f1e7fa;\n}\n.ticket-prizes img {\n  width: 96px;\n  height: 96px;\n  object-fit: contain;\n}\n#ticket-shop button {\n  min-height: 44px;\n  border: 0;\n  border-radius: 16px;\n  padding: 10px 14px;\n  background: #805ba6;\n  color: white;\n  font-weight: 700;\n  cursor: pointer;\n}\n#ticket-shop button:disabled {\n  background: #d3c4d5;\n  color: #665b69;\n  cursor: default;\n}\n#ticket-shop [data-close] {\n  display: block;\n  width: 100%;\n  margin-top: 16px;\n}\n#ticket-shop [role=status] {\n  font-weight: 700;\n  color: #566b40;\n}\n#travel-next-store {\n  position: absolute;\n  right: 12px;\n  top: 175px;\n  z-index: 12;\n  max-width: 170px;\n  min-height: 44px;\n  border: 2px solid #d9c5ec;\n  border-radius: 15px;\n  padding: 8px 12px;\n  background: #fff4e6;\n  color: #604861;\n  font-weight: 700;\n}\n#ticket-shop {\n  box-sizing: border-box;\n}\n#ticket-shop [data-close] {\n  position: sticky;\n  bottom: 0;\n  box-shadow: 0 0 0 5px #fff8ed;\n}\n.ticket-prizes article {\n  min-width: 0;\n}\n.ticket-prizes button {\n  width: 100%;\n}\n@media (max-width: 360px) {\n  #ticket-shop {\n    padding: 14px;\n  }\n  .ticket-prizes {\n    gap: 8px;\n  }\n  .ticket-prizes img {\n    width: 76px;\n    height: 76px;\n  }\n  .ticket-prizes article {\n    padding: 8px;\n  }\n  .ticket-prizes button {\n    padding: 8px;\n    font-size: 12px;\n  }\n}\n#ticket-shop [data-close] {\n  top: 0;\n  bottom: auto;\n  z-index: 2;\n}\n\n/* src/ui/tornado.css */\n#game[data-tornado] .room-title,\n#game[data-tornado] #cleanup-effects,\n#game[data-tornado] #house-doors,\n#game[data-tornado] #move-tip,\n#game[data-tornado] .mission-stats {\n  visibility: hidden;\n}\n#tornado-hud {\n  position: absolute;\n  z-index: 8;\n  top: 110px;\n  left: 22px;\n  width: min(340px, calc(100% - 44px));\n  padding: 15px 18px;\n  border: 2px solid #fff9;\n  border-radius: 23px;\n  background: #fff9f1ef;\n  color: #59476e;\n  box-shadow: 0 8px 25px #52416620;\n  pointer-events: none;\n  box-sizing: border-box;\n}\n#tornado-hud[hidden] {\n  display: none;\n}\n#tornado-hud header {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n}\n#tornado-hud small {\n  font-size: 8px;\n  letter-spacing: 1.6px;\n  color: #907ca6;\n}\n#tornado-hud h2 {\n  font-size: 23px;\n  margin: 3px 0 10px;\n}\n#tornado-hud [data-time] {\n  font-size: 28px;\n  font-variant-numeric: tabular-nums;\n  margin-left: auto;\n}\n#tornado-hud [data-sound] {\n  pointer-events: auto;\n  border: 0;\n  background: #ece0f3;\n  color: #69517e;\n  border-radius: 50%;\n  width: 32px;\n  height: 32px;\n  cursor: pointer;\n}\n.tornado-meter-row,\n.tornado-score {\n  display: flex;\n  justify-content: space-between;\n  gap: 8px;\n  font-size: 11px;\n}\n.tornado-score {\n  margin-top: 7px;\n  color: #71865c;\n}\n.tornado-score [data-streak] {\n  color: #a65585;\n  font-size: 10px;\n}\n#tornado-hud meter {\n  display: block;\n  width: 100%;\n  height: 17px;\n  margin-top: 4px;\n}\n#tornado-hud meter::-webkit-meter-bar {\n  background: #eee5f3;\n  border: 0;\n  border-radius: 10px;\n}\n#tornado-hud meter::-webkit-meter-optimum-value {\n  background:\n    linear-gradient(\n      90deg,\n      #c3cde8,\n      #e8adbe);\n  border-radius: 10px;\n}\n#tornado-hud p {\n  font-size: 11px;\n  line-height: 1.4;\n  min-height: 30px;\n  margin: 9px 0 0;\n}\n#tornado-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n  z-index: 7;\n}\n.tornado-marker {\n  position: absolute;\n  font-size: 24px;\n  border: 2px solid #fff;\n  background: #fff4d9ed;\n  box-shadow: 0 4px 12px #71603c30;\n  border-radius: 14px;\n  padding: 3px 7px;\n}\n.tornado-marker.near {\n  background: #dcf3c8;\n  box-shadow: 0 0 20px #fff3a1;\n}\n.tornado-marker.edge::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #9c729d;\n  transform: translate(-50%, -50%) rotate(var(--angle)) translateX(32px);\n}\n.tornado-sparkles {\n  position: absolute;\n  color: #8a599f;\n  text-shadow: 0 2px #fff;\n  font-weight: bold;\n  font-size: 26px;\n  animation: tornado-pop 1s ease-out forwards;\n  white-space: nowrap;\n}\n@keyframes tornado-pop {\n  from {\n    transform: translate(-50%, 0) scale(.6);\n  }\n  50% {\n    opacity: 1;\n  }\n  to {\n    transform: translate(-50%, -80px) scale(1.2);\n    opacity: 0;\n  }\n}\n#tornado-dialog {\n  box-sizing: border-box;\n  width: min(430px, calc(100% - 28px));\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  padding: 28px;\n  border: 2px solid white;\n  border-radius: 28px;\n  background: #fff8f1;\n  color: #5c4773;\n  text-align: center;\n  box-shadow: 0 20px 80px #51416650;\n}\n#tornado-dialog::backdrop {\n  background: #594d7666;\n  backdrop-filter: blur(3px);\n}\n#tornado-dialog small {\n  font-size: 9px;\n  letter-spacing: 1.4px;\n}\n#tornado-dialog h2 {\n  font-size: 29px;\n  line-height: 1.1;\n  margin: 12px 0;\n}\n#tornado-dialog p {\n  font-size: 14px;\n  line-height: 1.6;\n  color: #8b7094;\n}\n.tornado-emblem {\n  font-size: 60px;\n}\n.tornado-stars {\n  font-size: 48px;\n  color: #e4ae4e;\n  letter-spacing: 7px;\n}\n.tornado-instructions {\n  display: grid;\n  gap: 10px;\n  background: #efe6f4;\n  padding: 16px;\n  border-radius: 18px;\n  text-align: left;\n}\n.tornado-totals {\n  display: flex;\n  justify-content: space-around;\n  background: #efe6f4;\n  padding: 16px 4px;\n  border-radius: 18px;\n  font-size: 11px;\n}\n.tornado-totals b {\n  display: block;\n  font-size: 25px;\n  margin-bottom: 5px;\n}\n#tornado-dialog button {\n  display: block;\n  width: 100%;\n  padding: 14px;\n  border: 2px solid white;\n  border-radius: 16px;\n  margin-top: 10px;\n  background: #b8cfae;\n  color: #466240;\n  font: 700 16px system-ui;\n  cursor: pointer;\n}\n#tornado-dialog button.secondary {\n  background: #eee3f1;\n  color: #705285;\n}\n#tornado-dialog .tornado-earned {\n  color: #5b824e;\n  font-weight: bold;\n}\n@media (max-width: 500px) {\n  #tornado-hud {\n    top: 87px;\n    left: 12px;\n    width: calc(100% - 24px);\n    padding: 10px 13px;\n  }\n  #tornado-hud h2 {\n    font-size: 20px;\n    margin-bottom: 5px;\n  }\n  #tornado-hud p {\n    min-height: 16px;\n    margin-top: 5px;\n  }\n  #tornado-hud [data-time] {\n    font-size: 25px;\n  }\n  .tornado-marker {\n    font-size: 20px;\n  }\n}\n@media (max-height: 600px) and (orientation: landscape) {\n  #tornado-hud {\n    top: 80px;\n    width: 275px;\n    padding: 9px 12px;\n  }\n  #tornado-hud p {\n    min-height: 0;\n  }\n  #tornado-hud h2 {\n    font-size: 18px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .tornado-sparkles {\n    animation: none;\n  }\n}\n\n/* src/ui/styles.css */\n:root {\n  font-family:\n    "Trebuchet MS",\n    ui-rounded,\n    system-ui,\n    sans-serif;\n  color: #51466a;\n  background: #ede6f4;\n  font-synthesis: none;\n  -webkit-tap-highlight-color: transparent;\n}\n* {\n  box-sizing: border-box;\n}\nhtml,\nbody,\n#game {\n  margin: 0;\n  width: 100%;\n  height: 100%;\n  overflow: hidden;\n  overscroll-behavior: none;\n}\nbody {\n  position: fixed;\n  inset: 0;\n}\n#game {\n  height: 100dvh;\n  position: relative;\n  isolation: isolate;\n  user-select: none;\n  -webkit-user-select: none;\n}\n#game-canvas {\n  display: block;\n  width: 100%;\n  height: 100%;\n  outline: none;\n  touch-action: none;\n}\n#game-canvas:focus-visible {\n  outline: 3px solid #9b86bd;\n  outline-offset: -3px;\n}\n.topbar {\n  position: absolute;\n  top: max(22px, env(safe-area-inset-top));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.wordmark {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  font-size: 26px;\n  font-weight: 800;\n  letter-spacing: -1px;\n}\n.wordmark small {\n  display: block;\n  font-size: 7px;\n  letter-spacing: 1.8px;\n  margin-top: 2px;\n  font-weight: 700;\n}\n.flower {\n  color: #a18abd;\n  font-size: 43px;\n  line-height: 1;\n}\n.chapter {\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: 2px;\n}\n.chapter span {\n  color: #b8a8c9;\n  margin: 0 5px;\n}\n.room-title {\n  position: absolute;\n  top: 14%;\n  width: 100%;\n  text-align: center;\n  pointer-events: none;\n}\n.eyebrow {\n  font-size: 9px;\n  letter-spacing: 2.3px;\n  font-weight: 700;\n  color: #8c7a9f;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  gap: 7px;\n}\n.eyebrow i {\n  width: 5px;\n  height: 5px;\n  border-radius: 50%;\n  background: #90ac95;\n}\nh1 {\n  font-size: clamp(26px, 4vw, 37px);\n  letter-spacing: -1.2px;\n  margin: 10px 0 7px;\n  font-weight: 800;\n}\n.room-title p {\n  font-size: 12px;\n  color: #8c7a9f;\n  margin: 0;\n}\n.player-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  padding: 5px 10px;\n  background: #fffaf4ee;\n  border: 1px solid #fff;\n  border-radius: 12px;\n  font-size: 10px;\n  font-weight: 800;\n  pointer-events: none;\n  box-shadow: 0 3px 10px #71608518;\n  will-change: transform;\n}\n.player-label span {\n  color: #d592ad;\n  margin-left: 4px;\n}\n.room-caption {\n  position: absolute;\n  bottom: 26%;\n  width: 100%;\n  text-align: center;\n  font-size: 10px;\n  letter-spacing: .5px;\n  color: #9e8db0;\n  pointer-events: none;\n}\n.room-caption span {\n  margin: 0 12px;\n  color: #b9a3cc;\n}\n.move-tip {\n  position: absolute;\n  bottom: 19%;\n  left: 50%;\n  transform: translateX(-50%);\n  display: flex;\n  gap: 10px;\n  align-items: center;\n  width: max-content;\n  max-width: calc(100% - 36px);\n  transition: opacity .6s;\n  pointer-events: none;\n}\n.tip-icon {\n  display: grid;\n  place-items: center;\n  width: 34px;\n  height: 34px;\n  background: #fbf7fcbb;\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  font-size: 22px;\n  color: #a389bb;\n}\n.move-tip strong,\n.move-tip div > span {\n  display: block;\n}\n.move-tip strong {\n  font-size: 12px;\n  margin-bottom: 3px;\n}\n.move-tip div > span {\n  font-size: 10px;\n  color: #9686a7;\n}\n.move-tip.explored {\n  opacity: 0;\n}\n.controls {\n  position: absolute;\n  left: max(27px, env(safe-area-inset-left));\n  right: max(27px, env(safe-area-inset-right));\n  bottom: max(42px, calc(env(safe-area-inset-bottom) + 24px));\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  pointer-events: none;\n}\n.joystick-group {\n  text-align: center;\n  pointer-events: auto;\n}\n#joystick {\n  position: relative;\n  width: 120px;\n  height: 120px;\n  border: 2px solid #fff9;\n  background:\n    linear-gradient(\n      140deg,\n      #fffc,\n      #ded1ec99);\n  border-radius: 50%;\n  box-shadow: 0 7px 22px #82709516, inset 0 1px 8px #fff8;\n  touch-action: none;\n  cursor: grab;\n}\n#joystick.dragging {\n  cursor: grabbing;\n}\n#joystick-knob {\n  position: absolute;\n  left: 34px;\n  top: 34px;\n  width: 48px;\n  height: 48px;\n  border-radius: 50%;\n  border: 2px solid #fff;\n  background:\n    linear-gradient(\n      145deg,\n      #cdbce5,\n      #aa93c9);\n  box-shadow: 0 5px 8px #6c51813b;\n  pointer-events: none;\n  display: grid;\n  place-items: center;\n  will-change: transform;\n}\n#joystick-knob svg {\n  width: 22px;\n  height: 22px;\n  fill: none;\n  stroke: #fff;\n  stroke-width: 2;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n  opacity: .8;\n}\n.direction {\n  position: absolute;\n  color: #ae9abd;\n  font-size: 22px;\n  line-height: 20px;\n}\n.up {\n  top: 5px;\n  left: 51px;\n}\n.down {\n  bottom: 7px;\n  left: 51px;\n}\n.left {\n  top: 47px;\n  left: 9px;\n}\n.right {\n  top: 47px;\n  right: 9px;\n}\n.control-label {\n  display: block;\n  font-size: 8px;\n  letter-spacing: 1.5px;\n  font-weight: 800;\n  color: #9581a8;\n  margin-top: 11px;\n}\n.explore-note {\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  margin-top: 30px;\n  color: #8f7ba3;\n}\n.tiny-house {\n  font-size: 31px;\n  color: #ad98bd;\n}\n.explore-note > span:last-child {\n  font-size: 12px;\n  font-weight: 700;\n}\n.explore-note small {\n  display: block;\n  font-size: 9px;\n  font-weight: 400;\n  margin-top: 5px;\n}\nfooter {\n  position: absolute;\n  bottom: max(12px, env(safe-area-inset-bottom));\n  left: 28px;\n  right: 28px;\n  display: flex;\n  justify-content: space-between;\n  align-items: center;\n  font-size: 8px;\n  color: #a591b7;\n  letter-spacing: .6px;\n  pointer-events: none;\n}\n.build-badge {\n  font-size: 7px;\n  letter-spacing: 1.4px;\n}\n.keyboard-hint {\n  font-size: 8px;\n}\n#loading,\n#error {\n  position: absolute;\n  inset: 0;\n  background: #ede6f4;\n  display: grid;\n  place-content: center;\n  text-align: center;\n  padding: 32px;\n  z-index: 9;\n}\n#loading .loading-flower {\n  font-size: 60px;\n  color: #a18abd;\n  animation: breathe 1.2s infinite alternate;\n}\n#loading p {\n  font-size: 14px;\n}\n#error[hidden] {\n  display: none;\n}\n#error h2 {\n  font-size: 22px;\n}\n#error p {\n  font-size: 14px;\n  max-width: 320px;\n  line-height: 1.6;\n}\n@keyframes breathe {\n  to {\n    transform: scale(.85);\n    opacity: .5;\n  }\n}\n@media (min-width: 700px) {\n  .topbar {\n    left: 40px;\n    right: 40px;\n    top: 28px;\n  }\n  .room-title {\n    top: 12%;\n  }\n  .controls {\n    left: 45px;\n    right: 45px;\n    bottom: 50px;\n  }\n  .room-caption {\n    bottom: 15%;\n  }\n  .move-tip {\n    bottom: 7%;\n  }\n  .explore-note {\n    margin-top: 0;\n  }\n  footer {\n    left: 40px;\n    right: 40px;\n  }\n  .keyboard-hint {\n    font-size: 10px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .topbar {\n    top: 14px;\n  }\n  .room-title {\n    top: 13%;\n  }\n  h1 {\n    font-size: 25px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: 23%;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n  .keyboard-hint {\n    display: none;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .room-title {\n    top: 24%;\n    text-align: left;\n    padding-left: 28px;\n    width: 220px;\n  }\n  .eyebrow {\n    justify-content: flex-start;\n    font-size: 7px;\n    letter-spacing: 1px;\n  }\n  h1 {\n    font-size: 24px;\n  }\n  .room-title p {\n    font-size: 10px;\n  }\n  .topbar {\n    top: 14px;\n  }\n  .room-caption,\n  .move-tip,\n  .explore-note {\n    display: none;\n  }\n  .controls {\n    bottom: 35px;\n  }\n  .wordmark {\n    font-size: 21px;\n  }\n  #joystick {\n    width: 102px;\n    height: 102px;\n  }\n  #joystick-knob {\n    left: 25px;\n    top: 25px;\n  }\n  .up,\n  .down {\n    left: 42px;\n  }\n  .left,\n  .right {\n    top: 38px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #loading .loading-flower {\n    animation: none;\n  }\n  .move-tip {\n    transition: none;\n  }\n}\n@media (max-width: 699px) {\n  .room-caption {\n    display: none;\n  }\n  .move-tip {\n    bottom: calc(max(42px, env(safe-area-inset-bottom)) + 156px);\n  }\n}\n@media (max-width: 380px) {\n  .topbar {\n    left: 18px;\n    right: 18px;\n  }\n  .wordmark {\n    font-size: 24px;\n  }\n  .wordmark small {\n    font-size: 6px;\n    letter-spacing: 1.2px;\n    white-space: nowrap;\n  }\n  .chapter {\n    font-size: 8px;\n    letter-spacing: 1px;\n    white-space: nowrap;\n  }\n  .eyebrow {\n    font-size: 7px;\n    letter-spacing: 1.6px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n  .explore-note {\n    max-width: 125px;\n  }\n  .room-title {\n    top: 15%;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .move-tip {\n    display: none;\n  }\n}\n#house-music {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 10px;\n  line-height: 1.2;\n  padding: 8px;\n  min-height: 40px;\n  min-width: 54px;\n  cursor: pointer;\n}\nfooter {\n  gap: 6px;\n}\nfooter .keyboard-hint {\n  display: none;\n}\n@media (max-width: 380px) {\n  footer {\n    left: 12px;\n    right: 12px;\n  }\n  #collection-button {\n    font-size: 9px !important;\n  }\n}\n#audio-settings {\n  pointer-events: auto;\n  border: 0;\n  border-radius: 18px;\n  background: #eee2f3;\n  color: #725283;\n  font-family: inherit;\n  font-weight: 700;\n  font-size: 11px;\n  padding: 8px;\n  min-height: 40px;\n  cursor: pointer;\n}\n.audio-settings {\n  width: min(340px, 85vw);\n  border: 0;\n  border-radius: 22px;\n  background: #fff9f1;\n  color: #534565;\n  padding: 24px;\n  font-family: inherit;\n}\n.audio-settings::backdrop {\n  background: #30283880;\n}\n.audio-settings label {\n  display: block;\n  margin: 22px 0;\n  font-weight: 700;\n}\n.audio-settings output {\n  float: right;\n}\n.audio-settings input {\n  display: block;\n  width: 100%;\n  height: 40px;\n  accent-color: #9873b5;\n}\n.audio-settings button {\n  min-height: 44px;\n  width: 100%;\n  border: 0;\n  border-radius: 15px;\n  background: #e1d1ed;\n  color: #493659;\n  font-weight: 700;\n}\n.audio-settings p {\n  font-size: 12px;\n}\nfooter {\n  flex-wrap: wrap;\n}\n.audio-settings {\n  max-height: calc(100dvh - 28px);\n  overflow: auto;\n  box-sizing: border-box;\n}\n.audio-mutes {\n  display: flex;\n  gap: 8px;\n}\n.audio-mutes button {\n  flex: 1;\n  width: auto !important;\n}\n.audio-settings summary {\n  font-size: 13px;\n  cursor: pointer;\n}\n.audio-settings details p {\n  line-height: 1.5;\n}\n@media (max-height: 650px) {\n  .audio-settings {\n    padding: 16px;\n  }\n  .audio-settings h2 {\n    font-size: 20px;\n    margin: 0 0 10px;\n  }\n  .audio-settings label {\n    margin: 10px 0;\n  }\n}\n#game[data-scene=recess] .room-title {\n  top: 84px;\n  left: 18px;\n  right: auto;\n  width: auto;\n  max-width: 65%;\n  text-align: left;\n  padding: 10px 16px;\n  background: #fff8ece8;\n  border-radius: 18px;\n  pointer-events: none;\n}\n#game[data-scene=recess] .room-title h1 {\n  font-size: 22px;\n  margin: 3px 0;\n}\n#game[data-scene=recess] #scene-subtitle,\n#game[data-scene=recess] #day-label,\n#game[data-scene=recess] #room-connections {\n  display: none;\n}\n#game[data-scene=recess] .topbar {\n  background: #fff8ece8;\n  border-radius: 20px;\n  padding: 10px 18px;\n}\n#game[data-scene=recess] .cleanup-tip {\n  max-width: 70%;\n  background: #fff8ece6;\n  border-radius: 16px;\n  padding: 9px;\n}\n#game[data-scene=recess] #leave-recess {\n  top: 36px;\n  right: 44px;\n}\n@media (max-width: 600px) {\n  #game[data-scene=recess] .topbar {\n    left: 12px;\n    right: 12px;\n    padding: 9px 12px;\n  }\n  #game[data-scene=recess] .wordmark {\n    font-size: 20px;\n    gap: 6px;\n  }\n  #game[data-scene=recess] .wordmark .flower {\n    font-size: 29px;\n  }\n  #game[data-scene=recess] .wordmark small {\n    display: none;\n  }\n  #game[data-scene=recess] #leave-recess {\n    top: 28px;\n    right: 24px;\n    font-size: 11px;\n    padding: 9px 10px;\n  }\n  #game[data-scene=recess] .room-title {\n    top: 78px;\n    padding: 6px 12px;\n  }\n  #game[data-scene=recess] .room-title .eyebrow {\n    display: none;\n  }\n  #game[data-scene=recess] .room-title h1 {\n    font-size: 20px;\n    margin: 0;\n  }\n}\n#daily-play-open {\n  left: 18px;\n  bottom: 175px;\n  right: auto;\n  max-width: 180px;\n  font-size: 14px;\n  padding: 12px 16px;\n  background: #fff6df;\n  color: #5e486f;\n}\n#daily-play-drop {\n  left: 18px;\n  bottom: 229px;\n  right: auto;\n  max-width: 180px;\n  font-size: 14px;\n  padding: 12px 16px;\n}\n.daily-play-journal {\n  max-width: 520px;\n  max-height: 80dvh;\n  overflow: auto;\n  border: 2px solid #bba5cb;\n  border-radius: 25px;\n  background: #fff8ea;\n  color: #594469;\n  padding: 24px;\n  box-shadow: 0 12px 60px #33214455;\n}\n.daily-play-journal::backdrop {\n  background: #31274466;\n}\n.daily-play-journal h2 {\n  margin: 0 0 12px;\n}\n.daily-play-journal p {\n  line-height: 1.45;\n}\n.daily-play-card {\n  background: #eee8f2;\n  border-radius: 14px;\n  padding: 12px 16px;\n  margin: 10px 0;\n}\n.daily-play-card p {\n  margin: 6px 0;\n}\n.daily-play-card small {\n  color: #756381;\n}\n.daily-play-journal > button {\n  display: block;\n  margin: 18px auto 0;\n  padding: 13px 26px;\n  border: 0;\n  border-radius: 24px;\n  background: #d5eadc;\n  color: #334d40;\n  font-size: 17px;\n  font-weight: 700;\n  cursor: pointer;\n}\n.daily-play-journal > button.daily-play-close {\n  float: right;\n  margin: 0 0 8px 12px;\n  padding: 8px 14px;\n  font-size: 24px;\n  line-height: 1;\n}\n\n/* src/ui/cleanup.css */\n.mission-stats {\n  display: flex;\n  flex-direction: column;\n  align-items: flex-end;\n  gap: 2px;\n}\n#mission-clock {\n  font-size: 23px;\n  font-weight: 800;\n  font-variant-numeric: tabular-nums;\n  letter-spacing: -1px;\n}\n#mission-clock.soon {\n  color: #b77795;\n}\n.allowance-label {\n  font-size: 7px;\n  letter-spacing: 1px;\n  color: #9581a8;\n}\n#allowance {\n  font-size: 13px;\n  color: #6e856c;\n  margin-left: 3px;\n}\n#task-count {\n  letter-spacing: 1px;\n  color: #6e856c;\n}\n.task-list {\n  display: flex;\n  list-style: none;\n  justify-content: center;\n  gap: 9px;\n  padding: 0;\n  margin: 6px 0 0;\n  height: 22px;\n}\n.task-list li {\n  display: flex;\n  align-items: center;\n  gap: 3px;\n  font-size: 9px;\n  color: #9784a6;\n  border-bottom: 2px solid transparent;\n}\n.task-list li > span:first-child {\n  font-size: 13px;\n}\n.task-list li.done {\n  color: #69866f;\n  border-color: #a6c5a6;\n}\n.task-list li.done > span:first-child {\n  color: #69866f;\n}\n.action-group {\n  pointer-events: auto;\n  text-align: center;\n}\n#action-button {\n  --hold-progress: 0deg;\n  width: 120px;\n  height: 120px;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  gap: 3px;\n  border: 3px solid #fff9;\n  border-radius: 50%;\n  background:\n    linear-gradient(\n      145deg,\n      #f6b5d0,\n      #d888b6);\n  box-shadow: 0 6px 0 #ad739441, 0 8px 22px #82709522;\n  color: #663f6a;\n  cursor: pointer;\n  touch-action: none;\n  padding: 8px;\n  font-family: inherit;\n  position: relative;\n  -webkit-user-select: none;\n  user-select: none;\n}\n#action-button:disabled {\n  background:\n    linear-gradient(\n      145deg,\n      #f7f1f9,\n      #ddd0e8);\n  color: #a38caf;\n  box-shadow: 0 4px 0 #a58db222;\n  cursor: default;\n}\n#action-button:not(:disabled):active {\n  box-shadow: 0 2px 0 #ad739441;\n}\n#action-button:focus-visible,\n#replay:focus-visible {\n  outline: 3px solid #7960a5;\n  outline-offset: 4px;\n}\n#action-button.holding {\n  background: conic-gradient(#97c6a0 var(--hold-progress), #ecc0dd 0deg);\n}\n#action-icon {\n  font-size: 26px;\n  line-height: 29px;\n}\n#action-title {\n  font-size: 15px;\n  line-height: 18px;\n}\n#action-detail {\n  font-size: 10px;\n  max-width: 100%;\n  line-height: 13px;\n}\n.cleanup-tip {\n  text-align: center;\n  width: calc(100% - 36px);\n  max-width: 460px;\n  justify-content: center;\n  font-size: 11px;\n  line-height: 16px;\n  color: #887298;\n  min-height: 32px;\n}\n#cleanup-effects {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  overflow: hidden;\n}\n.cleanup-marker {\n  position: absolute;\n  left: 0;\n  top: 0;\n  border-radius: 9px;\n  min-width: 22px;\n  padding: 3px 5px;\n  background: #fffaf2db;\n  border: 1px solid #fffc;\n  box-shadow: 0 2px 5px #62507722;\n  font-size: 13px;\n  line-height: 16px;\n  color: #775672;\n  will-change: transform;\n  white-space: nowrap;\n}\n.cleanup-marker[hidden] {\n  display: none;\n}\n.cleanup-marker.destination {\n  font-size: 16px !important;\n  border-radius: 50%;\n  padding: 7px !important;\n  box-shadow: 0 0 14px #fff2a8a0;\n}\n.cleanup-marker.offscreen::after {\n  content: "\\27a4";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #fff1aa;\n  font-size: 17px;\n  text-shadow: 0 1px 3px #504760;\n  transform: translate(-50%, -50%) rotate(var(--guide-angle)) translateX(26px);\n}\n.cleanup-marker.tool {\n  font-size: 10px;\n}\n.cleanup-marker.nearby {\n  background: #fff0b9;\n  border-color: #fff;\n  box-shadow: 0 0 10px #fff3a4bb;\n}\n.cleanup-marker.destination {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n.coin-popup {\n  position: absolute;\n  color: #63845d;\n  font-size: 22px;\n  font-weight: 800;\n  z-index: 2;\n  transform: translate(-50%, -100%);\n  animation: reward-rise .95s ease-out forwards;\n  text-shadow: 0 2px 0 #fff;\n}\n.coin-popup strong {\n  display: block;\n  padding: 3px 8px;\n  background: #fff9e4ed;\n  border-radius: 12px;\n}\n.coin-popup > span {\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  color: #e9bd61;\n  font-size: 17px;\n  animation: sparkle .75s ease-out forwards;\n}\n@keyframes reward-rise {\n  0% {\n    opacity: 0;\n    margin-top: 0;\n  }\n  20% {\n    opacity: 1;\n  }\n  75% {\n    opacity: 1;\n  }\n  100% {\n    opacity: 0;\n    margin-top: -40px;\n  }\n}\n@keyframes sparkle {\n  from {\n    transform: translate(-50%, -50%) scale(.3);\n    opacity: 1;\n  }\n  to {\n    transform: translate(var(--spark-x), var(--spark-y)) scale(.7);\n    opacity: 0;\n  }\n}\n.sr-only {\n  position: absolute;\n  width: 1px;\n  height: 1px;\n  padding: 0;\n  margin: -1px;\n  clip-path: inset(50%);\n  overflow: hidden;\n  white-space: nowrap;\n}\n#results {\n  border: 2px solid #fff;\n  border-radius: 28px;\n  padding: 26px 22px 22px;\n  width: min(350px, calc(100% - 32px));\n  max-height: calc(100dvh - 32px);\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n  box-shadow: 0 16px 60px #55436140;\n}\n#results::backdrop {\n  background: #52416666;\n  backdrop-filter: blur(4px);\n}\n.results-flower {\n  font-size: 43px;\n  line-height: 1;\n  color: #af94cb;\n  margin-bottom: 16px;\n}\n#results .eyebrow {\n  font-size: 7px;\n  letter-spacing: 1.6px;\n}\n#results h2 {\n  margin: 12px 0 8px;\n  font-size: 30px;\n  letter-spacing: -1px;\n}\n#results-summary {\n  font-size: 12px;\n  line-height: 1.6;\n  color: #927d9e;\n}\n.results-totals {\n  display: flex;\n  justify-content: space-evenly;\n  padding: 14px 0;\n  margin: 12px 0 0;\n  background: #eee5f5;\n  border-radius: 17px;\n}\n.results-totals strong {\n  display: block;\n  font-size: 28px;\n}\n.results-totals span {\n  font-size: 10px;\n  color: #8e789f;\n}\n#results-money {\n  color: #708b6b;\n}\n#results-bonus {\n  font-size: 11px;\n  color: #788f6c;\n}\n#results-list {\n  list-style: none;\n  padding: 0;\n  display: flex;\n  justify-content: center;\n  flex-wrap: wrap;\n  gap: 6px 12px;\n  margin: 18px 0;\n  font-size: 10px;\n  color: #a58eb1;\n}\n#results-list .done {\n  color: #638269;\n}\n#replay {\n  width: 100%;\n  border: 2px solid #fff8;\n  border-radius: 17px;\n  padding: 15px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 16px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  box-shadow: 0 4px 0 #8caa8555;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#replay span {\n  margin-left: 7px;\n  font-size: 21px;\n}\n@media (max-width: 380px) {\n  .task-list {\n    gap: 6px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  #mission-clock {\n    font-size: 21px;\n  }\n  .allowance-label {\n    font-size: 6px;\n    letter-spacing: .5px;\n  }\n}\n@media (max-height: 650px) and (orientation: portrait), (orientation: landscape) and (max-height: 600px) {\n  #action-button {\n    width: 102px;\n    height: 102px;\n  }\n  #action-title {\n    font-size: 13px;\n  }\n  #action-icon {\n    font-size: 22px;\n    line-height: 24px;\n  }\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  .task-list {\n    height: 18px;\n    margin-top: 2px;\n  }\n  .task-list li {\n    font-size: 8px;\n  }\n  .task-list li > span:first-child {\n    font-size: 11px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  .task-list {\n    flex-wrap: wrap;\n    height: auto;\n    justify-content: flex-start;\n    max-width: 175px;\n    gap: 5px 10px;\n  }\n  #results {\n    padding: 12px 18px;\n  }\n  .results-flower {\n    display: none;\n  }\n  #results h2 {\n    font-size: 24px;\n    margin: 7px 0;\n  }\n  .results-totals {\n    padding: 7px 0;\n  }\n  #results-list {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .coin-popup {\n    animation: none;\n  }\n  .coin-popup > span {\n    display: none;\n  }\n}\n\n/* src/ui/collection.css */\n[hidden] {\n  display: none !important;\n}\n#collection-button {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  padding: 8px 0 8px 10px;\n}\n#collection-button:disabled {\n  opacity: .45;\n}\n#wallet {\n  margin-left: 4px;\n  color: #638269;\n}\n.loop-button {\n  width: 100%;\n  border: 2px solid #fff9;\n  border-radius: 16px;\n  padding: 13px;\n  background: #b3cea9;\n  color: #3b613f;\n  font:\n    800 15px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  margin: 5px 0;\n  touch-action: manipulation;\n}\n.pink-button {\n  background: #e8b5d2;\n  color: #704b75;\n}\n.loop-button:disabled {\n  opacity: .55;\n  cursor: default;\n}\n#results-wallet {\n  font-size: 12px;\n  color: #6f8869;\n}\n#go-shopping {\n  margin-bottom: 10px;\n}\n#collection-dialog {\n  border: 2px solid #fff;\n  border-radius: 26px;\n  width: min(410px, calc(100% - 24px));\n  max-height: calc(100dvh - 24px);\n  padding: 22px 17px 17px;\n  overflow: auto;\n  background: #faf5fb;\n  color: #51466a;\n  text-align: center;\n}\n#collection-dialog::backdrop {\n  background: #52416688;\n  backdrop-filter: blur(4px);\n}\n#collection-dialog h2 {\n  margin: 10px 0 6px;\n  font-size: 28px;\n  letter-spacing: -1px;\n}\n#collection-summary {\n  font-size: 11px;\n  color: #947c9e;\n}\n#collection-grid {\n  display: grid;\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 7px;\n  margin: 17px 0;\n}\n.dumpling-card {\n  background: #efe7f4;\n  border: 1px solid #fff;\n  border-radius: 14px;\n  padding: 6px 2px 9px;\n  min-width: 0;\n}\n.dumpling-card.owned {\n  background: linear-gradient(#fff9, var(--rarity));\n}\n.dumpling-card img {\n  width: 100%;\n  height: auto;\n  display: block;\n}\n.dumpling-card strong {\n  font-size: 10px;\n  display: block;\n}\n.dumpling-card small {\n  display: block;\n  font-size: 8px;\n  margin-top: 3px;\n}\n.dumpling-card .copies {\n  font-size: 10px;\n  font-weight: 800;\n  margin-top: 5px;\n}\n#store-markers {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n#shop-display-marker {\n  background: #f5ffe7ed;\n  color: #547457;\n  font-size: 10px;\n  font-weight: 800;\n  padding: 5px 7px;\n  border: 2px solid #fff9;\n}\n#reveal-copy {\n  position: absolute;\n  top: 71%;\n  left: 6%;\n  width: 88%;\n  text-align: center;\n  color: var(--rarity-ink,#775887);\n  font-size: 13px;\n  pointer-events: none;\n}\n.reveal-badges {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n}\n#reveal-copy small {\n  color: var(--rarity-ink,#665070);\n  padding: 5px 10px;\n  border: 1px solid var(--rarity,#dacbdf);\n  border-radius: 20px;\n  background: var(--rarity-wash,#f4edf5);\n  font-size: 11px;\n  line-height: 1.2;\n  font-weight: 800;\n  letter-spacing: .4px;\n}\n#reveal-copy .reveal-status {\n  background: #fffc;\n  border-color: #fff;\n  color: #64556c;\n}\n#reveal-copy h2 {\n  margin: 7px 0 4px;\n  font-size: 32px;\n  line-height: 1.1;\n  letter-spacing: -.8px;\n}\n#reveal-copy p {\n  font-size: 11px;\n  margin: 0;\n  color: #74647e;\n}\n#reveal-copy[data-rarity=Legendary] .reveal-rarity {\n  box-shadow: 0 0 0 2px #fff8, 0 2px 10px #dbb14b30;\n}\n#reveal-copy.has-reveal {\n  animation: reveal-caption .4s ease-out;\n}\n@keyframes reveal-caption {\n  from {\n    transform: translateY(6px);\n    opacity: 0;\n  }\n  to {\n    transform: translateY(0);\n    opacity: 1;\n  }\n}\n#save-message {\n  position: absolute;\n  bottom: 26%;\n  left: 8%;\n  width: 84%;\n  padding: 12px;\n  border-radius: 14px;\n  background: #fff5de;\n  color: #796143;\n  font-size: 12px;\n  text-align: center;\n  z-index: 8;\n  pointer-events: none;\n}\n#game[data-scene=home] .joystick-group {\n  visibility: hidden;\n}\n#game[data-scene=home] .cleanup-tip {\n  display: none;\n}\n#squish-friend {\n  position: absolute;\n  left: 8%;\n  bottom: 12%;\n  min-width: 100px;\n  min-height: 48px;\n  padding: 12px 20px;\n  border: 2px solid #fff;\n  border-radius: 25px;\n  background: #f1d6dd;\n  color: #795268;\n  font: 800 16px "Trebuchet MS", sans-serif;\n  box-shadow: 0 4px 12px #75534a15;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#home-vignette {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n  background:\n    linear-gradient(\n      #ede6f4ed,\n      transparent 29%,\n      transparent 75%,\n      #ede6f4dd);\n}\n#trip-wallet {\n  font-size: 8px;\n  letter-spacing: 1px;\n  color: #887298;\n  text-align: right;\n}\n#trip-balance {\n  display: block;\n  font-size: 24px;\n  letter-spacing: -1px;\n  color: #638269;\n}\n#reveal-copy {\n  isolation: isolate;\n}\n#game[data-scene=home] .topbar,\n#game[data-scene=home] .room-title,\n#game[data-scene=home] footer {\n  text-shadow: 0 1px 8px #fff;\n}\n@media (max-height: 740px) {\n  #reveal-copy {\n    top: 68%;\n  }\n  #reveal-copy h2 {\n    font-size: 27px;\n  }\n  #collection-dialog {\n    padding-top: 15px;\n  }\n  #collection-grid {\n    margin: 10px 0;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #reveal-copy.has-reveal {\n    animation: none;\n  }\n}\n#game[data-scene=home] .controls {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  right: 18px;\n  justify-content: flex-end;\n}\n#game[data-scene=home] .joystick-group,\n#game[data-scene=home] .control-label {\n  display: none;\n}\n#game[data-scene=home] #action-button {\n  width: 136px;\n  height: 48px;\n  border-radius: 25px;\n  display: flex;\n  flex-direction: row;\n  align-items: center;\n  justify-content: center;\n  gap: 8px;\n}\n#game[data-scene=home] #action-icon {\n  font-size: 20px;\n  margin: 0;\n}\n#game[data-scene=home] #action-title {\n  font-size: 13px;\n  margin: 0;\n}\n#game[data-scene=home] #action-detail {\n  display: none;\n}\n#game[data-scene=home] #squish-friend {\n  bottom: max(70px, calc(54px + env(safe-area-inset-bottom)));\n  left: 18px;\n  min-width: 130px;\n  font-size: 14px;\n}\nbody:has(#game[data-scene=home]) .dev-launch {\n  top: 77px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] .room-title {\n    top: 83px;\n    left: 20px;\n    right: 88px;\n    text-align: left;\n  }\n  #game[data-scene=home] .room-title .eyebrow,\n  #game[data-scene=home] #day-label {\n    display: none;\n  }\n  #game[data-scene=home] .room-title h1 {\n    font-size: 20px;\n    margin: 2px 0 4px;\n  }\n  #game[data-scene=home] .room-title p {\n    margin: 0;\n    font-size: 10px;\n  }\n  #game[data-scene=home] #reveal-copy {\n    top: 64%;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    margin: 7px 0 3px;\n    font-size: 24px;\n  }\n  #game[data-scene=home] #reveal-copy small {\n    font-size: 10px;\n    padding: 4px 8px;\n  }\n  #game[data-scene=home] #reveal-copy p {\n    font-size: 10px;\n  }\n}\n#collection-actions {\n  position: sticky;\n  top: -1px;\n  z-index: 2;\n  background: #faf5fb;\n  padding: 4px 0;\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 5px;\n}\n#collection-actions .loop-button {\n  font-size: 12px;\n  padding: 10px 5px;\n  margin: 0;\n  min-height: 44px;\n}\n#collection-actions #open-next {\n  grid-column: 1/-1;\n}\n#reveal-copy {\n  background: #fff9;\n  border-radius: 18px;\n  padding: 8px;\n  left: 8%;\n  width: 84%;\n}\n#home-vignette {\n  background:\n    linear-gradient(\n      #ede6f4a0,\n      transparent 25%,\n      transparent 70%,\n      #ede6f4a0);\n}\n#game[data-scene=home] #home-vignette {\n  background:\n    linear-gradient(\n      180deg,\n      #21112465,\n      transparent 27%,\n      transparent 65%,\n      #21112450);\n}\n#game[data-scene=home] .room-title,\n#game[data-scene=home] .topbar,\n#game[data-scene=home] footer {\n  color: #fff7ee;\n  text-shadow: 0 2px 5px #341c40;\n}\n#game[data-scene=home] #reveal-copy {\n  background: #fff8f0ed;\n  box-shadow: 0 5px 24px #49254920;\n}\n#game[data-scene=home] #reveal-copy {\n  top: auto;\n  bottom: 140px;\n}\n@media (max-height: 650px) {\n  #game[data-scene=home] #reveal-copy {\n    top: auto;\n    bottom: 132px;\n    padding: 6px;\n  }\n  #game[data-scene=home] #reveal-copy h2 {\n    font-size: 20px;\n    margin: 5px 0 3px;\n  }\n}\n#game[data-scene=home] #reveal-copy {\n  width: min(84%, 380px);\n  left: 50%;\n  translate: -50% 0;\n}\n@media (min-height: 651px) {\n  #game[data-scene=home] #reveal-copy {\n    bottom: 125px;\n  }\n}\n#fishing-panel {\n  position: absolute;\n  bottom: 22px;\n  left: 50%;\n  translate: -50% 0;\n  width: min(92%, 420px);\n  padding: 14px;\n  border-radius: 22px;\n  border: 2px solid #fff7;\n  background: #fff8eefa;\n  box-shadow: 0 5px 25px #35555130;\n  text-align: center;\n  color: #4e5f69;\n  z-index: 25;\n}\n#fishing-panel p {\n  font-size: 15px;\n  line-height: 1.4;\n  margin: 0 0 10px;\n  font-weight: 700;\n}\n#fishing-panel button {\n  border: 2px solid #fff;\n  border-radius: 20px;\n  background: #afd7ca;\n  color: #335a54;\n  font: 800 16px system-ui;\n  padding: 13px 22px;\n  min-height: 48px;\n  margin: 3px;\n  touch-action: manipulation;\n}\n#fishing-panel button:last-child {\n  background: #ede3ea;\n  font-size: 12px;\n  padding: 10px 14px;\n}\n#fishing-panel progress {\n  width: 80%;\n  display: block;\n  margin: 8px auto;\n  accent-color: #81b6a2;\n}\n#game[data-fishing=true] .controls,\n#game[data-fishing=true] .joystick-group,\n#game[data-fishing=true] footer,\n#game[data-fishing=true] .room-title {\n  visibility: hidden;\n}\n#game[data-scene=outdoors] .room-title {\n  pointer-events: none;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 22px;\n}\n#game[data-scene=outdoors] .room-title .eyebrow {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title {\n  top: 84px;\n  left: 20px;\n  right: 20px;\n  text-align: left;\n}\n#game[data-scene=outdoors] .room-title h1 {\n  font-size: 18px;\n  margin: 3px 0;\n}\n#game[data-scene=outdoors] #day-label {\n  display: none;\n}\n#game[data-scene=outdoors] .room-title p {\n  font-size: 11px;\n}\nbody:has(#game[data-fishing=true]) .dev-launch {\n  top: 78px;\n  right: 18px;\n  left: auto;\n  bottom: auto;\n  transform: none;\n  min-width: 60px;\n}\n#game[data-fishing=true] #move-tip {\n  visibility: hidden;\n}\n#fishing-panel progress[hidden] {\n  display: none;\n}\n#fishing-panel {\n  padding: 12px 14px;\n  bottom: 14px;\n  max-width: 390px;\n}\n#fishing-panel .fish-status {\n  display: block;\n  text-transform: uppercase;\n  font: 800 10px system-ui;\n  letter-spacing: 1.5px;\n  color: #738b87;\n  margin-bottom: 5px;\n}\n#fishing-panel p {\n  margin: 0 0 8px;\n  min-height: 22px;\n}\n#fishing-panel .fish-gauges {\n  display: flex;\n  gap: 12px;\n  margin: 8px 0;\n}\n#fishing-panel label {\n  flex: 1;\n  text-align: left;\n  font: 700 11px system-ui;\n}\n#fishing-panel progress {\n  width: 100%;\n  height: 9px;\n  margin: 5px 0;\n  appearance: none;\n  border: 0;\n  border-radius: 8px;\n  overflow: hidden;\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-bar {\n  background: #e6e5de;\n}\n#fishing-panel progress::-webkit-progress-value {\n  background: #7eaf9c;\n  border-radius: 8px;\n  transition: width .12s;\n}\n#fishing-panel[data-warning=true] label:last-child progress::-webkit-progress-value {\n  background: #d67976;\n}\n#fishing-panel[data-warning=true] p {\n  color: #ad535a;\n}\n#fishing-panel .fish-controls {\n  display: flex;\n  align-items: stretch;\n  gap: 5px;\n}\n#fishing-panel .fish-controls button {\n  touch-action: none;\n  user-select: none;\n  margin: 0;\n  padding: 13px 8px;\n  flex: 1;\n  border-radius: 15px;\n  font: 800 12px system-ui;\n  min-height: 52px;\n  background: #eee6f0;\n  color: #635470;\n}\n#fishing-panel #fish-action {\n  flex: 1.55;\n  background: #b1dac7;\n  color: #335e51;\n  font-size: 15px;\n}\n#fishing-panel .fish-controls button[data-held=true] {\n  background: #80bfa7 !important;\n  box-shadow: inset 0 2px 4px #416a6133;\n}\n#fishing-panel .fish-controls button[data-cue=true] {\n  border-color: #b194cf;\n  background: #e3d5f0;\n}\n#fishing-panel .fish-tip {\n  display: block;\n  font: 11px system-ui;\n  line-height: 1.4;\n  color: #79857f;\n  margin: 7px 0 2px;\n}\n#fishing-panel > button:last-child {\n  min-height: 32px;\n  padding: 5px 12px;\n  margin: 0;\n  background: transparent;\n  color: #797e83;\n  font-size: 11px;\n}\n#fishing-panel [hidden] {\n  display: none !important;\n}\n@media (max-height: 650px) {\n  #fishing-panel {\n    bottom: 8px;\n    padding: 8px 12px;\n  }\n  #fishing-panel .fish-status,\n  #fishing-panel .fish-tip {\n    display: none;\n  }\n  #fishing-panel .fish-controls button {\n    min-height: 44px;\n    padding: 9px 6px;\n  }\n}\n#fish-direction-cue {\n  position: absolute;\n  bottom: calc(var(--panel-height,230px) + 25px);\n  left: 50%;\n  translate: -50% 0;\n  z-index: 26;\n  pointer-events: none;\n  background: #fff9e7ee;\n  border: 3px solid #e8bc60;\n  border-radius: 20px;\n  padding: 2px 15px 8px;\n  min-width: 85px;\n  text-align: center;\n  color: #725d36;\n  box-shadow: 0 4px 14px #405c5230;\n}\n#fish-direction-cue[hidden] {\n  display: none;\n}\n#fish-direction-cue[data-side=left] {\n  left: 19%;\n}\n#fish-direction-cue[data-side=right] {\n  left: 81%;\n}\n#fish-direction-cue span {\n  display: block;\n  font: 900 46px/1 system-ui;\n  letter-spacing: -6px;\n  padding-right: 6px;\n}\n#fish-direction-cue b {\n  display: block;\n  font: 900 11px system-ui;\n  letter-spacing: .7px;\n}\n#fish-direction-cue[data-side=left] .fish-arrows {\n  animation: pull-left .65s ease-in-out infinite;\n}\n#fish-direction-cue[data-side=right] .fish-arrows {\n  animation: pull-right .65s ease-in-out infinite;\n}\n#fish-direction-cue[data-correct=true] {\n  border-color: #80b7a0;\n  color: #417761;\n}\n#fish-direction-cue[data-correct=true] span {\n  font-size: 35px;\n  letter-spacing: 0;\n}\n#fish-direction-cue[data-side=rest] {\n  border-color: #d99485;\n  color: #a1574f;\n}\n#fish-direction-cue .fish-hand {\n  font-size: 30px;\n  letter-spacing: 0;\n  margin: 4px;\n}\n#fishing-panel .fish-controls button[data-cue=true] {\n  border: 3px solid #e1b45b;\n  background: #ffedb7;\n  color: #624f31;\n  box-shadow: 0 0 0 3px #f7d78b60;\n}\n#fishing-panel .fish-controls[data-pull="-1"] #fish-right,\n#fishing-panel .fish-controls[data-pull="1"] #fish-left {\n  opacity: .55;\n}\n#fishing-panel .fish-controls[data-pull=rest] #fish-action {\n  background: #efd2c8;\n  color: #945c51;\n}\n@keyframes pull-left {\n  0%, 100% {\n    transform: translateX(4px);\n  }\n  50% {\n    transform: translateX(-7px);\n  }\n}\n@keyframes pull-right {\n  0%, 100% {\n    transform: translateX(-4px);\n  }\n  50% {\n    transform: translateX(7px);\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #fish-direction-cue .fish-arrows {\n    animation: none !important;\n  }\n}\n\n/* src/ui/house.css */\n#mission-picker {\n  display: flex;\n  gap: 5px;\n  justify-content: center;\n  margin: 9px auto 0;\n  pointer-events: auto;\n}\n#mission-picker button {\n  border: 1px solid #fff9;\n  border-radius: 12px;\n  background: #f6f0f9db;\n  padding: 5px 10px;\n  color: #8c739d;\n  font:\n    700 10px "Trebuchet MS",\n    system-ui,\n    sans-serif;\n  cursor: pointer;\n  touch-action: manipulation;\n}\n#mission-picker button[aria-pressed=true] {\n  color: #614d7c;\n  background: #d6c4e8;\n}\n#mission-picker button:disabled {\n  opacity: .65;\n  cursor: default;\n}\n#room-connections {\n  margin: 7px 12px 0;\n  font-size: 10px;\n  color: #816b90;\n}\n#house-doors {\n  position: absolute;\n  inset: 0;\n  pointer-events: none;\n}\n.door-label {\n  position: absolute;\n  left: 0;\n  top: 0;\n  white-space: nowrap;\n  padding: 3px 6px;\n  font-size: 9px;\n  font-weight: 700;\n  color: #756085;\n  background: #fff6e7dc;\n  border: 1px solid #fff8;\n  border-radius: 7px;\n}\n.room-title {\n  text-shadow: 0 1px 6px #ede6f4;\n}\n#game[data-mission=practice] #task-count {\n  font-size: 9px;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #mission-picker {\n    margin-top: 5px;\n  }\n  #mission-picker button {\n    padding: 4px 8px;\n    font-size: 9px;\n  }\n  #room-connections {\n    margin-top: 4px;\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #mission-picker {\n    justify-content: flex-start;\n    flex-wrap: wrap;\n    width: 180px;\n    margin-left: 0;\n  }\n  #room-connections {\n    max-width: 165px;\n    margin-left: 0;\n  }\n}\n#game[data-scene=cleanup] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border: 1px solid #fff9;\n  border-radius: 20px;\n  background: #fff9efed;\n  box-shadow: 0 4px 20px #66564412;\n}\n#game[data-scene=cleanup] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=cleanup] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=cleanup] .flower {\n  font-size: 34px;\n}\n#game[data-scene=cleanup] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=cleanup] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1.1px;\n  color: #5c6e52;\n}\n#game[data-scene=cleanup] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n  letter-spacing: -.6px;\n}\n#game[data-scene=cleanup] .task-list {\n  justify-content: flex-start;\n  background: #fff8efdc;\n  border-radius: 9px;\n  padding: 4px 7px;\n  width: max-content;\n  max-width: 100%;\n  height: auto;\n}\n#game[data-scene=cleanup] #mission-picker {\n  justify-content: flex-start;\n  margin: 7px 0 0;\n}\n#game[data-scene=cleanup] #room-connections {\n  display: none;\n}\n#game[data-scene=cleanup] .player-label {\n  font-size: 9px;\n  padding: 3px 7px;\n}\n#game[data-scene=cleanup] .controls {\n  bottom: max(40px, calc(env(safe-area-inset-bottom) + 24px));\n  left: 20px;\n  right: 20px;\n}\n#game[data-scene=cleanup] .control-label {\n  color: #50624c;\n  text-shadow: 0 1px 3px #ffff;\n}\n#game[data-scene=cleanup] #cleanup-hint {\n  background: #fff9efed;\n  width: calc(100% - 32px);\n  left: 16px;\n  padding: 7px 10px;\n  border-radius: 12px;\n  color: #596651;\n  bottom: calc(max(40px, env(safe-area-inset-bottom)) + 150px);\n  font-size: 10px;\n}\n#game[data-scene=cleanup] footer {\n  left: 16px;\n  right: 16px;\n  background: #fff9efed;\n  padding: 5px 9px;\n  border-radius: 12px;\n  bottom: 8px;\n  color: #6c795e;\n}\n@media (max-height: 740px) and (orientation: portrait) {\n  #game[data-scene=cleanup] .room-title {\n    top: 85px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] #mission-picker {\n    margin-top: 5px;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    bottom: calc(max(36px, env(safe-area-inset-bottom)) + 144px);\n    font-size: 9px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=cleanup] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=cleanup] .room-title {\n    top: 95px;\n    width: 210px;\n  }\n  #game[data-scene=cleanup] h1 {\n    display: none;\n  }\n  #game[data-scene=cleanup] .task-list {\n    flex-wrap: wrap;\n  }\n  #game[data-scene=cleanup] #cleanup-hint {\n    width: 40%;\n    left: 30%;\n    bottom: 12px;\n  }\n  #game[data-scene=cleanup] footer {\n    display: flex;\n    flex-wrap: wrap;\n    top: 12px;\n    bottom: auto;\n    left: 270px;\n    right: 16px;\n    justify-content: flex-end;\n  }\n}\n.asset-credits {\n  color: inherit;\n  font-size: 9px;\n  text-decoration: none;\n  padding: 5px;\n}\n#day-label {\n  margin: 5px 0;\n  font-size: 11px;\n  font-weight: 700;\n  color: #667b5b;\n  text-transform: capitalize;\n}\n#mission-picker {\n  flex-wrap: wrap;\n}\n#game[data-mission=day] .task-list {\n  flex-wrap: wrap;\n  font-size: 9px;\n}\n#game[data-mission=day] #mission-clock {\n  font-size: 19px;\n  white-space: nowrap;\n}\n#school-transition {\n  position: absolute;\n  z-index: 30;\n  inset: 0;\n  background: #f6eafaed;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  flex-direction: column;\n  color: #65517b;\n}\n#school-transition[hidden] {\n  display: none;\n}\n#school-transition span {\n  font-size: 64px;\n}\n.lilah-label {\n  position: absolute;\n  top: 0;\n  left: 0;\n  max-width: 165px;\n  padding: 7px 10px;\n  border-radius: 15px 15px 15px 3px;\n  background: #fff2ceeF;\n  color: #735978;\n  font-size: 12px;\n  font-weight: 700;\n  pointer-events: none;\n  box-shadow: 0 3px 12px #7c627525;\n  z-index: 5;\n  text-align: center;\n}\n.lilah-label[hidden] {\n  display: none;\n}\n.marc-label {\n  background: #e7f0e4ef;\n  color: #4f655c;\n}\n#player-label,\n#house-doors,\n#room-connections {\n  display: none !important;\n}\n#game[data-scene=cleanup] .room-title h1 {\n  display: none;\n}\n#game[data-scene=store] .topbar {\n  top: max(12px, env(safe-area-inset-top));\n  left: 16px;\n  right: 16px;\n  padding: 10px 13px;\n  border-radius: 20px;\n  background: #fff9efed;\n}\n#game[data-scene=store] .wordmark {\n  font-size: 22px;\n}\n#game[data-scene=store] .wordmark small {\n  font-size: 6px;\n}\n#game[data-scene=store] .flower {\n  font-size: 34px;\n}\n#game[data-scene=store] .room-title {\n  top: 96px;\n  padding: 0 14px;\n  text-align: left;\n  width: 100%;\n}\n#game[data-scene=store] .eyebrow {\n  justify-content: flex-start;\n  font-size: 8px;\n  letter-spacing: 1px;\n}\n#game[data-scene=store] h1 {\n  font-size: 21px;\n  margin: 5px 0;\n}\n#game[data-scene=store] #scene-subtitle {\n  font-size: 11px;\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  #game[data-scene=store] .topbar {\n    width: 235px;\n  }\n  #game[data-scene=store] .room-title {\n    width: 210px;\n  }\n}\n#bedtime-fade {\n  position: absolute;\n  inset: 0;\n  background: #161325;\n  z-index: 80;\n  pointer-events: none;\n}\n#house-effects {\n  pointer-events: auto;\n  border: 0;\n  background: transparent;\n  color: #78628f;\n  font: 700 10px "Trebuchet MS", sans-serif;\n  min-height: 36px;\n  cursor: pointer;\n  padding: 4px 6px;\n}\n\n/* src/ui/adventure.css */\n:root {\n  --paper:#fff9ee;\n  --ink:#3c304a;\n  --muted-ink:#726778;\n  --plum:#655078;\n  --lavender:#dfd2eb;\n  --sage:#dce6d4;\n  --line:#dfd7cd;\n  --hud-edge:24px;\n  --hud-bottom:max(26px,calc(env(safe-area-inset-bottom) + 18px));\n}\n.adventure-ui {\n  font-family:\n    "Segoe UI",\n    ui-rounded,\n    system-ui,\n    sans-serif;\n  color: var(--ink);\n}\n.adventure-ui:not([data-input=keyboard]) #game-canvas:focus-visible {\n  outline: none;\n}\n.adventure-ui > .topbar,\n.adventure-ui > .room-title,\n.adventure-ui > footer,\n.adventure-ui > #move-tip {\n  display: none !important;\n}\n.adventure-ui .control-label,\n.adventure-ui #action-icon,\n.adventure-ui #joystick .direction,\n.adventure-ui .pop-launch,\n.adventure-ui #daily-play-open {\n  display: none !important;\n}\nbody:has(.adventure-ui) .dev-launch,\nbody:has(.adventure-ui) .dev-inline {\n  display: none !important;\n}\n#adventure-hud {\n  position: absolute;\n  inset: 0;\n  z-index: 31;\n  pointer-events: none;\n}\n#adventure-hud svg,\n.adventure-panel svg,\n.adventure-action-glyph svg {\n  width: 24px;\n  height: 24px;\n  flex-shrink: 0;\n}\n.adventure-status {\n  position: absolute;\n  top: max(var(--hud-edge), env(safe-area-inset-top));\n  left: max(var(--hud-edge), env(safe-area-inset-left));\n  display: grid;\n  grid-template-columns: 42px auto;\n  gap: 0 10px;\n  padding: 12px 16px 0 12px;\n  background: var(--paper);\n  border-radius: 8px 20px 20px 8px;\n  box-shadow: 0 3px 0 #46365120, 0 8px 28px #352a3912;\n  max-width: 290px;\n  border-left: 4px solid #b29abb;\n}\n.day-seal {\n  width: 40px;\n  height: 40px;\n  border: 1px solid #dcd1ba;\n  border-radius: 50%;\n  display: grid;\n  place-items: center;\n  color: #82673e;\n  background: #f4ead5;\n}\n.place-copy {\n  display: flex;\n  flex-direction: column;\n  justify-content: center;\n  min-width: 0;\n}\n#adventure-time {\n  font-size: 12px;\n  color: var(--muted-ink);\n  font-weight: 600;\n  white-space: nowrap;\n  font-variant-numeric: tabular-nums;\n}\n#adventure-place {\n  font-size: 19px;\n  letter-spacing: -.5px;\n  line-height: 1.4;\n  max-width: 205px;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n#adventure-today {\n  grid-column: 1/-1;\n  margin-top: 8px;\n  border: 0;\n  border-top: 1px solid var(--line);\n  background: transparent;\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  color: var(--plum);\n  min-height: 44px;\n  padding: 8px 0;\n  font: 600 13px/1.2 "Segoe UI", sans-serif;\n  cursor: pointer;\n  pointer-events: auto;\n  text-align: left;\n}\n#adventure-today svg {\n  width: 19px;\n  height: 19px;\n}\n#adventure-today span {\n  display: flex;\n  gap: 10px;\n  align-items: center;\n  width: 100%;\n  font: 600 13px "Segoe UI", sans-serif;\n}\n#adventure-count {\n  margin-left: auto;\n  font-variant-numeric: tabular-nums;\n}\n.adventure-tools {\n  position: absolute;\n  top: max(var(--hud-edge), env(safe-area-inset-top));\n  right: max(var(--hud-edge), env(safe-area-inset-right));\n  display: flex;\n  align-items: center;\n  background: var(--paper);\n  border-radius: 16px 8px 8px 16px;\n  box-shadow: 0 3px 0 #46365120, 0 8px 28px #352a3912;\n  padding: 4px;\n}\n.adventure-wallet {\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  padding: 0 12px;\n  color: #4d6351;\n  font-size: 17px;\n  font-variant-numeric: tabular-nums;\n}\n.adventure-wallet svg {\n  width: 19px !important;\n}\n#adventure-menu-open {\n  border: 0;\n  border-left: 1px solid var(--line);\n  background: transparent;\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  min-height: 44px;\n  color: var(--ink);\n  font: 600 13px "Segoe UI", sans-serif;\n  padding: 0 12px;\n  cursor: pointer;\n  pointer-events: auto;\n}\n.adventure-ui button:focus-visible,\n.adventure-ui summary:focus-visible,\n.adventure-ui a:focus-visible {\n  outline: 3px solid #9774ae;\n  outline-offset: 4px;\n}\n.adventure-timer {\n  position: absolute;\n  top: 145px;\n  left: var(--hud-edge);\n  background: var(--paper);\n  border-left: 4px solid #a5b49b;\n  border-radius: 8px 14px 14px 8px;\n  padding: 10px 18px;\n  display: flex;\n  gap: 16px;\n  align-items: center;\n}\n.adventure-timer small {\n  font-size: 11px;\n  letter-spacing: 1px;\n}\n.adventure-timer strong {\n  font-size: 24px;\n  font-variant-numeric: tabular-nums;\n}\n.adventure-timer.urgent {\n  border-color: #af4c55;\n  color: #913641;\n}\n.adventure-ui .controls {\n  left: max(var(--hud-edge), env(safe-area-inset-left)) !important;\n  right: max(var(--hud-edge), env(safe-area-inset-right)) !important;\n  bottom: var(--hud-bottom) !important;\n  align-items: flex-end;\n  z-index: 32;\n}\n.adventure-ui #joystick {\n  width: 112px;\n  height: 112px;\n  border: 1px solid #fffaf2b3;\n  background: #fff9ed45;\n  box-shadow: inset 0 0 0 9px #fff9ed20;\n  border-radius: 50%;\n}\n.adventure-ui #joystick-knob {\n  width: 46px;\n  height: 46px;\n  left: 32px;\n  top: 32px;\n  border: 2px solid #fff9eebf;\n  background: #bba6cb;\n  box-shadow: 0 3px 0 #55465c30, 0 4px 14px #463a5229;\n}\n.adventure-ui #joystick-knob svg {\n  width: 16px;\n  height: 16px;\n  opacity: .75;\n}\n.adventure-ui #action-button {\n  width: 184px !important;\n  min-height: 72px;\n  height: auto !important;\n  border: 1px solid #8c759d;\n  border-bottom: 4px solid #463652;\n  border-radius: 20px 20px 8px 20px;\n  background: var(--plum);\n  color: #fff9ee;\n  box-shadow: 0 5px 16px #3c304a29;\n  display: flex;\n  flex-direction: row !important;\n  justify-content: flex-start;\n  align-items: center;\n  gap: 10px;\n  padding: 18px 16px;\n  position: relative;\n  transition: background .16s, transform .12s;\n}\n.adventure-ui #action-button:not(:disabled):active {\n  transform: translateY(2px);\n  box-shadow: 0 2px 8px #3c304a20;\n}\n.adventure-ui #action-button:disabled {\n  background: #fff9eeea;\n  color: #746978;\n  border-color: #f7eee1;\n  border-bottom-color: #cfc3d0;\n  box-shadow: 0 3px 12px #3c304a14;\n}\n.adventure-ui #action-button.holding {\n  background: conic-gradient(#3b7259 var(--hold-progress), var(--plum) 0deg);\n}\n.adventure-ui #action-title {\n  font: 650 17px/1.2 "Segoe UI", sans-serif;\n  text-align: left;\n  flex: 1;\n  order: 2;\n  min-width: 0;\n}\n.adventure-action-glyph {\n  order: 1;\n  display: grid;\n  place-items: center;\n  color: #e6d6b5;\n}\n.adventure-ui #action-button:disabled .adventure-action-glyph {\n  color: #a99aaf;\n}\n.adventure-action-key {\n  display: none;\n  order: 3;\n  border: 1px solid #fff5;\n  border-radius: 5px;\n  padding: 3px 5px;\n  font-size: 12px;\n}\n.adventure-ui #action-detail {\n  position: absolute;\n  right: 0;\n  bottom: calc(100% + 10px);\n  max-width: 224px;\n  width: max-content;\n  min-width: 80px;\n  text-align: right;\n  background: #fff9eeeF;\n  color: #5b4d62;\n  padding: 8px 11px;\n  border-radius: 10px 10px 3px 10px;\n  font: 500 12px/1.35 "Segoe UI", sans-serif;\n  box-shadow: 0 2px 9px #352b4310;\n}\n.adventure-ui[data-action=idle] #action-detail {\n  display: none;\n}\n.adventure-ui[data-input=keyboard] #joystick {\n  visibility: hidden;\n}\n.adventure-ui[data-input=keyboard] .adventure-action-key {\n  display: block;\n}\n.adventure-keyboard {\n  position: absolute;\n  bottom: calc(var(--hud-bottom) + 25px);\n  left: var(--hud-edge);\n  display: none;\n  gap: 8px;\n  align-items: center;\n  font-size: 12px;\n  background: #fff9eeef;\n  padding: 8px 12px;\n  border-radius: 8px;\n}\n.adventure-keyboard kbd {\n  font: 600 11px "Segoe UI", sans-serif;\n  color: var(--plum);\n}\n.adventure-ui[data-input=keyboard] .adventure-keyboard {\n  display: flex;\n}\n.adventure-ui .journey-button {\n  right: var(--hud-edge) !important;\n  left: auto !important;\n  bottom: calc(var(--hud-bottom) + 124px) !important;\n  max-width: 184px;\n  min-height: 44px;\n  border: 1px solid #e2d6c4;\n  border-bottom: 3px solid #c7bca9;\n  border-radius: 12px 12px 5px 12px;\n  background: var(--paper);\n  color: var(--ink);\n  box-shadow: 0 3px 10px #40304012;\n  padding: 10px 15px;\n  font: 600 13px "Segoe UI", sans-serif;\n}\n.adventure-ui #school-ball-pickup,\n.adventure-ui #scooter-toggle,\n.adventure-ui #daily-play-drop {\n  bottom: calc(var(--hud-bottom) + 176px) !important;\n}\n.adventure-ui #scooter-brake {\n  right: calc(var(--hud-edge) + 132px) !important;\n  bottom: calc(var(--hud-bottom) + 176px) !important;\n}\n.adventure-ui #travel-next-store,\n.adventure-ui #leave-recess {\n  top: max(88px, calc(env(safe-area-inset-top) + 64px));\n  right: var(--hud-edge);\n  left: auto;\n  width: auto;\n  max-width: 190px;\n  background: var(--paper);\n  color: var(--plum);\n  border: 1px solid #ded2e3;\n  border-radius: 8px;\n  padding: 12px 14px;\n  min-height: 44px;\n  font: 600 13px "Segoe UI", sans-serif;\n}\n.adventure-ui #hunt-find {\n  bottom: calc(var(--hud-bottom) + 148px);\n  left: auto;\n  right: var(--hud-edge);\n  max-width: 280px;\n  border: 1px solid var(--line);\n  border-radius: 16px 16px 5px 16px;\n  background: var(--paper);\n  padding: 14px;\n  box-shadow: 0 5px 20px #352b4314;\n}\n.adventure-ui #hunt-find small {\n  font-size: 12px;\n  line-height: 1.5;\n}\n.adventure-ui #save-message,\n.adventure-ui[data-scene=store] #save-message {\n  top: auto;\n  left: 50%;\n  right: auto;\n  bottom: calc(var(--hud-bottom) + 130px);\n  transform: translateX(-50%);\n  width: max-content;\n  max-width: min(380px, calc(100% - 40px));\n  background: var(--paper);\n  color: var(--ink);\n  font-size: 14px;\n  border: 1px solid var(--line);\n  box-shadow: 0 4px 18px #352b4320;\n  z-index: 34;\n}\n.adventure-ui[data-modal=true] #adventure-hud,\n.adventure-ui[data-modal=true] > .controls,\n.adventure-ui[data-modal=true] > .journey-button {\n  visibility: hidden;\n}\n.adventure-ui[data-revealing=true] #adventure-hud,\n.adventure-ui[data-revealing=true] > .controls {\n  visibility: hidden;\n}\n.adventure-panel {\n  width: min(460px, calc(100vw - 32px));\n  max-height: calc(100dvh - 40px);\n  padding: 0;\n  border: 1px solid #e8dece;\n  border-radius: 22px 22px 10px 22px;\n  background: var(--paper);\n  color: var(--ink);\n  font-family:\n    "Segoe UI",\n    system-ui,\n    sans-serif;\n  box-shadow: 0 20px 90px #261e354a;\n  overflow: auto;\n}\n.adventure-panel::backdrop {\n  background: #29233773;\n}\n.adventure-panel-head {\n  position: sticky;\n  top: 0;\n  z-index: 2;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 14px;\n  padding: 28px 28px 20px;\n  border-bottom: 1px solid var(--line);\n  background: var(--paper);\n}\n.adventure-panel h2 {\n  font-size: 30px;\n  line-height: 1.2;\n  letter-spacing: -1px;\n  margin: 7px 0 0;\n  color: var(--ink);\n}\n.adventure-overline {\n  font-size: 10px;\n  letter-spacing: 1.7px;\n  font-weight: 700;\n  color: var(--muted-ink);\n}\n.brand-petal {\n  display: inline-flex;\n  margin-left: 12px;\n  color: #a58bb5;\n}\n.brand-petal svg {\n  width: 28px;\n  height: 28px;\n}\n.adventure-close {\n  display: grid;\n  place-items: center;\n  width: 44px;\n  min-width: 44px;\n  height: 44px;\n  border: 1px solid var(--line);\n  border-radius: 50%;\n  background: transparent;\n  color: var(--ink);\n  cursor: pointer;\n}\n.adventure-close svg {\n  width: 20px;\n}\n.adventure-panel-body {\n  padding: 22px 28px 26px;\n}\n.adventure-resume {\n  width: 100%;\n  min-height: 50px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  background: var(--plum);\n  color: var(--paper);\n  font: 600 15px "Segoe UI", sans-serif;\n  border: 0;\n  border-bottom: 3px solid #493654;\n  border-radius: 12px 12px 5px 12px;\n  padding: 13px 18px;\n  cursor: pointer;\n}\n.adventure-destinations {\n  margin: 16px 0;\n}\n.adventure-destinations button {\n  width: 100%;\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  border: 0;\n  border-bottom: 1px solid var(--line);\n  background: transparent;\n  padding: 17px 0;\n  color: var(--plum);\n  text-align: left;\n  cursor: pointer;\n  min-height: 68px;\n}\n.adventure-destinations button > svg:last-child {\n  margin-left: auto;\n  width: 16px;\n  color: #938499;\n}\n.adventure-destinations strong {\n  display: block;\n  font-size: 16px;\n  color: var(--ink);\n  font-weight: 600;\n}\n.adventure-destinations small {\n  display: block;\n  font-size: 12px;\n  color: var(--muted-ink);\n  margin-top: 3px;\n}\n.adventure-destinations button:disabled {\n  opacity: .5;\n  cursor: default;\n}\n.adventure-panel details {\n  border-bottom: 1px solid var(--line);\n}\n.adventure-panel summary {\n  min-height: 48px;\n  align-content: center;\n  cursor: pointer;\n  font-size: 14px;\n  font-weight: 600;\n}\n.adventure-panel details p {\n  font-size: 13px;\n  line-height: 1.6;\n  color: var(--muted-ink);\n}\n#adventure-menu #mission-picker {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 8px;\n  margin: 12px 0 18px;\n  pointer-events: auto;\n  width: 100%;\n}\n#adventure-menu #mission-picker button {\n  position: static;\n  width: auto;\n  min-height: 46px;\n  padding: 10px;\n  border: 1px solid #d8cce0;\n  border-radius: 9px;\n  background: #f2ebf6;\n  color: #4f3f60;\n  font: 600 13px "Segoe UI", sans-serif;\n  white-space: normal;\n}\n#adventure-menu #mission-picker button[aria-pressed=true] {\n  background: var(--plum);\n  color: var(--paper);\n  border-color: var(--plum);\n}\n.adventure-menu-foot {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  margin-top: 20px;\n}\n.adventure-menu-foot a,\n.adventure-menu-foot button {\n  font: 500 12px "Segoe UI", sans-serif;\n  color: var(--muted-ink);\n  border: 0;\n  background: none;\n  padding: 8px 0;\n  text-decoration: underline;\n  cursor: pointer;\n}\n.adventure-clock-note,\n.adventure-availability {\n  font-size: 12px;\n  line-height: 1.5;\n  color: var(--muted-ink);\n  margin: 12px 0;\n}\n.adventure-clock-note:empty {\n  display: none;\n}\n.journal-summary {\n  display: flex;\n  gap: 12px;\n  align-items: center;\n  color: #576c54;\n  font-size: 14px;\n  padding-bottom: 16px;\n  border-bottom: 1px solid var(--line);\n}\n.journal-tasks {\n  list-style: none;\n  padding: 0;\n  margin: 0 0 20px;\n}\n.journal-tasks li {\n  display: flex;\n  gap: 14px;\n  align-items: center;\n  padding: 18px 0;\n  border-bottom: 1px solid var(--line);\n}\n.journal-check {\n  width: 25px;\n  height: 25px;\n  border: 1px solid #cdbcd6;\n  border-radius: 50%;\n  flex-shrink: 0;\n  color: #4b664a;\n  text-align: center;\n  line-height: 24px;\n}\n.journal-tasks .done .journal-check {\n  background: var(--sage);\n  border-color: #afc1a6;\n}\n.journal-tasks strong {\n  font-size: 16px;\n  font-weight: 600;\n}\n.journal-tasks small {\n  display: block;\n  color: var(--muted-ink);\n  font-size: 12px;\n  margin-top: 4px;\n}\n.journal-tasks .done strong {\n  color: #698164;\n}\n.journal-hint {\n  border-left: 3px solid #c6b1d4;\n  padding: 0 0 0 14px;\n  margin: 20px 0;\n}\n.journal-hint p {\n  font-size: 14px;\n  line-height: 1.6;\n  margin: 6px 0;\n}\n.adventure-ui #collection-dialog {\n  width: min(760px, calc(100% - 32px));\n  padding: 28px;\n  background: var(--paper);\n  color: var(--ink);\n  border: 1px solid var(--line);\n  border-radius: 22px;\n  max-height: calc(100dvh - 32px);\n  font-family: "Segoe UI", sans-serif;\n}\n.adventure-ui #collection-dialog h2 {\n  font-size: 30px;\n}\n.adventure-ui #collection-dialog > .eyebrow {\n  color: var(--muted-ink);\n  font-size: 10px;\n}\n.adventure-ui #collection-summary {\n  font-size: 13px;\n  color: var(--muted-ink);\n}\n.adventure-ui .collection-heading {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  text-align: left;\n}\n.adventure-ui .collection-heading .eyebrow {\n  justify-content: flex-start;\n  color: var(--muted-ink);\n  font-size: 10px;\n}\n.adventure-ui #back-cleanup {\n  border: 1px solid var(--line);\n  border-radius: 50%;\n  width: 44px;\n  height: 44px;\n  flex-shrink: 0;\n  background: var(--paper);\n  color: var(--ink);\n  font-size: 26px;\n  cursor: pointer;\n}\n.adventure-ui .collection-toolbar {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 8px;\n  position: sticky;\n  top: -28px;\n  z-index: 2;\n  background: var(--paper);\n  padding: 12px 0;\n  border-bottom: 1px solid var(--line);\n}\n.adventure-ui .collection-filters {\n  display: flex;\n  gap: 4px;\n}\n.adventure-ui .collection-filters button,\n.adventure-ui .collection-more summary {\n  font: 600 13px "Segoe UI", sans-serif;\n  min-height: 44px;\n  border: 0;\n  background: transparent;\n  padding: 12px;\n  color: var(--muted-ink);\n  cursor: pointer;\n  list-style: none;\n  border-radius: 8px;\n}\n.adventure-ui .collection-filters button[aria-pressed=true] {\n  background: var(--lavender);\n  color: var(--ink);\n}\n.adventure-ui .collection-more {\n  position: relative;\n}\n.adventure-ui .collection-more[open] summary {\n  background: #eee5f3;\n}\n.adventure-ui #collection-actions {\n  position: absolute;\n  top: 100%;\n  right: 0;\n  width: 230px;\n  display: grid;\n  grid-template-columns: 1fr;\n  gap: 8px;\n  padding: 12px;\n  background: var(--paper);\n  border: 1px solid var(--line);\n  border-radius: 12px;\n  box-shadow: 0 10px 30px #352b4320;\n}\n.adventure-ui #collection-dialog[data-filter=owned] .dumpling-card:not(.owned),\n.adventure-ui #collection-dialog[data-filter=owned] .series-heading,\n.adventure-ui #collection-dialog[data-filter=all] .collection-empty {\n  display: none;\n}\n.adventure-ui .collection-empty {\n  padding: 28px 16px;\n  font-size: 15px;\n  line-height: 1.6;\n}\n.adventure-ui #open-next {\n  background: var(--plum);\n  color: var(--paper);\n  font: 600 14px "Segoe UI", sans-serif;\n  min-height: 48px;\n  border-radius: 10px;\n}\n.adventure-ui #collection-actions .loop-button {\n  background: #eee5f3;\n  border: 1px solid #dbcfdf;\n  color: var(--ink);\n  border-radius: 9px;\n  font: 600 12px/1.3 "Segoe UI", sans-serif;\n  min-height: 48px;\n  padding: 10px;\n}\n.adventure-ui #collection-actions #open-next {\n  background: var(--plum);\n  color: var(--paper);\n}\n.adventure-ui #collection-grid {\n  grid-template-columns: repeat(4, minmax(0, 1fr));\n  gap: 14px;\n}\n.adventure-ui .dumpling-card {\n  padding: 10px 8px 12px;\n  border: 1px solid #e6dce9;\n  background: #f2edf2;\n  border-radius: 14px;\n}\n.adventure-ui .dumpling-card.owned {\n  background: linear-gradient(var(--paper), var(--rarity));\n}\n.adventure-ui .dumpling-card strong {\n  font: 600 14px/1.4 "Segoe UI", sans-serif;\n}\n.adventure-ui .dumpling-card small,\n.adventure-ui .dumpling-card .copies {\n  font: 500 12px/1.4 "Segoe UI", sans-serif;\n}\n.adventure-ui .collection-protection {\n  min-width: 44px;\n  min-height: 44px;\n  font-size: 17px;\n  margin: 6px 2px 0;\n}\n.adventure-ui .series-heading {\n  font: 650 17px "Segoe UI", sans-serif;\n  margin-top: 12px;\n  color: var(--plum);\n}\nbody:has(.adventure-ui) .audio-settings {\n  font-family: "Segoe UI", sans-serif;\n  background: var(--paper);\n  color: var(--ink);\n  border: 1px solid var(--line);\n  border-radius: 20px;\n  padding: 26px;\n  width: min(400px, calc(100vw - 32px));\n}\nbody:has(.adventure-ui) .audio-settings p {\n  font-size: 13px;\n}\n@media (max-width: 600px) {\n  :root {\n    --hud-edge:16px;\n  }\n  .adventure-status {\n    grid-template-columns: 28px auto;\n    padding: 10px 12px 0 9px;\n    gap: 0 7px;\n    max-width: calc(100% - 140px);\n  }\n  .day-seal {\n    width: 28px;\n    height: 28px;\n  }\n  .day-seal svg {\n    width: 19px !important;\n    height: 19px !important;\n  }\n  #adventure-time {\n    font-size: 11px;\n  }\n  #adventure-place {\n    font-size: 16px;\n    max-width: 150px;\n  }\n  .adventure-wallet {\n    padding: 0 9px;\n    font-size: 15px;\n  }\n  .adventure-wallet svg {\n    display: none;\n  }\n  #adventure-menu-open {\n    padding: 0 10px;\n  }\n  #adventure-menu-open > span {\n    display: none;\n  }\n  #adventure-menu-open svg {\n    width: 22px;\n  }\n  .adventure-ui #action-button {\n    width: 168px !important;\n    min-height: 68px;\n    padding: 15px 13px;\n  }\n  .adventure-ui #action-title {\n    font-size: 16px;\n  }\n  .adventure-ui #action-detail {\n    max-width: 186px;\n  }\n  .adventure-ui #joystick {\n    width: 104px;\n    height: 104px;\n  }\n  .adventure-ui #joystick-knob {\n    left: 28px;\n    top: 28px;\n  }\n  .adventure-ui #hunt-find {\n    max-width: 240px;\n  }\n  .adventure-panel-head {\n    padding: 22px 20px 18px;\n  }\n  .adventure-panel-body {\n    padding: 18px 20px 22px;\n  }\n  .adventure-panel h2 {\n    font-size: 27px;\n  }\n  .adventure-ui #collection-dialog {\n    padding: 18px;\n  }\n  .adventure-ui #collection-grid {\n    grid-template-columns: repeat(3, minmax(0, 1fr));\n    gap: 8px;\n  }\n  .adventure-ui .collection-toolbar {\n    top: -18px;\n  }\n  .adventure-ui #collection-actions {\n    top: 100%;\n    grid-template-columns: 1fr;\n  }\n  .adventure-ui #collection-actions #visit-recess {\n    grid-column: 1/-1;\n  }\n  .adventure-ui .dumpling-card {\n    padding: 6px 3px 10px;\n  }\n  .adventure-ui .dumpling-card strong {\n    font-size: 13px;\n  }\n  .adventure-ui .collection-protection {\n    min-width: 40px;\n    margin: 6px 1px 0;\n  }\n}\n@media (max-width: 350px) {\n  :root {\n    --hud-edge:12px;\n  }\n  .adventure-status {\n    grid-template-columns: 1fr;\n    max-width: calc(100% - 112px);\n    padding: 9px 10px 0;\n  }\n  .day-seal {\n    display: none;\n  }\n  #adventure-today {\n    margin-top: 5px;\n  }\n  .adventure-tools {\n    padding: 2px;\n  }\n  #adventure-menu-open {\n    padding: 0 8px;\n  }\n  .adventure-wallet {\n    padding: 0 7px;\n  }\n  .adventure-ui #action-button {\n    width: 156px !important;\n  }\n  .adventure-ui #joystick {\n    width: 96px;\n    height: 96px;\n  }\n  .adventure-ui #joystick-knob {\n    left: 24px;\n    top: 24px;\n  }\n  .adventure-ui #collection-grid {\n    grid-template-columns: repeat(2, minmax(0, 1fr));\n  }\n  .adventure-panel h2 {\n    font-size: 24px;\n  }\n}\n@media (orientation: landscape) and (max-height: 600px) {\n  :root {\n    --hud-edge:14px;\n    --hud-bottom:max(18px,calc(env(safe-area-inset-bottom) + 10px));\n  }\n  .adventure-status {\n    grid-template-columns: 32px auto;\n    padding-top: 8px;\n  }\n  .day-seal {\n    width: 30px;\n    height: 30px;\n  }\n  #adventure-place {\n    font-size: 16px;\n  }\n  #adventure-today {\n    margin-top: 4px;\n    min-height: 40px;\n  }\n  .adventure-ui #action-button {\n    min-height: 56px;\n    width: 170px !important;\n    padding: 12px;\n  }\n  .adventure-ui #action-title {\n    font-size: 15px;\n  }\n  .adventure-ui #joystick {\n    width: 96px;\n    height: 96px;\n  }\n  .adventure-ui #joystick-knob {\n    left: 24px;\n    top: 24px;\n  }\n  .adventure-ui .journey-button {\n    bottom: calc(var(--hud-bottom) + 110px) !important;\n    min-height: 44px;\n  }\n  .adventure-ui #school-ball-pickup,\n  .adventure-ui #scooter-toggle,\n  .adventure-ui #daily-play-drop {\n    right: calc(var(--hud-edge) + 110px) !important;\n    bottom: calc(var(--hud-bottom) + 110px) !important;\n  }\n  .adventure-ui #scooter-brake {\n    right: calc(var(--hud-edge) + 240px) !important;\n    bottom: calc(var(--hud-bottom) + 110px) !important;\n  }\n  .adventure-ui #hunt-find {\n    right: 200px;\n    bottom: var(--hud-bottom);\n    max-width: 230px;\n  }\n  .adventure-timer {\n    top: 125px;\n    padding: 7px 12px;\n  }\n  .adventure-ui #save-message {\n    bottom: 20px;\n    max-width: calc(100% - 340px);\n  }\n  .adventure-panel {\n    max-height: calc(100dvh - 24px);\n  }\n  .adventure-panel-head {\n    padding: 14px 22px;\n  }\n  .adventure-panel h2 {\n    font-size: 25px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  .adventure-ui #action-button {\n    transition: none;\n  }\n}\n\n/* src/dev/developer-panel.css */\n.dev-launch,\n.dev-inline {\n  font: 800 11px/1.2 system-ui, sans-serif !important;\n  letter-spacing: .08em;\n  background: #27263c !important;\n  color: #e6dcff !important;\n  border: 1px solid #b9a4e8 !important;\n  border-radius: 12px !important;\n  min-height: 44px;\n  min-width: 44px;\n  padding: 10px !important;\n  cursor: pointer;\n}\n.dev-launch {\n  position: fixed;\n  z-index: 90;\n  bottom: 64px;\n  left: 50%;\n  transform: translateX(-50%);\n  box-shadow: 0 4px 18px #29223a40;\n}\n.dev-launch {\n  bottom: calc(64px + env(safe-area-inset-bottom, 0px));\n}\n#developer-panel {\n  height: min(850px, calc(100dvh - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)));\n}\n.dev-inline {\n  margin: 6px;\n  flex-shrink: 0;\n}\n.pop-title .dev-inline {\n  font-size: 9px !important;\n  letter-spacing: 0;\n  margin: 0;\n  min-width: 38px;\n  padding: 5px !important;\n}\n#developer-panel {\n  width: min(720px, calc(100vw - 24px));\n  max-width: none;\n  max-height: none;\n  height: min(850px, calc(100dvh - 24px));\n  margin: auto;\n  padding: 0;\n  overflow: hidden;\n  border: 1px solid #b6a4d764;\n  border-radius: 24px;\n  background: #181926;\n  color: #eeeaf8;\n  box-shadow: 0 28px 100px #100c23a6;\n  font: 14px/1.45 system-ui, sans-serif;\n  text-align: left;\n}\n#developer-panel::backdrop {\n  background: #121020a6;\n  backdrop-filter: blur(5px);\n}\n#developer-panel * {\n  box-sizing: border-box;\n}\n#developer-panel [hidden] {\n  display: none !important;\n}\n#developer-panel .dev-shell {\n  display: flex;\n  flex-direction: column;\n  height: 100%;\n  min-height: 0;\n}\n#developer-panel button {\n  font: 650 13px/1.35 system-ui, sans-serif;\n  cursor: pointer;\n  min-height: 44px;\n  border: 1px solid #494458;\n  background: #303043;\n  color: #f3efff;\n  border-radius: 12px;\n  padding: 11px 13px;\n  box-shadow: none;\n  text-transform: none;\n  letter-spacing: 0;\n  transition: background .12s;\n}\n#developer-panel button:hover {\n  background: #414057;\n}\n#developer-panel button:focus-visible,\n#developer-panel select:focus-visible {\n  outline: 3px solid #d1bcff;\n  outline-offset: 2px;\n}\n#developer-panel button:disabled {\n  opacity: .4;\n  cursor: not-allowed;\n}\n#developer-panel button[aria-pressed=true] {\n  background: #b5dccc;\n  color: #1d3830;\n  border-color: #b5dccc;\n}\n#developer-panel .dev-header {\n  display: flex;\n  justify-content: space-between;\n  align-items: flex-start;\n  padding: 24px 26px 16px;\n  background:\n    radial-gradient(\n      ellipse at 90% 10%,\n      #76588b45,\n      transparent 60%);\n}\n#developer-panel .dev-eyebrow {\n  color: #c0b7d5;\n  font-size: 10px;\n  font-weight: 800;\n  letter-spacing: .16em;\n  display: flex;\n  align-items: center;\n  gap: 7px;\n}\n#developer-panel .dev-eyebrow i {\n  width: 7px;\n  height: 7px;\n  border-radius: 50%;\n  background: #aaddc4;\n  box-shadow: 0 0 12px #aaddc440;\n}\n#developer-panel h2 {\n  color: #f5f0ff;\n  font-size: 29px;\n  letter-spacing: -1px;\n  margin: 5px 0 2px;\n  font-weight: 750;\n}\n#developer-panel h2 span {\n  color: #d9baf5;\n  margin-left: 10px;\n}\n#developer-panel .dev-header p {\n  color: #b7afc8;\n  margin: 0;\n  font-size: 12px;\n}\n#developer-panel .dev-close {\n  font-size: 25px;\n  padding: 2px;\n  width: 44px;\n  background: #ffffff08;\n  border-color: #ffffff20;\n}\n#developer-panel .dev-live {\n  display: flex;\n  gap: 8px;\n  flex-wrap: wrap;\n  padding: 0 26px 16px;\n  color: #d2cddd;\n  font-size: 11px;\n}\n#developer-panel .dev-live span {\n  padding: 5px 9px;\n  border: 1px solid #ffffff15;\n  border-radius: 7px;\n  background: #ffffff05;\n}\n#developer-panel .dev-tabs {\n  display: grid;\n  grid-template-columns: repeat(4, 1fr);\n  gap: 4px;\n  border-block: 1px solid #ffffff12;\n  padding: 6px 20px;\n  background: #20202e;\n}\n#developer-panel .dev-tabs button {\n  background: transparent;\n  border-color: transparent;\n  color: #aaa2bc;\n  border-radius: 9px;\n  padding: 10px 4px;\n  font-size: 12px;\n}\n#developer-panel .dev-tabs button[aria-selected=true] {\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-content {\n  overflow-y: auto;\n  min-height: 0;\n  padding: 20px 26px;\n  flex: 1;\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  scrollbar-color: #6b597f transparent;\n}\n#developer-panel .dev-hero {\n  display: flex;\n  align-items: center;\n  gap: 16px;\n  width: 100%;\n  padding: 22px 18px;\n  text-align: left;\n  background:\n    linear-gradient(\n      120deg,\n      #d7c6f2,\n      #efc8da);\n  border: 0;\n  color: #392e4b;\n  margin-bottom: 16px;\n}\n#developer-panel .dev-hero:hover {\n  background:\n    linear-gradient(\n      120deg,\n      #e2d5f8,\n      #f6d8e5);\n}\n#developer-panel .dev-hero-icon {\n  font-size: 38px;\n  line-height: 1;\n}\n#developer-panel .dev-hero small {\n  display: block;\n  letter-spacing: .13em;\n  font-size: 9px;\n  font-weight: 800;\n  opacity: .75;\n}\n#developer-panel .dev-hero strong {\n  display: block;\n  font-size: 22px;\n  letter-spacing: -.6px;\n  margin: 3px 0;\n}\n#developer-panel .dev-hero span span {\n  display: block;\n  font-size: 11px;\n  font-weight: 500;\n}\n#developer-panel .dev-hero b {\n  font-size: 25px;\n  margin-left: auto;\n}\n#developer-panel .dev-card {\n  background: #232333;\n  border: 1px solid #ffffff10;\n  border-radius: 16px;\n  padding: 18px;\n  margin-bottom: 14px;\n}\n#developer-panel h3 {\n  font-size: 15px;\n  margin: 0 0 8px;\n  color: #f0eafa;\n  font-weight: 700;\n}\n#developer-panel p {\n  color: #b8b0c9;\n  font-size: 12px;\n  margin: 0 0 13px;\n  line-height: 1.55;\n}\n#developer-panel .dev-card > p:last-child {\n  margin: 12px 0 0;\n}\n#developer-panel .dev-grid {\n  display: grid;\n  grid-template-columns: repeat(2, minmax(0, 1fr));\n  gap: 8px;\n}\n#developer-panel .dev-grid button {\n  text-align: left;\n}\n#developer-panel .dev-select-label {\n  display: block;\n  font-size: 11px;\n  color: #b9b1ca;\n  margin: 15px 0 6px;\n}\n#developer-panel select {\n  display: block;\n  width: 100%;\n  border: 1px solid #58506b;\n  background: #181926;\n  color: #eeeaf8;\n  border-radius: 10px;\n  min-height: 44px;\n  padding: 10px;\n  margin-bottom: 8px;\n  font: 13px system-ui, sans-serif;\n}\n#developer-panel .dev-notice {\n  padding: 16px;\n  border-radius: 14px;\n  background: #30342f;\n  border: 1px solid #b8d4bb30;\n  margin-bottom: 14px;\n  color: #c8e5d1;\n}\n#developer-panel .dev-notice strong {\n  font-size: 12px;\n}\n#developer-panel .dev-notice p {\n  margin: 6px 0 0;\n  color: #b4c2b6;\n}\n#developer-panel .dev-resume {\n  width: 100%;\n  background: #cab7ea;\n  color: #302640;\n}\n#developer-panel .dev-danger {\n  color: #ffc4bf;\n  border-color: #965e6455;\n}\n#developer-panel pre {\n  white-space: pre-wrap;\n  font: 11px/1.8 ui-monospace, monospace;\n  color: #bbb4cd;\n  margin: 16px 0 0;\n  overflow-wrap: anywhere;\n}\n#developer-panel .dev-bottom {\n  padding: 13px 26px 15px;\n  border-top: 1px solid #ffffff12;\n  background: #20202e;\n}\n#developer-panel .dev-bottom > span {\n  display: block;\n  font-size: 11px;\n  color: #bce1cd;\n}\n#developer-panel .dev-bottom small {\n  display: block;\n  font-size: 10px;\n  color: #aaa1bc;\n  margin-top: 3px;\n}\n#developer-panel [data-status] {\n  font-size: 11px;\n  color: #d6c4f3;\n  margin-top: 8px;\n}\n#developer-panel [data-status][data-error=true] {\n  color: #ffc1b7;\n}\n@media (max-width: 480px) {\n  #developer-panel {\n    width: calc(100vw - 12px);\n    height: calc(100dvh - 12px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));\n    border-radius: 18px;\n  }\n  #developer-panel .dev-header {\n    padding: 17px 16px 12px;\n  }\n  #developer-panel h2 {\n    font-size: 25px;\n  }\n  #developer-panel .dev-live {\n    padding: 0 16px 12px;\n    gap: 5px;\n  }\n  #developer-panel .dev-tabs {\n    padding: 5px 10px;\n  }\n  #developer-panel .dev-content {\n    padding: 14px;\n  }\n  #developer-panel .dev-card {\n    padding: 14px;\n  }\n  #developer-panel .dev-bottom {\n    padding: 11px 16px;\n  }\n  #developer-panel .dev-hero {\n    padding: 16px 13px;\n    gap: 10px;\n  }\n  #developer-panel .dev-hero strong {\n    font-size: 20px;\n  }\n  #developer-panel .dev-hero-icon {\n    font-size: 28px;\n  }\n  #developer-panel .dev-grid button {\n    font-size: 12px;\n    padding: 10px;\n  }\n  #developer-panel .dev-bottom small {\n    font-size: 9px;\n  }\n}\n@media (prefers-reduced-motion: reduce) {\n  #developer-panel button {\n    transition: none;\n  }\n}\n#developer-panel .dev-bottom {\n  position: static;\n  display: block;\n  flex-shrink: 0;\n  letter-spacing: 0;\n  pointer-events: auto;\n}\n#squishy-pop:has(.dev-inline) .pop-footer {\n  display: block;\n}\n#squishy-pop .pop-title .dev-inline {\n  background: #27263c !important;\n  color: #e6dcff !important;\n}\n';
 
 // src/editor/FullGame.ts
 async function startEditorGame(app) {

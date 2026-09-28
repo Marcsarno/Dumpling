@@ -6,9 +6,12 @@ import type {CharacterAnimator} from '../components/CharacterAnimator';
 import type {Bedroom} from './bedroom';
 import type {DailyLife} from './DailyLife';
 import {material,primitives} from './primitives';
+import {leaseContainer} from './ContainerLease';
 
 /** One saved dinner per day, using the same collision-aware walking as the household. */
 export class FamilyDinner {
+ portionManaged=false;
+ private leases:ReturnType<typeof leaseContainer>[]=[];
  readonly tray:Entity;readonly socket:Entity;
  private models:Entity[]=[];private ready=false;private day=0;private stage='idle';private route:Vec3[]=[];private goal=new Vec3();private timer=0;private blocked=0;private retry=0;
  private planner:HousePath;private serving='pizza';
@@ -17,8 +20,8 @@ export class FamilyDinner {
   this.tray=new Entity('Family dinner',app);house.root.addChild(this.tray);this.tray.enabled=false;
   primitives(app,this.tray)('Dinner platter','cylinder',[0,0,0],[.72,.025,.58],material('Dinner china','#fff2d9'),false);
   void Promise.all(['pizza','taco','turkey'].map(async name=>{
-   const a=new Asset('Family '+name,'container',{url:assetUrl(`/assets/food/${name}.glb`)});app.assets.add(a);await new Promise<void>((resolve,reject)=>{a.once('load',resolve);a.once('error',reject);app.assets.load(a);});
-   const model=(a.resource as ContainerResource).instantiateRenderEntity({castShadows:true}),bounds=new BoundingBox();let first=true;
+   const lease=leaseContainer(app,assetUrl(`/assets/food/${name}.glb`),'Family '+name);this.leases.push(lease);const resource=await lease.ready;
+   const model=resource.instantiateRenderEntity({castShadows:true}),bounds=new BoundingBox();let first=true;
    for(const r of model.findComponents('render') as RenderComponent[])for(const m of r.meshInstances){if(first){bounds.copy(m.aabb);first=false;}else bounds.add(m.aabb);}
    const scale=.57/(bounds.halfExtents.x*2);model.setLocalScale(scale,scale,scale);model.setLocalPosition(-bounds.center.x*scale,.02-(bounds.center.y-bounds.halfExtents.y)*scale,-bounds.center.z*scale);model.name=name;this.tray.addChild(model);model.enabled=false;return model;
   })).then(models=>{this.models=models;this.ready=true;}).catch(e=>console.error('Dinner models failed',e));
@@ -32,7 +35,7 @@ export class FamilyDinner {
   const s=this.daily.clock.state;this.retry=Math.max(0,this.retry-dt);
   if(this.day!==s.day){this.day=s.day;this.finish();this.retry=0;this.tray.enabled=false;this.serving=['pizza','taco','turkey'][(s.day-1)%3];this.models.forEach(m=>m.enabled=m.name===this.serving);if(s.dinnerServed)this.table();}
   if(!this.ready)return false;
-  this.models.forEach(m=>m.enabled=m.name===this.serving);
+  this.models.forEach(m=>m.enabled=(!this.portionManaged||!s.dinnerServed)&&m.name===this.serving);
   if(this.stage==='idle'){
    if(s.dinnerServed&&!this.tray.enabled)this.table();
    if(!canStart||!this.due())return false;
@@ -62,5 +65,5 @@ export class FamilyDinner {
   return true;
  }
  snapshot(){return{ready:this.ready,stage:this.stage,food:this.serving,served:!!this.daily.clock.state.dinnerServed,position:this.tray.getPosition().toArray(),visible:this.tray.enabled,route:this.route.map(p=>p.toArray())};}
- destroy(){this.tray.destroy();this.socket.destroy();}
+ destroy(){this.tray.destroy();this.socket.destroy();for(const lease of this.leases)lease.release();}
 }

@@ -21,8 +21,281 @@ var init_SaveNamespace = __esm({
     SCHOOL_REVIEW = new URLSearchParams(globalThis.location?.search ?? "").get("preview") === "school";
     OPENING_REVIEW = new URLSearchParams(globalThis.location?.search ?? "").get("preview") === "opening";
     OUTDOOR_REVIEW = new URLSearchParams(globalThis.location?.search ?? "").get("preview") === "outdoors";
-    SAVE_PREFIX = OUTDOOR_REVIEW ? "dumpling.outdoorReview" : OPENING_REVIEW ? "dumpling.openingReview" : SCHOOL_REVIEW ? "dumpling.schoolReview" : globalThis.__productionRelease ? "arianna" : "dumpling.editorMigration";
+    SAVE_PREFIX = new URLSearchParams(globalThis.location?.search ?? "").get("preview") === "home-play" ? "dumpling.homePlayReview" : OUTDOOR_REVIEW ? "dumpling.outdoorReview" : OPENING_REVIEW ? "dumpling.openingReview" : SCHOOL_REVIEW ? "dumpling.schoolReview" : globalThis.__productionRelease ? "arianna" : "dumpling.editorMigration";
     saveKey = (suffix) => `${SAVE_PREFIX}.${suffix}`;
+  }
+});
+
+// src/editor/PropSpace.ts
+import { Vec3 } from "playcanvas";
+function registerPropSpace(key, entity, origin) {
+  spaces.set(key, { entity, origin });
+}
+function propPoint(key, point) {
+  const s = spaces.get(key);
+  return s ? s.entity.getWorldTransform().transformPoint(point.clone().sub(s.origin)) : point.clone();
+}
+function propTuple(key, point) {
+  return propPoint(key, new Vec3(...point)).toArray();
+}
+function propYaw(key, yaw) {
+  return yaw + (spaces.get(key)?.entity.getEulerAngles().y ?? 0);
+}
+function propHeight(key, y) {
+  const s = spaces.get(key);
+  return s ? s.entity.getPosition().y + y * s.entity.getLocalScale().y : y;
+}
+var spaces;
+var init_PropSpace = __esm({
+  "src/editor/PropSpace.ts"() {
+    "use strict";
+    spaces = /* @__PURE__ */ new Map();
+  }
+});
+
+// src/editor/LayoutBridge.ts
+import { BoundingBox, Vec3 as Vec32 } from "playcanvas";
+function trackArt(task) {
+  artTasks.push(task);
+}
+function recordLayout(entity, parent, model) {
+  if (!scopes.has(parent.name) && !parent.tags.has("migration.store")) return;
+  if (/Nearby display aura|Trading spot|Paper wiping|Puppy kibble/.test(entity.name)) return;
+  const key = parent.name + "/" + entity.name, index = counts.get(key) ?? 0;
+  counts.set(key, index + 1);
+  records.push({ key: key + "/" + index, entity, model });
+}
+function recordArt(entity, parent, model) {
+  recordLayout(entity, parent, model);
+}
+async function captureWorld(app, house, props, loop, editor) {
+  await Promise.all([house.ready, ...loop.stores.map((s) => s.ready), loop.recess.ready, ...artTasks]);
+  const rooms = [house, ...loop.stores, loop.recess];
+  for (const room of rooms) if (room.artStats?.().errors.length) throw Error("Environment assets failed: " + room.root.name + " " + room.artStats().errors.join(", "));
+  const serialize = (r) => {
+    const e = r.entity, m = e.render?.meshInstances[0]?.material;
+    return { key: r.key, name: e.name, model: r.model, modelMaterials: r.model ? e.findComponents("render").flatMap((r2) => r2.meshInstances.map((mi) => {
+      const mat = mi.material;
+      return { name: mat.name, diffuse: [mat.diffuse.r, mat.diffuse.g, mat.diffuse.b], specular: [mat.specular.r, mat.specular.g, mat.specular.b], emissive: [mat.emissive.r, mat.emissive.g, mat.emissive.b], useLighting: mat.useLighting };
+    })) : void 0, position: e.getLocalPosition().toArray(), rotation: e.getLocalEulerAngles().toArray(), scale: e.getLocalScale().toArray(), scope: e.parent.name, enabled: e.enabled, render: e.render ? { type: e.render.type, castShadows: e.render.castShadows } : void 0, material: m ? { name: m.name, diffuse: [m.diffuse.r, m.diffuse.g, m.diffuse.b], specular: [m.specular.r, m.specular.g, m.specular.b], emissive: [m.emissive.r, m.emissive.g, m.emissive.b], useLighting: m.useLighting } : void 0, normalization: r.model ? e.children[0].getLocalScale().toArray() : void 0, offset: r.model ? e.children[0].getLocalPosition().toArray() : void 0 };
+  };
+  const data = { records: records.map(serialize), rooms: rooms.map((r) => ({ name: r.root.name, walkable: r.walkable, obstacles: r.obstacles.map((b) => ({ center: b.center.toArray(), half: b.halfExtents.toArray() })) })), interactions: props.interactions.filter((i) => i.kind === "place" || i.kind === "daily" && !/play-lilah|wipe-|vacuum-|put-tool/.test(i.id)).map((i) => ({ id: i.id, anchor: i.anchor.toArray(), marker: i.marker.toArray(), placement: i.placement })), stores: loop.stores.map((s) => ({ name: s.root.name, sites: s.sites.map((t) => ({ id: t.id, anchor: t.anchor.toArray(), marker: t.marker.toArray() })), exit: s.exitAnchor.toArray() })) };
+  window.__migrationSource = data;
+  data.lights = house.lighting?.snapshot().lights;
+  window.__migration = { ready: false, source: data };
+  if (editor) {
+    const authored = app.root.findByTag("migration.environment");
+    if (!authored.length) throw Error("This Editor scene is missing its authored game environments.");
+    const entities = /* @__PURE__ */ new Map();
+    for (const e of app.root.findByTag("migration.record")) {
+      const key = e.tags.list().find((t) => t.startsWith("key:")).slice(4);
+      entities.set(key, e);
+    }
+    const variants = /* @__PURE__ */ new Map(), emission = [];
+    const paintMaterial = (source, paint) => {
+      const key = source.id + ":" + paint.id;
+      if (variants.has(key)) return variants.get(key);
+      const m = source.clone();
+      m.diffuse.copy(paint.diffuse);
+      m.specular.copy(paint.specular);
+      m.gloss = paint.gloss;
+      m.metalness = paint.metalness;
+      if (paint.diffuseMap) {
+        m.diffuseMap = paint.diffuseMap;
+        m.diffuseMapTiling.copy(paint.diffuseMapTiling);
+      }
+      m.update();
+      variants.set(key, m);
+      emission.push({ source, target: m });
+      return m;
+    };
+    for (const r of records) {
+      const e = entities.get(r.key);
+      if (!e) throw Error("Missing Editor layout entity: " + r.key);
+      const original = r.entity;
+      for (const preview of e.findByTag("migration.preview")) {
+        const paints = preview.findComponents("render").flatMap((r2) => r2.meshInstances.map((m) => m.material));
+        original.findComponents("render").flatMap((r2) => r2.meshInstances).forEach((mesh, i) => {
+          if (paints[i]) mesh.material = paintMaterial(mesh.material, paints[i]);
+        });
+        preview.enabled = false;
+      }
+      if (e.render) {
+        const paint = e.render.meshInstances[0]?.material, material2 = original.render?.meshInstances[0]?.material;
+        if (material2 && paint) {
+          original.render.material = paintMaterial(material2, paint);
+          original.render.type = e.render.type;
+        }
+        e.render.enabled = false;
+      }
+      original.reparent(e);
+      original.setLocalPosition(0, 0, 0);
+      original.setLocalEulerAngles(0, 0, 0);
+      original.setLocalScale(1, 1, 1);
+    }
+    for (const env of authored) {
+      const name = env.tags.list().find((t) => t.startsWith("scope:")).slice(6);
+      if (name === "Classroom trading club" && loop.recess.usesReferenceLayout) {
+        env.enabled = false;
+        continue;
+      }
+      const runtime = rooms.find((r) => r.root.name === name)?.root ?? (name === "Bedroom" ? house.root.findByName("Bedroom") : name === "Cleanup props" ? props.root : props.daily.root);
+      if (!runtime) throw Error("Unknown layout scope " + name);
+      env.reparent(runtime);
+      env.enabled = true;
+    }
+    for (const n of app.root.findByTag("migration.light")) {
+      const name = n.tags.list().find((t) => t.startsWith("light:")).slice(6), light = house.root.findComponents("light").find((l) => l.entity !== n && l.entity.name === name);
+      if (light) {
+        light.entity.reparent(n);
+        light.entity.setLocalPosition(0, 0, 0);
+        light.entity.setLocalEulerAngles(0, 0, 0);
+        light.color.copy(n.light.color);
+        light.range = n.light.range;
+        n.light.enabled = false;
+      }
+    }
+    for (const [key, x, z] of [["bed", -2.05, -1.7], ["crib", 9.8, -1.7], ["dining", 0.55, 13.85], ["marc-seat", 4.5, 7.35], ["stove", -2.72, 12.65], ["fridge", -2.65, 14.55], ["clothes", -0.7, 3.05]]) {
+      const index = data.rooms[0].obstacles.findIndex((b) => Math.abs(b.center[0] - x) < 0.01 && Math.abs(b.center[2] - z) < 0.01), e = app.root.findByTag("prop:Maple cottage:" + index)[0];
+      if (e) registerPropSpace(key, e, new Vec32(x, 0, z));
+    }
+    for (const item of props.items) {
+      const key = item.id === "daily-outfit" ? "clothes" : item.id === "breakfast-egg" ? "fridge" : item.id === "breakfast-plate" ? "stove" : null;
+      if (key) item.home.splice(0, 3, ...propTuple(key, item.home));
+    }
+    const bounds = new BoundingBox(new Vec32(), new Vec32(0.5, 0.5, 0.5));
+    for (const r of rooms) {
+      if (r === loop.recess && loop.recess.usesReferenceLayout) continue;
+      const enabled = r.root.enabled;
+      r.root.enabled = true;
+      const nodes = app.root.findByTag("collision:" + r.root.name).filter((n) => n.enabled);
+      r.obstacles.splice(0, r.obstacles.length, ...nodes.map((n) => {
+        const box = new BoundingBox();
+        box.setFromTransformedAabb(bounds, n.getWorldTransform());
+        return box;
+      }));
+      r.root.enabled = enabled;
+    }
+    for (const r of rooms.filter((r2) => r2 !== loop.recess || !loop.recess.usesReferenceLayout)) for (const n of app.root.findByTag("walkable:" + r.root.name)) {
+      const index = Number(n.tags.list().find((t) => t.startsWith("index:")).slice(6)), b = new BoundingBox();
+      b.setFromTransformedAabb(bounds, n.getWorldTransform());
+      if (r.walkable?.[index]) Object.assign(r.walkable[index], { minX: b.center.x - b.halfExtents.x, maxX: b.center.x + b.halfExtents.x, minZ: b.center.z - b.halfExtents.z, maxZ: b.center.z + b.halfExtents.z });
+    }
+    for (const i of props.interactions) {
+      const a = app.root.findByTag("anchor:" + i.id)[0], marker = app.root.findByTag("marker:" + i.id)[0], p = app.root.findByTag("placement:" + i.id)[0];
+      if (a) i.anchor.copy(a.getPosition());
+      if (marker) i.marker.copy(marker.getPosition());
+      if (p && i.placement) i.placement.splice(0, 3, ...p.getPosition().toArray());
+    }
+    for (const s of loop.stores) {
+      for (const site of s.sites) {
+        for (const field of ["anchor", "marker"]) {
+          const e = app.root.findByTag(s.root.name + ":" + site.id + ":" + field)[0];
+          if (e) site[field].copy(e.getPosition());
+        }
+      }
+      const exit = app.root.findByTag("exit:" + s.root.name)[0];
+      if (exit) s.exitAnchor.copy(exit.getPosition());
+    }
+    for (const s of loop.stores) for (let i = 0; i < s.sites.length; i++) {
+      const group = app.root.findByTag("prop:" + s.root.name + ":" + i)[0], origin = data.rooms.find((r) => r.name === s.root.name).obstacles[i].center;
+      for (const child of [...s.boxes[i], s.glows[i]]) {
+        const p = child.getLocalPosition().clone().sub(new Vec32(origin[0], 0, origin[2]));
+        child.reparent(group);
+        child.setLocalPosition(p);
+      }
+    }
+    for (const s of loop.stores) {
+      for (let i = 0; i < s.sites.length; i++) {
+        s.boxes[i].forEach((box, n) => {
+          const socket = app.root.findByTag("stock:" + s.root.name + ":" + i + ":" + n)[0];
+          if (socket) {
+            box.setLocalPosition(socket.getLocalPosition());
+            box.setLocalEulerAngles(socket.getLocalEulerAngles());
+            box.setLocalScale(socket.getLocalScale());
+          }
+        });
+        const anchor = app.root.findByTag(s.root.name + ":" + i + ":anchor")[0];
+        if (anchor) s.glows[i].setLocalPosition(anchor.getLocalPosition().clone().add(new Vec32(0, 0.027, 0)));
+      }
+      const batch = app.batcher.addGroup("Store art " + s.root.name, false, 32);
+      for (const e of s.root.findByTag("store.art")) for (const r of e.findComponents("render")) r.batchGroupId = batch.id;
+    }
+    const classroom = app.root.findByTag("prop:Classroom trading club:0")[0];
+    if (classroom) loop.recess.bindLayout(classroom);
+    const batchIds = [...new Set(app.root.findComponents("render").map((r) => r.batchGroupId).filter((id) => id >= 0))];
+    app.batcher.generate(batchIds);
+    app.on("update", () => {
+      for (const { source, target } of emission) if (target.emissiveIntensity !== source.emissiveIntensity || !target.emissive.equals(source.emissive)) {
+        target.emissive.copy(source.emissive);
+        target.emissiveIntensity = source.emissiveIntensity;
+        target.update();
+      }
+    });
+  }
+  window.__migration.ready = true;
+}
+var records, counts, artTasks, scopes;
+var init_LayoutBridge = __esm({
+  "src/editor/LayoutBridge.ts"() {
+    "use strict";
+    init_PropSpace();
+    records = [];
+    counts = /* @__PURE__ */ new Map();
+    artTasks = [];
+    scopes = /* @__PURE__ */ new Set(["Bedroom", "Maple cottage", "Cleanup props", "Daily routines"]);
+  }
+});
+
+// src/editor/AssetUrls.ts
+function containerOptions(sourcePath) {
+  return { crossOrigin: "anonymous", image: { preprocess(image) {
+    if (application && image.uri && !/^(data:|https?:)/.test(image.uri)) {
+      const path = new URL(image.uri, new URL(sourcePath, "https://asset-path.invalid/")).pathname;
+      image.uri = assetUrl(path);
+    }
+  } } };
+}
+function assetUrl(path) {
+  if (!application) return path;
+  const key = decodeURIComponent(path.replace(/^\/?assets\//, ""));
+  const asset = application.assets.find("game__" + key.replaceAll("/", "__") + (key.endsWith(".glb") ? ".bin" : ""));
+  if (!asset) throw new Error("Missing migrated asset: " + key);
+  return new URL(asset.getFileUrl(), document.baseURI).href;
+}
+var application;
+var init_AssetUrls = __esm({
+  "src/editor/AssetUrls.ts"() {
+    "use strict";
+  }
+});
+
+// src/game/primitives.ts
+import { Color as Color3, Entity as Entity3, StandardMaterial as StandardMaterial2 } from "playcanvas";
+function material(name, hex) {
+  const mat = new StandardMaterial2();
+  mat.name = name;
+  mat.diffuse = new Color3().fromString(hex);
+  mat.gloss = 0.15;
+  mat.specular.set(0.08, 0.07, 0.09);
+  mat.update();
+  return mat;
+}
+function primitives(app, parent, batchGroupId = -1) {
+  return (name, shape, position2, scale, mat, shadows = true) => {
+    const entity = new Entity3(name, app);
+    entity.addComponent("render", { type: shape, material: mat, castShadows: shadows, receiveShadows: true, batchGroupId });
+    entity.setLocalPosition(...position2);
+    entity.setLocalScale(...scale);
+    parent.addChild(entity);
+    recordLayout(entity, parent);
+    return entity;
+  };
+}
+var init_primitives = __esm({
+  "src/game/primitives.ts"() {
+    "use strict";
+    init_LayoutBridge();
   }
 });
 
@@ -212,6 +485,358 @@ var init_hunt = __esm({
       return s;
     };
     boxPrice = (store, series) => seriesById(series).price + store.markup;
+  }
+});
+
+// src/game/ContainerLease.ts
+import { Asset as Asset7 } from "playcanvas";
+function leaseContainer(app, url, name) {
+  let registry = registries.get(app);
+  if (!registry) {
+    registry = /* @__PURE__ */ new Map();
+    registries.set(app, registry);
+  }
+  let entry = registry.get(url);
+  if (!entry) {
+    const asset = new Asset7(name, "container", { url });
+    entry = { asset, refs: 0, promise: new Promise((resolve, reject) => {
+      asset.once("load", () => resolve(asset.resource));
+      asset.once("error", reject);
+    }) };
+    registry.set(url, entry);
+    app.assets.add(asset);
+    app.assets.load(asset);
+  }
+  entry.refs++;
+  let released = false;
+  const current = entry, owners = registry;
+  return { asset: current.asset, ready: current.promise, release() {
+    if (released) return;
+    released = true;
+    current.refs--;
+    const dispose = () => {
+      if (current.refs === 0 && owners.get(url) === current) {
+        owners.delete(url);
+        current.asset.unload();
+        app.assets.remove(current.asset);
+      }
+    };
+    if (current.asset.loaded) dispose();
+    else void current.promise.then(dispose, dispose);
+  } };
+}
+var registries;
+var init_ContainerLease = __esm({
+  "src/game/ContainerLease.ts"() {
+    "use strict";
+    registries = /* @__PURE__ */ new WeakMap();
+  }
+});
+
+// src/game/MealArt.ts
+import { BoundingBox as BoundingBox20, Entity as Entity42, Mesh as Mesh6, MeshInstance as MeshInstance6 } from "playcanvas";
+function mealGrip(prop, drink, fruit = false) {
+  prop.setLocalPosition(0, drink ? -0.025 : 0.035, -0.055);
+  prop.setLocalScale(drink ? 0.65 : 1, drink ? 0.65 : 1, drink ? 0.65 : 1);
+  prop.setLocalEulerAngles(drink ? -18 : fruit ? 0 : 35, 0, 0);
+}
+var MealArt;
+var init_MealArt = __esm({
+  "src/game/MealArt.ts"() {
+    "use strict";
+    init_ContainerLease();
+    init_AssetUrls();
+    init_primitives();
+    MealArt = class {
+      constructor(app, art) {
+        this.app = app;
+        this.art = art;
+      }
+      app;
+      art;
+      leases = /* @__PURE__ */ new Map();
+      meshes = [];
+      async pizzaPlatter(parent, portions) {
+        let lease = this.leases.get("pizza");
+        if (!lease) {
+          lease = leaseContainer(this.app, assetUrl("/assets/food/pizza.glb"), "Edible pizza");
+          this.leases.set("pizza", lease);
+        }
+        const res = await lease.ready;
+        if (!parent.parent) return;
+        const model = res.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox20();
+        let first = true;
+        for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
+          if (first) {
+            bounds.copy(m.aabb);
+            first = false;
+          } else bounds.add(m.aabb);
+        }
+        const size = 0.57 / (bounds.halfExtents.x * 2);
+        model.setLocalScale(size, size, size);
+        model.setLocalPosition(-bounds.center.x * size, -(bounds.center.y - bounds.halfExtents.y) * size, -bounds.center.z * size);
+        for (const r of model.findComponents("render")) {
+          const index = Number(r.entity.name.replace("slice", "")) - 1;
+          r.enabled = portions[index] ?? false;
+        }
+        parent.addChild(model);
+      }
+      async food(parent, kind, bites = 0, slice = 0, width = 0.28) {
+        if (bites >= 3) return;
+        if (kind === "sandwich") {
+          const serving = new Entity42("Sandwich serving", this.app);
+          parent.addChild(serving);
+          serving.setLocalScale(width / 0.28, width / 0.28, width / 0.28);
+          const s = primitives(this.app, serving), w = 0.25 * (1 - bites * 0.28);
+          for (const y of [0.025, 0.1]) s("Bread slice", "sphere", [0, y, 0], [w, 0.035, 0.22], this.art.mat("#ddbb80"));
+          s("Lettuce", "sphere", [0, 0.06, 0], [w + 0.01, 0.018, 0.23], this.art.mat("#91aa70"));
+          s("Tomato", "cylinder", [0, 0.08, 0], [w, 0.018, 0.19], this.art.mat("#cf8e75"));
+          return;
+        }
+        if (kind === "turkey" && slice >= 2) {
+          const s = primitives(this.app, parent), w = width * (1 - bites * 0.28);
+          s("Roasted turkey skin", "sphere", [0, 0.02, 0], [w, 0.04, width * 0.65], this.art.mat("#b88352"));
+          s("Carved turkey", "sphere", [0, 0.035, 0], [w * 0.86, 0.025, width * 0.53], this.art.mat("#ebd6b4"));
+          return;
+        }
+        const file = kind === "sandwich" ? "bread" : kind;
+        let lease = this.leases.get(file);
+        if (!lease) {
+          lease = leaseContainer(this.app, assetUrl(`/assets/food/${file}.glb`), "Edible " + file);
+          this.leases.set(file, lease);
+        }
+        const res = await lease.ready;
+        if (!parent.parent) return;
+        const model = res.instantiateRenderEntity({ castShadows: true });
+        const all = model.findComponents("render");
+        const visible = file === "pizza" ? all.filter((r) => r.entity.name === `slice${slice % 8 + 1}`) : file === "turkey" ? [all.filter((r) => r.entity.name === "leg")[slice % 2]].filter(Boolean) : all;
+        for (const r of all) r.enabled = visible.includes(r);
+        const bounds = new BoundingBox20();
+        let first = true;
+        for (const r of visible) for (const m of r.meshInstances) {
+          if (first) {
+            bounds.copy(m.aabb);
+            first = false;
+          } else bounds.add(m.aabb);
+        }
+        const size = width / Math.max(bounds.halfExtents.x * 2, bounds.halfExtents.z * 2, 1e-3);
+        model.setLocalScale(size, size, size);
+        model.setLocalPosition(-bounds.center.x * size, -(bounds.center.y - bounds.halfExtents.y) * size, -bounds.center.z * size);
+        parent.addChild(model);
+        if (bites) {
+          for (const r of visible) r.meshInstances = r.meshInstances.map((instance) => {
+            const positions = [], normals = [], uvs = [], indices = [];
+            instance.mesh.getPositions(positions);
+            instance.mesh.getNormals(normals);
+            instance.mesh.getUvs(0, uvs);
+            instance.mesh.getIndices(indices);
+            const zs = positions.filter((_, i) => i % 3 === 2), lo = Math.min(...zs), hi = Math.max(...zs), cut = lo + (hi - lo) * (bites === 1 ? 0.32 : 0.62), out = [];
+            for (let i = 0; i < indices.length; i += 3) if ((positions[indices[i] * 3 + 2] + positions[indices[i + 1] * 3 + 2] + positions[indices[i + 2] * 3 + 2]) / 3 >= cut) out.push(indices[i], indices[i + 1], indices[i + 2]);
+            const mesh = new Mesh6(this.app.graphicsDevice);
+            mesh.setPositions(positions);
+            if (normals.length) mesh.setNormals(normals);
+            if (uvs.length) mesh.setUvs(0, uvs);
+            mesh.setIndices(out);
+            mesh.update();
+            parent.once("destroy", () => mesh.destroy());
+            return new MeshInstance6(mesh, instance.material, instance.node);
+          });
+        }
+      }
+      plate(parent, lunch) {
+        const s = primitives(this.app, parent);
+        s("Plate", "cylinder", [0, 0, 0], [lunch ? 0.53 : 0.4, 0.025, lunch ? 0.44 : 0.4], this.art.mat(lunch ? "#a6c4bf" : "#fff1d8"));
+      }
+      destroy() {
+        for (const m of this.meshes) m.destroy();
+        for (const l of this.leases.values()) l.release();
+      }
+    };
+  }
+});
+
+// src/dev/MealReview.ts
+var MealReview_exports = {};
+__export(MealReview_exports, {
+  mealReview: () => mealReview
+});
+import { Vec3 as Vec348 } from "playcanvas";
+function mealReview(app, character, camera, loop, daily) {
+  const params = new URLSearchParams(location.search), context = params.get("meal-review");
+  if (params.get("preview") !== "home-play" || !["dinner", "lunch"].includes(context ?? "")) return;
+  if (context === "dinner") {
+    loop.developerCommand("phase", "afternoon");
+    daily.clock.state.dinnerServed = true;
+    daily.save();
+    character.player.setPosition(propPoint("dining", new Vec348(0.55, 0.09, 11.9)));
+  } else {
+    loop.developerCommand("recess");
+    character.player.setPosition(4.6, 0.09, -20.15);
+  }
+  if (!loop.developerSummary().clockFrozen) loop.developerCommand("freeze-clock");
+  const cameraControls = document.createElement("div");
+  cameraControls.style.cssText = "position:fixed;top:70px;left:12px;z-index:50;display:flex;gap:6px";
+  let side = false;
+  for (const label of ["Front view", "Side view"]) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.onclick = () => {
+      side = label === "Side view";
+    };
+    cameraControls.append(b);
+  }
+  document.body.append(cameraControls);
+  let stopAtContact = false;
+  const contact = document.createElement("button");
+  contact.textContent = "Inspect next bite";
+  contact.onclick = () => {
+    stopAtContact = true;
+    app.timeScale = 1;
+  };
+  cameraControls.append(contact);
+  const resume = document.createElement("button");
+  resume.textContent = "Resume";
+  resume.onclick = () => {
+    stopAtContact = false;
+    app.timeScale = 1;
+  };
+  cameraControls.append(resume);
+  app.on("postrender", () => {
+    const animation = character.animator.snapshot();
+    if (stopAtContact && ["MealBite", "MealDrink"].includes(animation.action ?? "") && animation.clipTime >= 0.65) {
+      app.timeScale = 0;
+      stopAtContact = false;
+    }
+  });
+  const diagnostic = document.createElement("output");
+  diagnostic.id = "meal-review-state";
+  diagnostic.style.cssText = "position:fixed;top:102px;left:12px;z-index:50;background:#fff8edcc;color:#493958;padding:4px;font:12px system-ui";
+  document.body.append(diagnostic);
+  app.on("prerender", () => {
+    const s = loop.meals.snapshot();
+    if (s.seat) {
+      const p = character.player.getPosition(), yaw = context === "lunch" ? -1 : 1;
+      camera.setPosition(p.x + (side ? 3 : 0), 2, p.z + (side ? 0 : 3 * yaw));
+      camera.lookAt(p.x, 0.7, p.z);
+      camera.camera.orthoHeight = 1.6;
+    }
+    diagnostic.value = `${s.plate?.food ?? "No plate"} \xB7 ${s.plate?.owner ?? "unclaimed"} \xB7 bites ${s.plate?.bites ?? 0} \xB7 drink ${s.plate?.drink ?? 0}`;
+  });
+}
+var init_MealReview = __esm({
+  "src/dev/MealReview.ts"() {
+    "use strict";
+    init_PropSpace();
+  }
+});
+
+// src/dev/MotionReview.ts
+var MotionReview_exports = {};
+__export(MotionReview_exports, {
+  motionReview: () => motionReview
+});
+import { Entity as Entity50, Vec3 as Vec349, Vec4 } from "playcanvas";
+function motionReview(app, character, camera, loop) {
+  loop.developerHold(true);
+  character.player.setPosition(0.55, 0.09, 4.5);
+  character.visual.setLocalEulerAngles(0, 0, 0);
+  character.grounding?.update();
+  const anim = character.player.findComponents("anim")[0], layer = anim.baseLayer;
+  const grip = new Entity50("Review hand grip", app), prop = new Entity50("Review meal prop", app);
+  app.root.addChild(grip);
+  grip.addChild(prop);
+  const art = new MealArt(app, loop.homePlay.art);
+  const showProp = (drink) => {
+    for (const child of [...prop.children]) child.destroy();
+    mealGrip(prop, drink);
+    if (drink) prop.addChild(loop.homePlay.art.make("cup", "#bad4dc"));
+    else void art.food(prop, "pizza", 0, 0, 0.18);
+  };
+  const panel = document.createElement("div");
+  panel.style.cssText = "position:fixed;z-index:100;left:12px;right:12px;bottom:12px;background:#fff8ed;color:#493958;padding:14px;border-radius:12px;font:14px system-ui;display:flex;flex-wrap:wrap;gap:10px;align-items:center";
+  panel.innerHTML = '<strong>Original-rig motion review</strong><select aria-label="Animation"><option value="EatSit">Existing breakfast</option><option value="MealBite">Reused dinner bite</option><option value="MealDrink">Reused drink</option><option value="CarryIdle">Original carry</option><option value="PickUp">Existing pickup</option><option value="PutDown">Existing putdown</option><option value="PlayThrow">Existing throw</option></select><button>Play slowly</button><button>Pause</button><button>Front</button><button>Side</button><button>Contact</button><input aria-label="Animation time" type="range" min="0" max="4.2" value="0" step="0.01"><output>0.00 s</output>';
+  document.body.append(panel);
+  const select = panel.querySelector("select"), slider = panel.querySelector("input"), output = panel.querySelector("output");
+  let side = false, playing = false;
+  const seek = (time2) => {
+    try {
+      layer.pause();
+      playing = false;
+      layer.activeStateCurrentTime = time2;
+      slider.value = String(time2);
+      output.value = time2.toFixed(2) + " s";
+    } catch (error) {
+      output.value = String(error);
+    }
+  };
+  const choose = () => {
+    layer.play(select.value);
+    anim.speed = 0.35;
+    layer.pause();
+    slider.max = String(layer.activeStateDuration);
+    prop.enabled = select.value === "MealBite" || select.value === "MealDrink";
+    if (prop.enabled) showProp(select.value === "MealDrink");
+    seek(0);
+  };
+  select.onchange = choose;
+  slider.oninput = () => seek(Number(slider.value));
+  const buttons = panel.querySelectorAll("button");
+  buttons[0].addEventListener("click", () => {
+    layer.play();
+    playing = true;
+  });
+  buttons[1].addEventListener("click", () => seek(layer.activeStateCurrentTime));
+  buttons[2].addEventListener("click", () => {
+    side = false;
+  });
+  buttons[3].addEventListener("click", () => {
+    side = true;
+  });
+  buttons[4].addEventListener("click", () => seek(select.value === "EatSit" ? 1.55 : select.value.startsWith("Meal") ? 0.65 : 0.4));
+  const frame = () => {
+    const p = character.player.getPosition(), reserved = Math.min(0.55, (panel.getBoundingClientRect().height + 24) / innerHeight);
+    camera.camera.rect = new Vec4(0, reserved, 1, 1 - reserved);
+    camera.setPosition(p.x + (side ? 3 : 0), 1.3, p.z + (side ? 0 : 3));
+    camera.lookAt(new Vec349(p.x, 0.65, p.z));
+    camera.camera.orthoHeight = 0.85;
+    const left = anim.entity.findByName("LeftHand"), right = anim.entity.findByName("RightHand");
+    grip.setPosition(new Vec349().add2(left.getPosition(), right.getPosition()).mulScalar(0.5).add(new Vec349(0, 0, 0.025)));
+    if (playing) {
+      slider.value = String(layer.activeStateCurrentTime);
+      output.value = layer.activeStateCurrentTime.toFixed(2) + " s";
+    }
+  };
+  app.on("prerender", frame);
+  choose();
+  const style = document.createElement("style");
+  style.textContent = "#adventure-hud,.adventure-hud,#controls,#character-label,#home-play-controls,#save-message,#action-button,#joystick{visibility:hidden!important}button,select{min-height:36px}";
+  document.head.append(style);
+  app.on("framerender", () => {
+    app.autoRender = true;
+    app.renderNextFrame = true;
+  });
+  const apply = document.createElement("button");
+  apply.textContent = "Apply clip";
+  apply.onclick = choose;
+  panel.append(apply);
+  const time = document.createElement("input");
+  time.type = "number";
+  time.min = "0";
+  time.max = "4.2";
+  time.step = ".05";
+  time.value = "1.2";
+  time.style.width = "70px";
+  time.setAttribute("aria-label", "Exact frame time");
+  panel.append(time);
+  const exact = document.createElement("button");
+  exact.textContent = "Show frame";
+  exact.onclick = () => seek(Number(time.value));
+  panel.append(exact);
+}
+var init_MotionReview = __esm({
+  "src/dev/MotionReview.ts"() {
+    "use strict";
+    init_MealArt();
   }
 });
 
@@ -619,215 +1244,8 @@ function createAudioSettings() {
   };
 }
 
-// src/editor/LayoutBridge.ts
-import { BoundingBox, Vec3 as Vec32 } from "playcanvas";
-
-// src/editor/PropSpace.ts
-import { Vec3 } from "playcanvas";
-var spaces = /* @__PURE__ */ new Map();
-function registerPropSpace(key, entity, origin) {
-  spaces.set(key, { entity, origin });
-}
-function propPoint(key, point) {
-  const s = spaces.get(key);
-  return s ? s.entity.getWorldTransform().transformPoint(point.clone().sub(s.origin)) : point.clone();
-}
-function propTuple(key, point) {
-  return propPoint(key, new Vec3(...point)).toArray();
-}
-function propYaw(key, yaw) {
-  return yaw + (spaces.get(key)?.entity.getEulerAngles().y ?? 0);
-}
-function propHeight(key, y) {
-  const s = spaces.get(key);
-  return s ? s.entity.getPosition().y + y * s.entity.getLocalScale().y : y;
-}
-
-// src/editor/LayoutBridge.ts
-var records = [];
-var counts = /* @__PURE__ */ new Map();
-var artTasks = [];
-function trackArt(task) {
-  artTasks.push(task);
-}
-var scopes = /* @__PURE__ */ new Set(["Bedroom", "Maple cottage", "Cleanup props", "Daily routines"]);
-function recordLayout(entity, parent, model) {
-  if (!scopes.has(parent.name) && !parent.tags.has("migration.store")) return;
-  if (/Nearby display aura|Trading spot|Paper wiping|Puppy kibble/.test(entity.name)) return;
-  const key = parent.name + "/" + entity.name, index = counts.get(key) ?? 0;
-  counts.set(key, index + 1);
-  records.push({ key: key + "/" + index, entity, model });
-}
-function recordArt(entity, parent, model) {
-  recordLayout(entity, parent, model);
-}
-async function captureWorld(app, house, props, loop, editor) {
-  await Promise.all([house.ready, ...loop.stores.map((s) => s.ready), loop.recess.ready, ...artTasks]);
-  const rooms = [house, ...loop.stores, loop.recess];
-  for (const room of rooms) if (room.artStats?.().errors.length) throw Error("Environment assets failed: " + room.root.name + " " + room.artStats().errors.join(", "));
-  const serialize = (r) => {
-    const e = r.entity, m = e.render?.meshInstances[0]?.material;
-    return { key: r.key, name: e.name, model: r.model, modelMaterials: r.model ? e.findComponents("render").flatMap((r2) => r2.meshInstances.map((mi) => {
-      const mat = mi.material;
-      return { name: mat.name, diffuse: [mat.diffuse.r, mat.diffuse.g, mat.diffuse.b], specular: [mat.specular.r, mat.specular.g, mat.specular.b], emissive: [mat.emissive.r, mat.emissive.g, mat.emissive.b], useLighting: mat.useLighting };
-    })) : void 0, position: e.getLocalPosition().toArray(), rotation: e.getLocalEulerAngles().toArray(), scale: e.getLocalScale().toArray(), scope: e.parent.name, enabled: e.enabled, render: e.render ? { type: e.render.type, castShadows: e.render.castShadows } : void 0, material: m ? { name: m.name, diffuse: [m.diffuse.r, m.diffuse.g, m.diffuse.b], specular: [m.specular.r, m.specular.g, m.specular.b], emissive: [m.emissive.r, m.emissive.g, m.emissive.b], useLighting: m.useLighting } : void 0, normalization: r.model ? e.children[0].getLocalScale().toArray() : void 0, offset: r.model ? e.children[0].getLocalPosition().toArray() : void 0 };
-  };
-  const data = { records: records.map(serialize), rooms: rooms.map((r) => ({ name: r.root.name, walkable: r.walkable, obstacles: r.obstacles.map((b) => ({ center: b.center.toArray(), half: b.halfExtents.toArray() })) })), interactions: props.interactions.filter((i) => i.kind === "place" || i.kind === "daily" && !/play-lilah|wipe-|vacuum-|put-tool/.test(i.id)).map((i) => ({ id: i.id, anchor: i.anchor.toArray(), marker: i.marker.toArray(), placement: i.placement })), stores: loop.stores.map((s) => ({ name: s.root.name, sites: s.sites.map((t) => ({ id: t.id, anchor: t.anchor.toArray(), marker: t.marker.toArray() })), exit: s.exitAnchor.toArray() })) };
-  window.__migrationSource = data;
-  data.lights = house.lighting?.snapshot().lights;
-  window.__migration = { ready: false, source: data };
-  if (editor) {
-    const authored = app.root.findByTag("migration.environment");
-    if (!authored.length) throw Error("This Editor scene is missing its authored game environments.");
-    const entities = /* @__PURE__ */ new Map();
-    for (const e of app.root.findByTag("migration.record")) {
-      const key = e.tags.list().find((t) => t.startsWith("key:")).slice(4);
-      entities.set(key, e);
-    }
-    const variants = /* @__PURE__ */ new Map(), emission = [];
-    const paintMaterial = (source, paint) => {
-      const key = source.id + ":" + paint.id;
-      if (variants.has(key)) return variants.get(key);
-      const m = source.clone();
-      m.diffuse.copy(paint.diffuse);
-      m.specular.copy(paint.specular);
-      m.gloss = paint.gloss;
-      m.metalness = paint.metalness;
-      if (paint.diffuseMap) {
-        m.diffuseMap = paint.diffuseMap;
-        m.diffuseMapTiling.copy(paint.diffuseMapTiling);
-      }
-      m.update();
-      variants.set(key, m);
-      emission.push({ source, target: m });
-      return m;
-    };
-    for (const r of records) {
-      const e = entities.get(r.key);
-      if (!e) throw Error("Missing Editor layout entity: " + r.key);
-      const original = r.entity;
-      for (const preview of e.findByTag("migration.preview")) {
-        const paints = preview.findComponents("render").flatMap((r2) => r2.meshInstances.map((m) => m.material));
-        original.findComponents("render").flatMap((r2) => r2.meshInstances).forEach((mesh, i) => {
-          if (paints[i]) mesh.material = paintMaterial(mesh.material, paints[i]);
-        });
-        preview.enabled = false;
-      }
-      if (e.render) {
-        const paint = e.render.meshInstances[0]?.material, material2 = original.render?.meshInstances[0]?.material;
-        if (material2 && paint) {
-          original.render.material = paintMaterial(material2, paint);
-          original.render.type = e.render.type;
-        }
-        e.render.enabled = false;
-      }
-      original.reparent(e);
-      original.setLocalPosition(0, 0, 0);
-      original.setLocalEulerAngles(0, 0, 0);
-      original.setLocalScale(1, 1, 1);
-    }
-    for (const env of authored) {
-      const name = env.tags.list().find((t) => t.startsWith("scope:")).slice(6);
-      if (name === "Classroom trading club" && loop.recess.usesReferenceLayout) {
-        env.enabled = false;
-        continue;
-      }
-      const runtime = rooms.find((r) => r.root.name === name)?.root ?? (name === "Bedroom" ? house.root.findByName("Bedroom") : name === "Cleanup props" ? props.root : props.daily.root);
-      if (!runtime) throw Error("Unknown layout scope " + name);
-      env.reparent(runtime);
-      env.enabled = true;
-    }
-    for (const n of app.root.findByTag("migration.light")) {
-      const name = n.tags.list().find((t) => t.startsWith("light:")).slice(6), light = house.root.findComponents("light").find((l) => l.entity !== n && l.entity.name === name);
-      if (light) {
-        light.entity.reparent(n);
-        light.entity.setLocalPosition(0, 0, 0);
-        light.entity.setLocalEulerAngles(0, 0, 0);
-        light.color.copy(n.light.color);
-        light.range = n.light.range;
-        n.light.enabled = false;
-      }
-    }
-    for (const [key, x, z] of [["bed", -2.05, -1.7], ["crib", 9.8, -1.7], ["dining", 0.55, 13.85], ["marc-seat", 4.5, 7.35], ["stove", -2.72, 12.65], ["fridge", -2.65, 14.55], ["clothes", -0.7, 3.05]]) {
-      const index = data.rooms[0].obstacles.findIndex((b) => Math.abs(b.center[0] - x) < 0.01 && Math.abs(b.center[2] - z) < 0.01), e = app.root.findByTag("prop:Maple cottage:" + index)[0];
-      if (e) registerPropSpace(key, e, new Vec32(x, 0, z));
-    }
-    for (const item of props.items) {
-      const key = item.id === "daily-outfit" ? "clothes" : item.id === "breakfast-egg" ? "fridge" : item.id === "breakfast-plate" ? "stove" : null;
-      if (key) item.home.splice(0, 3, ...propTuple(key, item.home));
-    }
-    const bounds = new BoundingBox(new Vec32(), new Vec32(0.5, 0.5, 0.5));
-    for (const r of rooms) {
-      if (r === loop.recess && loop.recess.usesReferenceLayout) continue;
-      const enabled = r.root.enabled;
-      r.root.enabled = true;
-      const nodes = app.root.findByTag("collision:" + r.root.name).filter((n) => n.enabled);
-      r.obstacles.splice(0, r.obstacles.length, ...nodes.map((n) => {
-        const box = new BoundingBox();
-        box.setFromTransformedAabb(bounds, n.getWorldTransform());
-        return box;
-      }));
-      r.root.enabled = enabled;
-    }
-    for (const r of rooms.filter((r2) => r2 !== loop.recess || !loop.recess.usesReferenceLayout)) for (const n of app.root.findByTag("walkable:" + r.root.name)) {
-      const index = Number(n.tags.list().find((t) => t.startsWith("index:")).slice(6)), b = new BoundingBox();
-      b.setFromTransformedAabb(bounds, n.getWorldTransform());
-      if (r.walkable?.[index]) Object.assign(r.walkable[index], { minX: b.center.x - b.halfExtents.x, maxX: b.center.x + b.halfExtents.x, minZ: b.center.z - b.halfExtents.z, maxZ: b.center.z + b.halfExtents.z });
-    }
-    for (const i of props.interactions) {
-      const a = app.root.findByTag("anchor:" + i.id)[0], marker = app.root.findByTag("marker:" + i.id)[0], p = app.root.findByTag("placement:" + i.id)[0];
-      if (a) i.anchor.copy(a.getPosition());
-      if (marker) i.marker.copy(marker.getPosition());
-      if (p && i.placement) i.placement.splice(0, 3, ...p.getPosition().toArray());
-    }
-    for (const s of loop.stores) {
-      for (const site of s.sites) {
-        for (const field of ["anchor", "marker"]) {
-          const e = app.root.findByTag(s.root.name + ":" + site.id + ":" + field)[0];
-          if (e) site[field].copy(e.getPosition());
-        }
-      }
-      const exit = app.root.findByTag("exit:" + s.root.name)[0];
-      if (exit) s.exitAnchor.copy(exit.getPosition());
-    }
-    for (const s of loop.stores) for (let i = 0; i < s.sites.length; i++) {
-      const group = app.root.findByTag("prop:" + s.root.name + ":" + i)[0], origin = data.rooms.find((r) => r.name === s.root.name).obstacles[i].center;
-      for (const child of [...s.boxes[i], s.glows[i]]) {
-        const p = child.getLocalPosition().clone().sub(new Vec32(origin[0], 0, origin[2]));
-        child.reparent(group);
-        child.setLocalPosition(p);
-      }
-    }
-    for (const s of loop.stores) {
-      for (let i = 0; i < s.sites.length; i++) {
-        s.boxes[i].forEach((box, n) => {
-          const socket = app.root.findByTag("stock:" + s.root.name + ":" + i + ":" + n)[0];
-          if (socket) {
-            box.setLocalPosition(socket.getLocalPosition());
-            box.setLocalEulerAngles(socket.getLocalEulerAngles());
-            box.setLocalScale(socket.getLocalScale());
-          }
-        });
-        const anchor = app.root.findByTag(s.root.name + ":" + i + ":anchor")[0];
-        if (anchor) s.glows[i].setLocalPosition(anchor.getLocalPosition().clone().add(new Vec32(0, 0.027, 0)));
-      }
-      const batch = app.batcher.addGroup("Store art " + s.root.name, false, 32);
-      for (const e of s.root.findByTag("store.art")) for (const r of e.findComponents("render")) r.batchGroupId = batch.id;
-    }
-    const classroom = app.root.findByTag("prop:Classroom trading club:0")[0];
-    if (classroom) loop.recess.bindLayout(classroom);
-    const batchIds = [...new Set(app.root.findComponents("render").map((r) => r.batchGroupId).filter((id) => id >= 0))];
-    app.batcher.generate(batchIds);
-    app.on("update", () => {
-      for (const { source, target } of emission) if (target.emissiveIntensity !== source.emissiveIntensity || !target.emissive.equals(source.emissive)) {
-        target.emissive.copy(source.emissive);
-        target.emissiveIntensity = source.emissiveIntensity;
-        target.update();
-      }
-    });
-  }
-  window.__migration.ready = true;
-}
+// src/main.ts
+init_LayoutBridge();
 
 // src/game/DogRoaming.ts
 import { Vec3 as Vec34 } from "playcanvas";
@@ -913,7 +1331,67 @@ var DogRoaming = class {
   state = "roaming";
   bowlWait = 20 + Math.random() * 20;
   meals = 0;
+  fetch = null;
+  fetchToy(toy2, player, drop) {
+    if (this.fetch || this.state !== "roaming" || this.daily.hasDogFood || toy2.getPosition().distance(this.root.getPosition()) > 7) return false;
+    const p = toy2.getPosition(), route = this.path.route(this.root.getPosition().clone().set(this.root.getPosition().x, 0, this.root.getPosition().z), new Vec34(p.x, 0, p.z));
+    if (!route.length) return false;
+    this.fetch = { toy: toy2, player, drop, carrying: false, time: 0 };
+    this.route = route;
+    this.wait = 0;
+    this.state = "fetch";
+    return true;
+  }
   update(dt, active, people) {
+    if (this.fetch) {
+      const job = this.fetch;
+      job.time += dt;
+      if (!active || job.time > 15) {
+        job.drop();
+        this.fetch = null;
+        this.route = [];
+        this.state = "roaming";
+        return;
+      }
+      const p2 = this.root.getPosition(), next2 = this.route[0];
+      if (next2) {
+        const delta2 = new Vec34(next2.x - p2.x, 0, next2.z - p2.z), d = delta2.length();
+        if (d < 0.08) this.route.shift();
+        else {
+          delta2.normalize();
+          const q2 = p2.clone().add(delta2.clone().mulScalar(Math.min(d, dt * 0.8)));
+          if (!people.some((v) => Math.hypot(q2.x - v.x, q2.z - v.z) < 0.38) && this.path.free(q2.x, q2.z)) {
+            this.root.setPosition(q2);
+            this.root.setEulerAngles(0, Math.atan2(delta2.x, delta2.z) * 180 / Math.PI, 0);
+          }
+        }
+      } else if (!job.carrying) {
+        const a = job.player.getPosition();
+        for (const [dx, dz] of [[0.7, 0], [-0.7, 0], [0, 0.7], [0, -0.7]]) {
+          const route = this.path.route(new Vec34(p2.x, 0, p2.z), new Vec34(a.x + dx, 0, a.z + dz));
+          if (route.length) {
+            this.route = route;
+            job.carrying = true;
+            break;
+          }
+        }
+        if (!job.carrying) {
+          job.drop();
+          this.fetch = null;
+          this.state = "roaming";
+        }
+      } else {
+        job.drop();
+        this.fetch = null;
+        this.state = "roaming";
+        this.wait = 4;
+      }
+      if (job.carrying) {
+        const f = this.root.forward;
+        job.toy.setPosition(p2.x - f.x * 0.22, 0.22, p2.z - f.z * 0.22);
+      }
+      return;
+    }
     if (!active) {
       this.route = [];
       this.wait = 3;
@@ -1000,26 +1478,7 @@ var DogRoaming = class {
 
 // src/ui/HouseMusic.ts
 init_SaveNamespace();
-
-// src/editor/AssetUrls.ts
-var application;
-function containerOptions(sourcePath) {
-  return { crossOrigin: "anonymous", image: { preprocess(image) {
-    if (application && image.uri && !/^(data:|https?:)/.test(image.uri)) {
-      const path = new URL(image.uri, new URL(sourcePath, "https://asset-path.invalid/")).pathname;
-      image.uri = assetUrl(path);
-    }
-  } } };
-}
-function assetUrl(path) {
-  if (!application) return path;
-  const key = decodeURIComponent(path.replace(/^\/?assets\//, ""));
-  const asset = application.assets.find("game__" + key.replaceAll("/", "__") + (key.endsWith(".glb") ? ".bin" : ""));
-  if (!asset) throw new Error("Missing migrated asset: " + key);
-  return new URL(asset.getFileUrl(), document.baseURI).href;
-}
-
-// src/ui/HouseMusic.ts
+init_AssetUrls();
 var tracks = {
   home: { file: "Squishy home clean.mp3", name: "Home \xB7 morning & night" },
   chores: { file: "Squishy Home clean v2.mp3", name: "Home \xB7 after-school chores" },
@@ -1250,6 +1709,7 @@ function animalModel(app, resource, data) {
 }
 
 // src/game/SquishyArt.ts
+init_AssetUrls();
 import { Asset, Color as Color2 } from "playcanvas";
 
 // src/data/squishyPresentation.ts
@@ -1347,7 +1807,7 @@ function animateSquishy(model, time, strength = 0.012) {
 }
 
 // src/main.ts
-import { Application, Color as Color12, Entity as Entity46, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec345 } from "playcanvas";
+import { Application, Color as Color12, Entity as Entity51, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec350 } from "playcanvas";
 
 // src/game/house.ts
 import { BoundingBox as BoundingBox4, Entity as Entity7, Vec3 as Vec36 } from "playcanvas";
@@ -1392,32 +1852,8 @@ var EXTRA_HOUSE_TASKS = [
 ];
 
 // src/game/bedroom.ts
+init_primitives();
 import { BoundingBox as BoundingBox2, Entity as Entity4, Vec3 as Vec35 } from "playcanvas";
-
-// src/game/primitives.ts
-import { Color as Color3, Entity as Entity3, StandardMaterial as StandardMaterial2 } from "playcanvas";
-function material(name, hex) {
-  const mat = new StandardMaterial2();
-  mat.name = name;
-  mat.diffuse = new Color3().fromString(hex);
-  mat.gloss = 0.15;
-  mat.specular.set(0.08, 0.07, 0.09);
-  mat.update();
-  return mat;
-}
-function primitives(app, parent, batchGroupId = -1) {
-  return (name, shape, position, scale, mat, shadows = true) => {
-    const entity = new Entity3(name, app);
-    entity.addComponent("render", { type: shape, material: mat, castShadows: shadows, receiveShadows: true, batchGroupId });
-    entity.setLocalPosition(...position);
-    entity.setLocalScale(...scale);
-    parent.addChild(entity);
-    recordLayout(entity, parent);
-    return entity;
-  };
-}
-
-// src/game/bedroom.ts
 function createBedroom(app) {
   const root = new Entity4("Bedroom", app);
   app.root.addChild(root);
@@ -1538,7 +1974,12 @@ function createBedroom(app) {
   return { root, obstacles, halfWidth: 3.3, halfDepth: 3.6, materials: m };
 }
 
+// src/game/house.ts
+init_primitives();
+
 // src/game/HouseArt.ts
+init_AssetUrls();
+init_LayoutBridge();
 import { Asset as Asset2, BoundingBox as BoundingBox3, Color as Color4, Entity as Entity5 } from "playcanvas";
 var PALETTE = {
   wood: "#c9a078",
@@ -1579,7 +2020,7 @@ var HouseArt = class {
   loaded = 0;
   errors = [];
   lampMaterials = [];
-  add(pack, name, position, size, yaw = 0, dimension = "height", colors = {}, exterior = pack === "nature", pitch = 0, finish = "natural") {
+  add(pack, name, position2, size, yaw = 0, dimension = "height", colors = {}, exterior = pack === "nature", pitch = 0, finish = "natural") {
     const key = `${pack}/${name}`;
     if (!this.assets.has(key)) this.assets.set(key, new Promise((resolve, reject) => {
       const path = `${"/"}assets/environment/${pack === "nursery" || pack === "school" ? "" : "kenney/"}${key}.glb`;
@@ -1624,9 +2065,9 @@ var HouseArt = class {
       this.root.addChild(anchor);
       normalization.setLocalScale(scale, scale, scale);
       normalization.setLocalPosition(-bounds.center.x * scale, -(bounds.center.y - bounds.halfExtents.y) * scale, -bounds.center.z * scale);
-      anchor.setLocalPosition(...position);
+      anchor.setLocalPosition(...position2);
       anchor.setLocalEulerAngles(pitch, yaw, 0);
-      if (this.root.name === "Maple cottage" && position[0] === 5.95 && position[2] === 4.9 && ["bookcaseOpenLow", "books"].includes(name)) anchor.enabled = false;
+      if (this.root.name === "Maple cottage" && position2[0] === 5.95 && position2[2] === 4.9 && ["bookcaseOpenLow", "books"].includes(name)) anchor.enabled = false;
       recordArt(anchor, this.root, `environment/${pack === "nursery" || pack === "school" ? "" : "kenney/"}${key}.glb`);
       for (const render of renderers) render.batchGroupId = this.group.id;
       this.loaded++;
@@ -1652,6 +2093,7 @@ var HouseArt = class {
 };
 
 // src/game/HouseLighting.ts
+init_primitives();
 import { Color as Color5, Entity as Entity6 } from "playcanvas";
 var HouseLighting = class {
   constructor(app, root, bedside, importedShades) {
@@ -1660,10 +2102,10 @@ var HouseLighting = class {
     this.shades = [bedside, shade];
     const shape = primitives(app, root);
     const brass = material("Light fixture brass", "#b59169");
-    const addLight = (name, position, intensity, range) => {
+    const addLight = (name, position2, intensity, range) => {
       const entity = new Entity6(name, app);
       root.addChild(entity);
-      entity.setLocalPosition(...position);
+      entity.setLocalPosition(...position2);
       entity.addComponent("light", {
         type: "omni",
         color: new Color5(1, 0.84, 0.67),
@@ -2106,6 +2548,7 @@ var IsometricCamera = class {
 };
 
 // src/components/CharacterVisual.ts
+init_AssetUrls();
 import { Asset as Asset3, BoundingBox as BoundingBox5, Entity as Entity14 } from "playcanvas";
 
 // src/components/MeshyGameplayAdapter.ts
@@ -2294,8 +2737,21 @@ function meshyGameplay(model, source, chore) {
   }
   arms(0.67, 0.27, 0.12);
   const seated = capture();
+  const breakfastHands = ["Left", "Right"].map((side) => model.findByName(side + "Hand").getPosition().clone());
   arms(0.94, 0.22, 0.1);
   const eating = capture();
+  restore();
+  const mealRest = channels.map(({ node }, i) => /^(Left|Right)(Shoulder|Arm|ForeArm|Hand)/.test(node.name) ? carry[i] : seated[i]);
+  channels.forEach(({ node, property }, i) => {
+    const v = mealRest[i];
+    if (property === "localRotation") node.setLocalRotation(v[0], v[1], v[2], v[3]);
+    else if (property === "localPosition") node.setLocalPosition(v[0], v[1], v[2]);
+    else node.setLocalScale(v[0], v[1], v[2]);
+  });
+  for (const [i, side] of ["Left", "Right"].entries()) aim(model.findByName(side + "ForeArm"), model.findByName(side + "Hand"), breakfastHands[i]);
+  const mealHead = model.findByName("Head");
+  mealHead.setRotation(new Quat2().mul2(new Quat2().setFromAxisAngle(axis, 25), mealHead.getRotation()));
+  const mealContact = capture();
   restore();
   const loop = (track, name) => {
     const start = Math.min(...track.inputs.map((input) => input.data[0]));
@@ -2310,6 +2766,12 @@ function meshyGameplay(model, source, chore) {
     loop(idle, "Idle"),
     pose("CarryIdle", [carry, carry], [0, 2]),
     pose("EatSit", [rest, seated, seated, eating, seated, seated, rest], [0, 0.55, 0.9, 1.55, 2.15, 3.6, 4.2]),
+    // Keep the existing upper-arm carry pose throughout the meal.
+    pose("MealSit", [rest, mealRest], [0, 0.65]),
+    pose("MealIdle", [mealRest, mealRest], [0, 2]),
+    pose("MealBite", [mealRest, mealContact, mealRest], [0, 0.65, 1.25]),
+    pose("MealDrink", [mealRest, mealContact, mealRest], [0, 0.65, 1.25]),
+    pose("MealStand", [mealRest, rest], [0, 0.65]),
     pose("PickUp", [rest, reach, carry], [0, 0.4, 0.8]),
     pose("PutDown", [carry, reach, rest], [0, 0.4, 0.8]),
     pose("Celebrate", [rest, happy, happy, rest], [0, 0.3, 0.7, 1]),
@@ -2331,13 +2793,16 @@ function meshyGameplay(model, source, chore) {
     animations: tracks2.map((track) => ({ name: track.name, duration_seconds: track.duration, loop: !["PickUp", "PutDown", "Celebrate"].includes(track.name) })),
     scale: { rest_height_m: 1.20309758 },
     locomotion: { Walk: { travel_speed_mps: WALK_SPEED }, Run: { travel_speed_mps: RUN_SPEED }, CarryWalk: { travel_speed_mps: WALK_SPEED }, CarryRun: { travel_speed_mps: RUN_SPEED } },
-    interaction_events: { PickUp: [{ time_seconds: 0.4, event: "attach" }], PutDown: [{ time_seconds: 0.4, event: "release" }] },
+    interaction_events: { PickUp: [{ time_seconds: 0.4, event: "attach" }], PutDown: [{ time_seconds: 0.4, event: "release" }], MealBite: [{ time_seconds: 0.65, event: "mouth-contact" }], MealDrink: [{ time_seconds: 0.65, event: "mouth-contact" }] },
     hand_joints: ["LeftHand", "RightHand"],
     action_playback: 1,
     walk_playback: 1
   };
   return { tracks: tracks2, manifest };
 }
+
+// src/components/CharacterVisual.ts
+init_primitives();
 
 // src/components/CharacterAnimator.ts
 import { AnimStateGraph, Mat4, Vec3 as Vec310, math, SEMANTIC_BLENDINDICES, SEMANTIC_BLENDWEIGHT } from "playcanvas";
@@ -3189,7 +3654,7 @@ var PlayerController = class {
   }
   setRoom(room) {
     this.room = room;
-    this.bounds = room.obstacles.map((box) => {
+    this.bounds = room.obstacles.filter((box) => !box.homePlayDynamic).map((box) => {
       const expanded = box.clone();
       expanded.halfExtents.x += this.radius;
       expanded.halfExtents.z += this.radius;
@@ -3347,6 +3812,7 @@ var VirtualJoystick = class {
 import { Entity as Entity21, Vec3 as Vec322 } from "playcanvas";
 
 // src/game/cleanupProps.ts
+init_primitives();
 import { BoundingBox as BoundingBox6, Entity as Entity16, Vec3 as Vec316 } from "playcanvas";
 function createCleanupProps(app, room) {
   const root = new Entity16("Cleanup props", app);
@@ -3468,10 +3934,14 @@ function createCleanupProps(app, room) {
   return { root, items, interactions, crayonMess, tidyCrayons, dirt, reset };
 }
 
+// src/game/houseProps.ts
+init_primitives();
+
 // src/game/PetCleanup.ts
 import { Entity as Entity18, Vec3 as Vec318 } from "playcanvas";
 
 // src/game/ImportedProp.ts
+init_AssetUrls();
 import { Asset as Asset4, BoundingBox as BoundingBox7 } from "playcanvas";
 async function importProp(app, parent, name, height, idle = false, rotation = [0, 0, 0]) {
   const asset = new Asset4(name, "container", { url: assetUrl(`${"/"}assets/pets/${name}.glb`) });
@@ -3504,6 +3974,9 @@ async function importProp(app, parent, name, height, idle = false, rotation = [0
   }
   return model;
 }
+
+// src/game/PetCleanup.ts
+init_primitives();
 
 // src/game/DogAnimator.ts
 import { BoundingBox as BoundingBox8, Vec3 as Vec317 } from "playcanvas";
@@ -3678,6 +4151,7 @@ var PetCleanup = class {
 
 // src/game/DailyLife.ts
 init_SaveNamespace();
+init_PropSpace();
 import { BoundingBox as BoundingBox9, Entity as Entity20, Vec3 as Vec320 } from "playcanvas";
 
 // src/systems/DailyClock.ts
@@ -3798,8 +4272,12 @@ var DailyClock = class {
   }
 };
 
+// src/game/DailyLife.ts
+init_primitives();
+
 // src/game/LilahMesses.ts
 init_SaveNamespace();
+init_primitives();
 import { Entity as Entity19, Vec3 as Vec319 } from "playcanvas";
 var LilahMesses = class {
   constructor(app, parent, props, active) {
@@ -3894,9 +4372,9 @@ var LilahMesses = class {
     const i = this.kinds.indexOf(kind);
     return !!this.records[i] && !this.records[i].done;
   }
-  add(position) {
+  add(position2) {
     if (this.count >= 3 || this.activeCount >= 2) return false;
-    const records2 = [...this.records, { x: position.x, z: position.z, done: false }];
+    const records2 = [...this.records, { x: position2.x, z: position2.z, done: false }];
     if (!this.save(records2)) return false;
     this.records = records2;
     this.refresh();
@@ -3971,10 +4449,10 @@ var DailyLife = class {
     plate("Breakfast plate", "cylinder", [0, 0.021, 0], [0.46, 0.012, 0.46], m.trim);
     plate("Plated egg white", "sphere", [0, 0.039, 0], [0.35, 0.025, 0.3], m.trim);
     plate("Plated egg yolk", "sphere", [0, 0.06, 0], [0.15, 0.055, 0.15], m.yellow);
-    const makeSpill = (name, position) => {
+    const makeSpill = (name, position2) => {
       const root = new Entity20(name, app);
       this.root.addChild(root);
-      root.setLocalPosition(...position);
+      root.setLocalPosition(...position2);
       const s = primitives(app, root);
       for (let i = 0; i < 7; i++) s("Puddle", "sphere", [Math.sin(i * 2) * 0.22, 0.01, Math.cos(i * 2) * 0.16], [0.35, 0.022, 0.3], i === 0 ? m.yellow : m.trim, false);
       return root;
@@ -4395,7 +4873,7 @@ var RoundMesses = class {
     const pools = { bedroom, living, kitchen: [[0.2, 10.6], [1.5, 11.4], [-0.6, 11.6], [0.15, 12]], laundry: [[4.55, 10.5], [4.65, 11.8], [5.35, 11.65]], hall: [[4.4, 2.4], [4.5, 1.5], [5.3, 1.8]], bath: [[4.6, -1.4], [4.6, -2.15], [5.1, -0.7]] };
     const choose = (id, pool) => {
       const candidates = pool.map(([x, z]) => new Vec321(x, 0, z)).filter((p2) => this.planner.free(p2.x, p2.z) && used.every((q) => q.distance(p2) > 0.65) && this.planner.route(new Vec321(0, 0, 0.9), p2).length);
-      const fresh2 = candidates.filter((p2) => p2.x + "," + p2.z !== this.previous.get(id)), options = fresh2.length ? fresh2 : candidates;
+      const fresh3 = candidates.filter((p2) => p2.x + "," + p2.z !== this.previous.get(id)), options = fresh3.length ? fresh3 : candidates;
       const p = options[Math.floor(random() * options.length)];
       if (p) {
         used.push(p);
@@ -4514,6 +4992,7 @@ function createHouseProps(app, house) {
 
 // src/ui/ChoreAudio.ts
 init_SaveNamespace();
+init_AssetUrls();
 var ChoreAudio = class {
   context;
   master;
@@ -4642,6 +5121,9 @@ var ChoreAudio = class {
   }
 };
 
+// src/game/CleanupGame.ts
+init_PropSpace();
+
 // src/components/CarrySystem.ts
 import { BoundingBox as BoundingBox10, Entity as Entity22, Mat4 as Mat42, Vec3 as Vec323 } from "playcanvas";
 var CarrySystem = class {
@@ -4671,12 +5153,12 @@ var CarrySystem = class {
     item.entity.setLocalEulerAngles(0, 0, 0);
     return true;
   }
-  release(parent, position) {
+  release(parent, position2) {
     if (!this.item) return null;
     const item = this.item;
     item.entity.reparent(parent);
     item.entity.setLocalScale(1, 1, 1);
-    item.entity.setLocalPosition(...position);
+    item.entity.setLocalPosition(...position2);
     item.entity.setLocalEulerAngles(0, 0, 0);
     this.item = null;
     return item;
@@ -4775,15 +5257,15 @@ var InteractionSystem = class {
     if (target.kind === "pickup") return !mission.completed.has(target.item === "vacuum" ? "dirt" : target.item);
     return true;
   }
-  distance(target, position) {
-    return Math.hypot(target.anchor.x - position.x, target.anchor.z - position.z);
+  distance(target, position2) {
+    return Math.hypot(target.anchor.x - position2.x, target.anchor.z - position2.z);
   }
-  update(position, carried, mission) {
+  update(position2, carried, mission) {
     let nearest = null;
     let nearestDistance = Infinity;
     for (const target of this.interactions) {
       if (!this.available(target, carried, mission)) continue;
-      const distance = this.distance(target, position);
+      const distance = this.distance(target, position2);
       const range = target.range + (target === this.focus ? 0.1 : 0);
       const score = distance + (target.id === "put-tool-away" ? 100 : 0);
       if (distance <= range && score < nearestDistance) {
@@ -4864,6 +5346,7 @@ var ActionButton = class {
 };
 
 // src/ui/CleanupFeedback.ts
+init_primitives();
 import { Entity as Entity23, Mesh, MeshInstance, TorusGeometry, Vec3 as Vec324 } from "playcanvas";
 
 // src/systems/InteractionGuidance.ts
@@ -4924,8 +5407,8 @@ var CleanupFeedback = class {
     const carried = carry.item?.id ?? null;
     const availableTargets = this.markers.map((m) => m.target).filter((t) => interactions.available(t, carried, mission));
     const candidates = guidanceCandidates(availableTargets, carried);
-    const position = carry.socket.getPosition();
-    const primary = candidates.sort((a, b) => interactions.distance(a, position) - interactions.distance(b, position))[0];
+    const position2 = carry.socket.getPosition();
+    const primary = candidates.sort((a, b) => interactions.distance(a, position2) - interactions.distance(b, position2))[0];
     for (const { target, ring, label } of this.markers) {
       const available = availableTargets.includes(target);
       const destination = target === primary;
@@ -5126,6 +5609,7 @@ function saveId() {
 import { Vec3 as Vec326 } from "playcanvas";
 
 // src/components/BedEntry.ts
+init_PropSpace();
 import { Vec3 as Vec325 } from "playcanvas";
 var BED_ENTRY_SECONDS = 3.2;
 function bedEntry(start, startYaw, crib, progress) {
@@ -5179,6 +5663,7 @@ var CleanupGame = class {
   resetMovement;
   controller;
   interactionCamera;
+  externalAction = () => false;
   roundId = saveId();
   onFinished = () => {
   };
@@ -5222,6 +5707,7 @@ var CleanupGame = class {
     this.interactions.update(this.character.player.getPosition(), this.carry.item?.id ?? null, this.mission);
   }
   press = () => {
+    if (this.externalAction()) return;
     const now = performance.now();
     this.mission.tick(now);
     this.refreshFocus();
@@ -5477,9 +5963,10 @@ var CleanupGame = class {
   replay = () => {
     if (!this.beforeReplay()) return;
     this.roundId = saveId();
+    const freePlayItem = this.carry.item?.id.startsWith("home-") ? this.carry.item : null;
     this.action.reset();
     this.cancelActivity();
-    this.carry.item = null;
+    this.carry.item = freePlayItem;
     if (this.mode === "house") {
       const tasks = this.props.roundMesses.houseTasks();
       this.mission.configure(tasks, true);
@@ -5493,6 +5980,7 @@ var CleanupGame = class {
     if (this.mode === "day") for (const id of this.props.daily.completed) this.mission.completed.add(id);
     this.character.animator.reset();
     this.character.player.setPosition(0, 0.09, 0.9);
+    this.character.animator.setCarrying(!!freePlayItem);
     this.character.visual.setLocalEulerAngles(0, 30, 0);
     this.finishedHandled = false;
     this.celebrationStarted = false;
@@ -5516,12 +6004,12 @@ var CleanupGame = class {
     this.aligning = null;
     this.resetMovement();
     this.character.animator.cancelAction();
-    if (this.carry.item) {
+    if (this.carry.item && !this.carry.item.id.startsWith("home-")) {
       const item = this.carry.item;
       this.carry.release(this.props.root, item.home);
       item.entity.enabled = true;
     }
-    this.character.animator.setCarrying(false);
+    this.character.animator.setCarrying(!!this.carry.item);
   }
   developerComplete() {
     this.developerCancel();
@@ -5596,7 +6084,7 @@ var CleanupGame = class {
 // src/game/GameLoop.ts
 init_collection();
 init_collection();
-import { Vec3 as Vec339 } from "playcanvas";
+import { Vec3 as Vec342 } from "playcanvas";
 
 // src/systems/ProgressStore.ts
 init_SaveNamespace();
@@ -6284,9 +6772,11 @@ var ProgressStore = class {
 };
 
 // src/game/store.ts
+init_primitives();
 import { BoundingBox as BoundingBox11, Color as Color7, Entity as Entity25, Vec3 as Vec327 } from "playcanvas";
 
 // src/game/dumplingVisual.ts
+init_AssetUrls();
 import { Entity as Entity24 } from "playcanvas";
 function createBlindBox(app, parent, compact = false) {
   const root = new Entity24("Bamboo surprise steamer", app);
@@ -6434,6 +6924,9 @@ function squishPose(time, style) {
   const y = 1 - 0.3 * wave;
   return { scale: [1 / Math.sqrt(y), y, 1 / Math.sqrt(y)], roll: 0 };
 }
+
+// src/game/OpeningSequence.ts
+init_primitives();
 
 // src/game/SquishyMotion.ts
 var clamp2 = (n) => Math.max(0, Math.min(1, n));
@@ -6607,6 +7100,9 @@ var SquishyRevealVfx = class {
     this.material.destroy();
   }
 };
+
+// src/game/OpeningSequence.ts
+init_AssetUrls();
 
 // src/game/SquishyRevealAudio.ts
 var SquishyRevealAudio = class {
@@ -7280,10 +7776,18 @@ var TradingUI = class {
 };
 
 // src/game/recess.ts
-import { Asset as Asset6, BoundingBox as BoundingBox13, Entity as Entity30, Vec3 as Vec330 } from "playcanvas";
+init_AssetUrls();
+import { Asset as Asset6, BoundingBox as BoundingBox13, Entity as Entity30, Vec3 as Vec331 } from "playcanvas";
+
+// src/game/SchoolCook.ts
+import { Vec3 as Vec330, Quat as Quat8 } from "playcanvas";
 
 // src/game/SchoolPerson.ts
+init_AssetUrls();
 import { Asset as Asset5, AnimCurve as AnimCurve7, AnimData as AnimData7, AnimTrack as AnimTrack7, BoundingBox as BoundingBox12, Entity as Entity28, Quat as Quat7, Vec3 as Vec329, INTERPOLATION_LINEAR as INTERPOLATION_LINEAR7 } from "playcanvas";
+function personMeshes(root) {
+  return [...root.findComponents("render").flatMap((r) => r.meshInstances), ...root.findComponents("model").flatMap((m) => m.model?.meshInstances ?? [])];
+}
 var assets = /* @__PURE__ */ new WeakMap();
 var studentAssets = /* @__PURE__ */ new WeakMap();
 function releaseSchoolStudents(app) {
@@ -7369,9 +7873,15 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
     app.assets.add(a);
     app.assets.load(a);
   }));
-  const res = await cache.get(file), model = res.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox12();
+  const res = await cache.get(file), model = res.instantiateModelEntity({ castShadows: true }), bounds = new BoundingBox12();
+  for (const component of model.findComponents("model")) {
+    const owned = component.model;
+    const used = new Set(owned.meshInstances.map((m) => m.skinInstance));
+    for (const skin of owned.skinInstances) if (!used.has(skin)) skin.destroy();
+    owned.skinInstances = [...new Set(owned.skinInstances.filter((s) => used.has(s)))];
+  }
   let first = true;
-  for (const render of model.findComponents("render")) for (const m of render.meshInstances) {
+  for (const m of personMeshes(model)) {
     if (first) {
       bounds.copy(m.aabb);
       first = false;
@@ -7380,7 +7890,7 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
   if (seated && !file.startsWith("student-")) {
     model.findByName("Head").setLocalScale(1.2, 1.2, 1.2);
     const palette = { jules: { Purple: "#9d88bf", LightBlue: "#587995", White: "#eee4d8" }, remy: { LightBrown: "#9dbda6", Red_Dark: "#6c8d78", LightBlue: "#567188" }, poppy: { White: "#ead2e6", Orange: "#b88aac", Grey: "#ede3d7" } };
-    for (const render of model.findComponents("render")) for (const mesh of render.meshInstances) {
+    for (const mesh of personMeshes(model)) {
       const color = palette[file]?.[mesh.material.name];
       if (color) {
         const mat = mesh.material.clone();
@@ -7402,7 +7912,7 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
   model.anim.baseLayer.play("Idle_Neutral");
   let waving = false, until = 0, lastBlink = -1;
   const blinkOffset = file.includes("poppy") ? 1.2 : file.includes("remy") ? 2.6 : 0;
-  const morphs = model.findComponents("render").flatMap((r) => r.meshInstances.map((m) => m.morphInstance).filter((m) => m != null));
+  const morphs = personMeshes(model).map((m) => m.morphInstance).filter((m) => m != null);
   return { root, model, height, scale, update(time, greeting = false) {
     if (file.startsWith("student-")) {
       const phase = (time + blinkOffset) % 4.6, blink = phase < 0.2 ? Math.sin(phase / 0.2 * Math.PI) : 0;
@@ -7424,10 +7934,11 @@ async function schoolPerson(app, parent, file, name, height = 1.38, seated = fal
 }
 
 // src/game/SchoolCook.ts
+init_primitives();
 async function schoolCook(app, parent) {
   const person = await schoolPerson(app, parent, "remy", "Friendly lunch cook", 1.84);
   person.root.setLocalPosition(0.3, 0.37, -6.18);
-  for (const render of person.model.findComponents("render")) for (const mesh of render.meshInstances) {
+  for (const mesh of personMeshes(person.model)) {
     if (/red|LightBrown/i.test(mesh.material.name)) {
       const mat = mesh.material.clone();
       mat.diffuse.set(0.93, 0.91, 0.84);
@@ -7439,18 +7950,47 @@ async function schoolCook(app, parent) {
   shape("Chef hat band", "cylinder", [0, size * 0.96, 0], [size * 1.65, size * 0.32, size * 1.4], white);
   for (const x of [-0.5, 0, 0.5]) shape("Soft chef cap", "sphere", [x * size, size * 1.25, 0], [size * 0.95, size * 0.66, size * 1.5], white);
   primitives(app, parent)("Kitchen standing platform", "box", [0.3, 0.175, -6.18], [1.1, 0.35, 0.8], material("Kitchen platform", "#b6bac2"));
+  let serving = 0;
+  const begin = () => {
+    serving = 1.1;
+  };
+  const aim = (node, child, target, weight) => {
+    const original = node.getRotation().clone(), from = child.getPosition().clone().sub(node.getPosition()).normalize(), to = target.clone().sub(node.getPosition()).normalize();
+    node.setRotation(new Quat8().slerp(original, new Quat8().mul2(new Quat8().setFromDirections(from, to), original), weight));
+  };
+  const update = (dt) => {
+    if (serving <= 0) return;
+    serving = Math.max(0, serving - dt);
+    const t = 1 - serving / 1.1, weight = Math.sin(Math.PI * t);
+    for (const [side, sign] of [["L", 1], ["R", -1]]) {
+      const arm = person.model.findByName("UpperArm." + side), fore = person.model.findByName("LowerArm." + side), hand = person.model.findByName("Wrist." + side), origin = arm.getPosition().clone(), target = new Vec330(4.6 + sign * 0.18, 1.4, -21.5 + Math.max(0, (t - 0.4) / 0.6) * 0.7), a = origin.distance(fore.getPosition()), b = fore.getPosition().distance(hand.getPosition()), delta = target.clone().sub(origin), d = Math.min(delta.length(), a + b - 5e-3);
+      delta.normalize();
+      const pole = new Vec330(sign, -0.5, 0);
+      pole.sub(delta.clone().mulScalar(pole.dot(delta))).normalize();
+      const along = (a * a - b * b + d * d) / (2 * d), elbow = origin.clone().add(delta.clone().mulScalar(along)).add(pole.mulScalar(Math.sqrt(Math.max(0, a * a - along * along))));
+      aim(arm, fore, elbow, weight);
+      aim(fore, hand, target, weight);
+    }
+  };
+  app.on("home-play:serve", begin);
+  app.on("postupdate", update);
+  person.root.once("destroy", () => {
+    app.off("home-play:serve", begin);
+    app.off("postupdate", update);
+    white.destroy();
+  });
   return person.root;
 }
 
 // src/game/Classmates.ts
-import { Entity as Entity29, Texture as Texture3, StandardMaterial as StandardMaterial7, CULLFACE_NONE as CULLFACE_NONE3 } from "playcanvas";
-function classroomSign(app, parent, name, text, position, width = 1, height = 0.26, color = "#5c496e") {
+import { Entity as Entity29, Texture as Texture3, StandardMaterial as StandardMaterial8, CULLFACE_NONE as CULLFACE_NONE3 } from "playcanvas";
+function classroomSign(app, parent, name, text, position2, width = 1, height = 0.26, color = "#5c496e") {
   const canvas = document.createElement("canvas");
   canvas.width = 768;
   canvas.height = 256;
   const texture = new Texture3(app.graphicsDevice, { mipmaps: false });
   texture.setSource(canvas);
-  const material2 = new StandardMaterial7();
+  const material2 = new StandardMaterial8();
   material2.diffuseMap = texture;
   material2.emissiveMap = texture;
   material2.emissive.set(0.45, 0.45, 0.45);
@@ -7459,7 +7999,7 @@ function classroomSign(app, parent, name, text, position, width = 1, height = 0.
   const sign = new Entity29(name, app);
   parent.addChild(sign);
   sign.addComponent("render", { type: "plane", material: material2, castShadows: false });
-  sign.setLocalPosition(...position);
+  sign.setLocalPosition(...position2);
   sign.setLocalEulerAngles(90, 0, 0);
   sign.setLocalScale(width, 1, height);
   sign.once("destroy", () => {
@@ -7529,6 +8069,9 @@ var Classmates = class {
   }
 };
 
+// src/game/recess.ts
+init_primitives();
+
 // public/assets/school-kit/classroom-collision.json
 var classroom_collision_default = [{ center: [-6.05, 0, 0], half: [0.05, 1, 7] }, { center: [6.05, 0, 0], half: [0.05, 1, 7] }, { center: [-1.12, 0, -7], half: [4.88, 1, 0.1] }, { center: [5.74, 0, -7], half: [0.26, 1, 0.1] }, { center: [-4.9, 0, -6.3], half: [0.665, 1, 0.3] }, { center: [-0.3, 0, -5.12], half: [1.55, 1, 0.9] }, { center: [3.1, 0, -6.28], half: [0.36, 1, 0.36] }, { center: [-3.1, 0, -1.75], half: [1.075, 1, 1.075] }, { center: [2.65, 0, -1.75], half: [1.075, 1, 1.075] }, { center: [0, 0, 1.5], half: [1.075, 1, 1.075] }, { center: [-3.2, 0, 2.5], half: [1.075, 1, 1.075] }, { center: [-5.42, 0, -3.5], half: [0.38999999999999996, 1, 0.3] }, { center: [-5.42, 0, 0], half: [0.38999999999999996, 1, 0.3] }, { center: [-5.42, 0, 3.7], half: [0.38999999999999996, 1, 0.3] }, { center: [-2.75, 0, 5.2], half: [0.525, 1, 0.5] }, { center: [3.02, 0, 4.4], half: [1.675, 1, 0.515] }, { center: [5.28, 0, 6.18], half: [0.35, 1, 0.35] }, { center: [-5.3, 0, 6.18], half: [0.35, 1, 0.35] }, { center: [5.37, 0, 0.78], half: [0.38999999999999996, 1, 0.3] }, { center: [-3.77, 0, -5.26], half: [0.375, 1, 0.285] }];
 
@@ -7572,6 +8115,13 @@ function buildRecess(app) {
   const desks = [{ x: -3.1, z: -1.75 }, { x: 2.65, z: -1.75 }, { x: 0, z: 1.5 }];
   const classmates = new Classmates(app, classroom, desks.map((p) => ({ x: p.x - 0.51, z: p.z - 0.8 })));
   const lunchFriends = new Classmates(app, cafeteria, [{ x: -4.15, y: 0.085, z: -2.5 }, { x: -1.85, y: 0.085, z: -2.5 }, { x: 2.55, y: 0.085, z: -2.5 }], false);
+  let lunchGreeting = "", lunchGreetingUntil = 0;
+  const greet = (id) => {
+    lunchGreeting = id;
+    lunchGreetingUntil = performance.now() + 2200;
+  };
+  app.on("home-play:lunch-arrive", greet);
+  root.once("destroy", () => app.off("home-play:lunch-arrive", greet));
   const offers = new Entity30("Today\u2019s trading squishies", app);
   classroom.addChild(offers);
   const display = new Entity30("Squishy friends display", app);
@@ -7582,11 +8132,11 @@ function buildRecess(app) {
     model.setLocalPosition(1.82 + i * 0.49, 0.855, 4.55);
   }
   const seats = TRADERS.map((trader, i) => {
-    const d = desks[i], anchor = new Vec330(d.x, 0, d.z + 1.55);
+    const d = desks[i], anchor = new Vec331(d.x, 0, d.z + 1.55);
     const glow = primitives(app, classroom)("Trading spot", "cylinder", [anchor.x, 0.016, anchor.z], [0.82, 0.022, 0.82], material(trader.name + " cue", trader.color), false);
     return { id: trader.id, anchor, glow };
   });
-  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec330(...b.center), new Vec330(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec330(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec330(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec330(x, 0, -8), new Vec330(0.05, 1, 1.05)))];
+  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec331(...b.center), new Vec331(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec331(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec331(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec331(x, 0, -8), new Vec331(0.05, 1, 1.05)))];
   const room = { root, halfWidth: 12, halfDepth: 24, walkable: [{ minX: -5.9, maxX: 5.9, minZ: -6.96, maxZ: 6.9 }, { minX: 3.7, maxX: 5.5, minZ: -9.2, maxZ: -6.7 }, { minX: -1.3, maxX: 10.5, minZ: -22.9, maxZ: -9 }], obstacles, ready: Promise.all([load("classroom", classroom), load("cafeteria", cafeteria), classmates.ready, lunchFriends.ready, schoolCook(app, cafeteria).catch((e) => {
     errors.push("School cook");
     console.error(e);
@@ -7621,15 +8171,15 @@ function buildRecess(app) {
     classroom.enabled = p.z > -9.2;
     cafeteria.enabled = p.z < -5.8;
     classmates.update(now, focus);
-    lunchFriends.update(now, "");
-  }, door: new Vec330(4.6, 0, -8), cafeteriaCenter: new Vec330(4.6, 0, -15) };
+    lunchFriends.update(now, now < lunchGreetingUntil ? lunchGreeting : "");
+  }, door: new Vec331(4.6, 0, -8), cafeteriaCenter: new Vec331(4.6, 0, -15) };
 }
 function createRecess(app) {
   const root = new Entity30("Classroom trading club", app);
   app.root.addChild(root);
   root.enabled = false;
   let actual = null, pending = null, day = null, ready = false, error = "";
-  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec330(...b.center), new Vec330(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec330(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec330(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec330(x, 0, -8), new Vec330(0.05, 1, 1.05)))];
+  const obstacles = [...classroom_collision_default.map((b) => new BoundingBox13(new Vec331(...b.center), new Vec331(...b.half))), ...cafeteria_collision_default.map((b) => new BoundingBox13(new Vec331(b.center[0] + 4.6, 0, b.center[2] - 16), new Vec331(...b.half))), ...[3.65, 5.55].map((x) => new BoundingBox13(new Vec331(x, 0, -8), new Vec331(0.05, 1, 1.05)))];
   const ensure = () => {
     if (pending) return pending;
     actual = buildRecess(app);
@@ -7658,7 +8208,7 @@ function createRecess(app) {
   }, update(now, focus, p) {
     if (ready) actual?.update(now, focus, p);
   }, bindLayout: (_group) => {
-  }, door: new Vec330(4.6, 0, -8), cafeteriaCenter: new Vec330(4.6, 0, -15), artStats: () => actual?.artStats?.() ?? { loaded: 0, models: 0, errors: error ? [error] : [] }, sleep() {
+  }, door: new Vec331(4.6, 0, -8), cafeteriaCenter: new Vec331(4.6, 0, -15), artStats: () => actual?.artStats?.() ?? { loaded: 0, models: 0, errors: error ? [error] : [] }, sleep() {
     const previous = actual;
     void pending?.then(() => {
       if (actual === previous && !root.enabled) {
@@ -7675,6 +8225,7 @@ function createRecess(app) {
 init_collection();
 
 // src/ui/PopAudio.ts
+init_AssetUrls();
 var PopAudio = class {
   musicGain;
   unsubscribe = onAudioChange(() => this.applyVolumes());
@@ -7850,6 +8401,7 @@ var PopAudio = class {
 
 // src/ui/PopArt.ts
 init_collection();
+init_AssetUrls();
 var PopArt = class {
   friends = /* @__PURE__ */ new Map();
   powers = /* @__PURE__ */ new Map();
@@ -8745,9 +9297,10 @@ var SquishyPopUI = class {
 };
 
 // src/game/Outdoors.ts
-import { BoundingBox as BoundingBox15, Entity as Entity34, Vec3 as Vec332, Mesh as Mesh4, MeshInstance as MeshInstance4 } from "playcanvas";
+import { BoundingBox as BoundingBox15, Entity as Entity34, Vec3 as Vec333, Mesh as Mesh4, MeshInstance as MeshInstance4 } from "playcanvas";
 
 // src/game/OutdoorGround.ts
+init_primitives();
 import { Color as Color10, Entity as Entity31, Mesh as Mesh3, MeshInstance as MeshInstance3, Texture as Texture4, ADDRESS_REPEAT as ADDRESS_REPEAT2, FILTER_LINEAR_MIPMAP_LINEAR as FILTER_LINEAR_MIPMAP_LINEAR2 } from "playcanvas";
 function outdoorSurface(app, kind) {
   const canvas = document.createElement("canvas");
@@ -8894,49 +9447,13 @@ function meadowFringes(app, parent, group) {
   e.addComponent("render", { meshInstances: [new MeshInstance3(mesh, mat)], castShadows: false, batchGroupId: group });
 }
 
+// src/game/Outdoors.ts
+init_primitives();
+
 // src/game/OutdoorArt.ts
+init_AssetUrls();
+init_ContainerLease();
 import { BoundingBox as BoundingBox14, Entity as Entity32, Color as Color11 } from "playcanvas";
-
-// src/game/ContainerLease.ts
-import { Asset as Asset7 } from "playcanvas";
-var registries = /* @__PURE__ */ new WeakMap();
-function leaseContainer(app, url, name) {
-  let registry = registries.get(app);
-  if (!registry) {
-    registry = /* @__PURE__ */ new Map();
-    registries.set(app, registry);
-  }
-  let entry = registry.get(url);
-  if (!entry) {
-    const asset = new Asset7(name, "container", { url });
-    entry = { asset, refs: 0, promise: new Promise((resolve, reject) => {
-      asset.once("load", () => resolve(asset.resource));
-      asset.once("error", reject);
-    }) };
-    registry.set(url, entry);
-    app.assets.add(asset);
-    app.assets.load(asset);
-  }
-  entry.refs++;
-  let released = false;
-  const current = entry, owners = registry;
-  return { asset: current.asset, ready: current.promise, release() {
-    if (released) return;
-    released = true;
-    current.refs--;
-    const dispose = () => {
-      if (current.refs === 0 && owners.get(url) === current) {
-        owners.delete(url);
-        current.asset.unload();
-        app.assets.remove(current.asset);
-      }
-    };
-    if (current.asset.loaded) dispose();
-    else void current.promise.then(dispose, dispose);
-  } };
-}
-
-// src/game/OutdoorArt.ts
 var OutdoorArt = class {
   constructor(app, parent, lazy = false) {
     this.app = app;
@@ -9047,7 +9564,8 @@ var OutdoorArt = class {
 };
 
 // src/game/CrossingGuard.ts
-import { Entity as Entity33, Texture as Texture5, StandardMaterial as StandardMaterial10, CULLFACE_NONE as CULLFACE_NONE4 } from "playcanvas";
+init_primitives();
+import { Entity as Entity33, Texture as Texture5, StandardMaterial as StandardMaterial11, CULLFACE_NONE as CULLFACE_NONE4 } from "playcanvas";
 async function crossingGuard(app, parent) {
   const person = await schoolPerson(app, parent, "crossing-guard", "Ms Maple crossing guard", 1.8);
   person.root.setLocalPosition(20, 0.09, -18);
@@ -9076,7 +9594,7 @@ async function crossingGuard(app, parent) {
   c.fillText("STOP", 128, 131);
   const texture = new Texture5(app.graphicsDevice, { mipmaps: false });
   texture.setSource(canvas);
-  const mat = new StandardMaterial10();
+  const mat = new StandardMaterial11();
   mat.diffuseMap = texture;
   mat.opacityMap = texture;
   mat.opacityMapChannel = "a";
@@ -9101,8 +9619,8 @@ async function crossingGuard(app, parent) {
 }
 
 // src/game/Outdoors.ts
-var POND = { stand: new Vec332(-4.1, 0.09, -10), bobber: new Vec332(-7.15, 0.12, -11.9), center: new Vec332(-8, 0, -12) };
-var SCHOOL_GATE = new Vec332(22, 0.09, -29.4);
+var POND = { stand: new Vec333(-4.1, 0.09, -10), bobber: new Vec333(-7.15, 0.12, -11.9), center: new Vec333(-8, 0, -12) };
+var SCHOOL_GATE = new Vec333(22, 0.09, -29.4);
 var Outdoors = class {
   constructor(app, house) {
     this.app = app;
@@ -9155,7 +9673,7 @@ var Outdoors = class {
     pondLayer("Grassy pond lip", 3.95, 3.25, 0.018, soil);
     pondLayer("Pond shallows", 3.72, 3.02, 0.055, material("Pond shallow turquoise", "#a4d4c6"));
     this.water = pondLayer("Pond water", 3.45, 2.77, 0.077, material("Pond blue", "#78bac5"));
-    this.obstacles.push(new BoundingBox15(new Vec332(-8, 0.5, -12), new Vec332(3.45, 2, 2.8)));
+    this.obstacles.push(new BoundingBox15(new Vec333(-8, 0.5, -12), new Vec333(3.45, 2, 2.8)));
     for (let i = 0; i < 15; i++) {
       const a = i * Math.PI * 2 / 15;
       if (a < 0.7 || a > 5.75) continue;
@@ -9229,7 +9747,7 @@ var Outdoors = class {
     const trees = [[-12, -6, 3.8], [-13, -16, 4.8], [-10, -18, 3.6], [0, -5.2, 3.8], [4, -7, 4.7], [10, -10, 4.5], [13, -15, 3.8], [28, -31, 4.5], [15, -31, 4.7], [30, -18, 4.1]];
     trees.forEach(([x, z, h], i) => {
       this.art.add(i % 2 ? "CommonTree_1" : "CommonTree_3", x, z, h, i * 67);
-      this.obstacles.push(new BoundingBox15(new Vec332(x, 1, z), new Vec332(0.38, 2, 0.38)));
+      this.obstacles.push(new BoundingBox15(new Vec333(x, 1, z), new Vec333(0.38, 2, 0.38)));
     });
     for (let x = -13; x < 14; x += 1.15) if (x < 4 || x > 8) this.art.add("Bush_Common", x, -18.7, 0.65, x * 17);
     for (let z = -17; z < -4; z += 1.15) this.art.add("Bush_Common_Flowers", -13.4, z, 0.65, z * 9);
@@ -9263,7 +9781,7 @@ var Outdoors = class {
     r("Chimney", "box", [7, 4, 8], [0.75, 1.4, 0.75], cream);
     r("Chimney cap", "box", [7, 4.73, 8], [0.95, 0.14, 0.95], edge);
     this.roof.enabled = false;
-    for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [28, -28.5, 1.5, 1], [16.65, -29.8, 2.78, 0.15], [14, -28.4, 0.15, 1.28], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox15(new Vec332(x, 0.6, z), new Vec332(hx, 1, hz)));
+    for (const [x, z, hx, hz] of [[-1.4, -7, 0.85, 0.34], [-2.8, -11.4, 0.12, 0.12], [20, -18, 0.35, 0.35], [28, -28.5, 1.5, 1], [16.65, -29.8, 2.78, 0.15], [14, -28.4, 0.15, 1.28], [27.5, -29.8, 3.55, 0.12], [19.8, -30, 0.23, 0.23], [24.2, -30, 0.23, 0.23]]) this.obstacles.push(new BoundingBox15(new Vec333(x, 0.6, z), new Vec333(hx, 1, hz)));
     app.batcher.generate([group.id]);
     this.root.enabled = false;
     this.ready = Promise.resolve();
@@ -9309,7 +9827,7 @@ var Outdoors = class {
     for (const [a, b] of [[3.6, 7.6], [8.95, 9.5]]) {
       shapes("Open entry wall", "box", [-3.3, 1.325, (a + b) / 2], [0.14, 2.65, b - a], wall);
       shapes("Open entry skirting", "box", [-3.28, 0.12, (a + b) / 2], [0.16, 0.16, b - a], trim);
-      this.house.obstacles.push(new BoundingBox15(new Vec332(-3.3, 0.7, (a + b) / 2), new Vec332(0.07, 1.4, (b - a) / 2)));
+      this.house.obstacles.push(new BoundingBox15(new Vec333(-3.3, 0.7, (a + b) / 2), new Vec333(0.07, 1.4, (b - a) / 2)));
     }
     this.house.walkable.push(...this.walkable);
     this.house.obstacles.push(...this.obstacles);
@@ -9319,7 +9837,7 @@ var Outdoors = class {
   }
   update(dt, p, enabled) {
     const camera = this.app.root.findByTag("migration.camera")[0];
-    const near = enabled && (p.x > -42 || !!camera?.camera?.frustum.containsAabb(new BoundingBox15(new Vec332(7, 2, -13), new Vec332(31, 8, 29))));
+    const near = enabled && (p.x > -42 || !!camera?.camera?.frustum.containsAabb(new BoundingBox15(new Vec333(7, 2, -13), new Vec333(31, 8, 29))));
     this.root.enabled = near;
     this.roof.enabled = near && (p.x < -5.2 || p.z < -5);
     if (near && !this.visible) void this.art.finish().catch((e) => console.error("Outdoor plants", e));
@@ -9340,7 +9858,8 @@ var Outdoors = class {
 };
 
 // src/game/Scooter.ts
-import { Asset as Asset9, Entity as Entity35, Quat as Quat8, Vec3 as Vec333 } from "playcanvas";
+init_AssetUrls();
+import { Asset as Asset9, Entity as Entity35, Quat as Quat9, Vec3 as Vec334 } from "playcanvas";
 var Scooter = class {
   constructor(app, character, controller) {
     this.app = app;
@@ -9456,12 +9975,12 @@ var Scooter = class {
     if (!this.controller.riding || !this.steering) return;
     const model = this.character.visual.findComponents("anim")[0]?.entity;
     if (!model) return;
-    const rotate = (a, b, target) => a.setRotation(new Quat8().mul2(new Quat8().setFromDirections(b.getPosition().clone().sub(a.getPosition()).normalize(), target.clone().sub(a.getPosition()).normalize()), a.getRotation()));
+    const rotate = (a, b, target) => a.setRotation(new Quat9().mul2(new Quat9().setFromDirections(b.getPosition().clone().sub(a.getPosition()).normalize(), target.clone().sub(a.getPosition()).normalize()), a.getRotation()));
     for (const side of ["Left", "Right"]) {
       const sign = side === "Left" ? 1 : -1, arm = model.findByName(side + "Arm"), fore = model.findByName(side + "ForeArm"), hand = model.findByName(side + "Hand"), wrist = hand.getRotation().clone();
-      const target = this.steering.getWorldTransform().transformPoint(new Vec333(sign * 0.209, 0.913, -0.185)), origin = arm.getPosition().clone(), a = origin.distance(fore.getPosition()), b = fore.getPosition().distance(hand.getPosition()), dir = target.clone().sub(origin), d = Math.min(dir.length(), a + b - 1e-3);
+      const target = this.steering.getWorldTransform().transformPoint(new Vec334(sign * 0.209, 0.913, -0.185)), origin = arm.getPosition().clone(), a = origin.distance(fore.getPosition()), b = fore.getPosition().distance(hand.getPosition()), dir = target.clone().sub(origin), d = Math.min(dir.length(), a + b - 1e-3);
       dir.normalize();
-      const pole = this.root.getRotation().transformVector(new Vec333(sign * 0.65, -1, -0.3));
+      const pole = this.root.getRotation().transformVector(new Vec334(sign * 0.65, -1, -0.3));
       pole.sub(dir.clone().mulScalar(pole.dot(dir))).normalize();
       const along = (a * a - b * b + d * d) / (2 * d);
       const elbow = origin.clone().add(dir.clone().mulScalar(along)).add(pole.mulScalar(Math.sqrt(Math.max(0, a * a - along * along))));
@@ -9482,7 +10001,10 @@ var Scooter = class {
 };
 
 // src/game/Neighborhood.ts
-import { Entity as Entity36, Vec3 as Vec334, BoundingBox as BoundingBox16 } from "playcanvas";
+init_AssetUrls();
+init_primitives();
+import { Entity as Entity36, Vec3 as Vec335, BoundingBox as BoundingBox16 } from "playcanvas";
+init_ContainerLease();
 var ROAD_Z = -22.5;
 var SHOP_DOOR_Z = -30.1;
 var PLAY_SPOTS = [-17, -30, -43, -56, -69].map((x) => ({ x, z: -15.3 }));
@@ -9503,7 +10025,7 @@ var Neighborhood = class {
   }
   update(p, outside) {
     for (let i = 0; i < this.maxSections; i++) {
-      const center = -16 - i * 24, camera = this.app.root.findByTag("migration.camera")[0], near = outside && (Math.abs(p.x - center) < 30 || !!camera?.camera?.frustum.containsAabb(new BoundingBox16(new Vec334(center, 2, -23), new Vec334(16, 8, 16))));
+      const center = -16 - i * 24, camera = this.app.root.findByTag("migration.camera")[0], near = outside && (Math.abs(p.x - center) < 30 || !!camera?.camera?.frustum.containsAabb(new BoundingBox16(new Vec335(center, 2, -23), new Vec335(16, 8, 16))));
       if (near && !this.sections.has(i)) this.sections.set(i, this.create(i));
       if (!near && this.sections.has(i)) {
         const s = this.sections.get(i);
@@ -9590,7 +10112,7 @@ var Neighborhood = class {
     return { root, art, group: group.id, materials, leases };
   }
   destroy() {
-    this.update(new Vec334(), false);
+    this.update(new Vec335(), false);
   }
   snapshot() {
     return { loadedSections: [...this.sections.keys()], totalSections: this.maxSections, roadZ: ROAD_Z, joinX: -4 };
@@ -9598,6 +10120,7 @@ var Neighborhood = class {
 };
 
 // src/game/OutdoorEncounters.ts
+init_primitives();
 import { Entity as Entity37 } from "playcanvas";
 var OutdoorEncounters = class {
   constructor(app, character, controller, say) {
@@ -9742,7 +10265,9 @@ var OutdoorEncounters = class {
 };
 
 // src/game/DailyPlay.ts
-import { BoundingBox as BoundingBox17, Entity as Entity38, Vec3 as Vec335 } from "playcanvas";
+init_AssetUrls();
+import { BoundingBox as BoundingBox17, Entity as Entity38, Vec3 as Vec336 } from "playcanvas";
+init_ContainerLease();
 
 // src/data/dailyPlay.ts
 var PLAY_ACTIVITIES = [
@@ -10057,7 +10582,7 @@ var DailyPlay = class {
   }
   world(s, x = 0, y = 0.075, z = 0) {
     const p = PLAY_SPOTS[s.index];
-    return new Vec335(p.x + x, y, p.z + z);
+    return new Vec336(p.x + x, y, p.z + z);
   }
   localPlayer(s) {
     const p = this.character.player.getPosition(), spot = PLAY_SPOTS[s.index];
@@ -10093,7 +10618,7 @@ var DailyPlay = class {
     return s;
   }
   solid(s, x, z, hx, hz) {
-    const b = new BoundingBox17(this.world(s, x, 0.5, z), new Vec335(hx, 1, hz));
+    const b = new BoundingBox17(this.world(s, x, 0.5, z), new Vec336(hx, 1, hz));
     s.solids.push(b);
     return b;
   }
@@ -10146,7 +10671,7 @@ var DailyPlay = class {
     }
     if (s.id === "bubbles") this.solid(s, 0, 0.65, 0.33, 0.28);
     if (s.id === "cart") {
-      s.cartBox = new BoundingBox17(this.world(s, 0, 0.5, 0.6), new Vec335(0.4, 1, 0.4));
+      s.cartBox = new BoundingBox17(this.world(s, 0, 0.5, 0.6), new Vec336(0.4, 1, 0.4));
       this.part(s, "Surprise").entity.enabled = false;
     }
     if (["duck", "pinwheel", "jack", "picnic"].includes(s.id) && !this.save.progress(s.id).done) s.count = this.save.progress(s.id).step;
@@ -10325,9 +10850,9 @@ var DailyPlay = class {
     if (!model) return;
     const l = model.findByName("LeftHand"), r = model.findByName("RightHand");
     if (!l || !r) return;
-    const position = new Vec335().add2(l.getPosition(), r.getPosition()).mulScalar(0.5), forward = this.character.visual.getWorldTransform().transformVector(new Vec335(0, 0, 0.055));
-    position.add(forward);
-    this.holding.part.entity.setPosition(position);
+    const position2 = new Vec336().add2(l.getPosition(), r.getPosition()).mulScalar(0.5), forward = this.character.visual.getWorldTransform().transformVector(new Vec336(0, 0, 0.055));
+    position2.add(forward);
+    this.holding.part.entity.setPosition(position2);
     this.holding.part.entity.setRotation(this.character.visual.getRotation());
     if (this.holding.station.phase === "watering") this.holding.part.entity.rotateLocal(0, 0, -30);
   }
@@ -10564,7 +11089,7 @@ var DailyPlay = class {
     if (s.id === "flamingo" && s.phase === "bowing") {
       const a = Math.sin(Math.min(1, t / 2) * Math.PI) * 18;
       part("Bird").setLocalEulerAngles(a, 0, 0);
-      const q = part("Bird").getLocalRotation(), v = q.transformVector(new Vec335(0.03, 1.48, 0.07));
+      const q = part("Bird").getLocalRotation(), v = q.transformVector(new Vec336(0.03, 1.48, 0.07));
       part("Hat").setLocalPosition(0.45 + v.x, v.y, -0.6 + v.z);
       part("Hat").setLocalEulerAngles(a, 0, Math.sin(t * 15) * 3);
       if (t > 2.5) this.complete(s);
@@ -10615,7 +11140,10 @@ var DailyPlay = class {
 };
 
 // src/game/SchoolGatePlay.ts
-import { Entity as Entity39, Vec3 as Vec336, BoundingBox as BoundingBox18, Texture as Texture6, Mesh as Mesh5, MeshInstance as MeshInstance5, CULLFACE_NONE as CULLFACE_NONE5 } from "playcanvas";
+init_primitives();
+init_ContainerLease();
+init_AssetUrls();
+import { Entity as Entity39, Vec3 as Vec337, BoundingBox as BoundingBox18, Texture as Texture6, Mesh as Mesh5, MeshInstance as MeshInstance5, CULLFACE_NONE as CULLFACE_NONE5 } from "playcanvas";
 
 // src/systems/SchoolBallPhysics.ts
 var BALL_RADIUS = 0.23;
@@ -10679,8 +11207,8 @@ function playerKick(b, player, friend, assist = true) {
 }
 
 // src/game/SchoolGatePlay.ts
-var HOME = new Vec336(19.15, 0.075, -28.2);
-var LEAVES = new Vec336(15.55, 0.075, -28.65);
+var HOME = new Vec337(19.15, 0.075, -28.2);
+var LEAVES = new Vec337(15.55, 0.075, -28.65);
 var SchoolGatePlay = class {
   constructor(app, character, controller, room, camera) {
     this.app = app;
@@ -10721,8 +11249,8 @@ var SchoolGatePlay = class {
   lastSay = -100;
   npcState = "waiting";
   npcTimer = 0;
-  npcTarget = new Vec336();
-  npcKickTo = new Vec336();
+  npcTarget = new Vec337();
+  npcKickTo = new Vec337();
   kicked = false;
   npcPractice = false;
   invited = false;
@@ -10733,7 +11261,7 @@ var SchoolGatePlay = class {
   abort = new AbortController();
   pickup = document.createElement("button");
   speech = document.createElement("div");
-  screen = new Vec336();
+  screen = new Vec337();
   ballFloors = [];
   ballSolids = [];
   stats = { playerKicks: 0, passes: 0, returns: 0, nudges: 0, wallBounces: 0, leafBursts: 0, pickups: 0, putdowns: 0, practiceKicks: 0, loads: 0, releases: 0 };
@@ -10817,11 +11345,11 @@ var SchoolGatePlay = class {
       const e = new Entity39("Fallen maple leaf " + i, this.app);
       root.addChild(e);
       e.addComponent("render", { meshInstances: [new MeshInstance5(mesh, leafMats[i % 4])], castShadows: false });
-      const home = new Vec336(LEAVES.x + Math.cos(angle) * r, 0.087 + i % 4 * 0.018, LEAVES.z + Math.sin(angle) * r * 0.66);
+      const home = new Vec337(LEAVES.x + Math.cos(angle) * r, 0.087 + i % 4 * 0.018, LEAVES.z + Math.sin(angle) * r * 0.66);
       e.setPosition(home);
       e.setLocalEulerAngles(0, i * 73, (i % 3 - 1) * 12);
       e.setLocalScale(0.85 + i % 3 * 0.2, 0.85 + i % 3 * 0.2, 0.85 + i % 3 * 0.2);
-      leaves.push({ entity: e, home, v: new Vec336(), spin: (i % 2 ? 1 : -1) * (110 + i * 7) });
+      leaves.push({ entity: e, home, v: new Vec337(), spin: (i % 2 ? 1 : -1) * (110 + i * 7) });
     }
     const person = new Entity39("Poppy at the school gate", this.app);
     root.addChild(person);
@@ -10883,7 +11411,7 @@ var SchoolGatePlay = class {
     }
     this.pending = true;
     this.controller.reset();
-    const target = new Vec336(this.body.x, 0.075, this.body.z);
+    const target = new Vec337(this.body.x, 0.075, this.body.z);
     const act = () => {
       if (!this.active) {
         this.pending = false;
@@ -10924,7 +11452,7 @@ var SchoolGatePlay = class {
       this.npcTimer = 0;
       this.lastPlayerContact = this.time;
       this.say("Can I have a turn?");
-    }, new Vec336(this.body.x, 0.075, this.body.z));
+    }, new Vec337(this.body.x, 0.075, this.body.z));
   }
   putDown() {
     const s = this.stage;
@@ -10933,7 +11461,7 @@ var SchoolGatePlay = class {
     const yaw = this.character.animator.snapshot().yaw * Math.PI / 180;
     let point = null;
     for (const a of [0, 0.6, -0.6, 1.3, -1.3, Math.PI]) {
-      const q = new Vec336(p.x + Math.sin(yaw + a) * 0.55, 0.075, p.z + Math.cos(yaw + a) * 0.55);
+      const q = new Vec337(p.x + Math.sin(yaw + a) * 0.55, 0.075, p.z + Math.cos(yaw + a) * 0.55);
       if (ballFits(q.x, q.z, this.ballFloors, this.ballSolids)) {
         point = q;
         break;
@@ -10961,8 +11489,8 @@ var SchoolGatePlay = class {
     if (!s || !this.held) return;
     const hands = this.character.animator.snapshot().hands;
     if (hands.length === 2) {
-      const h = new Vec336().add2(new Vec336(...hands[0]), new Vec336(...hands[1])).mulScalar(0.5);
-      h.add(this.character.visual.getWorldTransform().transformVector(new Vec336(0, 0.05, 0.14)));
+      const h = new Vec337().add2(new Vec337(...hands[0]), new Vec337(...hands[1])).mulScalar(0.5);
+      h.add(this.character.visual.getWorldTransform().transformVector(new Vec337(0, 0.05, 0.14)));
       s.ball.setPosition(h);
       this.body.x = h.x;
       this.body.z = h.z;
@@ -10976,8 +11504,8 @@ var SchoolGatePlay = class {
     target.y = 0;
     const player = this.character.player.getPosition();
     if (s.routeClock <= 0) {
-      const planner = new HousePath({ walkable: [{ minX: 14.35, maxX: 30.65, minZ: -29.42, maxZ: -26.38 }], obstacles: [...this.room.obstacles, new BoundingBox18(new Vec336(player.x, 0.6, player.z), new Vec336(0.48, 0.7, 0.48))] }, 0.23);
-      s.route = planner.route(new Vec336(at.x, 0, at.z), target);
+      const planner = new HousePath({ walkable: [{ minX: 14.35, maxX: 30.65, minZ: -29.42, maxZ: -26.38 }], obstacles: [...this.room.obstacles, new BoundingBox18(new Vec337(player.x, 0.6, player.z), new Vec337(0.48, 0.7, 0.48))] }, 0.23);
+      s.route = planner.route(new Vec337(at.x, 0, at.z), target);
       s.routeClock = 0.6;
     }
     s.routeClock -= dt;
@@ -10987,14 +11515,14 @@ var SchoolGatePlay = class {
     }
     const next = s.route[0];
     if (!next) return false;
-    const delta = new Vec336(next.x - at.x, 0, next.z - at.z), distance = delta.length();
+    const delta = new Vec337(next.x - at.x, 0, next.z - at.z), distance = delta.length();
     if (distance < 0.09) {
       s.route.shift();
       return false;
     }
     delta.normalize();
-    const step = Math.min(distance, 1 * dt), q = new Vec336(at.x + delta.x * step, 0.075, at.z + delta.z * step);
-    if (q.distance(new Vec336(player.x, 0.075, player.z)) < 0.7) {
+    const step = Math.min(distance, 1 * dt), q = new Vec337(at.x + delta.x * step, 0.075, at.z + delta.z * step);
+    if (q.distance(new Vec337(player.x, 0.075, player.z)) < 0.7) {
       s.routeClock = 0;
       return false;
     }
@@ -11017,12 +11545,12 @@ var SchoolGatePlay = class {
     this.npcPractice = practice;
   }
   updatePoppy(dt) {
-    const s = this.stage, p = s.person.getPosition(), player = this.character.player.getPosition(), ball = new Vec336(this.body.x, 0.075, this.body.z), speed = Math.hypot(this.body.vx, this.body.vz);
+    const s = this.stage, p = s.person.getPosition(), player = this.character.player.getPosition(), ball = new Vec337(this.body.x, 0.075, this.body.z), speed = Math.hypot(this.body.vx, this.body.vz);
     const space = Math.hypot(p.x - player.x, p.z - player.z);
     if (space < 0.7 || space < 0.95 && this.controller.input.lengthSq() > 0.01) {
       const away = Math.atan2(p.x - player.x, p.z - player.z);
       for (const offset of [0, 0.6, -0.6, 1.2, -1.2, 1.55, -1.55]) {
-        const a = away + offset, q = new Vec336(p.x + Math.sin(a) * 1.3 * dt, 0.075, p.z + Math.cos(a) * 1.3 * dt);
+        const a = away + offset, q = new Vec337(p.x + Math.sin(a) * 1.3 * dt, 0.075, p.z + Math.cos(a) * 1.3 * dt);
         if (s.planner.free(q.x, q.z) && Math.hypot(q.x - player.x, q.z - player.z) > space) {
           s.person.setPosition(q);
           s.person.setEulerAngles(0, a * 180 / Math.PI, 0);
@@ -11062,7 +11590,7 @@ var SchoolGatePlay = class {
     if (this.held) {
       const dx = player.x - p.x, dz = player.z - p.z, d2 = Math.hypot(dx, dz);
       if (d2 > 1.7 && player.z < -25.6 && player.x > 13.5 && player.x < 31) {
-        const goal = new Vec336(player.x - dx / Math.max(d2, 0.01) * 1.45, 0, player.z - dz / Math.max(d2, 0.01) * 1.45);
+        const goal = new Vec337(player.x - dx / Math.max(d2, 0.01) * 1.45, 0, player.z - dz / Math.max(d2, 0.01) * 1.45);
         if (this.movePoppy(goal, dt)) return;
       }
       this.clip("Interact");
@@ -11098,14 +11626,14 @@ var SchoolGatePlay = class {
       return;
     }
     const joined = this.invited && player.distance(HOME) < 8.5;
-    const target = joined ? new Vec336(player.x, 0.075, player.z) : new Vec336(17.6, 0.075, -30.3);
-    const d = new Vec336().sub2(target, ball);
+    const target = joined ? new Vec337(player.x, 0.075, player.z) : new Vec337(17.6, 0.075, -30.3);
+    const d = new Vec337().sub2(target, ball);
     d.y = 0;
     d.normalize();
     const behind = Math.atan2(-d.x, -d.z);
     let approach = null;
     for (const angle of [0, 0.4, -0.4, 0.8, -0.8, 1.3, -1.3, 2, -2, Math.PI]) {
-      const q = new Vec336(ball.x + Math.sin(behind + angle) * 0.56, 0.075, ball.z + Math.cos(behind + angle) * 0.56);
+      const q = new Vec337(ball.x + Math.sin(behind + angle) * 0.56, 0.075, ball.z + Math.cos(behind + angle) * 0.56);
       if (s.planner.free(q.x, q.z) && q.distance(player) > 0.75) {
         approach = q;
         break;
@@ -11165,7 +11693,7 @@ var SchoolGatePlay = class {
         l.entity.setPosition(p);
         l.entity.rotateLocal(l.spin * dt * 0.3, l.spin * dt, l.spin * dt * 0.18);
       } else if (player.distance(LEAVES) > 6) {
-        l.entity.setPosition(new Vec336().lerp(p, l.home, 1 - Math.exp(-0.3 * dt)));
+        l.entity.setPosition(new Vec337().lerp(p, l.home, 1 - Math.exp(-0.3 * dt)));
       }
     }
     if (touched && !this.leafSound) {
@@ -11248,7 +11776,7 @@ var SchoolGatePlay = class {
       const min = Math.min(lf.getPosition().y, rf.getPosition().y), local = s.model.getLocalPosition();
       s.model.setLocalPosition(local.x, local.y + (0.11 - min), local.z);
       const pp = s.person.getPosition();
-      this.controller.dynamicObstacles.push(new BoundingBox18(new Vec336(pp.x, 0.6, pp.z), new Vec336(0.24, 0.7, 0.24)));
+      this.controller.dynamicObstacles.push(new BoundingBox18(new Vec337(pp.x, 0.6, pp.z), new Vec337(0.24, 0.7, 0.24)));
     }
     this.leaves(dt);
     this.nodTime = Math.max(0, this.nodTime - dt);
@@ -11305,14 +11833,1675 @@ var SchoolGatePlay = class {
   }
 };
 
+// src/game/HomePlay.ts
+import { BoundingBox as BoundingBox19, Entity as Entity41, Vec3 as Vec338 } from "playcanvas";
+
+// src/data/homePlay.ts
+var toy = (id, name, kind, home, color = "#d4addb", fixed = false) => ({ id, name, kind, home, color, fixed });
+var HOME_TOYS = [
+  toy("sofa", "Sofa", "sofa", [-2, 0.72, 6], "#96b5a5", true),
+  toy("desk-surface", "Bedroom desk", "surface", [2.2, 1.19, 1.3], "#fff0d5", true),
+  toy("basket", "Toy basket", "basket", [1.8, 0.48, 8.55], "#d4b18a", true),
+  toy("ball", "Soft ball", "ball", [1.48, 0.67, 8.45], "#c68cc5"),
+  ...[0, 1, 2].map((i) => toy("cup" + i, ["Mint cup", "Rose cup", "Honey cup"][i], "cup", [1.78 + i * 0.19, 0.7, 8.48], ["#96c7b5", "#ebafbd", "#e8c16f"][i])),
+  toy("beanbag", "Beanbag", "beanbag", [2.05, 0.7, 8.69], "#de9c85"),
+  toy("teddy", "Teddy", "teddy", [1.46, 0.7, 8.72], "#bd8e63"),
+  toy("picnic-plate", "Toy plate", "plate", [2.4, 0.1, 8.2], "#d698bf"),
+  toy("cake", "Pretend cake", "cake", [2.4, 0.16, 8.2], "#eea0bb"),
+  toy("pitcher", "Tea pitcher", "pitcher", [2.65, 0.1, 8.25], "#96c7b5"),
+  toy("wagon", "Toy wagon", "wagon", [2.6, 0.08, 7.75], "#dc9385"),
+  ...[0, 1, 2, 3, 4].map((i) => toy("block" + i, "Wooden block", "block", [2.7 + i % 2 * 0.23, 0.13 + Math.floor(i / 2) * 0.2, 8.8], ["#edc577", "#a8c5d8", "#cbaccf"][i % 3])),
+  toy("car", "Little car", "car", [3.1, 0.08, 8.1], "#96c7b5"),
+  toy("ramp0", "Wooden ramp", "ramp", [3.3, 0.08, 8.55], "#d4b18a"),
+  toy("ramp1", "Wooden ramp", "ramp", [3.3, 0.08, 8.85], "#d4b18a"),
+  toy("cushion0", "Play cushion", "cushion", [-1.25, 0.09, 7.4], "#b5a1ce"),
+  toy("cushion1", "Play cushion", "cushion", [-1.25, 0.09, 8.15], "#dfa7b7"),
+  toy("blanket", "Den blanket", "blanket", [-1.1, 0.12, 8.75], "#99bdc7"),
+  toy("toy-bed", "Teddy\u2019s bed", "bed", [2.85, 0.08, 7], "#d4b18a", true),
+  toy("paper", "Drawing paper", "paper", [2.22, 1.19, 1.35], "#fff0d5"),
+  toy("book", "Picture book", "book", [0.81, 0.99, -2.99], "#a9bbd4"),
+  toy("hat", "Dress-up hat", "hat", [2.45, 0.91, -1.5], "#e9b9d5"),
+  toy("pinwheel", "Pinwheel", "pinwheel", [-4.44, 0.27, 5.8], "#e5b271"),
+  toy("board", "Picture board", "board", [1.7, 1.55, -3.22], "#c09b73", true),
+  toy("jack", "Jack-in-the-box", "jack", [2.35, 0.1, 7.1], "#a6c8b1"),
+  toy("duck", "Wind-up duck", "duck", [5.15, 0.1, 5.2], "#f2ca66"),
+  toy("fetch", "Sunny\u2019s soft toy", "fetch", [1.85, 0.7, 8.78], "#a3cbd2"),
+  toy("basin", "Toy basin", "basin", [4.85, 0.09, 12], "#a0c6d3"),
+  toy("boat", "Paper boat", "boat", [5.65, 0.99, 12.5], "#f3d698"),
+  toy("bubbles", "Bubble bottle", "bubbles", [1.97, 0.75, 8.75], "#95c9bd"),
+  toy("flower", "Doorstep flowers", "flower", [-4.4, 0.07, 5.75], "#dfa0bb", true),
+  toy("can", "Watering can", "can", [-4.8, 0.08, 5.5], "#9bbab8"),
+  toy("flamingo", "Garden flamingo", "flamingo", [-4.45, 0.07, 4.8], "#df9ead", true),
+  toy("rake", "Little rake", "rake", [-4.5, 0.08, 3.9], "#d1ae80"),
+  toy("marker0", "Garden goal marker", "marker", [-4.5, 0.08, 3.2], "#ead3a2"),
+  toy("marker1", "Garden goal marker", "marker", [-4.5, 0.08, 2.6], "#ead3a2")
+];
+
+// src/systems/HomePlayStore.ts
+var fresh2 = (day) => ({ version: 1, day, toys: Object.fromEntries(HOME_TOYS.map((t) => [t.id, { position: [...t.home], yaw: 0, owner: "world", kind: t.kind, value: 0, marks: [], tilt: 0 }])), dinner: { served: false, portions: Array(8).fill(true), plate: null }, lunch: null, serial: 0, water: 0, puddle: 0, leafPile: 1 });
+var position = (p) => Array.isArray(p) && p.length === 3 && p.every(Number.isFinite) && Math.abs(p[0]) < 40 && p[1] >= 0 && p[1] < 3 && p[2] > -24 && p[2] < 22;
+var HomePlayStore = class {
+  constructor(storage, key, day) {
+    this.storage = storage;
+    this.key = key;
+    this.data = fresh2(day);
+    let saved;
+    try {
+      saved = JSON.parse(storage.getItem(key) || "null") ?? void 0;
+    } catch {
+    }
+    if (saved?.version !== 1) return;
+    for (const def of HOME_TOYS) {
+      const t = saved.toys?.[def.id];
+      if (t && position(t.position) && Number.isFinite(t.value) && Number.isFinite(t.yaw)) this.data.toys[def.id] = { ...this.data.toys[def.id], ...t, marks: Array.isArray(t.marks) ? t.marks.filter(Number.isFinite).slice(0, 16) : [], kind: def.id === "paper" && t.kind === "plane" ? "plane" : def.kind };
+    }
+    for (const [id, t] of Object.entries(this.data.toys)) {
+      const seen = /* @__PURE__ */ new Set([id]);
+      let owner = t.owner;
+      while (owner !== "world" && owner !== "held") {
+        if (!this.data.toys[owner] || seen.has(owner)) {
+          t.owner = "world";
+          t.position = [...HOME_TOYS.find((d) => d.id === id).home];
+          break;
+        }
+        seen.add(owner);
+        owner = this.data.toys[owner].owner;
+      }
+    }
+    let held = false;
+    for (const t of Object.values(this.data.toys)) if (t.owner === "held") {
+      if (held) t.owner = "world";
+      held = true;
+    }
+    if (saved.day === day) {
+      const validPlate = (p) => p && typeof p.id === "string" && position(p.position) && ["pizza", "taco", "turkey", "sandwich"].includes(p.food) && Number.isInteger(p.bites) && p.bites >= 0 && p.bites <= 3 ? { ...p, owner: ["world", "held", "counter", "home-north", "lunch-left", "lunch-right"].includes(p.owner) ? p.owner : "world", fruit: p.fruit === "orange" ? "orange" : "apple", drink: Math.max(0, Math.min(3, p.drink || 0)), fruitBites: Math.max(0, Math.min(2, p.fruitBites || 0)) } : null;
+      this.data.dinner = { served: !!saved.dinner?.served, portions: Array.isArray(saved.dinner?.portions) && saved.dinner.portions.length === 8 ? saved.dinner.portions.map(Boolean) : Array(8).fill(true), plate: validPlate(saved.dinner?.plate) };
+      this.data.lunch = validPlate(saved.lunch);
+      this.data.water = Math.max(0, Math.min(1, saved.water || 0));
+      this.data.puddle = Math.max(0, Math.min(1, saved.puddle || 0));
+      this.data.serial = Number.isSafeInteger(saved.serial) ? Math.max(0, saved.serial) : 0;
+      this.data.leafPile = saved.leafPile ? 1 : 0;
+      for (const plate of [this.data.dinner.plate, this.data.lunch]) if (plate?.owner === "held") {
+        if (held) plate.owner = "world";
+        held = true;
+      }
+    }
+  }
+  storage;
+  key;
+  data;
+  transact(change) {
+    const next = structuredClone(this.data);
+    if (change(next) === false) return false;
+    this.storage.setItem(this.key, JSON.stringify(next));
+    this.data = next;
+    return true;
+  }
+  day(day) {
+    if (day === this.data.day) return false;
+    return this.transact((s) => {
+      s.day = day;
+      s.dinner = { served: false, portions: Array(8).fill(true), plate: null };
+      s.lunch = null;
+      s.puddle = 0;
+    });
+  }
+  get held() {
+    return Object.keys(this.data.toys).find((id) => this.data.toys[id].owner === "held") ?? (this.data.dinner.plate?.owner === "held" ? "dinner-plate" : this.data.lunch?.owner === "held" ? "lunch-tray" : null);
+  }
+  take(id) {
+    return this.transact((s) => {
+      if (this.held || !s.toys[id] || s.toys[id].owner === "sunny" || s.toys[id].owner === "lilah" || HOME_TOYS.find((t) => t.id === id)?.fixed) return false;
+      s.toys[id].owner = "held";
+    });
+  }
+  place(id, p, owner = "world") {
+    return this.transact((s) => {
+      const t = s.toys[id];
+      if (!t || !position(p) || id === owner) return false;
+      if (owner !== "world") {
+        const parent = s.toys[owner];
+        if (!parent || parent.owner === "held") return false;
+        const seen = /* @__PURE__ */ new Set([id]);
+        let cursor = owner;
+        while (s.toys[cursor]) {
+          if (seen.has(cursor)) return false;
+          seen.add(cursor);
+          cursor = s.toys[cursor].owner;
+        }
+        if (owner === "wagon" && Object.values(s.toys).filter((t2) => t2.owner === "wagon").length >= 4) return false;
+      }
+      t.owner = owner;
+      t.position = [...p];
+      t.tilt = 0;
+    });
+  }
+  claimDinner() {
+    return this.transact((s) => {
+      if (this.held || s.dinner.plate || !s.dinner.served) return false;
+      const index = s.dinner.portions.indexOf(true);
+      if (index < 0) return false;
+      s.dinner.portions[index] = false;
+      s.dinner.plate = { id: `dinner-${s.day}-${index}`, food: ["pizza", "taco", "turkey"][(s.day - 1) % 3], bites: 0, drink: 0, fruit: "apple", fruitBites: 2, owner: "held", position: [0.55, 1, 13.28] };
+    });
+  }
+  refillDinner() {
+    return this.transact((s) => {
+      const plate = s.dinner.plate, index = s.dinner.portions.indexOf(true);
+      if (!plate || plate.bites < 3 || index < 0) return false;
+      s.dinner.portions[index] = false;
+      plate.id = `dinner-${s.day}-${index}`;
+      plate.bites = 0;
+    });
+  }
+  lunch(food, fruit, counter = false) {
+    return this.transact((s) => {
+      if (this.held || s.lunch) return false;
+      s.lunch = { id: `lunch-${s.day}-${++s.serial}`, food, fruit, bites: 0, drink: 0, fruitBites: 0, owner: counter ? "counter" : "held", position: [4.6, 1.34, -20.8] };
+    });
+  }
+  bite(context, identity, expected, fruit = false) {
+    return this.transact((s) => {
+      const p = context === "dinner" ? s.dinner.plate : s.lunch;
+      if (!p || p.id !== identity || p[fruit ? "fruitBites" : "bites"] !== expected || p[fruit ? "fruitBites" : "bites"] >= (fruit ? 2 : 3)) return false;
+      p[fruit ? "fruitBites" : "bites"]++;
+    });
+  }
+  plate(context) {
+    return context === "dinner" ? this.data.dinner.plate : this.data.lunch;
+  }
+  returnPlate(context) {
+    return this.transact((s) => {
+      if (context === "dinner") s.dinner.plate = null;
+      else s.lunch = null;
+    });
+  }
+};
+
+// src/game/HomePlay.ts
+init_SaveNamespace();
+
+// src/game/HomeToyArt.ts
+init_primitives();
+import { Entity as Entity40 } from "playcanvas";
+var HomeToyArt = class {
+  constructor(app) {
+    this.app = app;
+  }
+  app;
+  materials = /* @__PURE__ */ new Map();
+  mat(color) {
+    let m = this.materials.get(color);
+    if (!m) {
+      m = material("Home toy " + color, color);
+      this.materials.set(color, m);
+    }
+    return m;
+  }
+  make(kind, color) {
+    const root = new Entity40("Toy " + kind, this.app), s = primitives(this.app, root);
+    const part = (name, type, p, size, c = color) => s(name, type, p, size, this.mat(c));
+    const ball = (name, p, size, c = color) => part(name, "sphere", p, size, c);
+    const box = (name, p, size, c = color) => part(name, "box", p, size, c);
+    const cyl = (name, p, size, c = color) => part(name, "cylinder", p, size, c);
+    const eyes = (y, z) => {
+      for (const x of [-0.055, 0.055]) ball("Eye", [x, y, z], [0.026, 0.032, 0.02], "#453c48");
+    };
+    if (kind === "ball" || kind === "fetch") {
+      ball("Soft toy", [0, 0.14, 0], [0.28, 0.28, 0.28]);
+      for (const x of [-0.07, 0.07]) ball("Stitch", [x, 0.25, 0.045], [0.015, 0.025, 0.17], "#fff3dc");
+    }
+    if (kind === "cup" || kind === "pitcher" || kind === "can" || kind === "bubbles") {
+      const h = kind === "cup" ? 0.17 : 0.26;
+      cyl("Body", [0, h / 2, 0], [0.19, h, 0.19]);
+      cyl("Open rim", [0, h, 0], [0.215, 0.028, 0.215], "#fff0d8");
+      cyl("Inside", [0, h + 4e-3, 0], [0.16, 0.01, 0.16], "#76617d");
+      if (kind !== "cup") {
+        const handle = ball("Handle", [0.13, 0.13, 0], [0.14, 0.16, 0.045]);
+        if (kind === "bubbles") {
+          handle.setLocalPosition(0, 0.34, 0);
+          box("Wand", [0, 0.24, 0], [0.025, 0.16, 0.025], "#fff0d8");
+        } else {
+          const spout = cyl("Spout", [-0.14, 0.17, 0], [0.065, 0.22, 0.065]);
+          spout.setLocalEulerAngles(0, 0, 50);
+        }
+      }
+    }
+    if (kind === "beanbag" || kind === "cushion") {
+      const f = kind === "cushion" ? 3 : 1;
+      ball("Fabric", [0, 0.06 * f, 0], [0.28 * f, 0.12 * f, 0.23 * f]);
+      box("Seam", [0, 0.08 * f, 0.108 * f], [0.22 * f, 0.013, 0.018], "#eee0cd");
+    }
+    if (kind === "teddy") {
+      ball("Body", [0, 0.19, 0], [0.29, 0.35, 0.22]);
+      ball("Head", [0, 0.42, 0], [0.29, 0.27, 0.25]);
+      ball("Muzzle", [0, 0.39, 0.11], [0.16, 0.1, 0.09], "#e5c79f");
+      eyes(0.44, 0.12);
+      ball("Nose", [0, 0.4, 0.16], [0.04, 0.035, 0.025], "#453c48");
+      for (const x of [-0.14, 0.14]) {
+        ball("Ear", [x * 0.8, 0.53, 0], [0.11, 0.12, 0.09]);
+        ball("Paw", [x, 0.08, 0.1], [0.13, 0.12, 0.2]);
+        ball("Arm", [x, 0.23, 0.03], [0.12, 0.22, 0.13]);
+      }
+    }
+    if (kind === "plate") {
+      cyl("Toy china", [0, 0.025, 0], [0.35, 0.035, 0.35]);
+      cyl("Center", [0, 0.045, 0], [0.26, 9e-3, 0.26], "#f4d6e4");
+    }
+    if (kind === "cake") {
+      cyl("Pretend sponge", [0, 0.06, 0], [0.19, 0.11, 0.19], "#c99c70");
+      cyl("Painted icing", [0, 0.12, 0], [0.2, 0.04, 0.2]);
+      ball("Wooden cherry", [0, 0.165, 0], [0.06, 0.06, 0.06], "#ad646e");
+    }
+    if (kind === "block") {
+      box("Wooden block", [0, 0.11, 0], [0.22, 0.22, 0.22]);
+      box("Grain", [0, 0.224, 0], [0.15, 3e-3, 0.013], "#fff0d8");
+    }
+    if (kind === "car" || kind === "wagon") {
+      const wagon = kind === "wagon";
+      box("Body", [0, 0.19, 0], wagon ? [0.56, 0.12, 0.7] : [0.22, 0.12, 0.34]);
+      if (wagon) {
+        for (const x of [-0.27, 0.27]) box("Side", [x, 0.29, 0], [0.04, 0.19, 0.7]);
+        for (const z of [-0.33, 0.33]) box("End", [0, 0.29, z], [0.56, 0.19, 0.04]);
+        const h = cyl("Pull handle", [0, 0.32, 0.53], [0.035, 0.58, 0.035], "#76617d");
+        h.setLocalEulerAngles(55, 0, 0);
+      } else {
+        box("Cabin", [0, 0.29, -0.015], [0.17, 0.12, 0.16]);
+        box("Window", [0, 0.3, 0.07], [0.135, 0.07, 9e-3], "#d8e9df");
+      }
+      for (const x of [-1, 1]) for (const z of [-1, 1]) {
+        const w = cyl("Wheel", [x * (wagon ? 0.3 : 0.13), 0.11, z * (wagon ? 0.23 : 0.11)], [wagon ? 0.19 : 0.12, 0.065, wagon ? 0.19 : 0.12], "#76617d");
+        w.setLocalEulerAngles(0, 0, 90);
+      }
+    }
+    if (kind === "ramp") {
+      const p = box("Ramp", [0, 0.15, 0], [0.35, 0.045, 0.68]);
+      p.setLocalEulerAngles(18, 0, 0);
+      box("Support", [0, 0.13, -0.26], [0.32, 0.25, 0.07]);
+    }
+    if (kind === "blanket") {
+      box("Quilt", [0, 0.025, 0], [1.1, 0.04, 0.85]);
+      for (const x of [-0.4, 0, 0.4]) box("Quilt stripe", [x, 0.048, 0], [0.07, 6e-3, 0.82], "#e6d8cc");
+    }
+    if (kind === "paper" || kind === "book") {
+      box("Cover", [0, 0.02, 0], [0.33, 0.035, 0.43]);
+      box("Pages", [0, 0.043, 0], [0.3, 9e-3, 0.4], "#fff6dc");
+      if (kind === "book") {
+        box("Spine", [-0.15, 0.06, 0], [0.025, 0.035, 0.4]);
+        for (const x of [-0.08, 0.08]) ball("Picture", [x, 0.055, 0], [0.1, 6e-3, 0.15], x < 0 ? "#c399c5" : "#91bcb0");
+      }
+    }
+    if (kind === "plane" || kind === "boat") {
+      if (kind === "plane") {
+        for (const x of [-1, 1]) {
+          const w = box("Paper wing", [x * 0.1, 0.045, 0], [0.23, 0.012, 0.39]);
+          w.setLocalEulerAngles(0, x * 22, x * 12);
+        }
+        const spine = box("Fold", [0, 0.03, 0], [0.016, 0.08, 0.32]);
+        spine.setLocalEulerAngles(0, 0, 0);
+      } else {
+        box("Hull", [0, 0.045, 0], [0.3, 0.04, 0.19]);
+        for (const x of [-1, 1]) {
+          const side = box("Folded bow", [x * 0.11, 0.08, 0], [0.14, 0.015, 0.2]);
+          side.setLocalEulerAngles(0, 0, x * -40);
+        }
+        const sail = part("Fold", "cone", [0, 0.13, 0], [0.16, 0.2, 0.015], "#fff2da");
+        sail.setLocalEulerAngles(0, 0, 0);
+      }
+    }
+    if (kind === "hat") {
+      cyl("Brim", [0, 0.015, 0], [0.34, 0.025, 0.29]);
+      cyl("Crown", [0, 0.075, 0], [0.21, 0.13, 0.18]);
+      cyl("Ribbon", [0, 0.04, 0], [0.215, 0.03, 0.185], "#a976ac");
+    }
+    if (kind === "flamingo") {
+      for (const x of [-0.055, 0.055]) cyl("Leg", [x, 0.25, 0], [0.018, 0.5, 0.018], "#a77b74");
+      ball("Body", [0, 0.51, 0], [0.25, 0.21, 0.38]);
+      const neck = cyl("Neck", [0, 0.7, 0.15], [0.06, 0.38, 0.06]);
+      neck.setLocalEulerAngles(14, 0, 0);
+      ball("Head", [0, 0.87, 0.2], [0.16, 0.14, 0.17]);
+      ball("Beak", [0, 0.85, 0.3], [0.08, 0.07, 0.14], "#453c48");
+    }
+    if (kind === "duck") {
+      ball("Body", [0, 0.12, 0], [0.24, 0.2, 0.3]);
+      ball("Head", [0, 0.25, 0.1], [0.19, 0.18, 0.18]);
+      ball("Beak", [0, 0.23, 0.21], [0.13, 0.055, 0.1], "#d99155");
+      eyes(0.27, 0.175);
+      for (const x of [-0.075, 0.075]) ball("Foot", [x, 0.025, 0.04], [0.1, 0.035, 0.15], "#d99155");
+      box("Key", [0.17, 0.13, 0], [0.12, 0.02, 0.055], "#fff0d8");
+    }
+    if (kind === "jack") {
+      box("Box", [0, 0.16, 0], [0.31, 0.3, 0.31]);
+      box("Lid", [0, 0.32, 0], [0.33, 0.035, 0.33]);
+      cyl("Crank", [0.21, 0.17, 0], [0.035, 0.15, 0.035], "#e5ba73");
+      ball("Surprise", [0, 0.5, 0], [0.2, 0.18, 0.17], "#96bd90");
+      root.findByName("Surprise").enabled = false;
+    }
+    if (kind === "basin" || kind === "basket" || kind === "bed") {
+      const w = kind === "basin" ? 0.78 : kind === "bed" ? 0.43 : 0.62, d = kind === "basin" ? 0.62 : kind === "bed" ? 0.65 : 0.5;
+      box("Bottom", [0, 0.035, 0], [w, 0.07, d]);
+      for (const x of [-w / 2, w / 2]) box("Side", [x, 0.12, 0], [0.04, 0.22, d]);
+      for (const z of [-d / 2, d / 2]) box("End", [0, 0.12, z], [w, 0.22, 0.04]);
+      if (kind === "basin") {
+        const water = box("Water", [0, 0.15, 0], [w - 0.04, 0.016, d - 0.04], "#9bd4d9");
+        water.enabled = false;
+      }
+      if (kind === "bed") ball("Pillow", [0, 0.13, -0.2], [0.35, 0.1, 0.2], "#dfa7b7");
+    }
+    if (kind === "flower") {
+      cyl("Pot", [0, 0.14, 0], [0.32, 0.28, 0.32], "#be9179");
+      cyl("Stem", [0, 0.42, 0], [0.03, 0.4, 0.03], "#7eac85");
+      for (let i = 0; i < 5; i++) ball("Petal", [Math.sin(i * 1.256) * 0.11, 0.63 + Math.cos(i * 1.256) * 0.11, 0], [0.14, 0.14, 0.055]);
+      ball("Pollen", [0, 0.63, 0.025], [0.1, 0.1, 0.08], "#e9c57a");
+    }
+    if (kind === "pinwheel") {
+      cyl("Stick", [0, 0.23, 0], [0.018, 0.46, 0.018], "#d4b18a");
+      const rotor = new Entity40("Rotor", this.app);
+      root.addChild(rotor);
+      rotor.setLocalPosition(0, 0.48, 0);
+      for (let i = 0; i < 4; i++) {
+        const b = primitives(this.app, rotor)("Blade", "box", [0, 0, 0], [0.23, 0.1, 0.015], this.mat(i % 2 ? color : "#b8cddd"));
+        b.setLocalPosition(Math.sin(i * Math.PI / 2) * 0.095, Math.cos(i * Math.PI / 2) * 0.095, 0);
+        b.setLocalEulerAngles(0, 0, i * 90 + 25);
+      }
+      ball("Pin", [0, 0.48, 0.025], [0.045, 0.045, 0.04], "#fff0d8");
+    }
+    if (kind === "rake") {
+      cyl("Handle", [0, 0.25, 0], [0.025, 0.5, 0.025]);
+      box("Rake head", [0, 0.02, 0], [0.3, 0.04, 0.04]);
+      for (const x of [-0.12, -0.06, 0, 0.06, 0.12]) box("Tooth", [x, 0.02, 0.04], [0.02, 0.025, 0.11]);
+    }
+    if (kind === "marker") {
+      part("Marker", "cone", [0, 0.15, 0], [0.22, 0.3, 0.22]);
+    }
+    if (kind === "board") {
+      box("Frame", [0, 0, 0], [0.55, 0.65, 0.04]);
+      box("Cork", [0, 0, 0.026], [0.49, 0.59, 0.015], "#e7cdac");
+    }
+    return root;
+  }
+  destroy() {
+    for (const m of this.materials.values()) m.destroy();
+    this.materials.clear();
+  }
+};
+
+// src/game/HomePlay.ts
+init_primitives();
+var HomePlay = class {
+  constructor(app, character, controller, house, cleanup, daily, say, camera) {
+    this.app = app;
+    this.character = character;
+    this.controller = controller;
+    this.house = house;
+    this.cleanup = cleanup;
+    this.daily = daily;
+    this.say = say;
+    this.camera = camera;
+    this.store = new HomePlayStore(localStorage, saveKey("home-play.v1"), daily.clock.state.day);
+    this.lastDay = daily.clock.state.day;
+    this.root = new Entity41("Home free play", app);
+    app.root.addChild(this.root);
+    this.art = new HomeToyArt(app);
+    this.planner = new HousePath(house, 0.12);
+    this.wagonPlanner = new HousePath(house, 0.38);
+    for (const def of HOME_TOYS) {
+      const t = this.state(def.id);
+      if (t.owner !== "world" || t.position.every((v, i) => v === def.home[i])) continue;
+      if (!this.planner.free(t.position[0], t.position[2])) t.position = [...def.home];
+      else t.position[1] = 0.08;
+    }
+    for (const def of HOME_TOYS) {
+      const entity = new Entity41(def.name, app);
+      this.root.addChild(entity);
+      this.items.set(def.id, { id: "home-" + def.id, name: def.name, icon: "\u273F", entity, home: [...def.home], carryGrip: [0, 0.12, 0], carryPace: "walk" });
+    }
+    const shape = primitives(app, this.root);
+    this.cue = shape("Selected toy", "cylinder", [0, 0, 0], [0.4, 9e-3, 0.4], this.art.mat("#f3dfae"), false);
+    this.preview = shape("Placement preview", "cylinder", [0, 0, 0], [0.3, 8e-3, 0.3], this.art.mat("#b6dbc6"), false);
+    this.puddle = shape("Watering puddle", "sphere", [-5, 0.065, 5.6], [0.65, 0.015, 0.52], this.art.mat("#a5cbd1"), false);
+    for (let i = 0; i < 18; i++) {
+      const leaf = shape("Garden leaf", "sphere", [-8.1 + Math.sin(i * 2.4) * 0.6, 0.075, 2 + Math.cos(i * 1.7) * 0.7], [0.13, 0.018, 0.07], this.art.mat(i % 2 ? "#c6a46d" : "#b88767"), false);
+      leaf.setLocalEulerAngles(0, i * 29, 0);
+      this.leaves.push(leaf);
+    }
+    this.controls.id = "home-play-controls";
+    this.controls.hidden = true;
+    this.next.type = this.other.type = "button";
+    this.next.id = "home-next-action";
+    this.other.id = "home-next-object";
+    this.next.textContent = "More \xB7 Q";
+    this.other.textContent = "Select \xB7 R";
+    this.controls.append(this.next, this.other);
+    document.querySelector("#action-button").parentElement.prepend(this.controls);
+    this.next.onclick = () => {
+      this.commandIndex = (this.commandIndex + 1) % Math.max(1, this.allCommands.length);
+    };
+    this.other.onclick = () => {
+      const stand = this.extraCommands.find((c) => c.title === "Stand up");
+      if (stand) {
+        this.safe(stand.run);
+        return;
+      }
+      const options = [...this.nearby, ""], n = options.indexOf(this.selected);
+      this.selected = options[(n + 1) % options.length];
+      this.manualTarget = true;
+      this.lastSelectPosition.copy(this.character.player.getPosition());
+      this.commandIndex = 0;
+    };
+    window.addEventListener("keydown", (e) => {
+      if (e.repeat || document.querySelector("dialog[open]") || !this.allowed) return;
+      if (e.code === "KeyQ") {
+        e.preventDefault();
+        this.next.click();
+      }
+      if (e.code === "KeyR") {
+        e.preventDefault();
+        this.other.click();
+      }
+    }, { signal: this.abort.signal });
+    this.sync();
+    Object.assign(this.wagonObstacle, { homePlayDynamic: true });
+    this.house.obstacles.push(this.wagonObstacle);
+  }
+  app;
+  character;
+  controller;
+  house;
+  cleanup;
+  daily;
+  say;
+  camera;
+  store;
+  root;
+  art;
+  items = /* @__PURE__ */ new Map();
+  versions = /* @__PURE__ */ new Map();
+  motion = /* @__PURE__ */ new Map();
+  spin = /* @__PURE__ */ new Map();
+  controls = document.createElement("div");
+  next = document.createElement("button");
+  other = document.createElement("button");
+  cue;
+  preview;
+  planner;
+  selected = "";
+  commandIndex = 0;
+  commands = [];
+  active = false;
+  allowed = false;
+  pushing = false;
+  nextPersist = 0;
+  clock = 0;
+  effectClock = 0;
+  abort = new AbortController();
+  effects = [];
+  leaves = [];
+  puddle;
+  lastPlayer = new Vec338();
+  nearby = [];
+  dirty = false;
+  lastDay = 0;
+  fetchAfter = 0;
+  goalCooldown = 0;
+  jumpEffect = false;
+  audio = new PlayAudio();
+  manualTarget = false;
+  lastSelectPosition = new Vec338();
+  wagonObstacle = new BoundingBox19(new Vec338(2.6, 0, 7.75), new Vec338(0.3, 1, 0.39));
+  wagonPlanner;
+  resting = null;
+  sceneMode = "";
+  jumpParent = null;
+  shared = null;
+  extraFocus = null;
+  extraCommands = [];
+  onInvite = () => {
+  };
+  onFetch = () => false;
+  get carrying() {
+    return this.cleanup.carry.item?.id.startsWith("home-") ?? false;
+  }
+  get movementLocked() {
+    return this.pushing && !!this.character.animator.busy;
+  }
+  get sitting() {
+    return !!this.resting;
+  }
+  applyObstacles() {
+    this.wagonObstacle.center.copy(this.active ? this.pos("wagon") : new Vec338(9999, 0, 9999));
+    this.controller.dynamicObstacles = this.controller.dynamicObstacles.filter((b) => b !== this.wagonObstacle);
+    if (this.active) this.controller.dynamicObstacles.push(this.wagonObstacle);
+  }
+  get allCommands() {
+    return this.extraCommands.length ? this.extraCommands : this.commands;
+  }
+  get focus() {
+    if (!this.allowed) return null;
+    const command = this.allCommands[this.commandIndex % Math.max(1, this.allCommands.length)];
+    return command ? { title: command.title, detail: this.extraFocus?.detail ?? this.items.get(this.held() ?? this.selected)?.name ?? "Home play", icon: "\u273F", enabled: !this.character.animator.busy || ["Stand up", "Stop bite"].includes(command.title) } : null;
+  }
+  safe(run) {
+    try {
+      run();
+      this.sync();
+    } catch (e) {
+      this.say("Your play could not be saved. Please try again.");
+      console.error("Home play transaction", e);
+    }
+  }
+  press() {
+    if (!this.focus?.enabled) return false;
+    this.audio.unlock();
+    const c = this.allCommands[this.commandIndex % this.allCommands.length];
+    this.safe(c.run);
+    this.audio.tone(330, 0.09, "sine", 1.2);
+    return true;
+  }
+  pos(id) {
+    return this.items.get(id).entity.getPosition().clone();
+  }
+  state(id) {
+    return this.store.data.toys[id];
+  }
+  held() {
+    const id = this.store.held;
+    return id && this.items.has(id) ? id : null;
+  }
+  reactToVisit(id, person, socket) {
+    if (!this.items.has(id) || person.getPosition().distance(this.pos(id)) > 1.8) return false;
+    let shared = false;
+    this.safe(() => {
+      if (id === "jack" && this.state(id).value < 1) this.animate(id, 1);
+      else if (["bubbles", "cup", "book"].includes(this.state(id).kind) && !this.shared) {
+        this.store.transact((s) => {
+          s.toys[id].owner = "lilah";
+        });
+        if (this.cleanup.carry.item === this.items.get(id)) this.detachCarry();
+        this.shared = { id, person, socket, time: 3, burst: false };
+        shared = true;
+      } else this.burst(this.pos(id), "#e9c989", 4);
+    });
+    return shared;
+  }
+  returnShared() {
+    if (!this.shared) return;
+    const { id, person } = this.shared, p = person.getPosition();
+    for (const [dx, dz] of [[0.55, 0], [-0.55, 0], [0, 0.55], [0, -0.55]]) if (this.planner.free(p.x + dx, p.z + dz)) {
+      this.store.place(id, [p.x + dx, 0.08, p.z + dz]);
+      this.shared = null;
+      this.sync();
+      return;
+    }
+    this.store.place(id, HOME_TOYS.find((d) => d.id === id).home);
+    this.shared = null;
+    this.sync();
+  }
+  finishFetch(id) {
+    this.motion.delete(id);
+    const p = this.pos(id);
+    this.safe(() => {
+      this.store.place(id, [p.x, 0.08, p.z]);
+    });
+  }
+  facing() {
+    const v = this.character.visual.forward.clone().mulScalar(-1);
+    v.y = 0;
+    return v.normalize();
+  }
+  destination() {
+    const p = this.character.player.getPosition(), f = this.facing();
+    for (const d of [0.57, 0.42, 0.75]) {
+      const q = p.clone().add(f.clone().mulScalar(d));
+      if (this.planner.free(q.x, q.z)) return [q.x, 0.08, q.z];
+    }
+    for (const angle of [-45, 45, -90, 90, 180]) {
+      const a = angle * Math.PI / 180, q = p.clone().add(new Vec338(f.x * Math.cos(a) - f.z * Math.sin(a), 0, f.x * Math.sin(a) + f.z * Math.cos(a)).mulScalar(0.6));
+      if (this.planner.free(q.x, q.z)) return [q.x, 0.08, q.z];
+    }
+    return this.planner.free(p.x, p.z) ? [p.x, 0.08, p.z] : null;
+  }
+  pickup(id) {
+    if (this.cleanup.carry.item) return;
+    this.character.animator.playAction("PickUp", 0.8, () => this.safe(() => {
+      if (this.store.take(id)) {
+        this.motion.delete(id);
+        this.sync();
+        this.character.animator.setCarrying(true);
+      }
+    }), this.pos(id));
+  }
+  put(id, owner = "world") {
+    const target = owner === "world" ? this.destination() : this.pos(owner).toArray();
+    if (!target) {
+      this.say("Step into a little clear floor space to put this down.");
+      return;
+    }
+    if (id === "wagon" && HOUSE_DOORS.some((d) => Math.hypot(target[0] - d.x, target[2] - d.z) < 0.8)) {
+      this.say("A little farther from the doorway will leave room to walk.");
+      return;
+    }
+    if (owner !== "world") target[1] += owner.startsWith("cup") || owner.startsWith("block") ? 0.2 : owner === "teddy" ? 0.22 : owner === "flamingo" ? 0.95 : owner === "wagon" ? 0.24 : owner === "board" ? 0 : 0.16;
+    if (owner === "world" && ["cup", "block", "ramp"].includes(this.state(id).kind)) {
+      const near = [...this.items.keys()].find((k) => k !== id && ["cup", "block"].includes(this.state(k).kind) && this.state(k).owner === "world" && Math.hypot(this.pos(k).x - target[0], this.pos(k).z - target[2]) < 0.23 && this.pos(k).y < 0.7);
+      if (near) {
+        const p = this.pos(near);
+        target[0] = p.x;
+        target[1] = p.y + (this.state(near).kind === "cup" ? 0.17 : 0.22);
+        target[2] = p.z;
+        owner = near;
+      }
+    }
+    if (this.store.place(id, target, owner)) {
+      if (owner === "basin") {
+        this.motion.delete(id);
+        if (id === "duck") this.animate(id, 0);
+      }
+      this.detachCarry();
+      this.sync();
+      this.character.animator.playAction("PutDown", 0.8);
+    }
+  }
+  detachCarry() {
+    if (this.carrying) this.cleanup.carry.release(this.root, [0, 0.08, 0]);
+    this.character.animator.setCarrying(!!this.cleanup.carry.item);
+  }
+  throw(id, strong = false) {
+    if (!this.destination()) return;
+    const kind = this.state(id).kind;
+    this.character.animator.playAction(kind === "ball" ? "PlayRoll" : "PlayThrow", 0.8, () => this.safe(() => {
+      if (this.held() !== id || !this.active) return;
+      const p = this.destination();
+      if (!p) return;
+      const f = this.facing();
+      p[1] = ["ball", "car"].includes(kind) ? 0.08 : Math.max(0.3, this.cleanup.carry.socket.getPosition().y);
+      if (this.store.place(id, p)) {
+        this.detachCarry();
+        this.sync();
+        const speed = kind === "plane" ? strong ? 3.8 : 2.1 : kind === "ball" ? 2.8 : 2;
+        this.motion.set(id, { vx: f.x * speed, vy: kind === "plane" ? 0.8 : kind === "ball" ? 0 : 1.5, vz: f.z * speed, time: 0 });
+        if (kind === "fetch") this.fetchAfter = 1.8;
+      }
+    }));
+  }
+  animate(id, value) {
+    this.store.transact((s) => {
+      s.toys[id].value = value;
+    });
+  }
+  gather() {
+    const members = HOME_TOYS.filter((d) => ["cup", "ball", "beanbag", "teddy", "block", "fetch", "cake", "plate", "pitcher"].includes(d.kind));
+    this.store.transact((s) => {
+      for (const d of members) {
+        if (s.toys[d.id].owner === "held") continue;
+        Object.assign(s.toys[d.id], { owner: "world", position: [...d.home], tilt: 0 });
+        this.motion.delete(d.id);
+      }
+    });
+  }
+  buildCommands() {
+    this.commands = [];
+    const add = (title, run) => this.commands.push({ title, run }), id = this.selected, t = id ? this.state(id) : null, h = this.held(), ht = h ? this.state(h) : null;
+    if (this.resting) {
+      if (h && ht?.kind === "book") add("Turn page", () => this.animate(h, (ht.value + 1) % 4));
+      add("Stand up", () => {
+        this.character.animator.setIdleClip("Idle");
+        this.character.animator.playAction("MealStand", 0.65);
+        this.resting = null;
+      });
+      return;
+    }
+    if (this.pushing) {
+      add("Let go", () => {
+        this.pushing = false;
+        this.savePositions();
+        this.character.animator.setWorkClip(null);
+      });
+      return;
+    }
+    if (h && ht) {
+      const k = ht.kind;
+      if (id && id !== h && t && this.pos(id).distance(this.character.player.getPosition()) < 1.5) {
+        if (id === "basket") add("Put in basket", () => {
+          const def = HOME_TOYS.find((d) => d.id === h);
+          this.store.place(h, def.home);
+          this.detachCarry();
+        });
+        if (id === "wagon" && ["teddy", "cup", "block", "duck", "cake"].includes(k) || k === "hat" && ["teddy", "flamingo"].includes(id) || k === "teddy" && ["cushion", "bed", "sofa"].includes(t.kind) || id === "board" && k === "paper") add(id === "wagon" ? "Load wagon" : k === "hat" ? "Put hat on" : id === "board" ? "Display picture" : "Seat Teddy", () => this.put(h, id));
+        if (t.kind === "surface" && ["paper", "plane", "cup", "block", "book"].includes(k)) add("Place on desk", () => this.put(h, id));
+        if (id === "teddy" && k === "beanbag") add("Set in Teddy\u2019s lap", () => this.put(h, id));
+        if (id === "basin" && ["boat", "duck"].includes(k) && this.store.data.water) add("Float toy", () => this.put(h, "basin"));
+        if (["pitcher", "cup", "cake"].includes(k) && id === "teddy") add(k === "cake" ? "Offer pretend bite" : "Offer tea", () => {
+          this.animate("teddy", k === "cake" ? 2 : 1);
+          this.burst(this.pos("teddy"), "#e9c989", 3);
+        });
+        if (k === "pitcher" && t.kind === "cup") add("Pour tea", () => {
+          this.animate(id, 1);
+          this.spin.set(h, 1);
+          this.burst(this.pos(id), "#bbd7d5", 4);
+        });
+        if (k === "can" && id === "flower") add("Water flower", () => {
+          if (!ht.value) {
+            this.say("The watering can is empty. Fill it at the sink.");
+            return;
+          }
+          this.store.transact((s) => {
+            s.toys[h].value--;
+            s.toys.flower.value = Math.min(3, s.toys.flower.value + 1);
+            s.puddle = Math.min(1, s.puddle + 0.3);
+          });
+          this.burst(this.pos(id), "#aad5e0", 8);
+        });
+        if (k === "pinwheel" && id === "flower") add("Plant pinwheel", () => this.put(h, id));
+      }
+      if (k === "can" && this.character.player.getPosition().distance(new Vec338(-1.7, 0.09, 11.45)) < 1.15) add("Refill can", () => {
+        this.animate(h, 3);
+        this.burst(this.pos(h), "#acd6de", 5);
+      });
+      if (k === "paper") {
+        add("Draw a mark", () => this.store.transact((s) => {
+          const a = s.toys[h].marks;
+          if (a.length < 16) a.push((s.toys[h].value + a.length) % 4);
+        }));
+        add("Choose color", () => this.animate(h, (ht.value + 1) % 4));
+        add("Fold plane", () => this.store.transact((s) => {
+          s.toys[h].kind = "plane";
+        }));
+      }
+      if (k === "plane") {
+        add("Gentle toss", () => this.throw(h));
+        add("Strong throw", () => this.throw(h, true));
+        add("Unfold paper", () => this.store.transact((s) => {
+          s.toys[h].kind = "paper";
+        }));
+      }
+      if (["beanbag", "ball", "fetch"].includes(k)) add(k === "ball" ? "Roll ball" : "Toss", () => this.throw(h));
+      if (k === "book") add("Turn page", () => this.animate(h, (ht.value + 1) % 4));
+      if (k === "book" && id && t?.kind === "cushion") add("Read beside cushion", () => {
+        this.resting = this.character.player.getPosition().clone();
+        this.character.animator.setIdleClip("MealIdle");
+        this.character.animator.playAction("MealSit", 0.65);
+      });
+      if (k === "pitcher") add("Pour here", () => {
+        this.spin.set(h, 1);
+        const p = this.destination();
+        if (p) this.burst(new Vec338(...p), "#bbd7d5", 4);
+      });
+      if (k === "pinwheel") add("Blow", () => this.spin.set(h, 9));
+      if (k === "bubbles") add("Blow bubbles", () => this.blow());
+      if (this.daily.lilahAvailable && this.daily.lilahTarget.anchor.distance(this.character.player.getPosition()) < 4 && ["bubbles", "book", "cup", "teddy", "duck", "jack"].includes(k)) add("Invite Lilah", () => this.onInvite(h, this.pos(h)));
+      if (k === "rake" && this.character.player.getPosition().x < -6) add("Gather leaves", () => {
+        const p = this.character.player.getPosition(), f = this.facing();
+        for (let i = 0; i < this.leaves.length; i++) this.leaves[i].setPosition(p.x + f.x * 0.65 + Math.sin(i * 2) * 0.2, 0.08, p.z + f.z * 0.65 + Math.cos(i * 2) * 0.2);
+        this.store.transact((s) => {
+          s.leafPile = 1;
+        });
+      });
+      add("Place here", () => this.put(h));
+      add("Turn", () => {
+        this.store.transact((s) => {
+          s.toys[h].yaw += 45;
+        });
+        this.items.get(h).entity.setLocalEulerAngles(0, this.state(h).yaw, 0);
+      });
+      return;
+    }
+    if (!id || !t || this.cleanup.carry.item) return;
+    const fixed = HOME_TOYS.find((d) => d.id === id).fixed;
+    if (t.kind === "ball") add("Kick softly", () => {
+      const p = this.pos(id), a = this.character.player.getPosition(), f = p.sub(a);
+      f.y = 0;
+      f.normalize();
+      this.motion.set(id, { vx: f.x * 3, vy: 0, vz: f.z * 3, time: 0 });
+    });
+    if (t.kind === "duck") add("Wind duck", () => {
+      this.animate(id, Math.min(8, t.value + 2.7));
+      const yaw = t.yaw * Math.PI / 180;
+      this.motion.set(id, { vx: Math.sin(yaw) * 0.28, vy: 0, vz: Math.cos(yaw) * 0.28, time: 0 });
+    });
+    if (t.kind === "jack") add(t.value >= 1 ? "Close lid" : "Turn handle", () => {
+      this.animate(id, t.value >= 1 ? 0 : Math.min(1, t.value + 0.18 + Math.random() * 0.13));
+    });
+    if (t.kind === "wagon") add("Pull wagon", () => {
+      this.pushing = true;
+    });
+    if (t.kind === "car") add("Push car", () => {
+      const f = this.facing();
+      this.motion.set(id, { vx: f.x * 1.6, vy: 0, vz: f.z * 1.6, time: 0 });
+    });
+    if (t.kind === "ramp") add("Run car down ramp", () => {
+      const car = this.pos("car"), ramp = this.pos(id);
+      if (car.distance(ramp) < 1.1 && this.state("car").owner === "world") {
+        const a = t.yaw * Math.PI / 180;
+        this.items.get("car").entity.setPosition(ramp.x, ramp.y + 0.24, ramp.z);
+        this.motion.set("car", { vx: Math.sin(a) * Math.sqrt(4 * (ramp.y + 0.24)), vy: 0, vz: Math.cos(a) * Math.sqrt(4 * (ramp.y + 0.24)), time: 0 });
+      } else this.say("Place the little car beside the ramp.");
+    });
+    if (t.kind === "basin") add(this.store.data.water ? "Empty basin" : "Fill basin", () => {
+      this.store.transact((s) => {
+        s.water = s.water ? 0 : 1;
+        if (!s.water) {
+          for (const [key, toy2] of Object.entries(s.toys)) if (toy2.owner === "basin") {
+            toy2.owner = "world";
+            toy2.position = [5.65, 0.99, 12.5 + (key === "duck" ? -0.25 : 0)];
+            this.motion.delete(key);
+          }
+        }
+      });
+      this.burst(this.pos(id), "#aed6dd", 8);
+    });
+    if (t.kind === "boat" && t.owner === "basin") add("Blow boat", () => {
+      const p = this.pos(id), a = this.character.player.getPosition(), f = p.sub(a);
+      f.y = 0;
+      f.normalize();
+      this.motion.set(id, { vx: f.x * 0.3, vy: 0, vz: f.z * 0.3, time: 0 });
+    });
+    if (t.kind === "pinwheel") add("Blow", () => this.spin.set(id, 9));
+    if (t.kind === "cushion") add("Stand cushion", () => this.animate(id, t.value ? 0 : 1));
+    if (t.kind === "blanket") add("Drape den", () => {
+      const a = this.pos("cushion0"), b = this.pos("cushion1");
+      if (a.distance(b) > 0.55 && a.distance(b) < 1.4 && this.state("cushion0").value && this.state("cushion1").value) {
+        this.store.place(id, [(a.x + b.x) / 2, 0.69, (a.z + b.z) / 2]);
+      } else this.say("Stand the two play cushions nearby for the blanket.");
+    });
+    if (id === "basket") add("Gather basket toys", () => this.gather());
+    if (this.daily.lilahAvailable && this.daily.lilahTarget.anchor.distance(this.character.player.getPosition()) < 4 && ["teddy", "duck", "jack"].includes(t.kind)) add("Invite Lilah", () => this.onInvite(id, this.pos(id)));
+    if (!fixed) add(t.tilt ? "Right and pick up" : "Pick up", () => this.pickup(id));
+    if (!fixed) add("Turn", () => this.store.transact((s) => {
+      s.toys[id].yaw += 45;
+    }));
+  }
+  sync() {
+    for (const def of HOME_TOYS) {
+      const t = this.state(def.id), item = this.items.get(def.id), signature = t.kind + ":" + t.marks.join(",") + ":" + (t.kind === "book" ? t.value : 0);
+      if (this.versions.get(def.id) !== signature) {
+        for (const child of [...item.entity.children]) child.destroy();
+        item.entity.addChild(this.art.make(t.kind, def.color));
+        this.versions.set(def.id, signature);
+        if (t.kind === "paper" || t.kind === "plane") for (const [i, c] of t.marks.entries()) primitives(this.app, item.entity)("Crayon mark", "sphere", [(i % 4 - 1.5) * 0.06, 0.055, ((i / 4 | 0) - 1.5) * 0.07], [0.045, 3e-3, 0.065], this.art.mat(["#d49aaf", "#9bbbad", "#e2be75", "#b2a4d1"][c % 4]), false);
+        if (t.kind === "book") {
+          const page = primitives(this.app, item.entity);
+          for (let i = 0; i < 3; i++) page("Picture story", "sphere", [(i - 1) * 0.08, 0.065, Math.sin(i + t.value) * 0.12], [0.07, 3e-3, 0.07], this.art.mat(["#c69abb", "#9bbbad", "#e1bd79", "#a8b5d3"][(i + t.value) % 4]), false);
+        }
+      }
+      if (t.owner === "held") {
+        if (!this.cleanup.carry.item) {
+          this.cleanup.carry.pickUp(item);
+          this.character.animator.setCarrying(true);
+        }
+        continue;
+      }
+      if (item.entity.parent !== this.root) item.entity.reparent(this.root);
+      item.entity.setPosition(...t.position);
+      item.entity.setEulerAngles(0, t.yaw, t.tilt || 0);
+    }
+  }
+  burst(p, color, count) {
+    for (let i = 0; i < count && this.effects.length < 36; i++) {
+      const e = primitives(this.app, this.root)("Play splash", "sphere", [p.x, p.y + 0.2, p.z], [0.04, 0.04, 0.04], this.art.mat(color), false);
+      this.effects.push({ entity: e, life: 0.5 + Math.random() * 0.35, vx: (Math.random() - 0.5) * 0.7, vz: (Math.random() - 0.5) * 0.7, vy: 0.6 });
+    }
+  }
+  blow(origin) {
+    const p = origin ?? this.character.player.getPosition(), f = this.facing();
+    for (let i = 0; i < 5 && this.effects.length < 30; i++) {
+      const size = 0.055 + Math.random() * 0.08, e = primitives(this.app, this.root)("Soap bubble", "sphere", [p.x + f.x * 0.4, (origin ? p.y + 0.15 : 1) + i * 0.05, p.z + f.z * 0.4], [size, size, size], this.art.mat(i % 2 ? "#d9e9df" : "#dbcce5"), false);
+      this.effects.push({ entity: e, life: 2 + Math.random() * 3, vx: f.x * 0.2 + 0.06, vz: f.z * 0.2, vy: 0.1 });
+    }
+  }
+  savePositions() {
+    if (!this.dirty) return;
+    this.store.transact((s) => {
+      for (const [id, item] of this.items) {
+        if (s.toys[id].owner !== "held") s.toys[id].position = item.entity.getPosition().toArray();
+      }
+    });
+    this.dirty = false;
+  }
+  suspend() {
+    this.pushing = false;
+    this.returnShared();
+    if (this.resting) {
+      this.resting = null;
+      this.character.animator.setIdleClip("Idle");
+    }
+    this.savePositions();
+    this.extraCommands = [];
+    this.extraFocus = null;
+    this.character.animator.setWorkClip(null);
+    for (const e of this.effects) e.entity.destroy();
+    this.effects = [];
+  }
+  update(dt, mode, available) {
+    this.sceneMode = mode;
+    this.active = (mode === "cleanup" || mode === "outdoors") && this.cleanup.mode === "day";
+    this.allowed = this.active && available && !this.controller.riding;
+    if (this.lastDay !== this.daily.clock.state.day) {
+      this.detachCarry();
+      this.store.day(this.daily.clock.state.day);
+      this.lastDay = this.daily.clock.state.day;
+      this.sync();
+    }
+    this.root.enabled = this.active;
+    this.controls.hidden = !this.allowed && !this.extraCommands.length;
+    if (!this.active) {
+      this.allowed = available && mode === "recess";
+      this.controls.hidden = !this.extraCommands.length;
+      return;
+    }
+    const p = this.character.player.getPosition();
+    this.clock += dt;
+    if (this.allowed) {
+      this.step(Math.min(0.04, dt), p);
+      this.nextPersist -= dt;
+      if (this.nextPersist <= 0) {
+        this.safe(() => this.savePositions());
+        this.nextPersist = 2;
+      }
+    }
+    const held = this.held();
+    this.nearby = HOME_TOYS.filter((d) => d.id !== held && !["held", "sunny", "lilah"].includes(this.state(d.id).owner) && Math.hypot(this.pos(d.id).x - p.x, this.pos(d.id).z - p.z) < 1.25).sort((a, b) => this.pos(a.id).distance(p) - this.pos(b.id).distance(p)).map((d) => d.id);
+    if (this.manualTarget && p.distance(this.lastSelectPosition) > 0.45) this.manualTarget = false;
+    if (!this.nearby.includes(this.selected) && !(this.manualTarget && !this.selected)) {
+      const selected = this.nearby[0] ?? "";
+      if (selected !== this.selected) {
+        this.selected = selected;
+        this.commandIndex = 0;
+      }
+    }
+    this.buildCommands();
+    this.controls.hidden = !this.allowed || !this.allCommands.length && !this.nearby.length;
+    this.next.hidden = this.allCommands.length < 2;
+    const seated = this.extraCommands.some((c) => c.title === "Stand up");
+    this.other.hidden = !seated && (this.nearby.length < 1 || !!this.extraCommands.length);
+    this.other.textContent = seated ? "Stand up \xB7 R" : "Select \xB7 R";
+    this.cue.enabled = this.allowed && !!this.selected;
+    if (this.selected) {
+      const q = this.pos(this.selected);
+      this.cue.setPosition(q.x, q.y + 6e-3, q.z);
+    }
+    const destination = held ? this.destination() : null;
+    this.preview.enabled = !!destination && this.allowed;
+    if (destination) this.preview.setPosition(...destination);
+    this.puddle.setLocalScale(0.65 + this.store.data.puddle, 0.012, 0.52 + this.store.data.puddle * 0.6);
+    this.lastPlayer.copy(p);
+  }
+  step(dt, p) {
+    if (!dt) return;
+    if (this.shared) {
+      const job = this.shared;
+      job.time -= dt;
+      this.items.get(job.id).entity.setPosition(job.socket.getPosition());
+      if (job.time < 1.8 && !job.burst) {
+        job.burst = true;
+        if (job.id === "bubbles") this.blow(job.socket.getPosition());
+        else this.burst(job.socket.getPosition(), "#e9c989", 3);
+      }
+      if (job.time <= 0 || !job.person.enabled || !this.daily.lilahAvailable) this.safe(() => this.returnShared());
+    }
+    this.wagonPlanner = new HousePath({ ...this.house, obstacles: this.house.obstacles.filter((b) => b !== this.wagonObstacle) }, 0.38);
+    this.goalCooldown = Math.max(0, this.goalCooldown - dt);
+    if (this.fetchAfter > 0) {
+      this.fetchAfter -= dt;
+      if (this.fetchAfter <= 0) {
+        this.motion.delete("fetch");
+        const at = this.pos("fetch");
+        if (this.onFetch("fetch", at)) this.safe(() => {
+          this.store.transact((s) => {
+            s.toys.fetch.owner = "sunny";
+            s.toys.fetch.position = at.toArray();
+          });
+        });
+      }
+    }
+    const ball = this.pos("ball");
+    if (this.state("ball").owner === "world" && Math.hypot(ball.x - p.x, ball.z - p.z) < 0.35 && this.controller.velocity.length() > 0.1) {
+      const f = ball.clone().sub(p);
+      f.y = 0;
+      f.normalize();
+      this.motion.set("ball", { vx: f.x * 0.9, vy: 0, vz: f.z * 0.9, time: 0 });
+    }
+    if (this.pushing) {
+      const e = this.items.get("wagon").entity, old = e.getPosition().clone(), f = this.facing(), target = p.clone().sub(f.mulScalar(0.8)), q = new Vec338().lerp(old, target, Math.min(1, dt * 1.8 / Math.max(1e-3, old.distance(target))));
+      if (this.wagonPlanner.line(old, q)) {
+        e.setPosition(q.x, 0.08, q.z);
+        e.setEulerAngles(0, this.character.visual.getEulerAngles().y, 0);
+        this.dirty = true;
+        for (const wheel of e.find((n) => n.name === "Wheel")) wheel.rotateLocal(0, 0, this.controller.velocity.length() * dt * 240);
+      }
+      if (old.distance(p) > 2) {
+        this.pushing = false;
+        this.say("The wagon stopped here. You can pull it back out.");
+      }
+      this.character.animator.setWorkClip(this.controller.velocity.length() > 0.1 ? "CarryWalk" : "CarryIdle");
+    }
+    for (const [id, m] of this.motion) {
+      const e = this.items.get(id).entity, t = this.state(id), q = e.getPosition().clone();
+      if (q.distance(p) > 12 || t.owner === "held") {
+        this.motion.delete(id);
+        continue;
+      }
+      m.time += dt;
+      const floating = t.owner === "basin";
+      if (floating) {
+        const basin = this.pos("basin");
+        if (Math.abs(q.x + m.vx * dt - basin.x) > 0.28) m.vx *= -0.8;
+        if (Math.abs(q.z + m.vz * dt - basin.z) > 0.2) m.vz *= -0.8;
+        q.x += m.vx * dt;
+        q.z += m.vz * dt;
+      } else {
+        const nx = q.x + m.vx * dt, nz = q.z + m.vz * dt;
+        if (this.planner.free(nx, q.z)) q.x = nx;
+        else m.vx *= -0.6;
+        if (this.planner.free(q.x, nz)) q.z = nz;
+        else m.vz *= -0.6;
+        if (q.y > 0.081 || m.vy > 0) {
+          m.vy -= dt * (t.kind === "plane" ? 1.25 : 5);
+          q.y = Math.max(0.08, q.y + m.vy * dt);
+          if (q.y === 0.08) m.vy = 0;
+        }
+      }
+      const friction = floating ? 0.7 : t.kind === "duck" ? 0 : q.y > 0.1 ? t.kind === "plane" ? 0.13 : 0.2 : Math.abs(q.x) < 2 && q.z > 5 && q.z < 7.5 ? 2.8 : 1.3;
+      m.vx *= Math.exp(-friction * dt);
+      m.vz *= Math.exp(-friction * dt);
+      e.setPosition(q);
+      this.dirty = true;
+      if (t.kind === "duck") {
+        e.findByName("Key")?.setLocalEulerAngles(0, 0, this.clock * 360);
+        e.setEulerAngles(0, t.yaw, Math.sin(this.clock * 12) * 5);
+        if (m.time > t.value || floating) this.motion.delete(id);
+      }
+      if (t.kind === "ball") {
+        const a = this.pos("marker0"), b = this.pos("marker1"), vx = b.x - a.x, vz = b.z - a.z, len = vx * vx + vz * vz, u = ((q.x - a.x) * vx + (q.z - a.z) * vz) / len;
+        if (len > 0.3 && u > 0 && u < 1 && Math.abs((q.x - a.x) * vz - (q.z - a.z) * vx) / Math.sqrt(len) < 0.16 && this.goalCooldown <= 0) {
+          this.burst(a, "#e9cc8a", 3);
+          this.burst(b, "#e9cc8a", 3);
+          this.goalCooldown = 2;
+        }
+        for (const leaf of this.leaves) {
+          const l = leaf.getPosition();
+          if (Math.hypot(l.x - q.x, l.z - q.z) < 0.3) {
+            leaf.setPosition(l.x + m.vx * 0.12, 0.08, l.z + m.vz * 0.12);
+            leaf.rotateLocal(0, 30, 0);
+          }
+        }
+      }
+      for (const [other, item] of this.items) {
+        if (other === id || this.state(other).owner === "held") continue;
+        const a = item.entity.getPosition();
+        if (Math.hypot(q.x - a.x, q.z - a.z) > 0.23 || Math.abs(q.y - a.y) > 0.32) continue;
+        const k = this.state(other).kind;
+        if (["cup", "block"].includes(k)) {
+          const dx = a.x - q.x, dy = a.y - q.y, dz = a.z - q.z, d = Math.max(0.01, Math.hypot(dx, dy, dz)), impact = Math.max(0, (m.vx * dx + m.vy * dy + m.vz * dz) / d), tilt = Math.max(this.state(other).tilt || 0, impact > 1 ? 78 : 24);
+          item.entity.setEulerAngles(0, this.state(other).yaw, tilt);
+          this.state(other).tilt = tilt;
+          this.motion.set(other, { vx: m.vx * 0.45, vy: 0.2, vz: m.vz * 0.45, time: 0 });
+          this.state(other).owner = "world";
+        }
+        if (k === "flamingo") this.spin.set(other, 1);
+        if (k === "cushion") {
+          m.vx *= 0.8;
+          m.vz *= 0.8;
+        }
+      }
+      if (m.time > 10 || Math.hypot(m.vx, m.vz) < 0.035 && q.y <= 0.081) this.motion.delete(id);
+    }
+    for (const [id, item] of this.items) {
+      const t = this.state(id), e = item.entity;
+      if (this.items.has(t.owner)) {
+        const parent = this.pos(t.owner), offset = Object.keys(this.store.data.toys).filter((k) => this.state(k).owner === t.owner).indexOf(id);
+        if (t.owner === "basin" && this.motion.has(id)) continue;
+        const height = t.owner === "wagon" ? 0.25 : t.owner === "flamingo" ? 0.95 : t.owner === "teddy" ? t.kind === "hat" ? 0.54 : 0.22 : t.owner.startsWith("block") ? 0.22 : t.owner.startsWith("cup") ? 0.17 : t.owner.startsWith("cushion") ? 0.32 : t.owner === "sofa" || t.owner === "board" || t.owner === "desk-surface" ? 0 : t.owner === "toy-bed" ? 0.08 : 0.16;
+        e.setPosition(parent.x + (t.owner === "wagon" ? (offset % 2 - 0.5) * 0.22 : 0), parent.y + height, parent.z + (t.owner === "wagon" ? (Math.floor(offset / 2) - 0.5) * 0.24 : t.owner === "board" ? 0.04 : 0));
+        if (t.owner === "board") e.setEulerAngles(90, 0, 0);
+      }
+      if (t.kind === "cushion") e.setEulerAngles(t.value ? 75 : 0, t.yaw, 0);
+      if (t.kind === "teddy" && t.value) e.setEulerAngles(Math.sin(this.clock * 4) * (t.value === 2 ? 9 : 4), t.yaw, 0);
+      if (t.kind === "jack") {
+        const jack = e.findByName("Surprise");
+        if (jack) {
+          jack.enabled = t.value >= 1;
+          jack.setLocalPosition(0, 0.5 + Math.sin(this.clock * 8) * 0.03, 0);
+        }
+        e.findByName("Lid")?.setLocalEulerAngles(t.value >= 1 ? -110 : 0, 0, 0);
+        e.findByName("Crank")?.setLocalEulerAngles(t.value * 1080, 0, 0);
+      }
+      if (t.kind === "basin") {
+        const water = e.findByName("Water");
+        if (water) water.enabled = !!this.store.data.water;
+      }
+      if (t.kind === "flower") e.findByName("Stem")?.setLocalEulerAngles(0, 0, t.value ? 0 : 16);
+      if (t.kind === "cup") {
+        const top = e.findByName("Inside");
+        if (top) top.setLocalPosition(0, t.value ? 0.175 : 0.171, 0);
+      }
+      if (t.kind === "pitcher" && (this.spin.get(id) || 0) > 0) {
+        const v = this.spin.get(id);
+        e.setLocalEulerAngles(0, 0, Math.sin(v * Math.PI) * -45);
+        this.spin.set(id, Math.max(0, v - dt));
+      }
+      if (t.kind === "pinwheel") {
+        let speed = this.spin.get(id) || 0;
+        if (t.owner === "held") speed = Math.max(speed, this.controller.velocity.length() * 3);
+        speed *= Math.exp(-dt * 0.8);
+        this.spin.set(id, speed);
+        e.findByName("Rotor")?.rotateLocal(0, 0, speed * dt * 100);
+      }
+      if (t.kind === "flamingo" && (this.spin.get(id) || 0) > 0) {
+        const a = this.spin.get(id);
+        e.setEulerAngles(0, 0, Math.sin(this.clock * 12) * a * 8);
+        this.spin.set(id, Math.max(0, a - dt));
+      }
+    }
+    this.effectClock -= dt;
+    const jumping = ["PlayJump", "JourneyJump"].includes(this.character.animator.actionName ?? "");
+    if (jumping && !this.jumpEffect) {
+      if (Math.hypot(p.x + 5, p.z - 5.6) < 0.7) this.burst(new Vec338(p.x, 0.09, p.z), "#b5d8df", 14);
+      for (const leaf of this.leaves) {
+        const q = leaf.getPosition();
+        if (Math.hypot(q.x - p.x, q.z - p.z) < 1) leaf.setPosition(q.x + (q.x - p.x) * 0.9, 0.08, q.z + (q.z - p.z) * 0.9);
+      }
+    }
+    this.jumpEffect = jumping;
+    if (this.effectClock <= 0 && this.controller.velocity.length() > 0.15) {
+      if (Math.hypot(p.x + 5, p.z - 5.6) < 0.5 + this.store.data.puddle * 0.4) {
+        this.burst(new Vec338(p.x, 0.08, p.z), "#bedde2", this.controller.velocity.length() > 1 ? 7 : 3);
+        this.effectClock = 0.25;
+        this.spin.set("wet-feet", 3);
+        this.audio.tone(this.controller.velocity.length() > 1 ? 170 : 260, 0.1, "sine", 0.5);
+      } else if ((this.spin.get("wet-feet") || 0) > 0 && this.effects.length < 30) {
+        const e = primitives(this.app, this.root)("Fading wet footprint", "sphere", [p.x, 0.077, p.z], [0.09, 6e-3, 0.18], this.art.mat("#b0c3bc"), false);
+        e.setEulerAngles(0, this.character.visual.getEulerAngles().y, 0);
+        this.effects.push({ entity: e, life: 2.5, vx: 0, vz: 0, vy: 0 });
+        this.effectClock = 0.35;
+        this.spin.set("wet-feet", this.spin.get("wet-feet") - 0.35);
+      }
+      for (const leaf of this.leaves) {
+        const q = leaf.getPosition();
+        if (Math.hypot(q.x - p.x, q.z - p.z) < 0.5) {
+          leaf.setPosition(q.x + (q.x - p.x) * 0.4, 0.08, q.z + (q.z - p.z) * 0.4);
+          leaf.rotateLocal(0, 35, 0);
+        }
+      }
+    }
+    for (let i = this.effects.length - 1; i >= 0; i--) {
+      const fx = this.effects[i], q = fx.entity.getPosition();
+      fx.life -= dt;
+      const bubble = fx.entity.name === "Soap bubble";
+      if (fx.life <= 0 || bubble && (Math.hypot(q.x - p.x, q.z - p.z) < 0.2 || !this.planner.free(q.x, q.z))) {
+        fx.entity.destroy();
+        this.effects.splice(i, 1);
+      } else {
+        fx.entity.setPosition(q.x + fx.vx * dt, q.y + fx.vy * dt, q.z + fx.vz * dt);
+        if (fx.entity.name === "Fading wet footprint") {
+          const s = Math.min(1, fx.life);
+          fx.entity.setLocalScale(0.09 * s, 6e-3, 0.18 * s);
+        }
+      }
+    }
+  }
+  paintHUD() {
+    const seated = this.extraCommands.some((c) => c.title === "Stand up");
+    this.controls.hidden = !this.allowed || !this.allCommands.length && !this.nearby.length;
+    this.next.hidden = this.allCommands.length < 2;
+    this.other.hidden = !seated && (this.nearby.length < 1 || !!this.extraCommands.length);
+    this.other.textContent = seated ? "Stand up \xB7 R" : "Select \xB7 R";
+    const jump = document.querySelector("#journey-jump");
+    if (jump) {
+      this.jumpParent ??= jump.parentElement;
+      if (this.sceneMode === "outdoors" && !this.controls.hidden) {
+        if (jump.parentElement !== this.controls) this.controls.append(jump);
+        this.next.textContent = "More";
+        this.other.textContent = "Select";
+        jump.textContent = "Jump";
+      } else if (jump.parentElement === this.controls) this.jumpParent.append(jump);
+    }
+    const f = this.focus;
+    if (!f) return false;
+    const player = this.character.player.getPosition();
+    this.camera.beginChore(player, this.selected ? this.pos(this.selected) : player);
+    const b = document.querySelector("#action-button");
+    b.dataset.target = "home-play";
+    b.disabled = !f.enabled;
+    document.querySelector("#action-title").textContent = f.title;
+    document.querySelector("#action-detail").textContent = f.detail;
+    document.querySelector("#action-icon").textContent = f.icon;
+    b.setAttribute("aria-label", f.title + ": " + f.detail);
+    return true;
+  }
+  snapshot() {
+    return { active: this.active, selected: this.selected, focus: this.focus, commands: this.allCommands.map((c) => c.title), held: this.store.held, pushing: this.pushing, moving: this.motion.size, effects: this.effects.length, state: this.store.data, objects: [...this.items].map(([id, item]) => ({ id, position: item.entity.getPosition().toArray() })) };
+  }
+  destroy() {
+    this.suspend();
+    const index = this.house.obstacles.indexOf(this.wagonObstacle);
+    if (index >= 0) this.house.obstacles.splice(index, 1);
+    this.abort.abort();
+    this.controls.remove();
+    this.root.destroy();
+    this.art.destroy();
+    this.audio.destroy();
+  }
+};
+
+// src/game/MealPlay.ts
+init_PropSpace();
+import { Entity as Entity43, Vec3 as Vec339 } from "playcanvas";
+init_MealArt();
+init_primitives();
+var MealPlay = class {
+  constructor(app, home, character, controller, cleanup, daily, school, house, say) {
+    this.app = app;
+    this.home = home;
+    this.character = character;
+    this.controller = controller;
+    this.cleanup = cleanup;
+    this.daily = daily;
+    this.house = house;
+    this.say = say;
+    this.school = school;
+    this.root = new Entity43("Optional meals", app);
+    app.root.addChild(this.root);
+    this.art = new MealArt(app, home.art);
+    this.platter = new Entity43("Dinner portions", app);
+    this.root.addChild(this.platter);
+    for (const context of ["dinner", "lunch"]) {
+      const e = new Entity43(context === "dinner" ? "Arianna\u2019s dinner plate" : "Arianna\u2019s lunch tray", app);
+      this.root.addChild(e);
+      this.plates.set(context, { id: "home-" + (context === "dinner" ? "dinner-plate" : "lunch-tray"), name: e.name, icon: "\u{1F37D}", entity: e, home: [0, 1, 0], carryGrip: [0, 0.08, 0], carryPace: "walk" });
+    }
+    const s = primitives(app, this.root);
+    this.mealCue = s("Vacant seat cue", "cylinder", [0, 0, 0], [0.38, 8e-3, 0.38], home.art.mat("#e5d2a1"), false);
+    this.menu = new Entity43("Lunch counter choices", app);
+    this.root.addChild(this.menu);
+    this.menu.setPosition(4.6, 1.34, -20.8);
+    for (const [i, food] of ["pizza", "sandwich"].entries()) {
+      const option = new Entity43(food, app);
+      this.menu.addChild(option);
+      option.setLocalPosition((i - 0.5) * 0.52, 0, 0);
+      this.art.plate(option, false);
+      void this.art.food(option, food);
+    }
+    for (const [i, color] of ["#c98276", "#dfaf67"].entries()) primitives(app, this.menu)(i ? "Orange option" : "Apple option", "sphere", [0.75 + i * 0.2, 0.065, 0], [0.12, 0.12, 0.12], home.art.mat(color));
+    const rack = new Entity43("Tray return rack", app);
+    this.root.addChild(rack);
+    rack.setPosition(9.5, 0.05, -20.3);
+    const r = primitives(app, rack);
+    r("Rack back", "box", [0, 0.65, 0], [0.6, 1.3, 0.06], home.art.mat("#a8bfc2"));
+    for (const y of [0.15, 0.55, 0.95]) r("Tray shelf", "box", [0, y, 0.2], [0.6, 0.05, 0.4], home.art.mat("#d3d0bd"));
+    for (const seat of this.seats()) {
+      const pad = s("Child seat cushion", "box", [seat.sit.x, seat.plate.y - 0.39, seat.sit.z], [0.36, 0.18, 0.32], home.art.mat("#c8b5d7"));
+      pad.setEulerAngles(0, seat.yaw, 0);
+      this.boosters.set(seat.id, pad);
+    }
+  }
+  app;
+  home;
+  character;
+  controller;
+  cleanup;
+  daily;
+  house;
+  say;
+  root;
+  art;
+  dinner;
+  plates = /* @__PURE__ */ new Map();
+  signatures = /* @__PURE__ */ new Map();
+  platter;
+  platterSignature = "";
+  seat = null;
+  entry = null;
+  seatTime = 0;
+  standing = false;
+  actionItem = null;
+  mode = "";
+  selectedMain = "pizza";
+  selectedFruit = "apple";
+  mealCue;
+  menu;
+  serveTime = 0;
+  serveStart = 1.1;
+  actionSource = "";
+  school;
+  lastGreeting = 0;
+  day = 0;
+  boosters = /* @__PURE__ */ new Map();
+  bindDinner(dinner) {
+    this.dinner = dinner;
+    dinner.portionManaged = true;
+    this.platter.reparent(dinner.tray);
+    this.platter.setLocalPosition(0, 0.025, 0);
+  }
+  get locked() {
+    return !!this.seat;
+  }
+  seats() {
+    return [
+      { id: "home-north", context: "dinner", approach: propPoint("dining", new Vec339(0.55, 0.09, 11.9)), sit: propPoint("dining", new Vec339(0.55, 0.09, 12.49)), plate: propPoint("dining", new Vec339(0.55, 0.99, 13.28)), yaw: propYaw("dining", 0) },
+      // The front stools of the two real north cafeteria tables; friends occupy the back stools.
+      { id: "lunch-left", context: "lunch", approach: new Vec339(1.6, 0.09, -15.65), sit: new Vec339(1.6, 0.09, -16.36), plate: new Vec339(1.6, 0.96, -17), yaw: 180 },
+      { id: "lunch-right", context: "lunch", approach: new Vec339(7.15, 0.09, -15.65), sit: new Vec339(7.15, 0.09, -16.36), plate: new Vec339(7.15, 0.96, -17), yaw: 180 }
+    ];
+  }
+  context() {
+    return this.mode === "recess" ? "lunch" : "dinner";
+  }
+  plate(context = this.context()) {
+    return this.home.store.plate(context);
+  }
+  commit(change) {
+    try {
+      change();
+      this.sync();
+    } catch (e) {
+      this.say("Your meal could not be saved. Please try again.");
+      console.error("Meal save", e);
+    }
+  }
+  sync() {
+    for (const [context, item] of this.plates) {
+      const p = this.plate(context);
+      item.entity.enabled = !!p && (p.owner === "held" || (context === "dinner" ? ["cleanup", "outdoors"].includes(this.mode) : this.mode === "recess"));
+      if (!p) continue;
+      const signature2 = JSON.stringify([p.id, p.bites, p.drink, p.fruitBites]);
+      if (this.signatures.get(context) !== signature2) {
+        for (const c of [...item.entity.children]) c.destroy();
+        this.art.plate(item.entity, context === "lunch");
+        const food = new Entity43("Edible serving", this.app);
+        item.entity.addChild(food);
+        food.setLocalPosition(context === "lunch" ? -0.09 : 0, 0.028, 0);
+        void this.art.food(food, p.food, p.bites, Number(p.id.split("-").at(-1)) || 0);
+        const cup = this.home.art.make("cup", "#bad4dc");
+        cup.name = "Drinking cup";
+        item.entity.addChild(cup);
+        cup.setLocalScale(0.65, 0.65, 0.65);
+        cup.setLocalPosition(0.15, 0.025, -0.14);
+        if (context === "lunch" && p.fruitBites < 2) {
+          const fruit = primitives(this.app, item.entity)("Fruit", "sphere", [0.15, 0.07, 0.08], [0.12 * (1 - p.fruitBites * 0.35), 0.11, 0.12], this.home.art.mat(p.fruit === "apple" ? "#c98276" : "#dfaf67"));
+          fruit.name = "Edible fruit";
+        }
+        this.signatures.set(context, signature2);
+      }
+      if (this.actionItem && context === this.context()) {
+        const source = item.entity.findByName(this.actionSource);
+        if (source) source.enabled = false;
+      }
+      if (p.owner === "held") {
+        if (!this.cleanup.carry.item) {
+          this.cleanup.carry.pickUp(item);
+          this.character.animator.setCarrying(true);
+        }
+      } else {
+        if (item.entity.parent !== this.root) item.entity.reparent(this.root);
+        item.entity.setPosition(...p.position);
+        item.entity.setEulerAngles(0, 0, 0);
+      }
+    }
+    const state = this.home.store.data.dinner, signature = JSON.stringify([this.daily.clock.state.day, state.served, state.portions]);
+    if (signature !== this.platterSignature) {
+      this.platterSignature = signature;
+      for (const c of [...this.platter.children]) c.destroy();
+      if (state.served) {
+        const food = ["pizza", "taco", "turkey"][(this.daily.clock.state.day - 1) % 3];
+        if (food === "pizza") void this.art.pizzaPlatter(this.platter, state.portions);
+        else for (let i = 0; i < state.portions.length; i++) if (state.portions[i]) {
+          const part = new Entity43("Remaining portion " + i, this.app);
+          this.platter.addChild(part);
+          part.setLocalPosition(Math.sin(i * Math.PI / 4) * 0.19, 0, Math.cos(i * Math.PI / 4) * 0.19);
+          part.setLocalEulerAngles(0, i * 45, 0);
+          void this.art.food(part, food, 0, i, 0.17);
+        }
+      }
+    }
+  }
+  transfer(owner, point) {
+    const context = this.context();
+    this.commit(() => {
+      this.home.store.transact((s) => {
+        const p = context === "dinner" ? s.dinner.plate : s.lunch;
+        if (p) {
+          p.owner = owner;
+          p.position = point.toArray();
+        }
+      });
+      if (this.cleanup.carry.item === this.plates.get(context)) this.cleanup.carry.release(this.root, point.toArray());
+      this.character.animator.setCarrying(!!this.cleanup.carry.item);
+    });
+  }
+  take() {
+    if (this.cleanup.carry.item) return;
+    this.transfer("held", this.character.player.getPosition());
+  }
+  sit(seat) {
+    if (this.seat || this.character.animator.busy) return;
+    const p = this.character.player.getPosition(), planner = new HousePath(seat.context === "dinner" ? this.house : this.school, 0.24);
+    if (!planner.free(seat.approach.x, seat.approach.z) || !planner.line(p, seat.approach)) {
+      this.say("Come around to the open side of this chair.");
+      return;
+    }
+    this.seat = seat;
+    this.entry = seat.approach.clone();
+    this.seatTime = 0;
+    this.standing = false;
+    this.controller.reset();
+    this.character.player.setPosition(seat.approach);
+    this.character.visual.setLocalEulerAngles(0, seat.yaw, 0);
+    this.character.animator.setCarrying(false);
+    this.character.animator.setIdleClip("MealIdle");
+    this.character.animator.playAction("MealSit", 0.65);
+    if (this.character.grounding) this.character.grounding.surfaceHeight = 0.07;
+    if (this.plate()?.owner === "held") this.transfer(seat.id, seat.plate);
+    if (seat.context === "lunch") this.app.fire("home-play:lunch-arrive", seat.id === "lunch-left" ? "series" : "cute");
+    if (performance.now() - this.lastGreeting > 15e3) {
+      this.say(seat.context === "lunch" ? "There\u2019s room beside us!" : "A little time together at the table.");
+      this.lastGreeting = performance.now();
+    }
+  }
+  stand() {
+    if (!this.seat) return;
+    this.cancelBite();
+    this.standing = true;
+    this.seatTime = 0;
+    this.character.animator.setIdleClip("Idle");
+    this.character.animator.playAction("MealStand", 0.65);
+  }
+  finishSeat() {
+    if (this.entry) this.character.player.setPosition(this.entry);
+    this.seat = null;
+    this.entry = null;
+    this.standing = false;
+    this.character.animator.setIdleClip("Idle");
+    if (this.character.grounding) this.character.grounding.surfaceHeight = null;
+    this.character.animator.setCarrying(!!this.cleanup.carry.item);
+  }
+  cancelBite() {
+    this.character.animator.cancelAction();
+    if (this.actionItem) {
+      this.actionItem.destroy();
+      this.actionItem = null;
+    }
+    this.signatures.clear();
+    this.sync();
+  }
+  bite(drink = false, fruit = false) {
+    const context = this.context(), p = this.plate(context);
+    if (!this.seat || !p || this.character.animator.busy || p.owner !== this.seat.id) return;
+    const identity = p.id, expected = p[fruit ? "fruitBites" : "bites"];
+    if (!drink && expected >= (fruit ? 2 : 3)) return;
+    const prop = new Entity43(drink ? "Cup at mouth" : "Food at mouth", this.app);
+    this.cleanup.carry.socket.addChild(prop);
+    mealGrip(prop, drink, fruit);
+    this.actionItem = prop;
+    if (drink) {
+      prop.addChild(this.home.art.make("cup", "#bad4dc"));
+    } else if (fruit) primitives(this.app, prop)("Fruit bite", "sphere", [0, 0, 0], [0.1, 0.1, 0.1], this.home.art.mat(p.fruit === "apple" ? "#c98276" : "#dfaf67"));
+    else void this.art.food(prop, p.food, p.bites, Number(p.id.split("-").at(-1)) || 0, 0.18);
+    this.actionSource = drink ? "Drinking cup" : fruit ? "Edible fruit" : "Edible serving";
+    const original = this.plates.get(context).entity.findByName(this.actionSource);
+    if (original) original.enabled = false;
+    this.character.animator.playAction(drink ? "MealDrink" : "MealBite", 1.35, () => this.commit(() => {
+      if (this.plate(context)?.id !== identity || !this.seat) return;
+      if (drink) this.home.store.transact((s) => {
+        const plate = context === "dinner" ? s.dinner.plate : s.lunch;
+        if (plate) plate.drink = Math.min(3, plate.drink + 1);
+      });
+      else this.home.store.bite(context, identity, expected, fruit);
+    }));
+  }
+  suspend() {
+    this.serveTime = 0;
+    if (this.seat) {
+      this.cancelBite();
+      this.finishSeat();
+    }
+    this.home.extraCommands = [];
+    this.home.extraFocus = null;
+  }
+  update(dt, mode, available) {
+    if (mode !== this.mode) {
+      this.suspend();
+      this.mode = mode;
+      this.sync();
+    }
+    this.home.extraCommands = [];
+    this.home.extraFocus = null;
+    const day = this.daily.clock.state, breakfastActive = day.phase === "morning" && day.breakfast !== "done";
+    if (this.day !== day.day) {
+      this.suspend();
+      this.day = day.day;
+    }
+    if (day.dinnerServed && !this.home.store.data.dinner.served) this.commit(() => {
+      this.home.store.transact((s) => {
+        s.dinner.served = true;
+      });
+    });
+    const p = this.character.player.getPosition(), context = this.context(), plate = this.plate(), item = this.plates.get(context);
+    this.menu.enabled = mode === "recess";
+    this.root.findByName("Tray return rack").enabled = mode === "recess";
+    this.mealCue.enabled = false;
+    for (const seat of this.seats()) this.boosters.get(seat.id).enabled = seat.context === "lunch" ? mode === "recess" : mode === "cleanup" && !breakfastActive;
+    if (this.serveTime > 0) {
+      this.serveTime -= dt;
+      if (this.serveTime <= 0 && this.plate("lunch")?.owner === "counter" && this.mode === "recess" && p.distance(new Vec339(4.6, 0.09, -20.15)) < 1.5 && !this.cleanup.carry.item) this.character.animator.playAction("PickUp", 0.8, () => {
+        if (this.mode === "recess" && this.plate("lunch")?.owner === "counter") this.take();
+      });
+    }
+    if (this.seat) {
+      this.seatTime += dt;
+      const t = Math.min(1, this.seatTime / 0.65), from = this.standing ? this.seat.sit : this.seat.approach, to = this.standing ? this.seat.approach : this.seat.sit;
+      this.character.player.setPosition(new Vec339().lerp(from, to, t));
+      if (this.character.grounding) this.character.grounding.surfaceHeight = 0.07 + 0.18 * (this.standing ? 1 - t : t);
+      if (this.standing && t >= 1) this.finishSeat();
+    }
+    if (this.actionItem && !this.character.animator.busy) {
+      this.actionItem.destroy();
+      this.actionItem = null;
+      this.signatures.clear();
+      this.sync();
+    }
+    if (!available || !["cleanup", "outdoors", "recess"].includes(mode) || this.cleanup.mode !== "day" || context === "dinner" && breakfastActive) return;
+    const add = (title, run) => this.home.extraCommands.push({ title, run });
+    let detail = "";
+    if (this.seat) {
+      detail = "At the table";
+      if (plate?.owner === this.seat.id) {
+        if (plate.bites < 3) add("Eat", () => this.bite());
+        if (context === "lunch" && plate.fruitBites < 2) add("Eat fruit", () => this.bite(false, true));
+        add("Drink", () => this.bite(true));
+      }
+      add("Stand up", () => this.stand());
+      if (this.character.animator.busy) add("Stop bite", () => this.cancelBite());
+    } else if (context === "dinner" && day.dinnerServed && Math.hypot(p.x - propPoint("dining", new Vec339(0.55, 0, 11.9)).x, p.z - propPoint("dining", new Vec339(0.55, 0, 11.9)).z) < 1 && !plate && !this.cleanup.carry.item) {
+      detail = "Dad\u2019s dinner";
+      if (this.home.store.data.dinner.portions.some(Boolean)) add("Take a portion", () => this.character.animator.playAction("PickUp", 0.8, () => this.commit(() => {
+        if (this.mode === "cleanup") this.home.store.claimDinner();
+      })));
+    }
+    if (!this.seat && context === "lunch" && Math.hypot(p.x - 4.6, p.z + 20.15) < 1.45 && !plate && !this.cleanup.carry.item) {
+      detail = `${this.selectedMain === "pizza" ? "Pizza" : "Sandwich"} \xB7 ${this.selectedFruit}`;
+      add("Take lunch", () => {
+        this.commit(() => {
+          if (this.home.store.lunch(this.selectedMain, this.selectedFruit, true)) {
+            this.serveTime = this.serveStart;
+            this.app.fire("home-play:serve");
+          }
+        });
+      });
+      add(this.selectedMain === "pizza" ? "Choose sandwich" : "Choose pizza", () => {
+        this.selectedMain = this.selectedMain === "pizza" ? "sandwich" : "pizza";
+      });
+      add(this.selectedFruit === "apple" ? "Choose orange" : "Choose apple", () => {
+        this.selectedFruit = this.selectedFruit === "apple" ? "orange" : "apple";
+      });
+    }
+    if (!this.seat) {
+      const nearest = this.seats().filter((s) => s.context === context && p.distance(s.approach) < 0.95)[0];
+      if (nearest) {
+        this.mealCue.enabled = true;
+        this.mealCue.setPosition(nearest.approach.x, 0.09, nearest.approach.z);
+        if (plate?.owner === "held") {
+          add("Set plate down", () => this.character.animator.playAction("PutDown", 0.8, () => this.transfer(nearest.id, nearest.plate)));
+          detail = "An open place";
+        }
+        if (!this.cleanup.carry.item || plate?.owner === "held") add("Sit down", () => this.sit(nearest));
+      }
+      if (nearest && context === "dinner" && plate?.owner === "held" && plate.bites === 3 && this.home.store.data.dinner.portions.some(Boolean)) add("Take another portion", () => this.character.animator.playAction("PickUp", 0.8, () => this.commit(() => {
+        this.home.store.refillDinner();
+      })));
+      if (plate && plate.owner !== "held" && !this.cleanup.carry.item && Math.hypot(p.x - plate.position[0], p.z - plate.position[2]) < 1.65) {
+        add("Pick up plate", () => this.character.animator.playAction("PickUp", 0.8, () => this.take()));
+        detail = "Your meal";
+      }
+      if (plate?.owner === "held") {
+        const atReturn = context === "dinner" ? p.distance(propPoint("sink", new Vec339(-1.7, 0.09, 11.45))) < 1.1 : p.distance(new Vec339(9.5, 0.09, -19.65)) < 1.15;
+        if (atReturn) {
+          add(context === "dinner" ? "Return plate" : "Return tray", () => this.commit(() => {
+            this.home.store.returnPlate(context);
+            this.cleanup.carry.release(this.root, [0, 0, 0]);
+            item.entity.enabled = false;
+            this.character.animator.setCarrying(false);
+          }));
+          detail = context === "dinner" ? "Kitchen sink" : "Tray rack";
+        }
+        add("Leave plate here", () => {
+          const planner = new HousePath(context === "dinner" ? this.house : this.school, 0.1);
+          if (planner.free(p.x, p.z)) this.transfer("world", new Vec339(p.x, 0.09, p.z));
+        });
+        detail = detail || "Your meal";
+      }
+    }
+    if (this.home.extraCommands.length) this.home.extraFocus = { title: "", detail: detail || "Meal time", icon: "\u{1F37D}", enabled: true };
+    this.sync();
+    if (this.serveTime > 0 && this.plate("lunch")?.owner === "counter") {
+      const phase = 1 - this.serveTime / this.serveStart, t = Math.max(0, (phase - 0.4) / 0.6), e = this.plates.get("lunch").entity;
+      e.setPosition(4.6, 1.34 + Math.sin(t * Math.PI) * 0.04, -21.5 + t * 0.7);
+      for (const name of ["Edible serving", "Edible fruit"]) {
+        const part = e.findByName(name);
+        if (part) part.enabled = phase >= 0.4;
+      }
+    }
+  }
+  snapshot() {
+    return { seat: this.seat?.id, standing: this.standing, plate: this.plate(), seats: this.seats().map((s) => ({ ...s, approach: s.approach.toArray(), sit: s.sit.toArray(), plate: s.plate.toArray() })), main: this.selectedMain, fruit: this.selectedFruit };
+  }
+  destroy() {
+    this.suspend();
+    this.root.destroy();
+    this.art.destroy();
+  }
+};
+
 // src/game/Fishing.ts
-import { Asset as Asset10, Entity as Entity41, Vec3 as Vec338, Quat as Quat10, BoundingBox as BoundingBox19, AnimData as AnimData8, AnimTrack as AnimTrack8 } from "playcanvas";
+import { Asset as Asset10, Entity as Entity45, Vec3 as Vec341, Quat as Quat11, BoundingBox as BoundingBox21, AnimData as AnimData8, AnimTrack as AnimTrack8 } from "playcanvas";
+init_AssetUrls();
+init_primitives();
 
 // src/game/FishingRod.ts
-import { Entity as Entity40, Mat4 as Mat43, Mesh as Mesh6, MeshInstance as MeshInstance6, Vec3 as Vec337 } from "playcanvas";
+import { Entity as Entity44, Mat4 as Mat43, Mesh as Mesh7, MeshInstance as MeshInstance7, Vec3 as Vec340 } from "playcanvas";
 function flexibleRod(app, root, source) {
   const inverse = new Mat43().copy(root.getWorldTransform()).invert(), parts = [];
-  const output = new Entity40("Flexible rod mesh", app);
+  const output = new Entity44("Flexible rod mesh", app);
   root.addChild(output);
   const instances = [];
   for (const render of source.findComponents("render")) {
@@ -11324,17 +13513,17 @@ function flexibleRod(app, root, source) {
       original.mesh.getUvs(0, uv);
       const transform = new Mat43().mul2(inverse, original.node.getWorldTransform());
       for (let i = 0; i < positions.length; i += 3) {
-        const p = transform.transformPoint(new Vec337(positions[i], positions[i + 1], positions[i + 2])), n = transform.transformVector(new Vec337(normals[i], normals[i + 1], normals[i + 2])).normalize();
+        const p = transform.transformPoint(new Vec340(positions[i], positions[i + 1], positions[i + 2])), n = transform.transformVector(new Vec340(normals[i], normals[i + 1], normals[i + 2])).normalize();
         positions.splice(i, 3, p.x, p.y, p.z);
         normals.splice(i, 3, n.x, n.y, n.z);
       }
-      const mesh = new Mesh6(app.graphicsDevice);
+      const mesh = new Mesh7(app.graphicsDevice);
       mesh.setPositions(positions);
       mesh.setNormals(normals);
       if (uv.length) mesh.setUvs(0, uv);
       mesh.setIndices(indices);
       mesh.update();
-      instances.push(new MeshInstance6(mesh, original.material, output));
+      instances.push(new MeshInstance7(mesh, original.material, output));
       parts.push({ mesh, positions, normals });
     }
     render.enabled = false;
@@ -11348,7 +13537,7 @@ function flexibleRod(app, root, source) {
       for (let i = 0; i < positions.length; i += 3) {
         const t = Math.max(0, Math.min(1, (positions[i + 1] - 0.35) / 1.47));
         positions[i + 2] += bend * t * t;
-        const n = new Vec337(normals[i], normals[i + 1] - 2 * bend * t / 1.47 * normals[i + 2], normals[i + 2]).normalize();
+        const n = new Vec340(normals[i], normals[i + 1] - 2 * bend * t / 1.47 * normals[i + 2], normals[i + 2]).normalize();
         normals[i] = n.x;
         normals[i + 1] = n.y;
         normals[i + 2] = n.z;
@@ -11357,7 +13546,7 @@ function flexibleRod(app, root, source) {
       p.mesh.setNormals(normals);
       p.mesh.update();
     }
-  }, tip: () => root.getWorldTransform().transformPoint(new Vec337(0, 1.82, bend)) };
+  }, tip: () => root.getWorldTransform().transformPoint(new Vec340(0, 1.82, bend)) };
 }
 
 // src/game/Fishing.ts
@@ -11386,10 +13575,10 @@ var Fishing = class {
     this.save = save;
     this.splash = new Audio(assetUrl("assets/outdoors/pond-splash.mp3"));
     this.splash.preload = "auto";
-    this.root = new Entity41("Pond fishing presentation", app);
+    this.root = new Entity45("Pond fishing presentation", app);
     parent.addChild(this.root);
     const shape = primitives(app, this.root), wood = material("Fishing rod cork", "#ac8762"), red = material("Bobber coral", "#f1958c"), cream = material("Fishing cream", "#fff1d7");
-    this.rod = new Entity41("Hand fitted fishing rod", app);
+    this.rod = new Entity45("Hand fitted fishing rod", app);
     this.root.addChild(this.rod);
     const r = primitives(app, this.rod);
     r("Cork grip", "cylinder", [0, 0.12, 0], [0.07, 0.24, 0.07], wood);
@@ -11404,7 +13593,7 @@ var Fishing = class {
     this.root.enabled = false;
     this.setupControls();
     const rodReady = this.load("fishingrod_lvl1").then((res) => {
-      const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity41("Rod normalization", app);
+      const e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), scale = 1.82 / (bounds.halfExtents.y * 2), pivot = new Entity45("Rod normalization", app);
       this.rod.addChild(pivot);
       pivot.addChild(e);
       pivot.setLocalScale(scale, scale, scale);
@@ -11413,9 +13602,9 @@ var Fishing = class {
       for (const name of ["Cork grip", "Slender rod", "Reel"]) this.rod.findByName(name).enabled = false;
     });
     this.ready = Promise.all(FISH.map(async ([file], i) => {
-      const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity41(file, app);
+      const res = await this.load(file), e = res.instantiateRenderEntity({ castShadows: true }), bounds = this.bounds(e), anchor = new Entity45(file, app);
       this.root.addChild(anchor);
-      const normalization = new Entity41("Fish size and origin", app);
+      const normalization = new Entity45("Fish size and origin", app);
       anchor.addChild(normalization);
       normalization.addChild(e);
       const scale = 0.8 / Math.max(bounds.halfExtents.x * 2, bounds.halfExtents.y * 2, bounds.halfExtents.z * 2);
@@ -11459,7 +13648,7 @@ var Fishing = class {
   prev = "";
   lastClip = "";
   settle = 0;
-  startPoint = new Vec338();
+  startPoint = new Vec341();
   caught = false;
   saveError = "";
   side = 0;
@@ -11500,7 +13689,7 @@ var Fishing = class {
     });
   }
   bounds(e) {
-    const b = new BoundingBox19();
+    const b = new BoundingBox21();
     let first = true;
     for (const r of e.findComponents("render")) for (const m of r.meshInstances) {
       if (first) {
@@ -11639,7 +13828,7 @@ var Fishing = class {
     }
     this.settle += dt;
     const blend = Math.min(1, this.settle / 0.7), ease = blend * blend * (3 - 2 * blend);
-    this.character.player.setPosition(new Vec338().lerp(this.startPoint, POND.stand, ease));
+    this.character.player.setPosition(new Vec341().lerp(this.startPoint, POND.stand, ease));
     this.round.update(dt);
     const r = this.round;
     if (!this.active) {
@@ -11725,7 +13914,7 @@ var Fishing = class {
     this.lastFish.copy(this.fishPoint);
     this.fishPoint.copy(POND.bobber);
     if (r.phase === "reel") {
-      const near = new Vec338(-4.85, 0.16, -10.35), far = POND.bobber;
+      const near = new Vec341(-4.85, 0.16, -10.35), far = POND.bobber;
       this.fishPoint.lerp(near, far, r.distance);
       const target = r.pullSide * 0.68 + Math.sin(r.fightTime * 2) * 0.13;
       this.side += (target - this.side) * Math.min(1, dt * 3);
@@ -11737,22 +13926,22 @@ var Fishing = class {
     }
     const hands = this.character.animator.snapshot().hands;
     if (hands.length === 2) {
-      const hand = new Vec338(...hands[1]);
+      const hand = new Vec341(...hands[1]);
       this.rod.setPosition(hand);
-      const tip = new Vec338().lerp(hand, this.fishPoint, 0.58);
+      const tip = new Vec341().lerp(hand, this.fishPoint, 0.58);
       tip.y += 1.35 + (r.phase === "cast" ? Math.sin(r.elapsed / 1.93 * Math.PI) * 0.7 : 0);
-      this.rod.setRotation(new Quat10().setFromDirections(Vec338.UP, tip.sub(hand).normalize()));
+      this.rod.setRotation(new Quat11().setFromDirections(Vec341.UP, tip.sub(hand).normalize()));
     }
     this.flexible?.update(r.phase === "reel" ? r.tension * 0.3 + (r.pullSide ? Math.sin(r.total * 18) * 0.018 : 0) : 0.015, dt);
     this.rod.enabled = !["catch", "release"].includes(r.phase);
-    const rodTip = this.flexible?.tip() ?? this.rod.getWorldTransform().transformPoint(new Vec338(0, 1.82, 0));
+    const rodTip = this.flexible?.tip() ?? this.rod.getWorldTransform().transformPoint(new Vec341(0, 1.82, 0));
     let bob = this.fishPoint.clone();
     if (r.phase === "wait") {
       const twitch = Math.max(0, 1 - Math.abs(r.elapsed - 1.05) / 0.22);
       bob.y -= twitch * 0.035;
     }
     bob.y += r.phase === "bite" ? -0.08 + Math.sin(r.elapsed * 24) * 0.04 : Math.sin(r.total * 3) * 0.025;
-    if (r.phase === "prepare") bob.copy(rodTip).add(new Vec338(0, -0.35, 0));
+    if (r.phase === "prepare") bob.copy(rodTip).add(new Vec341(0, -0.35, 0));
     if (r.phase === "cast") {
       const t = Math.min(1, r.elapsed / 1.5);
       bob.lerp(rodTip, bob, t);
@@ -11772,8 +13961,8 @@ var Fishing = class {
       w.setLocalScale(s, s * 0.7, s);
     });
     const delta = bob.clone().sub(rodTip);
-    this.line.setPosition(new Vec338().lerp(bob, rodTip, 0.5));
-    this.line.setRotation(new Quat10().setFromDirections(Vec338.UP, delta.clone().normalize()));
+    this.line.setPosition(new Vec341().lerp(bob, rodTip, 0.5));
+    this.line.setRotation(new Quat11().setFromDirections(Vec341.UP, delta.clone().normalize()));
     this.line.setLocalScale(8e-3, delta.length(), 8e-3);
     this.line.enabled = !["catch", "release"].includes(r.phase);
     const reward = this.receipt ? this.reward : this.fishes[r.fishIndex];
@@ -11786,7 +13975,7 @@ var Fishing = class {
       if (move.lengthSq() > 1e-6) fish.setEulerAngles(0, Math.atan2(move.x, move.z) * 180 / Math.PI, Math.sin(r.total * 7) * 6);
     }
     if (reward && ["catch", "release"].includes(r.phase)) {
-      const landing = new Vec338(-5.55, 1.55, -10.65), release = r.phase === "release", t = Math.min(1, release ? r.elapsed / 0.95 : this.catchTime / 0.8), ease = t * t * (3 - 2 * t), point = new Vec338().lerp(release ? landing : this.landingPoint, release ? POND.bobber : landing, ease);
+      const landing = new Vec341(-5.55, 1.55, -10.65), release = r.phase === "release", t = Math.min(1, release ? r.elapsed / 0.95 : this.catchTime / 0.8), ease = t * t * (3 - 2 * t), point = new Vec341().lerp(release ? landing : this.landingPoint, release ? POND.bobber : landing, ease);
       if (this.receipt) {
         reward.setPosition(point);
         reward.rotateLocal(0, dt * 24, 0);
@@ -11957,6 +14146,9 @@ var GameLoop = class {
     this.encounters = new OutdoorEncounters(app, character, controller, (s) => this.message(s));
     this.dailyPlay = new DailyPlay(app, character, controller, camera, (s) => this.message(s));
     this.schoolGate = new SchoolGatePlay(app, character, controller, room, camera);
+    this.homePlay = new HomePlay(app, character, controller, room, cleanup, props.daily, (s) => this.message(s), camera);
+    this.meals = new MealPlay(app, this.homePlay, character, controller, cleanup, props.daily, this.recess, room, (s) => this.message(s));
+    cleanup.externalAction = () => !!this.homePlay.focus && (this.homePlay.press() || true);
     this.popUI.onPrizes = () => {
       void this.ticketShop.open();
       this.controller.reset();
@@ -11994,11 +14186,11 @@ var GameLoop = class {
       const away = this.mode !== "cleanup";
       if (away && daily.clock.state.phase !== "night") return;
       this.huntUI.dialog.close();
-      const position = this.character.player.getPosition().clone();
+      const position2 = this.character.player.getPosition().clone();
       if (this.mode !== "cleanup" && daily.clock.state.phase === "night") this.startCleanup();
       this.cleanup.configure("day");
       if (daily.clock.state.phase === "afternoon" || away) this.character.player.setPosition(-2.1, 0.09, 8.2);
-      else if (daily.clock.state.phase !== "morning") this.character.player.setPosition(position);
+      else if (daily.clock.state.phase !== "morning") this.character.player.setPosition(position2);
     };
     el("#game").dataset.scene = "cleanup";
     this.action = new ActionButton(el("#action-button"), this.press, () => {
@@ -12091,6 +14283,8 @@ var GameLoop = class {
   recessFromGate = false;
   dailyPlay;
   schoolGate;
+  homePlay;
+  meals;
   recessFromSchool = false;
   travelUntil = 0;
   inspecting = null;
@@ -12104,8 +14298,8 @@ var GameLoop = class {
   messageUntil = 0;
   pendingCredit = null;
   baseZoom = 9;
-  screen = new Vec339();
-  markerPoint = new Vec339();
+  screen = new Vec342();
+  markerPoint = new Vec342();
   developerPaused = false;
   developerClockFrozen = false;
   destination = "";
@@ -12194,6 +14388,8 @@ var GameLoop = class {
     el("#collection-button").textContent = `Collection \xB7 ${discovered} / ${DUMPLINGS.length}${data.boxes.length ? ` \xB7 \u{1F381} ${data.boxes.length}` : ""}`;
   }
   transition(mode, continuous = false) {
+    this.meals.suspend();
+    this.homePlay.suspend();
     if (this.mode === "outdoors" && mode !== "outdoors") {
       this.dailyPlay.leave();
       this.schoolGate.leave();
@@ -12206,8 +14402,9 @@ var GameLoop = class {
     if (mode !== "outdoors" && this.controller.riding) this.scooter.dismount();
     if (this.mode === "cleanup" && mode !== "cleanup") {
       this.props.reset();
-      this.cleanup.carry.item = null;
+      if (!this.homePlay.carrying) this.cleanup.carry.item = null;
       this.character.animator.reset();
+      this.character.animator.setCarrying(this.homePlay.carrying);
     }
     this.mode = mode;
     this.cleanup.setActive(mode === "cleanup");
@@ -12407,6 +14604,10 @@ var GameLoop = class {
   }
   press = () => this.attempt(() => {
     if (this.travelUntil || this.inspecting) return;
+    if (this.homePlay.focus) {
+      this.homePlay.press();
+      return;
+    }
     if (this.mode === "recess") {
       const seat = this.recess.seats.find((s) => s.id === this.focus && this.character.player.getPosition().distance(s.anchor) < 1.05);
       if (seat) {
@@ -12487,7 +14688,7 @@ var GameLoop = class {
     const p = this.character.player.getPosition();
     if (this.mode === "outdoors") this.room.root.enabled = p.x > -36 && p.z > -35;
     if (this.mode === "cleanup" && p.x < -3.5 && p.z > 7.5 && p.z < 9.1) {
-      if (this.cleanup.carry.item) {
+      if (this.cleanup.carry.item && !this.homePlay.carrying) {
         this.character.player.setPosition(-3.05, p.y, p.z);
         this.message("Put your things away before heading outside.");
       } else this.enterOutdoors();
@@ -12509,8 +14710,10 @@ var GameLoop = class {
     this.outdoors.update(outdoorDt, p, this.mode === "outdoors");
     this.neighborhood.update(p, this.mode === "outdoors");
     const playAvailable = !this.fishing.active && !this.huntUI.dialog.open && !this.popUI.isOpen && !el("#collection-dialog").open;
+    this.homePlay.update(document.hidden ? 0 : outdoorDt, this.mode, playAvailable && !this.ticketShop.dialog.open && !this.tradingUI.dialog.open && !this.tornado?.active && !document.querySelector("dialog[open]") && !this.cleanup.activeInteractionId);
+    this.meals.update(document.hidden ? 0 : outdoorDt, this.mode, playAvailable && !document.querySelector("dialog[open]") && !this.tornado?.active && !this.cleanup.activeInteractionId);
     this.dailyPlay.update(0, false, false, this.props.daily.clock.state.day);
-    this.schoolGate.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors" && this.props.daily.clock.state.phase !== "night", playAvailable && !this.ticketShop.dialog.open && !this.character.placeholder.enabled);
+    this.schoolGate.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors" && this.props.daily.clock.state.phase !== "night", playAvailable && !this.homePlay.carrying && !this.ticketShop.dialog.open && !this.character.placeholder.enabled);
     this.encounters.update(document.hidden ? 0 : outdoorDt, this.mode === "outdoors", playAvailable && !this.dailyPlay.occupied && !this.schoolGate.carrying && !this.schoolGate.busy, this.props.daily.clock.state.day);
     this.fishing.update(document.hidden ? 0 : outdoorDt);
     el("#game").dataset.fishing = String(this.fishing.active);
@@ -12539,6 +14742,7 @@ var GameLoop = class {
     if (this.mode === "cleanup") this.cleanup.mission.tick(now);
     this.controller.enabled = (!school || this.mode === "recess") && (this.mode !== "recess" || this.recess.isReady) && !this.ticketShop.dialog.open && !this.tradingUI.dialog.open && !this.travelUntil && !this.inspecting && !this.huntUI.dialog.open && (this.mode === "outdoors" || this.mode === "recess" || this.mode === "store" || this.mode === "cleanup" && this.cleanup.mission.state !== "finished" && !this.cleanup.movementLocked) && !el("#collection-dialog").open;
     if (this.mode === "outdoors" && (this.dailyPlay.movementLocked || this.schoolGate.movementLocked)) this.controller.enabled = false;
+    if (this.meals.locked || this.homePlay.sitting) this.controller.enabled = false;
   }
   update(now) {
     this.nextStore.hidden = this.mode !== "store" || this.popUI.isOpen || !!this.travelUntil || Object.values(this.save.data.hunt?.stores ?? {}).filter((s) => s.visited).length >= 2;
@@ -12577,6 +14781,7 @@ var GameLoop = class {
     if (this.mode === "cleanup") {
       el("#task-list").hidden = this.cleanup.mode === "practice";
       this.cleanup.update(now, this.controller.input.lengthSq() > 0);
+      this.homePlay.paintHUD();
       if (this.cleanup.mode === "day") {
         el("#allowance").textContent = `$${this.save.data.balance}`;
         el("#day-label").textContent = `Day ${this.props.daily.clock.state.day} \xB7 ${this.props.daily.clock.state.phase === "afternoon" ? "After school" : this.props.daily.clock.state.phase}`;
@@ -12587,7 +14792,7 @@ var GameLoop = class {
     let title = "Action", detail = "Come closer", icon = "\u270B", enabled = false;
     if (this.mode === "outdoors") {
       const p = this.character.player.getPosition();
-      this.focus = p.distance(POND.stand) < 1.25 ? "pond-fish" : p.distance(SCHOOL_GATE) < 1.8 ? "school-gate" : p.distance(new Vec339(-6.3, 0.09, 8.25)) < 1.2 && clock.canShop ? "outdoor-shops" : "";
+      this.focus = p.distance(POND.stand) < 1.25 ? "pond-fish" : p.distance(SCHOOL_GATE) < 1.8 ? "school-gate" : p.distance(new Vec342(-6.3, 0.09, 8.25)) < 1.2 && clock.canShop ? "outdoor-shops" : "";
       const stop = SHOP_STOPS.find((s) => Math.hypot(s.x - p.x, p.z - SHOP_DOOR_Z) < 1.7);
       if (stop) this.focus = "neighborhood-shop-" + stop.id;
       title = this.focus === "pond-fish" ? "FISH" : this.focus === "school-gate" ? "Enter school" : this.focus === "outdoor-shops" ? "Visit shops" : "Explore";
@@ -12714,6 +14919,7 @@ var GameLoop = class {
     el("#action-detail").textContent = detail;
     el("#action-icon").textContent = icon;
     button2.setAttribute("aria-label", `${title}: ${detail}`);
+    this.homePlay.paintHUD();
   }
   developerHold(paused) {
     this.tornado?.pause(paused);
@@ -12861,12 +15067,12 @@ var GameLoop = class {
         break;
       case "restock":
         this.save.developerEdit((data) => {
-          const fresh2 = createHuntDay(daily.clock.state.day);
+          const fresh3 = createHuntDay(daily.clock.state.day);
           if (data.hunt) {
-            fresh2.activeStore = data.hunt.activeStore;
-            fresh2.clockFloor = data.hunt.clockFloor;
+            fresh3.activeStore = data.hunt.activeStore;
+            fresh3.clockFloor = data.hunt.clockFloor;
           }
-          data.hunt = fresh2;
+          data.hunt = fresh3;
           data.trip.purchases = 0;
         });
         for (const store of this.stores) store.sync(this.save.data.hunt.stores[store.definition.id]);
@@ -12893,6 +15099,8 @@ var GameLoop = class {
       phase: this.opening.phase,
       reveal: this.save.data.reveal ? { ...this.save.data.reveal } : null,
       focus: this.focus,
+      meals: this.meals.snapshot(),
+      homePlay: this.homePlay.snapshot(),
       schoolGate: this.schoolGate.snapshot(),
       dailyPlay: this.dailyPlay.snapshot(),
       neighborhood: this.neighborhood.snapshot(),
@@ -12910,6 +15118,8 @@ var GameLoop = class {
     };
   }
   destroy() {
+    this.meals.destroy();
+    this.homePlay.destroy();
     this.dailyPlay.destroy();
     this.schoolGate.destroy();
     this.neighborhood.destroy();
@@ -12927,23 +15137,23 @@ var GameLoop = class {
 };
 
 // src/ui/HouseNavigation.ts
-import { Vec3 as Vec340 } from "playcanvas";
+import { Vec3 as Vec343 } from "playcanvas";
 var HouseNavigation = class {
   current = "bedroom";
   root = document.querySelector("#house-doors");
-  point = new Vec340();
-  screen = new Vec340();
+  point = new Vec343();
+  screen = new Vec343();
   labels = HOUSE_DOORS.map((door) => {
     const label = document.createElement("span");
     label.className = "door-label";
     this.root.append(label);
     return { door, label };
   });
-  update(position, camera, enabled, mission) {
+  update(position2, camera, enabled, mission) {
     this.root.hidden = true;
     document.querySelector("#room-connections").hidden = true;
     if (!enabled) return;
-    const room = HOUSE_ROOMS.find((room2) => position.x >= room2.minX && position.x <= room2.maxX && position.z >= room2.minZ && position.z <= room2.maxZ);
+    const room = HOUSE_ROOMS.find((room2) => position2.x >= room2.minX && position2.x <= room2.maxX && position2.z >= room2.minZ && position2.z <= room2.maxZ);
     if (room) this.current = room.id;
     const current = HOUSE_ROOMS.find((room2) => room2.id === this.current);
     document.querySelector("h1").textContent = current.title;
@@ -12967,22 +15177,25 @@ var HouseNavigation = class {
 };
 
 // src/game/Lilah.ts
-import { Asset as Asset11, BoundingBox as BoundingBox20, Entity as Entity42, Vec3 as Vec341 } from "playcanvas";
+init_PropSpace();
+init_AssetUrls();
+import { Asset as Asset11, BoundingBox as BoundingBox22, Entity as Entity46, Vec3 as Vec344 } from "playcanvas";
+init_primitives();
 var Lilah = class {
   constructor(app, house, daily) {
     this.app = app;
     this.house = house;
     this.daily = daily;
-    this.root = new Entity42("Lilah \xB7 age 2", app);
+    this.root = new Entity46("Lilah \xB7 age 2", app);
     app.root.addChild(this.root);
     this.root.setPosition(1, 0.09, 0.7);
-    this.visual = new Entity42("Lilah visual", app);
+    this.visual = new Entity46("Lilah visual", app);
     this.root.addChild(this.visual);
-    const placeholder = new Entity42("Lilah loading", app);
+    const placeholder = new Entity46("Lilah loading", app);
     this.visual.addChild(placeholder);
     this.animator = new CharacterAnimator(this.visual, placeholder);
     this.planner = new HousePath(house);
-    this.socket = new Entity42("Lilah toy grip", app);
+    this.socket = new Entity46("Lilah toy grip", app);
     this.visual.addChild(this.socket);
     this.animator.bindCarrySocket(this.socket);
     this.toy = primitives(app, this.socket)("Favorite block", "box", [0, 0, 0], [0.13, 0.13, 0.13], material("Lilah favorite block", "#edb867"));
@@ -13031,6 +15244,29 @@ var Lilah = class {
   speechUntil = 0;
   visited = /* @__PURE__ */ new Set();
   scripted = false;
+  playArrival = null;
+  playUntil = 0;
+  sharedUntil = 0;
+  get playSocket() {
+    return this.socket;
+  }
+  sharePlayToy() {
+    this.animator.cancelAction();
+    this.animator.setCarrying(true);
+    this.sharedUntil = this.time + 3.2;
+    this.nextDecision = this.sharedUntil + 2;
+  }
+  inviteToy(point, onArrival) {
+    if (!this.daily.lilahAvailable || this.scripted || this.job || this.carrying || this.playArrival || this.time < this.sharedUntil + 3 || this.daily.clock.state.minutes >= 1095 || this.root.getPosition().distance(point) > 5) return false;
+    for (const [dx, dz] of [[0, 0.6], [0.6, 0], [0, -0.6], [-0.6, 0]]) if (this.go(new Vec344(point.x + dx, 0, point.z + dz), "free-play")) {
+      this.playArrival = onArrival;
+      this.playUntil = this.time + 12;
+      this.state = "looking";
+      this.say("Let me see!");
+      return true;
+    }
+    return false;
+  }
   job = null;
   get ready() {
     return this.loaded;
@@ -13079,7 +15315,7 @@ var Lilah = class {
     const job = this.job;
     if (!job || this.animator.busy) return;
     if (this.route.length) {
-      const p = this.root.getPosition(), next = this.route[0], delta = new Vec341(next.x - p.x, 0, next.z - p.z), distance = delta.length();
+      const p = this.root.getPosition(), next = this.route[0], delta = new Vec344(next.x - p.x, 0, next.z - p.z), distance = delta.length();
       if (distance < 0.035) {
         this.route.shift();
         return;
@@ -13090,11 +15326,11 @@ var Lilah = class {
       if (separation < 0.43 && separation <= previousSeparation) {
         job.blocked += dt;
         if (job.blocked > 0.45) {
-          const obstacle = new BoundingBox20(new Vec341(arianna.x, 0, arianna.z), new Vec341(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec341(p.x, 0, p.z);
+          const obstacle = new BoundingBox22(new Vec344(arianna.x, 0, arianna.z), new Vec344(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec344(p.x, 0, p.z);
           let path = planner.route(start, job.point);
           if (!path.length) {
             for (let i = 0; i < 16; i++) {
-              const angle = i * Math.PI / 8, escape = new Vec341(p.x + Math.sin(angle) * 0.65, 0, p.z + Math.cos(angle) * 0.65);
+              const angle = i * Math.PI / 8, escape = new Vec344(p.x + Math.sin(angle) * 0.65, 0, p.z + Math.cos(angle) * 0.65);
               if (Math.hypot(escape.x - arianna.x, escape.z - arianna.z) < 0.55 || (escape.x - p.x) * (p.x - arianna.x) + (escape.z - p.z) * (p.z - arianna.z) <= 0 || !this.planner.line(start, escape)) continue;
               const rest = planner.route(escape, job.point);
               if (rest.length) {
@@ -13112,7 +15348,7 @@ var Lilah = class {
         this.root.setPosition(q);
         velocity.copy(delta).mulScalar(1.05);
       } else {
-        this.route = this.planner.route(new Vec341(p.x, 0, p.z), job.point);
+        this.route = this.planner.route(new Vec344(p.x, 0, p.z), job.point);
       }
     } else {
       if (!job.wait) {
@@ -13130,7 +15366,7 @@ var Lilah = class {
         this.job = null;
         job.drop();
         this.say(job.icon === "\u{1F9FA}" ? "Oops! ALL the toys!" : "Ta-da! Your turn, Ari!");
-      }, new Vec341(job.point.x, 0.1, job.point.z + 0.3));
+      }, new Vec344(job.point.x, 0.1, job.point.z + 0.3));
     }
   }
   async load() {
@@ -13156,7 +15392,7 @@ var Lilah = class {
       walk_playback: 1
     };
     for (const required of ["Idle", "Walk", "CarryIdle", "CarryWalk", "PickUp", "PutDown", "Celebrate"]) if (!tracks2.some((t) => t.name === required)) throw new Error("Missing Lilah clip " + required);
-    const alignment = new Entity42("Lilah ground alignment", this.app);
+    const alignment = new Entity46("Lilah ground alignment", this.app);
     this.visual.addChild(alignment);
     alignment.addChild(model);
     model.setLocalScale(this.height / 1.03, this.height / 1.03, this.height / 1.03);
@@ -13213,17 +15449,17 @@ var Lilah = class {
       this.carrying = false;
       this.toy.enabled = false;
       this.animator.setCarrying(false);
-      this.go(propPoint("crib", new Vec341(8.55, 0, -1.3)), "bedtime");
+      this.go(propPoint("crib", new Vec344(8.55, 0, -1.3)), "bedtime");
       this.nextDecision = this.time + 30;
       return;
     }
     if (Math.random() < 0.55) {
-      for (const [x, z] of [[0.9, 0.7], [-0.9, 0.7], [0.9, -0.7], [-0.9, -0.7]]) if (this.go(new Vec341(arianna.x + x, 0, arianna.z + z), "follow")) break;
+      for (const [x, z] of [[0.9, 0.7], [-0.9, 0.7], [0.9, -0.7], [-0.9, -0.7]]) if (this.go(new Vec344(arianna.x + x, 0, arianna.z + z), "follow")) break;
       this.state = "following";
       this.say(["Ari! Wait for me!", "I do it too!", "Whatcha doing?"][Math.floor(Math.random() * 3)]);
     } else {
       const spots = [[1.1, 1.3], [3.8, 2], [1.4, 5.6], [0.5, 10.8], [4.3, 11.4], [8.4, 0.5]], p = spots[Math.floor(Math.random() * spots.length)];
-      this.go(new Vec341(p[0], 0, p[1]), "explore");
+      this.go(new Vec344(p[0], 0, p[1]), "explore");
       this.state = "exploring";
       this.say("Ooh! What\u2019s that?");
     }
@@ -13248,12 +15484,12 @@ var Lilah = class {
       this.carrying = false;
       this.toy.enabled = false;
       if (this.grounding) this.grounding.surfaceHeight = null;
-      if (this.state === "sleeping" || this.bedStart) this.root.setPosition(propPoint("crib", new Vec341(8.55, 0.09, -1.3)));
+      if (this.state === "sleeping" || this.bedStart) this.root.setPosition(propPoint("crib", new Vec344(8.55, 0.09, -1.3)));
       this.bedStart = null;
       this.state = "watching";
     }
     if ((this.state === "sleeping" || this.bedStart) && !this.daily.clock.state.lilahAsleep && this.daily.clock.state.minutes < 1095) {
-      this.root.setPosition(propPoint("crib", new Vec341(8.55, 0.09, -1.3)));
+      this.root.setPosition(propPoint("crib", new Vec344(8.55, 0.09, -1.3)));
       this.state = "watching";
       this.bedStart = null;
       this.animator.setWorkClip(null);
@@ -13262,12 +15498,20 @@ var Lilah = class {
     }
     if (this.daily.clock.state.lilahAsleep && this.state !== "sleeping") this.restInCrib();
     if (canMischief) this.time += dt;
+    if (this.sharedUntil && this.time >= this.sharedUntil) {
+      this.sharedUntil = 0;
+      this.animator.setCarrying(false);
+    }
+    if (this.playArrival && (!canMischief || this.time > this.playUntil || this.daily.clock.state.lilahAsleep)) {
+      this.playArrival = null;
+      this.route = [];
+    }
     if (!this.scripted && canMischief && this.daily.clock.state.minutes >= 1095 && this.state !== "sleepy" && this.state !== "sleeping" && !this.bedStart) {
       this.route = [];
       this.animator.cancelAction();
       this.decide(arianna);
     }
-    const velocity = new Vec341();
+    const velocity = new Vec344();
     if (this.scripted) this.updateTornado(dt, arianna, velocity);
     else if (this.bedStart) {
       const entry = this.bedStart;
@@ -13296,6 +15540,10 @@ var Lilah = class {
             velocity.set(dx / distance * 0.7, 0, dz / distance * 0.7);
           } else {
             this.route = [];
+            if (this.playArrival) {
+              this.playArrival = null;
+              this.say("A little more room, Ari?");
+            }
             this.nextDecision = this.time + 2;
           }
         }
@@ -13305,13 +15553,22 @@ var Lilah = class {
     this.animator.update(dt, velocity, elapsed);
     const p = this.root.getPosition();
     this.visited.add(p.z < 3 ? "bedroom" : p.z < 9 ? "living" : "kitchen");
-    const screen = camera.camera.worldToScreen(new Vec341(p.x, p.y + this.height + 0.12, p.z));
+    const screen = camera.camera.worldToScreen(new Vec344(p.x, p.y + this.height + 0.12, p.z));
     const viewport = document.querySelector("#game").getBoundingClientRect();
     this.label.hidden = performance.now() > this.speechUntil || screen.x < 10 || screen.x > viewport.width - 10 || screen.y < 130 || screen.y > viewport.height - 130;
     this.label.style.transform = `translate(${Math.max(4, Math.min(viewport.width - this.label.offsetWidth - 4, screen.x - this.label.offsetWidth / 2))}px,${screen.y - this.label.offsetHeight}px)`;
   }
   arrive() {
     this.nextDecision = this.time + 7;
+    if (this.destination === "free-play" && this.playArrival) {
+      const done = this.playArrival;
+      this.playArrival = null;
+      this.state = "playing";
+      this.say("I found it! My turn!");
+      this.animator.playAction("Celebrate", 1.6);
+      done();
+      return;
+    }
     if (this.destination === "mess") {
       this.animator.playAction("PutDown", 0.8, () => {
         const made = this.daily.clock.state.phase !== "night" && this.daily.lilahMesses.add(this.root.getPosition());
@@ -13344,7 +15601,8 @@ var Lilah = class {
 };
 
 // src/game/LilahTornado.ts
-import { Entity as Entity43, Vec3 as Vec342 } from "playcanvas";
+import { Entity as Entity47, Vec3 as Vec345 } from "playcanvas";
+init_primitives();
 
 // src/systems/TornadoRules.ts
 var TORNADO_SECONDS = 55;
@@ -13506,7 +15764,7 @@ var LilahTornado = class {
     this.action.enabled = true;
     this.notice = "Follow Lilah\u2019s thought bubbles. Tap Action near a mess!";
     this.noticeUntil = 6;
-    this.spots = [[1.1, 2.1], [1.1, 4.8], [0.7, 8.1], [0.5, 10.3], [1.8, 11.3], [4.8, 11.5], [3.7, 6.4], [3.8, 2], [8.4, 0.8], [8.1, 7]].map(([x, z]) => new Vec342(x, 0, z)).filter((p) => this.planner.free(p.x, p.z) && this.planner.route(new Vec342(this.character.player.getPosition().x, 0, this.character.player.getPosition().z), p).length > 0);
+    this.spots = [[1.1, 2.1], [1.1, 4.8], [0.7, 8.1], [0.5, 10.3], [1.8, 11.3], [4.8, 11.5], [3.7, 6.4], [3.8, 2], [8.4, 0.8], [8.1, 7]].map(([x, z]) => new Vec345(x, 0, z)).filter((p) => this.planner.free(p.x, p.z) && this.planner.route(new Vec345(this.character.player.getPosition().x, 0, this.character.player.getPosition().z), p).length > 0);
     this.lilah.beginTornado();
     void this.audio.unlock();
     this.audio.pause(false);
@@ -13535,9 +15793,9 @@ var LilahTornado = class {
       return;
     }
     if (!this.lilah.working && this.elapsed >= this.nextDrop && this.messes.length < 3) {
-      const position = this.lilah.root.getPosition();
-      const candidates = this.spots.map((p, i) => ({ p, i, d: Math.hypot(p.x - position.x, p.z - position.z) })).filter((v) => v.i !== this.lastSpot && v.d > 0.8 && v.d < 12 && !this.messes.some((m) => m.point.distance(v.p) < 1));
-      const room = roomOf(position);
+      const position2 = this.lilah.root.getPosition();
+      const candidates = this.spots.map((p, i) => ({ p, i, d: Math.hypot(p.x - position2.x, p.z - position2.z) })).filter((v) => v.i !== this.lastSpot && v.d > 0.8 && v.d < 12 && !this.messes.some((m) => m.point.distance(v.p) < 1));
+      const room = roomOf(position2);
       candidates.sort((a, b) => Number(roomOf(a.p) === room) - Number(roomOf(b.p) === room) || Number(this.recentSpots.includes(a.i)) - Number(this.recentSpots.includes(b.i)) || a.d - b.d);
       const otherRooms = candidates.filter((c) => roomOf(c.p) !== room);
       if (otherRooms.length) {
@@ -13591,7 +15849,7 @@ var LilahTornado = class {
   }
   spawn(point, type, special) {
     if (this.messes.length >= 3) return;
-    const root = new Entity43("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
+    const root = new Entity47("Tornado " + (special === "none" ? TYPES[type].name : special), this.app);
     this.props.root.addChild(root);
     root.setPosition(point.x, 0.06, point.z);
     const shape = primitives(this.app, root), n = special === "basket" ? 12 : type === 3 ? 5 : 6;
@@ -13620,7 +15878,7 @@ var LilahTornado = class {
   }
   focus() {
     const p = this.character.player.getPosition();
-    return this.messes.filter((m) => Math.hypot(p.x - m.point.x, p.z - m.point.z) < 1.15 && this.sight.line(new Vec342(p.x, 0, p.z), m.point)).sort((a, b) => a.point.distance(p) - b.point.distance(p))[0];
+    return this.messes.filter((m) => Math.hypot(p.x - m.point.x, p.z - m.point.z) < 1.15 && this.sight.line(new Vec345(p.x, 0, p.z), m.point)).sort((a, b) => a.point.distance(p) - b.point.distance(p))[0];
   }
   clean() {
     if (!this.playing || this.cleaning || this.character.animator.busy) return;
@@ -13658,7 +15916,7 @@ var LilahTornado = class {
     if (!pet.loaded) return;
     const p = pet.dog.getPosition(), point = this.spots.filter((v) => !this.messes.some((m) => m.point.distance(v) < 1)).sort((a, b) => a.distance(p) - b.distance(p))[0];
     if (!point) return;
-    const path = this.planner.route(new Vec342(p.x, 0, p.z), point);
+    const path = this.planner.route(new Vec345(p.x, 0, p.z), point);
     if (!path.length) {
       this.specialStarted = true;
       return;
@@ -13673,7 +15931,7 @@ var LilahTornado = class {
     if (!dog || dog.wait < 0 && !dog.route.length) return;
     const root = this.props.pet.dog;
     if (dog.route.length) {
-      const p = root.getPosition(), next = dog.route[0], delta = new Vec342(next.x - p.x, 0, next.z - p.z), distance = delta.length();
+      const p = root.getPosition(), next = dog.route[0], delta = new Vec345(next.x - p.x, 0, next.z - p.z), distance = delta.length();
       if (distance < 0.04) {
         dog.route.shift();
         return;
@@ -13687,7 +15945,7 @@ var LilahTornado = class {
         root.setPosition(dog.point.x, 0.04, dog.point.z);
         this.spawn(dog.point, 0, "dog");
         dog.wait = -1;
-        dog.route = this.planner.route(dog.point, new Vec342(dog.home.x, 0, dog.home.z));
+        dog.route = this.planner.route(dog.point, new Vec345(dog.home.x, 0, dog.home.z));
       }
     }
   }
@@ -13713,7 +15971,7 @@ var LilahTornado = class {
     set("[data-notice]", this.elapsed < this.noticeUntil ? this.notice : this.messes.length === 3 ? "Lilah takes a breather. Pick any mess!" : "\u{1F463} Follow Lilah \xB7 \u2728 Tap Action to tidy");
     const bounds = get("#game").getBoundingClientRect();
     for (const m of this.messes) {
-      const p = this.camera.entity.camera.worldToScreen(new Vec342(m.point.x, 0.4, m.point.z)), x = Math.max(24, Math.min(bounds.width - 24, p.x)), y = Math.max(this.hud.offsetTop + this.hud.offsetHeight + 40, Math.min(bounds.height - 180, p.y));
+      const p = this.camera.entity.camera.worldToScreen(new Vec345(m.point.x, 0.4, m.point.z)), x = Math.max(24, Math.min(bounds.width - 24, p.x)), y = Math.max(this.hud.offsetTop + this.hud.offsetHeight + 40, Math.min(bounds.height - 180, p.y));
       m.label.classList.toggle("near", m === nearest);
       m.label.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
       m.label.classList.toggle("edge", x !== p.x || y !== p.y);
@@ -13813,7 +16071,11 @@ var LilahTornado = class {
 };
 
 // src/game/FamilyDinner.ts
-import { Asset as Asset12, BoundingBox as BoundingBox21, Entity as Entity44, Vec3 as Vec343 } from "playcanvas";
+init_AssetUrls();
+init_PropSpace();
+import { BoundingBox as BoundingBox23, Entity as Entity48, Vec3 as Vec346 } from "playcanvas";
+init_primitives();
+init_ContainerLease();
 var FamilyDinner = class {
   constructor(app, house, daily, root, visual, animator, say) {
     this.app = app;
@@ -13824,22 +16086,18 @@ var FamilyDinner = class {
     this.animator = animator;
     this.say = say;
     this.planner = new HousePath(house, 0.25);
-    this.socket = new Entity44("Dad serving hands", app);
+    this.socket = new Entity48("Dad serving hands", app);
     visual.addChild(this.socket);
     animator.bindCarrySocket(this.socket);
-    this.tray = new Entity44("Family dinner", app);
+    this.tray = new Entity48("Family dinner", app);
     house.root.addChild(this.tray);
     this.tray.enabled = false;
     primitives(app, this.tray)("Dinner platter", "cylinder", [0, 0, 0], [0.72, 0.025, 0.58], material("Dinner china", "#fff2d9"), false);
     void Promise.all(["pizza", "taco", "turkey"].map(async (name) => {
-      const a = new Asset12("Family " + name, "container", { url: assetUrl(`/assets/food/${name}.glb`) });
-      app.assets.add(a);
-      await new Promise((resolve, reject) => {
-        a.once("load", resolve);
-        a.once("error", reject);
-        app.assets.load(a);
-      });
-      const model = a.resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox21();
+      const lease = leaseContainer(app, assetUrl(`/assets/food/${name}.glb`), "Family " + name);
+      this.leases.push(lease);
+      const resource = await lease.ready;
+      const model = resource.instantiateRenderEntity({ castShadows: true }), bounds = new BoundingBox23();
       let first = true;
       for (const r of model.findComponents("render")) for (const m of r.meshInstances) {
         if (first) {
@@ -13866,6 +16124,8 @@ var FamilyDinner = class {
   visual;
   animator;
   say;
+  portionManaged = false;
+  leases = [];
   tray;
   socket;
   models = [];
@@ -13873,7 +16133,7 @@ var FamilyDinner = class {
   day = 0;
   stage = "idle";
   route = [];
-  goal = new Vec343();
+  goal = new Vec346();
   timer = 0;
   blocked = 0;
   retry = 0;
@@ -13881,14 +16141,14 @@ var FamilyDinner = class {
   serving = "pizza";
   table() {
     this.tray.reparent(this.house.root);
-    this.tray.setPosition(propPoint("dining", new Vec343(0.55, 0.99, 14.35)));
+    this.tray.setPosition(propPoint("dining", new Vec346(0.55, 0.99, 14.35)));
     this.tray.setEulerAngles(0, propYaw("dining", 0), 0);
     this.tray.enabled = true;
   }
   go(p, stage) {
     const at = this.root.getPosition();
     this.goal.copy(p);
-    this.route = this.planner.route(new Vec343(at.x, 0, at.z), p);
+    this.route = this.planner.route(new Vec346(at.x, 0, at.z), p);
     this.stage = stage;
     this.blocked = 0;
     return this.route.length > 0;
@@ -13922,11 +16182,11 @@ var FamilyDinner = class {
       if (s.dinnerServed) this.table();
     }
     if (!this.ready) return false;
-    this.models.forEach((m) => m.enabled = m.name === this.serving);
+    this.models.forEach((m) => m.enabled = (!this.portionManaged || !s.dinnerServed) && m.name === this.serving);
     if (this.stage === "idle") {
       if (s.dinnerServed && !this.tray.enabled) this.table();
       if (!canStart || !this.due()) return false;
-      if (!this.go(propPoint("fridge", new Vec343(-1.65, 0, 14.55)), "fetch")) {
+      if (!this.go(propPoint("fridge", new Vec346(-1.65, 0, 14.55)), "fetch")) {
         this.finish();
         return false;
       }
@@ -13935,13 +16195,13 @@ var FamilyDinner = class {
     if (["fetch", "carry", "seat"].includes(this.stage)) {
       const p = this.root.getPosition(), next = this.route[0];
       if (next) {
-        const delta = new Vec343(next.x - p.x, 0, next.z - p.z), distance = delta.length(), step = Math.min(distance, dt * 1.05);
+        const delta = new Vec346(next.x - p.x, 0, next.z - p.z), distance = delta.length(), step = Math.min(distance, dt * 1.05);
         delta.normalize();
         const q = p.clone().add(delta.clone().mulScalar(step));
         if (people.some((v) => Math.hypot(v.x - q.x, v.z - q.z) < 0.6) || !this.planner.free(q.x, q.z)) {
           this.blocked += dt;
           if (this.blocked > 3) {
-            this.route = this.planner.route(new Vec343(p.x, 0, p.z), this.goal);
+            this.route = this.planner.route(new Vec346(p.x, 0, p.z), this.goal);
             this.blocked = 0;
           }
           return true;
@@ -13960,11 +16220,11 @@ var FamilyDinner = class {
         this.stage = "pickup";
         this.timer = 1.4;
         this.animator.setIdleClip("Cleaning");
-        this.animator.faceTowards(propPoint("fridge", new Vec343(-2.65, 1, 14.55)));
+        this.animator.faceTowards(propPoint("fridge", new Vec346(-2.65, 1, 14.55)));
       } else if (this.stage === "carry") {
         this.stage = "place";
         this.timer = 1.1;
-        this.animator.faceTowards(propPoint("dining", new Vec343(0.55, 1, 13.85)));
+        this.animator.faceTowards(propPoint("dining", new Vec346(0.55, 1, 13.85)));
       } else {
         this.stage = "sitting";
         this.timer = 1.3;
@@ -13976,7 +16236,7 @@ var FamilyDinner = class {
       this.timer -= dt;
       if (this.stage === "sitting" || this.stage === "standing") {
         const down = this.stage === "sitting", t = Math.max(0, Math.min(1, 1 - this.timer / (down ? 1.3 : 1.2))), z = down ? 15.65 - 0.55 * t : 15.1 + 0.55 * t;
-        this.root.setPosition(propPoint("dining", new Vec343(0.55, 0.09, z)));
+        this.root.setPosition(propPoint("dining", new Vec346(0.55, 0.09, z)));
       }
       if (this.timer > 0) return true;
       if (this.stage === "pickup") {
@@ -13987,7 +16247,7 @@ var FamilyDinner = class {
         this.tray.setLocalPosition(0, 0.035, 0.06);
         this.tray.setLocalEulerAngles(0, 0, 0);
         this.tray.enabled = true;
-        if (!this.go(propPoint("dining", new Vec343(0.55, 0, 15.65)), "carry")) {
+        if (!this.go(propPoint("dining", new Vec346(0.55, 0, 15.65)), "carry")) {
           this.tray.enabled = false;
           this.finish();
         }
@@ -14006,14 +16266,14 @@ var FamilyDinner = class {
       } else if (this.stage === "sitting") {
         this.stage = "seated";
         this.timer = 12 + s.day % 4 * 2;
-        this.root.setPosition(propPoint("dining", new Vec343(0.55, 0.09, 15.1)));
+        this.root.setPosition(propPoint("dining", new Vec346(0.55, 0.09, 15.1)));
       } else if (this.stage === "seated") {
         this.stage = "standing";
         this.timer = 1.2;
         this.animator.setIdleClip("Idle");
         this.animator.playAction("StandUp", 1.2);
       } else if (this.stage === "standing") {
-        this.root.setPosition(propPoint("dining", new Vec343(0.55, 0.09, 15.65)));
+        this.root.setPosition(propPoint("dining", new Vec346(0.55, 0.09, 15.65)));
         this.finish();
         return false;
       }
@@ -14026,14 +16286,18 @@ var FamilyDinner = class {
   destroy() {
     this.tray.destroy();
     this.socket.destroy();
+    for (const lease of this.leases) lease.release();
   }
 };
 
 // src/game/Marc.ts
-import { Asset as Asset13, AnimData as AnimData9, AnimTrack as AnimTrack9, Entity as Entity45, Quat as Quat11, Vec3 as Vec344 } from "playcanvas";
-var SEAT = new Vec344(4.5, 0, 7.35);
+init_PropSpace();
+init_AssetUrls();
+import { Asset as Asset13, AnimData as AnimData9, AnimTrack as AnimTrack9, Entity as Entity49, Quat as Quat12, Vec3 as Vec347 } from "playcanvas";
+init_primitives();
+var SEAT = new Vec347(4.5, 0, 7.35);
 var YAW = -35;
-var FORWARD = new Vec344(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
+var FORWARD = new Vec347(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
 var ENTRY = SEAT.clone().add(FORWARD.clone().mulScalar(1.02));
 var SEATED = SEAT.clone().add(FORWARD.clone().mulScalar(0.28));
 var PATROL = [[8.4, 0.5], [8.1, 9.6], [0.4, 11.2], [3.8, 2], [1.25, 5.6]];
@@ -14043,12 +16307,12 @@ var Marc = class {
     this.app = app;
     this.house = house;
     this.daily = daily;
-    this.root = new Entity45("Marc", app);
+    this.root = new Entity49("Marc", app);
     app.root.addChild(this.root);
     this.root.setPosition(3.5, 0.09, 6.2);
-    this.visual = new Entity45("Marc visual", app);
+    this.visual = new Entity49("Marc visual", app);
     this.root.addChild(this.visual);
-    const placeholder = new Entity45("Marc loading", app);
+    const placeholder = new Entity49("Marc loading", app);
     this.visual.addChild(placeholder);
     this.animator = new CharacterAnimator(this.visual, placeholder);
     this.planner = new HousePath(house, 0.25);
@@ -14059,7 +16323,7 @@ var Marc = class {
     document.querySelector("#game").append(this.label);
     const colors = ["#cda678", "#c5d9dd", "#b8c39d"];
     for (let i = 0; i < 3; i++) {
-      const tool = new Entity45(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
+      const tool = new Entity49(["Marc toy tidy", "Marc wiping cloth", "Marc crumb brush"][i], app);
       this.root.addChild(tool);
       const shape = primitives(app, tool);
       shape("Dad cleanup tool", "box", [0, 0, 0], i === 0 ? [0.25, 0.16, 0.23] : i === 1 ? [0.3, 0.025, 0.23] : [0.3, 0.07, 0.13], material("Dad tool " + i, colors[i]));
@@ -14100,7 +16364,7 @@ var Marc = class {
   standCount = 0;
   sitCount = 0;
   visited = /* @__PURE__ */ new Set();
-  velocity = new Vec344();
+  velocity = new Vec347();
   blockedFor = 0;
   nextScan = 0;
   async load() {
@@ -14131,7 +16395,7 @@ var Marc = class {
       if (paths.some((p) => p.entityPath.at(-1) === "Spine02" && p.propertyPath[0] === "localRotation")) {
         const data = outputs[curve.output].data;
         for (let i = 0; i < data.length; i += 4) {
-          const q = new Quat11(data[i], data[i + 1], data[i + 2], data[i + 3]).mul(new Quat11().setFromEulerAngles(24, 0, 0));
+          const q = new Quat12(data[i], data[i + 1], data[i + 2], data[i + 3]).mul(new Quat12().setFromEulerAngles(24, 0, 0));
           data[i] = q.x;
           data[i + 1] = q.y;
           data[i + 2] = q.z;
@@ -14141,7 +16405,7 @@ var Marc = class {
     }
     tracks2.push(new AnimTrack9("Cleaning", idle.duration, idle.inputs, outputs, idle.curves));
     const manifest = { animations: tracks2.map((t) => ({ name: t.name, duration_seconds: t.duration, loop: !["SitDown", "StandUp"].includes(t.name) })), locomotion: { Walk: { travel_speed_mps: 1.2 }, CarryWalk: { travel_speed_mps: 1.05 } }, interaction_events: {}, scale: { rest_height_m: 1.8 }, hand_joints: ["LeftHand", "RightHand"], walk_playback: 1 };
-    const alignment = new Entity45("Marc ground alignment", this.app);
+    const alignment = new Entity49("Marc ground alignment", this.app);
     this.visual.addChild(alignment);
     alignment.addChild(model);
     model.setLocalScale(this.height / 1.8, this.height / 1.8, this.height / 1.8);
@@ -14175,7 +16439,7 @@ var Marc = class {
     if (!m) return false;
     const p = this.root.getPosition(), candidates = [];
     for (const radius of [0.65, 0.85]) for (let i = 0; i < 12; i++) {
-      const a = i * Math.PI / 6, v = new Vec344(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
+      const a = i * Math.PI / 6, v = new Vec347(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
       if (this.planner.free(v.x, v.z)) candidates.push(v);
     }
     candidates.sort((a, b) => a.distance(p) - b.distance(p));
@@ -14203,7 +16467,7 @@ var Marc = class {
     this.label.hidden = true;
     if (!this.root.enabled || document.hidden) return;
     if (!active) {
-      this.animator.update(0, new Vec344(), Math.max(elapsed, 1e-3));
+      this.animator.update(0, new Vec347(), Math.max(elapsed, 1e-3));
       return;
     }
     this.time += dt;
@@ -14272,7 +16536,7 @@ var Marc = class {
                   this.until = this.time + 3;
                   this.animator.setIdleClip("Cleaning");
                   const mess = this.mess();
-                  this.animator.faceTowards(new Vec344(mess.x, 0, mess.z));
+                  this.animator.faceTowards(new Vec347(mess.x, 0, mess.z));
                   this.say(["These blocks are plotting against my feet.", "Ah, floor juice. My least favorite flavor.", "Crumbs: the glitter of snack time."][Number(mess.id.at(-1))]);
                 } else {
                   this.state = "idle";
@@ -14293,7 +16557,7 @@ var Marc = class {
         }
       } else if (this.state === "sitting-down" || this.state === "standing-up") {
         const down = this.state === "sitting-down", t = Math.min(1, (this.time - this.transitionStart) / (down ? 1.3 : 1)), smooth2 = t * t * (3 - 2 * t);
-        const p2 = new Vec344().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
+        const p2 = new Vec347().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
         this.root.setPosition(p2.x, 0.09, p2.z);
         this.visual.setLocalEulerAngles(0, propYaw("marc-seat", YAW), 0);
         if (this.time >= this.until && !this.animator.busy) {
@@ -14325,7 +16589,7 @@ var Marc = class {
       } else if (this.time >= this.until) {
         if (this.purpose === "seat" || this.purpose === "mess") {
           const point = PATROL[this.patrolIndex++ % PATROL.length];
-          if (!this.go(new Vec344(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
+          if (!this.go(new Vec347(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
         } else if (!this.go(propPoint("marc-seat", ENTRY), "seat")) this.until = this.time + 3;
       }
       if (this.time < 2 && this.state === "idle") {
@@ -14337,7 +16601,7 @@ var Marc = class {
     this.animator.update(dt, this.velocity, elapsed);
     const p = this.root.getPosition(), room = HOUSE_ROOMS.find((r) => p.x >= r.minX && p.x <= r.maxX && p.z >= r.minZ && p.z <= r.maxZ);
     if (room) this.visited.add(room.id);
-    const screen = camera.camera.worldToScreen(new Vec344(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
+    const screen = camera.camera.worldToScreen(new Vec347(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
     this.label.hidden = performance.now() > this.speechUntil || screen.x < 0 || screen.x > viewport.width || screen.y < 135 || screen.y > viewport.height - 145;
     this.label.style.transform = `translate(${Math.max(6, Math.min(viewport.width - this.label.offsetWidth - 6, screen.x - this.label.offsetWidth / 2))}px,${screen.y - this.label.offsetHeight}px)`;
   }
@@ -14564,7 +16828,7 @@ async function startGame(editorApp) {
   await loadSquishyArt(app);
   const ambientBase = editorApp ? app.scene.ambientLight.clone() : new Color12(0.72, 0.68, 0.77);
   app.scene.ambientLight = ambientBase.clone();
-  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity46("Soft afternoon sunlight", app);
+  const sun = editorApp?.root.findByTag("migration.sun")[0] ?? new Entity51("Soft afternoon sunlight", app);
   if (!sun.light) sun.addComponent("light", {
     type: "directional",
     color: new Color12(1, 0.92, 0.83),
@@ -14594,11 +16858,12 @@ async function startGame(editorApp) {
   const navigation = new HouseNavigation();
   const lilah = new Lilah(app, room, props.daily);
   const marc = new Marc(app, room, props.daily);
+  loop.meals.bindDinner(marc.dinner);
   const tornado = new LilahTornado(app, room, props, cleanup, loop, character, controller, camera, lilah);
   loop.tornado = tornado;
   const label = document.querySelector("#player-label");
-  const screenPoint = new Vec345();
-  const headPoint = new Vec345();
+  const screenPoint = new Vec350();
+  const headPoint = new Vec350();
   const viewport = document.querySelector("#game");
   const resize = () => {
     app.graphicsDevice.maxPixelRatio = window.devicePixelRatio || 1;
@@ -14620,6 +16885,12 @@ async function startGame(editorApp) {
     loop.resetUIInput();
   });
   const dogRoaming = new DogRoaming(room, props.pet.dog, props.daily);
+  loop.homePlay.onInvite = (id, point) => {
+    lilah.inviteToy(point, () => {
+      if (loop.homePlay.reactToVisit(id, lilah.root, lilah.playSocket)) lilah.sharePlayToy();
+    });
+  };
+  loop.homePlay.onFetch = (id) => !tornado.active && !props.pet?.active && dogRoaming.fetchToy(loop.homePlay.items.get(id).entity, character.player, () => loop.homePlay.finishFetch(id));
   app.on("update", (elapsed) => {
     houseMusic.update({ mode: loop.mode, phase: props.daily.clock.state.phase, store: loop.mode === "store" ? loop.store.definition.id : "", paused: loop.popUI.isOpen || loop.developerPaused || tornado.active, revealing: loop.opening.phase === "opening" }, Math.min(elapsed, 0.1));
     const now = performance.now();
@@ -14629,6 +16900,7 @@ async function startGame(editorApp) {
       return;
     }
     loop.beforeMovement(now);
+    loop.homePlay.applyObstacles();
     if (document.querySelector("dialog[open]")) controller.enabled = false;
     if (loop.popUI.isOpen) return;
     const bulky = cleanup.carry.item?.carryPace === "walk" || loop.dailyPlay.carrying || loop.schoolGate.carrying;
@@ -14646,12 +16918,12 @@ async function startGame(editorApp) {
     if (loop.mode !== "home") camera.follow(character.player.getPosition(), dt);
     loop.update(now);
     tornado.update(document.hidden ? 0 : Math.min(elapsed, 0.1));
-    dogRoaming.update(dt, loop.mode === "cleanup" && !tornado.active && !!props.pet?.loaded, [character.player.getPosition(), lilah.root.getPosition(), marc.root.getPosition()]);
+    dogRoaming.update(dt, ["cleanup", "outdoors"].includes(loop.mode) && !tornado.active && !!props.pet?.loaded, [character.player.getPosition(), lilah.root.getPosition(), marc.root.getPosition()]);
     props.pet?.dogAnimator?.update(dt);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === "cleanup", cleanup.mode);
     const day = props.daily.clock;
-    const position = character.player.getPosition();
-    const location2 = loop.mode === "cleanup" ? HOUSE_ROOMS.find((room2) => room2.id === navigation.current)?.name ?? "Home" : loop.mode === "store" ? loop.store.definition.name : loop.mode === "recess" ? loop.recess.area : loop.mode === "home" ? "Little surprises" : position.z < -26 && position.x > 14 ? "School garden" : position.x < -9 ? "Maple Lane" : "Home garden";
+    const position2 = character.player.getPosition();
+    const location2 = loop.mode === "cleanup" ? HOUSE_ROOMS.find((room2) => room2.id === navigation.current)?.name ?? "Home" : loop.mode === "store" ? loop.store.definition.name : loop.mode === "recess" ? loop.recess.area : loop.mode === "home" ? "Little surprises" : position2.z < -26 && position2.x > 14 ? "School garden" : position2.x < -9 ? "Maple Lane" : "Home garden";
     hud.update({
       scene: loop.mode,
       location: location2,
@@ -14673,7 +16945,7 @@ async function startGame(editorApp) {
     }
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
-    loop.scooter.update(dt, loop.mode === "outdoors", !loop.fishing.active && !loop.huntUI.dialog.open && !loop.dailyPlay.occupied && !loop.schoolGate.carrying && !loop.schoolGate.busy, loop.encounters.hop);
+    loop.scooter.update(dt, loop.mode === "outdoors", !loop.homePlay.carrying && !loop.fishing.active && !loop.huntUI.dialog.open && !loop.dailyPlay.occupied && !loop.schoolGate.carrying && !loop.schoolGate.busy, loop.encounters.hop);
     lilah.update(dt, elapsed, loop.mode === "cleanup" && props.daily.clock.state.phase !== "school", cleanup.mode === "day" && !cleanup.movementLocked, character.player.getPosition(), camera.entity);
     marc.update(dt, elapsed, loop.mode === "cleanup" && props.daily.clock.state.phase !== "school", cleanup.mode === "day" && !tornado.active, character.player.getPosition(), lilah.root.getPosition(), cleanup.activeInteractionId, camera.entity);
     headPoint.copy(character.player.getPosition());
@@ -14699,10 +16971,19 @@ async function startGame(editorApp) {
     loop.developerCommand("recess");
     if (new URLSearchParams(location.search).get("room") === "cafeteria") character.player.setPosition(4.6, 0.09, -14.8);
   }
+  if (new URLSearchParams(location.search).has("meal-review")) {
+    const { mealReview: mealReview2 } = await Promise.resolve().then(() => (init_MealReview(), MealReview_exports));
+    mealReview2(app, character, camera.entity, loop, props.daily);
+  }
   if (!editorApp) app.start();
   document.querySelector("#loading").remove();
   document.querySelector("#game").setAttribute("data-ready", "true");
-  void loadArianna(app, character).catch((error) => console.warn("Keeping the Arianna placeholder:", error));
+  void loadArianna(app, character).then(async () => {
+    if (new URLSearchParams(location.search).get("preview") === "home-play" && new URLSearchParams(location.search).get("motion-review") === "1") {
+      const { motionReview: motionReview2 } = await Promise.resolve().then(() => (init_MotionReview(), MotionReview_exports));
+      motionReview2(app, character, camera.entity, loop);
+    }
+  }).catch((error) => console.warn("Keeping the Arianna placeholder:", error));
   if (true) {
     Object.defineProperty(window, "__roomTest", { configurable: true, value: {
       characterGeometry: () => character.animator.geometrySnapshot(),

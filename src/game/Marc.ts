@@ -25,7 +25,7 @@ export class Marc {
   private animator: CharacterAnimator;
   private grounding: CharacterGrounding | null = null;
   private planner: HousePath;
-  private dinner: FamilyDinner;
+  readonly dinner: FamilyDinner;
   private label=document.createElement('div');
   private tools: Entity[]=[];
   private route: Vec3[]=[];

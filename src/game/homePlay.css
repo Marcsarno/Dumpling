@@ -1,0 +1,7 @@
+#home-play-controls{display:flex;gap:6px;justify-content:flex-end;margin-bottom:46px;max-width:184px;pointer-events:auto}
+#home-play-controls[hidden]{display:none}
+#home-play-controls button{min-height:44px;flex:1;border:1px solid #c7b9ce;border-radius:10px;background:#fff8e9;color:#5b4468;font:600 12px 'Segoe UI',sans-serif;padding:7px}
+#home-play-controls #journey-jump{position:static!important;right:auto!important;left:auto!important;bottom:auto!important;max-width:none;min-width:44px;min-height:44px;margin:0;padding:4px;font-size:12px;box-shadow:none;flex:1}
+.adventure-ui:has(#home-play-controls:not([hidden])) #save-message{bottom:calc(var(--hud-bottom) + 238px);left:16px;right:auto;max-width:calc(100% - 32px)}
+@media(max-width:600px){#home-play-controls{max-width:168px}}
+@media(max-width:350px){#home-play-controls{max-width:156px}}

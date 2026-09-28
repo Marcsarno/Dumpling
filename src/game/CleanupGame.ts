@@ -18,6 +18,7 @@ import type { PlayerController } from '../components/PlayerController';
 import type { IsometricCamera } from './IsometricCamera';
 
 export class CleanupGame {
+  externalAction:()=>boolean=()=>false;
   roundId = saveId();
   onFinished: (id: string, amount: number) => void = () => {};
   beforeReplay: () => boolean = () => true;
@@ -62,6 +63,7 @@ export class CleanupGame {
   }
   private refreshFocus() { this.interactions.update(this.character.player.getPosition(), this.carry.item?.id ?? null, this.mission); }
   private press = () => {
+    if(this.externalAction())return;
     const now = performance.now();
     this.mission.tick(now); this.refreshFocus();
     const target = this.interactions.focus;
@@ -228,11 +230,13 @@ export class CleanupGame {
   replay = () => {
     if (!this.beforeReplay()) return;
     this.roundId = saveId();
-    this.action.reset(); this.cancelActivity(); this.carry.item = null;
+    const freePlayItem=this.carry.item?.id.startsWith('home-')?this.carry.item:null;
+    this.action.reset(); this.cancelActivity(); this.carry.item = freePlayItem;
     if(this.mode==='house'){const tasks=this.props.roundMesses!.houseTasks();this.mission.configure(tasks,true);this.props.configure?.(tasks.map(t=>t.id));}
     this.props.reset(); this.props.roundMesses?.apply(this.mode); this.mission.reset(); this.feedback.reset(); this.hud.reset();
     if(this.mode==='day')for(const id of this.props.daily!.completed)this.mission.completed.add(id);
     this.character.animator.reset(); this.character.player.setPosition(0, 0.09, 0.9);
+    this.character.animator.setCarrying(!!freePlayItem);
     this.character.visual.setLocalEulerAngles(0, 30, 0);
     this.finishedHandled = false; this.celebrationStarted = false; this.interactions.focus = null; this.resetMovement();
     this.onReplay();
@@ -244,8 +248,8 @@ export class CleanupGame {
   }
   developerCancel(){
     this.action.reset();this.cancelActivity();this.aligning=null;this.resetMovement();this.character.animator.cancelAction();
-    if(this.carry.item){const item=this.carry.item;this.carry.release(this.props.root,item.home);item.entity.enabled=true;}
-    this.character.animator.setCarrying(false);
+    if(this.carry.item&&!this.carry.item.id.startsWith('home-')){const item=this.carry.item;this.carry.release(this.props.root,item.home);item.entity.enabled=true;}
+    this.character.animator.setCarrying(!!this.carry.item);
   }
   developerComplete(){
     this.developerCancel();

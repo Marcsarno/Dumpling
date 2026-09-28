@@ -57,7 +57,7 @@ export class PlayerController {
   }
   setRoom(room: Bedroom) {
     this.room = room;
-    this.bounds = room.obstacles.map(box => {
+    this.bounds = room.obstacles.filter(box=>!(box as BoundingBox&{homePlayDynamic?:boolean}).homePlayDynamic).map(box => {
       const expanded = box.clone();
       expanded.halfExtents.x += this.radius;
       expanded.halfExtents.z += this.radius;

@@ -58,6 +58,7 @@ export async function startGame(editorApp?:Application) {
   const navigation = new HouseNavigation();
   const lilah = new Lilah(app,room,props.daily!);
   const marc = new Marc(app,room,props.daily!);
+  loop.meals.bindDinner(marc.dinner);
   const tornado = new LilahTornado(app,room,props,cleanup,loop,character,controller,camera,lilah);loop.tornado=tornado;
   const label = document.querySelector<HTMLElement>('#player-label')!;
   const screenPoint = new Vec3();
@@ -77,12 +78,15 @@ export async function startGame(editorApp?:Application) {
   const houseMusic=new HouseMusic();const destroyAudioSettings=createAudioSettings();const destroyPerformance=performanceSettings(app,()=>loop.popUI.isOpen||loop.developerPaused);
   const hud=new AdventureHUD(()=>{joystick.reset();controller.reset();cleanup.action.reset();loop.resetUIInput();});
   const dogRoaming=new DogRoaming(room,props.pet!.dog,props.daily!);
+  loop.homePlay.onInvite=(id,point)=>{lilah.inviteToy(point,()=>{if(loop.homePlay.reactToVisit(id,lilah.root,lilah.playSocket))lilah.sharePlayToy();});};
+  loop.homePlay.onFetch=(id)=>!tornado.active&&!props.pet?.active&&dogRoaming.fetchToy(loop.homePlay.items.get(id)!.entity,character.player,()=>loop.homePlay.finishFetch(id));
   app.on('update', (elapsed: number) => {
     houseMusic.update({mode:loop.mode,phase:props.daily!.clock.state.phase,store:loop.mode==='store'?loop.store.definition.id:'',paused:loop.popUI.isOpen||loop.developerPaused||tornado.active,revealing:loop.opening.phase==='opening'},Math.min(elapsed,.1));
     const now = performance.now();
     if(loop.developerPaused||loop.popUI.isOpen||document.hidden)cleanup.audio.silence();
     if(loop.developerPaused){loop.developerTick(now,elapsed);return;}
     loop.beforeMovement(now);
+    loop.homePlay.applyObstacles();
     if(document.querySelector('dialog[open]'))controller.enabled=false;
     if(loop.popUI.isOpen)return;
     const bulky = cleanup.carry.item?.carryPace === 'walk'||loop.dailyPlay.carrying||loop.schoolGate.carrying;
@@ -101,7 +105,7 @@ export async function startGame(editorApp?:Application) {
     if (loop.mode !== 'home') camera.follow(character.player.getPosition(), dt);
     loop.update(now);
     tornado.update(document.hidden?0:Math.min(elapsed,.1));
-    dogRoaming.update(dt,loop.mode==='cleanup'&&!tornado.active&&!!props.pet?.loaded,[character.player.getPosition(),lilah.root.getPosition(),marc.root.getPosition()]);
+    dogRoaming.update(dt,['cleanup','outdoors'].includes(loop.mode)&&!tornado.active&&!!props.pet?.loaded,[character.player.getPosition(),lilah.root.getPosition(),marc.root.getPosition()]);
     props.pet?.dogAnimator?.update(dt);
     navigation.update(character.player.getPosition(), camera.entity, loop.mode === 'cleanup', cleanup.mode);
     const day=props.daily!.clock;
@@ -116,7 +120,7 @@ export async function startGame(editorApp?:Application) {
     if(loop.mode==='outdoors'&&!controller.riding&&character.grounding){const p=character.player.getPosition();character.grounding.surfaceHeight=p.x<-9||p.z<-16?.075:.03;}
     character.grounding?.update();
     character.animator.update(dt, controller.velocity, elapsed);
-    loop.scooter.update(dt,loop.mode==='outdoors',!loop.fishing.active&&!loop.huntUI.dialog.open&&!loop.dailyPlay.occupied&&!loop.schoolGate.carrying&&!loop.schoolGate.busy,loop.encounters.hop);
+    loop.scooter.update(dt,loop.mode==='outdoors',!loop.homePlay.carrying&&!loop.fishing.active&&!loop.huntUI.dialog.open&&!loop.dailyPlay.occupied&&!loop.schoolGate.carrying&&!loop.schoolGate.busy,loop.encounters.hop);
     lilah.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day'&&!cleanup.movementLocked,character.player.getPosition(),camera.entity);
     marc.update(dt,elapsed,loop.mode==='cleanup'&&props.daily!.clock.state.phase!=='school',cleanup.mode==='day'&&!tornado.active,character.player.getPosition(),lilah.root.getPosition(),cleanup.activeInteractionId,camera.entity);
     headPoint.copy(character.player.getPosition());
@@ -140,10 +144,11 @@ export async function startGame(editorApp?:Application) {
     loop.developerCommand('recess');
     if(new URLSearchParams(location.search).get('room')==='cafeteria')character.player.setPosition(4.6,.09,-14.8);
   }
+  if(import.meta.env.DEV&&new URLSearchParams(location.search).has('meal-review')){const {mealReview}=await import('./dev/MealReview');mealReview(app,character,camera.entity,loop,props.daily!);}
   if(!editorApp)app.start();
   document.querySelector('#loading')!.remove();
   document.querySelector('#game')!.setAttribute('data-ready', 'true');
-  void loadArianna(app, character).catch(error => console.warn('Keeping the Arianna placeholder:', error));
+  void loadArianna(app, character).then(async()=>{if(import.meta.env.DEV&&new URLSearchParams(location.search).get('preview')==='home-play'&&new URLSearchParams(location.search).get('motion-review')==='1'){const {motionReview}=await import('./dev/MotionReview');motionReview(app,character,camera.entity,loop);}}).catch(error => console.warn('Keeping the Arianna placeholder:', error));
 
   // Read-only diagnostics for local playtests, excluded from production by Vite.
   if (import.meta.env.DEV) {

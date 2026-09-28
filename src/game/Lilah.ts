@@ -35,6 +35,15 @@ export class Lilah {
   private speechUntil=0;
   private visited=new Set<string>();
   private scripted=false;
+  private playArrival:(()=>void)|null=null;
+  private playUntil=0;
+  private sharedUntil=0;
+  get playSocket(){return this.socket;}
+  sharePlayToy(){this.animator.cancelAction();this.animator.setCarrying(true);this.sharedUntil=this.time+3.2;this.nextDecision=this.sharedUntil+2;}
+  inviteToy(point:Vec3,onArrival:()=>void){
+    if(!this.daily.lilahAvailable||this.scripted||this.job||this.carrying||this.playArrival||this.time<this.sharedUntil+3||this.daily.clock.state.minutes>=1095||this.root.getPosition().distance(point)>5)return false;
+    for(const [dx,dz]of [[0,.6],[.6,0],[0,-.6],[-.6,0]])if(this.go(new Vec3(point.x+dx,0,point.z+dz),'free-play')){this.playArrival=onArrival;this.playUntil=this.time+12;this.state='looking';this.say('Let me see!');return true;}return false;
+  }
   private job:{point:Vec3;icon:string;drop:()=>void;wait:number;blocked:number}|null=null;
   get ready(){return this.loaded;}
   get working(){return !!this.job;}
@@ -140,6 +149,8 @@ export class Lilah {
     if((this.state==='sleeping'||this.bedStart)&&!this.daily.clock.state.lilahAsleep&&this.daily.clock.state.minutes<1095){this.root.setPosition(propPoint('crib',new Vec3(8.55,.09,-1.3)));this.state='watching';this.bedStart=null;this.animator.setWorkClip(null);this.animator.setIdleClip('Idle');if(this.grounding)this.grounding.surfaceHeight=null;}
     if(this.daily.clock.state.lilahAsleep&&this.state!=='sleeping')this.restInCrib();
     if(canMischief)this.time+=dt;
+    if(this.sharedUntil&&this.time>=this.sharedUntil){this.sharedUntil=0;this.animator.setCarrying(false);}
+    if(this.playArrival&&(!canMischief||this.time>this.playUntil||this.daily.clock.state.lilahAsleep)){this.playArrival=null;this.route=[];}
     if(!this.scripted&&canMischief&&this.daily.clock.state.minutes>=1095&&this.state!=='sleepy'&&this.state!=='sleeping'&&!this.bedStart){
       this.route=[];this.animator.cancelAction();this.decide(arianna);
     }
@@ -154,7 +165,7 @@ export class Lilah {
           const step=Math.min(distance,.7*dt),x=p.x+dx/distance*step,z=p.z+dz/distance*step;
           // Stop for Arianna instead of clipping through her; reroute on the next decision.
           if(Math.hypot(x-arianna.x,z-arianna.z)>.4&&this.planner.free(x,z)){this.root.setPosition(x,p.y,z);velocity.set(dx/distance*.7,0,dz/distance*.7);}
-          else{this.route=[];this.nextDecision=this.time+2;}
+          else{this.route=[];if(this.playArrival){this.playArrival=null;this.say('A little more room, Ari?');}this.nextDecision=this.time+2;}
         }
       }else if(this.time>=this.nextDecision)this.decide(arianna);
     }
@@ -167,6 +178,7 @@ export class Lilah {
   }
   private arrive(){
     this.nextDecision=this.time+7;
+    if(this.destination==='free-play'&&this.playArrival){const done=this.playArrival;this.playArrival=null;this.state='playing';this.say('I found it! My turn!');this.animator.playAction('Celebrate',1.6);done();return;}
     if(this.destination==='mess'){
       this.animator.playAction('PutDown',.8,()=>{
         const made=this.daily.clock.state.phase!=='night'&&this.daily.lilahMesses.add(this.root.getPosition());this.carrying=false;this.toy.enabled=false;this.animator.setCarrying(false);

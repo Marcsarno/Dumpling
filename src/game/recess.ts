@@ -25,6 +25,7 @@ function buildRecess(app:Application){
  const desks=[{x:-3.1,z:-1.75},{x:2.65,z:-1.75},{x:0,z:1.5}];
  const classmates=new Classmates(app,classroom,desks.map(p=>({x:p.x-.51,z:p.z-.8})));
  const lunchFriends=new Classmates(app,cafeteria,[{x:-4.15,y:.085,z:-2.50},{x:-1.85,y:.085,z:-2.50},{x:2.55,y:.085,z:-2.50}],false);
+ let lunchGreeting='',lunchGreetingUntil=0;const greet=(id:string)=>{lunchGreeting=id;lunchGreetingUntil=performance.now()+2200;};app.on('home-play:lunch-arrive',greet);root.once('destroy',()=>app.off('home-play:lunch-arrive',greet));
  const offers=new Entity('Today’s trading squishies',app);classroom.addChild(offers);
  const display=new Entity('Squishy friends display',app);classroom.addChild(display);
  for(const [i,id] of ['bunny','rosie','mochi','panda','lavendream'].entries()){
@@ -35,7 +36,7 @@ function buildRecess(app:Application){
  const room:Bedroom={root,halfWidth:12,halfDepth:24,walkable:[{minX:-5.9,maxX:5.9,minZ:-6.96,maxZ:6.9},{minX:3.7,maxX:5.5,minZ:-9.2,maxZ:-6.7},{minX:-1.3,maxX:10.5,minZ:-22.9,maxZ:-9}],obstacles,ready:Promise.all([load('classroom',classroom),load('cafeteria',cafeteria),classmates.ready,lunchFriends.ready,schoolCook(app,cafeteria).catch(e=>{errors.push('School cook');console.error(e);})]).then(()=>{}),artStats:()=>({loaded,models:2,errors:[...errors,...classmates.errors,...lunchFriends.errors],classmates:classmates.snapshot(),cafeteria:lunchFriends.snapshot()})};
  let area='Classroom';root.enabled=false;
  const sync=(day:TradingDay)=>{classmates.sync(day);for(const child of [...offers.children])child.destroy();TRADERS.forEach((t,i)=>{if(day.traders[t.id].done)return;day.traders[t.id].offer.forEach((id,j)=>{const model=createDumpling(app,offers,definition(id));model.setLocalScale(.22,.22,.22);model.setLocalPosition(desks[i].x+(j-1)*.40,.875,desks[i].z+.12);});});};
- return{...room,dispose(){root.destroy();for(const a of modelAssets){a.unload();app.assets.remove(a);}releaseSchoolStudents(app);},usesReferenceLayout:true,seats,sync,bindLayout:(_group:Entity)=>{},get area(){return area;},update:(now:number,focus:string,p:Vec3)=>{area=p.z<-8?'Cafeteria':'Classroom';classroom.enabled=p.z>-9.2;cafeteria.enabled=p.z<-5.8;classmates.update(now,focus);lunchFriends.update(now,'');},door:new Vec3(4.6,0,-8),cafeteriaCenter:new Vec3(4.6,0,-15)};
+ return{...room,dispose(){root.destroy();for(const a of modelAssets){a.unload();app.assets.remove(a);}releaseSchoolStudents(app);},usesReferenceLayout:true,seats,sync,bindLayout:(_group:Entity)=>{},get area(){return area;},update:(now:number,focus:string,p:Vec3)=>{area=p.z<-8?'Cafeteria':'Classroom';classroom.enabled=p.z>-9.2;cafeteria.enabled=p.z<-5.8;classmates.update(now,focus);lunchFriends.update(now,now<lunchGreetingUntil?lunchGreeting:'');},door:new Vec3(4.6,0,-8),cafeteriaCenter:new Vec3(4.6,0,-15)};
 }
 
 /** The house loads only collision metadata. School art lives for a school visit. */

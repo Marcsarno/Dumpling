@@ -1,0 +1,23 @@
+import {Entity,Vec3,Vec4,type Application,type AnimComponent} from 'playcanvas';
+import {MealArt,mealGrip} from '../game/MealArt';
+import type {createCharacter} from '../components/CharacterVisual';
+import type {GameLoop} from '../game/GameLoop';
+
+/** Local-only inspection of the exact runtime clips, without changing a save. */
+export function motionReview(app:Application,character:ReturnType<typeof createCharacter>,camera:Entity,loop:GameLoop){
+ loop.developerHold(true);character.player.setPosition(.55,.09,4.5);character.visual.setLocalEulerAngles(0,0,0);character.grounding?.update();
+ const anim=(character.player.findComponents('anim') as AnimComponent[])[0],layer=anim.baseLayer!;
+ const grip=new Entity('Review hand grip',app),prop=new Entity('Review meal prop',app);app.root.addChild(grip);grip.addChild(prop);const art=new MealArt(app,loop.homePlay.art);
+ const showProp=(drink:boolean)=>{for(const child of [...prop.children])child.destroy();mealGrip(prop,drink);if(drink)prop.addChild(loop.homePlay.art.make('cup','#bad4dc'));else void art.food(prop,'pizza',0,0,.18);};
+ const panel=document.createElement('div');panel.style.cssText='position:fixed;z-index:100;left:12px;right:12px;bottom:12px;background:#fff8ed;color:#493958;padding:14px;border-radius:12px;font:14px system-ui;display:flex;flex-wrap:wrap;gap:10px;align-items:center';
+ panel.innerHTML='<strong>Original-rig motion review</strong><select aria-label="Animation"><option value="EatSit">Existing breakfast</option><option value="MealBite">Reused dinner bite</option><option value="MealDrink">Reused drink</option><option value="CarryIdle">Original carry</option><option value="PickUp">Existing pickup</option><option value="PutDown">Existing putdown</option><option value="PlayThrow">Existing throw</option></select><button>Play slowly</button><button>Pause</button><button>Front</button><button>Side</button><button>Contact</button><input aria-label="Animation time" type="range" min="0" max="4.2" value="0" step="0.01"><output>0.00 s</output>';
+ document.body.append(panel);const select=panel.querySelector('select')!,slider=panel.querySelector('input')!,output=panel.querySelector('output')!;let side=false,playing=false;
+ const seek=(time:number)=>{try{layer.pause();playing=false;layer.activeStateCurrentTime=time;slider.value=String(time);output.value=time.toFixed(2)+' s';}catch(error){output.value=String(error);}};
+ const choose=()=>{layer.play(select.value);anim.speed=.35;layer.pause();slider.max=String(layer.activeStateDuration);prop.enabled=select.value==='MealBite'||select.value==='MealDrink';if(prop.enabled)showProp(select.value==='MealDrink');seek(0);};select.onchange=choose;slider.oninput=()=>seek(Number(slider.value));
+ const buttons=panel.querySelectorAll('button');buttons[0].addEventListener('click',()=>{layer.play();playing=true;});buttons[1].addEventListener('click',()=>seek(layer.activeStateCurrentTime));buttons[2].addEventListener('click',()=>{side=false;});buttons[3].addEventListener('click',()=>{side=true;});buttons[4].addEventListener('click',()=>seek(select.value==='EatSit'?1.55:select.value.startsWith('Meal')?.65:.4));
+ const frame=()=>{const p=character.player.getPosition(),reserved=Math.min(.55,(panel.getBoundingClientRect().height+24)/innerHeight);camera.camera!.rect=new Vec4(0,reserved,1,1-reserved);camera.setPosition(p.x+(side?3:0),1.3,p.z+(side?0:3));camera.lookAt(new Vec3(p.x,.65,p.z));camera.camera!.orthoHeight=.85;const left=anim.entity.findByName('LeftHand')!,right=anim.entity.findByName('RightHand')!;grip.setPosition(new Vec3().add2(left.getPosition(),right.getPosition()).mulScalar(.5).add(new Vec3(0,0,.025)));if(playing){slider.value=String(layer.activeStateCurrentTime);output.value=layer.activeStateCurrentTime.toFixed(2)+' s';}};app.on('prerender',frame);choose();
+ const style=document.createElement('style');style.textContent='#adventure-hud,.adventure-hud,#controls,#character-label,#home-play-controls,#save-message,#action-button,#joystick{visibility:hidden!important}button,select{min-height:36px}';document.head.append(style);
+ app.on('framerender',()=>{app.autoRender=true;app.renderNextFrame=true;});
+ const apply=document.createElement('button');apply.textContent='Apply clip';apply.onclick=choose;panel.append(apply);
+ const time=document.createElement('input');time.type='number';time.min='0';time.max='4.2';time.step='.05';time.value='1.2';time.style.width='70px';time.setAttribute('aria-label','Exact frame time');panel.append(time);const exact=document.createElement('button');exact.textContent='Show frame';exact.onclick=()=>seek(Number(time.value));panel.append(exact);
+}
