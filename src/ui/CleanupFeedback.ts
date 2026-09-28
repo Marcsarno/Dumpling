@@ -36,7 +36,12 @@ export class CleanupFeedback {
     }
     this.layer.append(element); this.popups.push({ element, point: point.clone(), until: now + 950 });
   }
-  update(now: number, interactions: InteractionSystem, carry: CarrySystem, mission: MissionSystem) {
+  update(now: number, interactions: InteractionSystem, carry: CarrySystem, mission: MissionSystem, showMarkers = true) {
+    // Read layout once, before any marker writes. Covered scenes still expire rewards.
+    const visible = !document.hidden && !document.querySelector('dialog[open]');
+    showMarkers = showMarkers && visible;
+    const width = showMarkers ? this.layer.clientWidth : 0;
+    const height = showMarkers ? this.layer.clientHeight : 0;
     const carried=carry.item?.id??null;
     const availableTargets=this.markers.map(m=>m.target).filter(t=>interactions.available(t,carried,mission));
     const candidates=guidanceCandidates(availableTargets,carried);
@@ -46,35 +51,46 @@ export class CleanupFeedback {
       const available = availableTargets.includes(target);
       const destination = target===primary;
       const nearby = interactions.focus === target && available && !(target.id==='put-tool-away'&&primary&&primary!==target);
-      ring.enabled = nearby || destination || (available && !carried && target.id!=='play-lilah');
-      ring.setPosition(target.anchor.x,.105,target.anchor.z);
-      const scale = (destination ? 1.3 : nearby ? 1.1 : .85) + Math.sin(now / 300) * (destination?.10:.035);
-      ring.setLocalScale(scale, 1, scale);
-      label.hidden = !nearby && !destination;
-      if(target.id==='play-lilah')label.hidden=true;
-      label.classList.toggle('nearby', nearby); label.classList.toggle('destination', destination);
-      label.dataset.guided=String(destination);
+      const ringVisible = showMarkers && (nearby || destination || (available && !carried && target.id!=='play-lilah'));
+      if (ring.enabled !== ringVisible) ring.enabled = ringVisible;
+      if (ringVisible) {
+        ring.setPosition(target.anchor.x,.105,target.anchor.z);
+        const scale = (destination ? 1.3 : nearby ? 1.1 : .85) + Math.sin(now / 300) * (destination?.10:.035);
+        ring.setLocalScale(scale, 1, scale);
+      }
+      // The HUD also reads the destination marker, including offscreen guidance.
+      if(label.classList.contains('nearby')!==nearby)label.classList.toggle('nearby',nearby);
+      if(label.classList.contains('destination')!==destination)label.classList.toggle('destination',destination);
+      if(label.dataset.guided!==String(destination))label.dataset.guided=String(destination);
+      if (!showMarkers || (!nearby && !destination) || target.id==='play-lilah') {
+        if (!label.hidden) label.hidden = true;
+        continue;
+      }
+      this.camera.camera!.worldToScreen(target.marker, this.screen);
+      const x=Math.max(30,Math.min(width-30,this.screen.x));
+      const y=Math.max(height*.29,Math.min(height*.7,this.screen.y));
+      const offscreen=x!==this.screen.x||y!==this.screen.y;
+      const hidden=offscreen&&!destination;
+      if(label.hidden!==hidden)label.hidden=hidden;
+      if(hidden)continue;
       const text = target.icon;
       if (label.textContent !== text) label.textContent = text;
-      this.camera.camera!.worldToScreen(target.marker, this.screen);
-      const x=Math.max(30,Math.min(this.layer.clientWidth-30,this.screen.x));
-      const y=Math.max(this.layer.clientHeight*.29,Math.min(this.layer.clientHeight*.7,this.screen.y));
-      const offscreen=x!==this.screen.x||y!==this.screen.y;
-      if(offscreen&&!destination)label.hidden=true;
-      label.classList.toggle('offscreen',offscreen&&destination);
-      label.style.setProperty('--guide-angle',`${Math.atan2(this.screen.y-y,this.screen.x-x)}rad`);
-      label.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+      if(label.classList.contains('offscreen')!==(offscreen&&destination))label.classList.toggle('offscreen',offscreen&&destination);
+      const angle=`${Math.atan2(this.screen.y-y,this.screen.x-x)}rad`;
+      if(label.style.getPropertyValue('--guide-angle')!==angle)label.style.setProperty('--guide-angle',angle);
+      const transform=`translate(${x}px, ${y}px) translate(-50%, -100%)`;
+      if(label.style.transform!==transform)label.style.transform=transform;
     }
     for (let i = this.popups.length - 1; i >= 0; i--) {
       const popup = this.popups[i];
       if (now >= popup.until) { popup.element.remove(); this.popups.splice(i, 1); continue; }
+      if (!visible) continue;
       this.camera.camera!.worldToScreen(popup.point, this.screen);
       popup.element.style.left = `${this.screen.x}px`; popup.element.style.top = `${this.screen.y}px`;
     }
   }
   reset() { for (const popup of this.popups) popup.element.remove(); this.popups.length = 0; }
   hide() { this.reset(); for (const marker of this.markers) { marker.ring.enabled = false; marker.label.hidden = true; } }
-  hideWorkingLabel(_id:string){for(const marker of this.markers){marker.label.hidden=true;marker.ring.enabled=false;}}
   destroy() {
     this.reset(); for (const marker of this.markers) { marker.ring.destroy(); marker.label.remove(); }
     this.mesh.destroy(); this.glow.destroy();

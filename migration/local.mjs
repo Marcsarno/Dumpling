@@ -660,7 +660,7 @@ var MealReview_exports = {};
 __export(MealReview_exports, {
   mealReview: () => mealReview
 });
-import { Vec3 as Vec348 } from "playcanvas";
+import { Vec3 as Vec347 } from "playcanvas";
 function mealReview(app, character, camera, loop, daily) {
   const params = new URLSearchParams(location.search), context = params.get("meal-review");
   if (params.get("preview") !== "home-play" || !["dinner", "lunch"].includes(context ?? "")) return;
@@ -668,7 +668,7 @@ function mealReview(app, character, camera, loop, daily) {
     loop.developerCommand("phase", "afternoon");
     daily.clock.state.dinnerServed = true;
     daily.save();
-    character.player.setPosition(propPoint("dining", new Vec348(0.55, 0.09, 11.9)));
+    character.player.setPosition(propPoint("dining", new Vec347(0.55, 0.09, 11.9)));
   } else {
     loop.developerCommand("recess");
     character.player.setPosition(4.6, 0.09, -20.15);
@@ -735,7 +735,7 @@ var MotionReview_exports = {};
 __export(MotionReview_exports, {
   motionReview: () => motionReview
 });
-import { Entity as Entity50, Vec3 as Vec349, Vec4 } from "playcanvas";
+import { Entity as Entity50, Vec3 as Vec348, Vec4 } from "playcanvas";
 function motionReview(app, character, camera, loop) {
   loop.developerHold(true);
   character.player.setPosition(0.55, 0.09, 4.5);
@@ -797,10 +797,10 @@ function motionReview(app, character, camera, loop) {
     const p = character.player.getPosition(), reserved = Math.min(0.55, (panel.getBoundingClientRect().height + 24) / innerHeight);
     camera.camera.rect = new Vec4(0, reserved, 1, 1 - reserved);
     camera.setPosition(p.x + (side ? 3 : 0), 1.3, p.z + (side ? 0 : 3));
-    camera.lookAt(new Vec349(p.x, 0.65, p.z));
+    camera.lookAt(new Vec348(p.x, 0.65, p.z));
     camera.camera.orthoHeight = 0.85;
     const left = anim.entity.findByName("LeftHand"), right = anim.entity.findByName("RightHand");
-    grip.setPosition(new Vec349().add2(left.getPosition(), right.getPosition()).mulScalar(0.5).add(new Vec349(0, 0, 0.025)));
+    grip.setPosition(new Vec348().add2(left.getPosition(), right.getPosition()).mulScalar(0.5).add(new Vec348(0, 0, 0.025)));
     if (playing) {
       slider.value = String(layer.activeStateCurrentTime);
       output.value = layer.activeStateCurrentTime.toFixed(2) + " s";
@@ -1807,7 +1807,7 @@ function animateSquishy(model, time, strength = 0.012) {
 }
 
 // src/main.ts
-import { Application, Color as Color12, Entity as Entity51, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec350 } from "playcanvas";
+import { Application, Color as Color12, Entity as Entity51, FILLMODE_NONE, RESOLUTION_AUTO, SHADOW_PCF3_32F, Vec3 as Vec349 } from "playcanvas";
 
 // src/game/house.ts
 import { BoundingBox as BoundingBox4, Entity as Entity7, Vec3 as Vec36 } from "playcanvas";
@@ -5403,7 +5403,11 @@ var CleanupFeedback = class {
     this.layer.append(element);
     this.popups.push({ element, point: point.clone(), until: now + 950 });
   }
-  update(now, interactions, carry, mission) {
+  update(now, interactions, carry, mission, showMarkers = true) {
+    const visible = !document.hidden && !document.querySelector("dialog[open]");
+    showMarkers = showMarkers && visible;
+    const width = showMarkers ? this.layer.clientWidth : 0;
+    const height = showMarkers ? this.layer.clientHeight : 0;
     const carried = carry.item?.id ?? null;
     const availableTargets = this.markers.map((m) => m.target).filter((t) => interactions.available(t, carried, mission));
     const candidates = guidanceCandidates(availableTargets, carried);
@@ -5413,25 +5417,34 @@ var CleanupFeedback = class {
       const available = availableTargets.includes(target);
       const destination = target === primary;
       const nearby = interactions.focus === target && available && !(target.id === "put-tool-away" && primary && primary !== target);
-      ring.enabled = nearby || destination || available && !carried && target.id !== "play-lilah";
-      ring.setPosition(target.anchor.x, 0.105, target.anchor.z);
-      const scale = (destination ? 1.3 : nearby ? 1.1 : 0.85) + Math.sin(now / 300) * (destination ? 0.1 : 0.035);
-      ring.setLocalScale(scale, 1, scale);
-      label.hidden = !nearby && !destination;
-      if (target.id === "play-lilah") label.hidden = true;
-      label.classList.toggle("nearby", nearby);
-      label.classList.toggle("destination", destination);
-      label.dataset.guided = String(destination);
+      const ringVisible = showMarkers && (nearby || destination || available && !carried && target.id !== "play-lilah");
+      if (ring.enabled !== ringVisible) ring.enabled = ringVisible;
+      if (ringVisible) {
+        ring.setPosition(target.anchor.x, 0.105, target.anchor.z);
+        const scale = (destination ? 1.3 : nearby ? 1.1 : 0.85) + Math.sin(now / 300) * (destination ? 0.1 : 0.035);
+        ring.setLocalScale(scale, 1, scale);
+      }
+      if (label.classList.contains("nearby") !== nearby) label.classList.toggle("nearby", nearby);
+      if (label.classList.contains("destination") !== destination) label.classList.toggle("destination", destination);
+      if (label.dataset.guided !== String(destination)) label.dataset.guided = String(destination);
+      if (!showMarkers || !nearby && !destination || target.id === "play-lilah") {
+        if (!label.hidden) label.hidden = true;
+        continue;
+      }
+      this.camera.camera.worldToScreen(target.marker, this.screen);
+      const x = Math.max(30, Math.min(width - 30, this.screen.x));
+      const y = Math.max(height * 0.29, Math.min(height * 0.7, this.screen.y));
+      const offscreen = x !== this.screen.x || y !== this.screen.y;
+      const hidden = offscreen && !destination;
+      if (label.hidden !== hidden) label.hidden = hidden;
+      if (hidden) continue;
       const text = target.icon;
       if (label.textContent !== text) label.textContent = text;
-      this.camera.camera.worldToScreen(target.marker, this.screen);
-      const x = Math.max(30, Math.min(this.layer.clientWidth - 30, this.screen.x));
-      const y = Math.max(this.layer.clientHeight * 0.29, Math.min(this.layer.clientHeight * 0.7, this.screen.y));
-      const offscreen = x !== this.screen.x || y !== this.screen.y;
-      if (offscreen && !destination) label.hidden = true;
-      label.classList.toggle("offscreen", offscreen && destination);
-      label.style.setProperty("--guide-angle", `${Math.atan2(this.screen.y - y, this.screen.x - x)}rad`);
-      label.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+      if (label.classList.contains("offscreen") !== (offscreen && destination)) label.classList.toggle("offscreen", offscreen && destination);
+      const angle = `${Math.atan2(this.screen.y - y, this.screen.x - x)}rad`;
+      if (label.style.getPropertyValue("--guide-angle") !== angle) label.style.setProperty("--guide-angle", angle);
+      const transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+      if (label.style.transform !== transform) label.style.transform = transform;
     }
     for (let i = this.popups.length - 1; i >= 0; i--) {
       const popup = this.popups[i];
@@ -5440,6 +5453,7 @@ var CleanupFeedback = class {
         this.popups.splice(i, 1);
         continue;
       }
+      if (!visible) continue;
       this.camera.camera.worldToScreen(popup.point, this.screen);
       popup.element.style.left = `${this.screen.x}px`;
       popup.element.style.top = `${this.screen.y}px`;
@@ -5454,12 +5468,6 @@ var CleanupFeedback = class {
     for (const marker of this.markers) {
       marker.ring.enabled = false;
       marker.label.hidden = true;
-    }
-  }
-  hideWorkingLabel(_id) {
-    for (const marker of this.markers) {
-      marker.label.hidden = true;
-      marker.ring.enabled = false;
     }
   }
   destroy() {
@@ -5945,8 +5953,7 @@ var CleanupGame = class {
         }
       }
     }
-    this.feedback.update(now, this.interactions, this.carry, this.mission);
-    if (this.activity || this.character.animator.busy) this.feedback.hideWorkingLabel(this.workingId);
+    this.feedback.update(now, this.interactions, this.carry, this.mission, !this.activity && !this.character.animator.busy);
     this.audio.update();
     this.props.pet?.update(now, this.activity?.target.kind === "pet" ? this.progress : 0, this.carry.socket.getPosition());
     this.props.daily?.effect(this.activity?.target.kind === "daily" ? this.activity.target : null, this.progress, this.carry.socket.getPosition());
@@ -9622,9 +9629,10 @@ async function crossingGuard(app, parent) {
 var POND = { stand: new Vec333(-4.1, 0.09, -10), bobber: new Vec333(-7.15, 0.12, -11.9), center: new Vec333(-8, 0, -12) };
 var SCHOOL_GATE = new Vec333(22, 0.09, -29.4);
 var Outdoors = class {
-  constructor(app, house) {
+  constructor(app, house, camera) {
     this.app = app;
     this.house = house;
+    this.camera = camera;
     this.root = new Entity34("Pond and school walk", app);
     app.root.addChild(this.root);
     const group = app.batcher.addGroup("Outdoor architecture", false, 14), s = primitives(app, this.root, group.id), grass = outdoorSurface(app, "grass"), stone = outdoorSurface(app, "path"), edge = material("Limestone edges", "#eadfc3"), soil = material("Pond bank", "#a79b74"), road = material("Quiet street", "#8994a0"), white = material("Crossing paint", "#fff4d7"), wood = material("Honey garden oak", "#b89570"), mint = material("School mint", "#b3cbbc"), cream = material("School plaster", "#f5dfb8"), pink = material("Roof clay", "#cb8d88");
@@ -9788,6 +9796,7 @@ var Outdoors = class {
   }
   app;
   house;
+  camera;
   root;
   roof;
   ready;
@@ -9802,6 +9811,7 @@ var Outdoors = class {
   time = 0;
   opened = false;
   art;
+  bounds = new BoundingBox15(new Vec333(7, 2, -13), new Vec333(31, 8, 29));
   installDoor() {
     if (this.opened) return;
     this.opened = true;
@@ -9836,8 +9846,7 @@ var Outdoors = class {
     this.app.batcher.generate();
   }
   update(dt, p, enabled) {
-    const camera = this.app.root.findByTag("migration.camera")[0];
-    const near = enabled && (p.x > -42 || !!camera?.camera?.frustum.containsAabb(new BoundingBox15(new Vec333(7, 2, -13), new Vec333(31, 8, 29))));
+    const near = enabled && (p.x > -42 || !!this.camera.camera?.frustum.containsAabb(this.bounds));
     this.root.enabled = near;
     this.roof.enabled = near && (p.x < -5.2 || p.z < -5);
     if (near && !this.visible) void this.art.finish().catch((e) => console.error("Outdoor plants", e));
@@ -10010,14 +10019,17 @@ var SHOP_DOOR_Z = -30.1;
 var PLAY_SPOTS = [-17, -30, -43, -56, -69].map((x) => ({ x, z: -15.3 }));
 var SHOP_STOPS = [{ id: "corner", x: -26, name: "Clover Corner" }, { id: "toys", x: -50, name: "Peachy Playroom" }, { id: "collector", x: -74, name: "Moonbeam Finds" }];
 var Neighborhood = class {
-  constructor(app, house) {
+  constructor(app, house, camera) {
     this.app = app;
     this.house = house;
+    this.camera = camera;
   }
   app;
   house;
+  camera;
   sections = /* @__PURE__ */ new Map();
   maxSections = 4;
+  sectionBounds = Array.from({ length: this.maxSections }, (_, i) => new BoundingBox16(new Vec335(-16 - i * 24, 2, -23), new Vec335(16, 8, 16)));
   install() {
     this.house.walkable.push({ minX: -100, maxX: 31, minZ: -27.5, maxZ: -16.3 });
     this.house.halfWidth = 110;
@@ -10025,7 +10037,7 @@ var Neighborhood = class {
   }
   update(p, outside) {
     for (let i = 0; i < this.maxSections; i++) {
-      const center = -16 - i * 24, camera = this.app.root.findByTag("migration.camera")[0], near = outside && (Math.abs(p.x - center) < 30 || !!camera?.camera?.frustum.containsAabb(new BoundingBox16(new Vec335(center, 2, -23), new Vec335(16, 8, 16))));
+      const center = -16 - i * 24, near = outside && (Math.abs(p.x - center) < 30 || !!this.camera.camera?.frustum.containsAabb(this.sectionBounds[i]));
       if (near && !this.sections.has(i)) this.sections.set(i, this.create(i));
       if (!near && this.sections.has(i)) {
         const s = this.sections.get(i);
@@ -14134,9 +14146,9 @@ var GameLoop = class {
       }
     }, () => !this.save.data.pop?.tutorialSeen, () => ({ bestScore: this.save.data.pop?.bestScore ?? 0, tickets: this.save.data.pop?.tickets ?? 0, levels: this.save.data.pop?.levels ?? {} }));
     this.recess = createRecess(app);
-    this.outdoors = new Outdoors(app, room);
+    this.outdoors = new Outdoors(app, room, camera.entity);
     this.scooter = new Scooter(app, character, controller);
-    this.neighborhood = new Neighborhood(app, room);
+    this.neighborhood = new Neighborhood(app, room, camera.entity);
     this.fishing = new Fishing(app, this.outdoors.root, character, camera, this.save);
     this.fishing.onReward = () => this.wallet();
     this.fishing.onFinish = () => {
@@ -15137,39 +15149,23 @@ var GameLoop = class {
 };
 
 // src/ui/HouseNavigation.ts
-import { Vec3 as Vec343 } from "playcanvas";
 var HouseNavigation = class {
   current = "bedroom";
   root = document.querySelector("#house-doors");
-  point = new Vec343();
-  screen = new Vec343();
-  labels = HOUSE_DOORS.map((door) => {
-    const label = document.createElement("span");
-    label.className = "door-label";
-    this.root.append(label);
-    return { door, label };
-  });
-  update(position2, camera, enabled, mission) {
+  title = document.querySelector("h1");
+  kicker = document.querySelector("#scene-kicker");
+  constructor() {
     this.root.hidden = true;
     document.querySelector("#room-connections").hidden = true;
+  }
+  update(position2, _camera, enabled, mission) {
     if (!enabled) return;
     const room = HOUSE_ROOMS.find((room2) => position2.x >= room2.minX && position2.x <= room2.maxX && position2.z >= room2.minZ && position2.z <= room2.maxZ);
     if (room) this.current = room.id;
     const current = HOUSE_ROOMS.find((room2) => room2.id === this.current);
-    document.querySelector("h1").textContent = current.title;
-    document.querySelector("#scene-kicker").textContent = `${mission === "day" ? "EVERYDAY LIFE" : mission === "practice" ? "FREE EXPLORING" : mission === "pet" ? "PUPPY CLEANUP" : mission === "house" ? "HOUSE CLEANUP" : "BEDROOM CLEANUP"}`;
-    const neighbors = [];
-    for (const { door, label } of this.labels) {
-      const connected = door.a === this.current || door.b === this.current;
-      const other = HOUSE_ROOMS.find((room2) => room2.id === (door.a === this.current ? door.b : door.a));
-      if (connected) neighbors.push(other.name);
-      this.point.set(door.x, 0.6, door.z);
-      camera.camera.worldToScreen(this.point, this.screen);
-      label.hidden = !connected || this.screen.x < 25 || this.screen.x > this.root.clientWidth - 25 || this.screen.y < this.root.clientHeight * 0.27 || this.screen.y > this.root.clientHeight * 0.72;
-      label.textContent = `${other.name} \u203A`;
-      label.style.transform = `translate(${this.screen.x}px,${this.screen.y}px) translate(-50%,-100%)`;
-    }
-    document.querySelector("#room-connections").textContent = `Walk through to ${neighbors.join(" \xB7 ")}`;
+    if (this.title.textContent !== current.title) this.title.textContent = current.title;
+    const kicker = mission === "day" ? "EVERYDAY LIFE" : mission === "practice" ? "FREE EXPLORING" : mission === "pet" ? "PUPPY CLEANUP" : mission === "house" ? "HOUSE CLEANUP" : "BEDROOM CLEANUP";
+    if (this.kicker.textContent !== kicker) this.kicker.textContent = kicker;
   }
   destroy() {
     this.root.replaceChildren();
@@ -15179,7 +15175,7 @@ var HouseNavigation = class {
 // src/game/Lilah.ts
 init_PropSpace();
 init_AssetUrls();
-import { Asset as Asset11, BoundingBox as BoundingBox22, Entity as Entity46, Vec3 as Vec344 } from "playcanvas";
+import { Asset as Asset11, BoundingBox as BoundingBox22, Entity as Entity46, Vec3 as Vec343 } from "playcanvas";
 init_primitives();
 var Lilah = class {
   constructor(app, house, daily) {
@@ -15258,7 +15254,7 @@ var Lilah = class {
   }
   inviteToy(point, onArrival) {
     if (!this.daily.lilahAvailable || this.scripted || this.job || this.carrying || this.playArrival || this.time < this.sharedUntil + 3 || this.daily.clock.state.minutes >= 1095 || this.root.getPosition().distance(point) > 5) return false;
-    for (const [dx, dz] of [[0, 0.6], [0.6, 0], [0, -0.6], [-0.6, 0]]) if (this.go(new Vec344(point.x + dx, 0, point.z + dz), "free-play")) {
+    for (const [dx, dz] of [[0, 0.6], [0.6, 0], [0, -0.6], [-0.6, 0]]) if (this.go(new Vec343(point.x + dx, 0, point.z + dz), "free-play")) {
       this.playArrival = onArrival;
       this.playUntil = this.time + 12;
       this.state = "looking";
@@ -15315,7 +15311,7 @@ var Lilah = class {
     const job = this.job;
     if (!job || this.animator.busy) return;
     if (this.route.length) {
-      const p = this.root.getPosition(), next = this.route[0], delta = new Vec344(next.x - p.x, 0, next.z - p.z), distance = delta.length();
+      const p = this.root.getPosition(), next = this.route[0], delta = new Vec343(next.x - p.x, 0, next.z - p.z), distance = delta.length();
       if (distance < 0.035) {
         this.route.shift();
         return;
@@ -15326,11 +15322,11 @@ var Lilah = class {
       if (separation < 0.43 && separation <= previousSeparation) {
         job.blocked += dt;
         if (job.blocked > 0.45) {
-          const obstacle = new BoundingBox22(new Vec344(arianna.x, 0, arianna.z), new Vec344(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec344(p.x, 0, p.z);
+          const obstacle = new BoundingBox22(new Vec343(arianna.x, 0, arianna.z), new Vec343(0.27, 2, 0.27)), planner = new HousePath({ ...this.house, obstacles: [...this.house.obstacles, obstacle] }, 0.18), start = new Vec343(p.x, 0, p.z);
           let path = planner.route(start, job.point);
           if (!path.length) {
             for (let i = 0; i < 16; i++) {
-              const angle = i * Math.PI / 8, escape = new Vec344(p.x + Math.sin(angle) * 0.65, 0, p.z + Math.cos(angle) * 0.65);
+              const angle = i * Math.PI / 8, escape = new Vec343(p.x + Math.sin(angle) * 0.65, 0, p.z + Math.cos(angle) * 0.65);
               if (Math.hypot(escape.x - arianna.x, escape.z - arianna.z) < 0.55 || (escape.x - p.x) * (p.x - arianna.x) + (escape.z - p.z) * (p.z - arianna.z) <= 0 || !this.planner.line(start, escape)) continue;
               const rest = planner.route(escape, job.point);
               if (rest.length) {
@@ -15348,7 +15344,7 @@ var Lilah = class {
         this.root.setPosition(q);
         velocity.copy(delta).mulScalar(1.05);
       } else {
-        this.route = this.planner.route(new Vec344(p.x, 0, p.z), job.point);
+        this.route = this.planner.route(new Vec343(p.x, 0, p.z), job.point);
       }
     } else {
       if (!job.wait) {
@@ -15366,7 +15362,7 @@ var Lilah = class {
         this.job = null;
         job.drop();
         this.say(job.icon === "\u{1F9FA}" ? "Oops! ALL the toys!" : "Ta-da! Your turn, Ari!");
-      }, new Vec344(job.point.x, 0.1, job.point.z + 0.3));
+      }, new Vec343(job.point.x, 0.1, job.point.z + 0.3));
     }
   }
   async load() {
@@ -15449,17 +15445,17 @@ var Lilah = class {
       this.carrying = false;
       this.toy.enabled = false;
       this.animator.setCarrying(false);
-      this.go(propPoint("crib", new Vec344(8.55, 0, -1.3)), "bedtime");
+      this.go(propPoint("crib", new Vec343(8.55, 0, -1.3)), "bedtime");
       this.nextDecision = this.time + 30;
       return;
     }
     if (Math.random() < 0.55) {
-      for (const [x, z] of [[0.9, 0.7], [-0.9, 0.7], [0.9, -0.7], [-0.9, -0.7]]) if (this.go(new Vec344(arianna.x + x, 0, arianna.z + z), "follow")) break;
+      for (const [x, z] of [[0.9, 0.7], [-0.9, 0.7], [0.9, -0.7], [-0.9, -0.7]]) if (this.go(new Vec343(arianna.x + x, 0, arianna.z + z), "follow")) break;
       this.state = "following";
       this.say(["Ari! Wait for me!", "I do it too!", "Whatcha doing?"][Math.floor(Math.random() * 3)]);
     } else {
       const spots = [[1.1, 1.3], [3.8, 2], [1.4, 5.6], [0.5, 10.8], [4.3, 11.4], [8.4, 0.5]], p = spots[Math.floor(Math.random() * spots.length)];
-      this.go(new Vec344(p[0], 0, p[1]), "explore");
+      this.go(new Vec343(p[0], 0, p[1]), "explore");
       this.state = "exploring";
       this.say("Ooh! What\u2019s that?");
     }
@@ -15484,12 +15480,12 @@ var Lilah = class {
       this.carrying = false;
       this.toy.enabled = false;
       if (this.grounding) this.grounding.surfaceHeight = null;
-      if (this.state === "sleeping" || this.bedStart) this.root.setPosition(propPoint("crib", new Vec344(8.55, 0.09, -1.3)));
+      if (this.state === "sleeping" || this.bedStart) this.root.setPosition(propPoint("crib", new Vec343(8.55, 0.09, -1.3)));
       this.bedStart = null;
       this.state = "watching";
     }
     if ((this.state === "sleeping" || this.bedStart) && !this.daily.clock.state.lilahAsleep && this.daily.clock.state.minutes < 1095) {
-      this.root.setPosition(propPoint("crib", new Vec344(8.55, 0.09, -1.3)));
+      this.root.setPosition(propPoint("crib", new Vec343(8.55, 0.09, -1.3)));
       this.state = "watching";
       this.bedStart = null;
       this.animator.setWorkClip(null);
@@ -15511,7 +15507,7 @@ var Lilah = class {
       this.animator.cancelAction();
       this.decide(arianna);
     }
-    const velocity = new Vec344();
+    const velocity = new Vec343();
     if (this.scripted) this.updateTornado(dt, arianna, velocity);
     else if (this.bedStart) {
       const entry = this.bedStart;
@@ -15553,7 +15549,7 @@ var Lilah = class {
     this.animator.update(dt, velocity, elapsed);
     const p = this.root.getPosition();
     this.visited.add(p.z < 3 ? "bedroom" : p.z < 9 ? "living" : "kitchen");
-    const screen = camera.camera.worldToScreen(new Vec344(p.x, p.y + this.height + 0.12, p.z));
+    const screen = camera.camera.worldToScreen(new Vec343(p.x, p.y + this.height + 0.12, p.z));
     const viewport = document.querySelector("#game").getBoundingClientRect();
     this.label.hidden = performance.now() > this.speechUntil || screen.x < 10 || screen.x > viewport.width - 10 || screen.y < 130 || screen.y > viewport.height - 130;
     this.label.style.transform = `translate(${Math.max(4, Math.min(viewport.width - this.label.offsetWidth - 4, screen.x - this.label.offsetWidth / 2))}px,${screen.y - this.label.offsetHeight}px)`;
@@ -15601,7 +15597,7 @@ var Lilah = class {
 };
 
 // src/game/LilahTornado.ts
-import { Entity as Entity47, Vec3 as Vec345 } from "playcanvas";
+import { Entity as Entity47, Vec3 as Vec344 } from "playcanvas";
 init_primitives();
 
 // src/systems/TornadoRules.ts
@@ -15764,7 +15760,7 @@ var LilahTornado = class {
     this.action.enabled = true;
     this.notice = "Follow Lilah\u2019s thought bubbles. Tap Action near a mess!";
     this.noticeUntil = 6;
-    this.spots = [[1.1, 2.1], [1.1, 4.8], [0.7, 8.1], [0.5, 10.3], [1.8, 11.3], [4.8, 11.5], [3.7, 6.4], [3.8, 2], [8.4, 0.8], [8.1, 7]].map(([x, z]) => new Vec345(x, 0, z)).filter((p) => this.planner.free(p.x, p.z) && this.planner.route(new Vec345(this.character.player.getPosition().x, 0, this.character.player.getPosition().z), p).length > 0);
+    this.spots = [[1.1, 2.1], [1.1, 4.8], [0.7, 8.1], [0.5, 10.3], [1.8, 11.3], [4.8, 11.5], [3.7, 6.4], [3.8, 2], [8.4, 0.8], [8.1, 7]].map(([x, z]) => new Vec344(x, 0, z)).filter((p) => this.planner.free(p.x, p.z) && this.planner.route(new Vec344(this.character.player.getPosition().x, 0, this.character.player.getPosition().z), p).length > 0);
     this.lilah.beginTornado();
     void this.audio.unlock();
     this.audio.pause(false);
@@ -15878,7 +15874,7 @@ var LilahTornado = class {
   }
   focus() {
     const p = this.character.player.getPosition();
-    return this.messes.filter((m) => Math.hypot(p.x - m.point.x, p.z - m.point.z) < 1.15 && this.sight.line(new Vec345(p.x, 0, p.z), m.point)).sort((a, b) => a.point.distance(p) - b.point.distance(p))[0];
+    return this.messes.filter((m) => Math.hypot(p.x - m.point.x, p.z - m.point.z) < 1.15 && this.sight.line(new Vec344(p.x, 0, p.z), m.point)).sort((a, b) => a.point.distance(p) - b.point.distance(p))[0];
   }
   clean() {
     if (!this.playing || this.cleaning || this.character.animator.busy) return;
@@ -15916,7 +15912,7 @@ var LilahTornado = class {
     if (!pet.loaded) return;
     const p = pet.dog.getPosition(), point = this.spots.filter((v) => !this.messes.some((m) => m.point.distance(v) < 1)).sort((a, b) => a.distance(p) - b.distance(p))[0];
     if (!point) return;
-    const path = this.planner.route(new Vec345(p.x, 0, p.z), point);
+    const path = this.planner.route(new Vec344(p.x, 0, p.z), point);
     if (!path.length) {
       this.specialStarted = true;
       return;
@@ -15931,7 +15927,7 @@ var LilahTornado = class {
     if (!dog || dog.wait < 0 && !dog.route.length) return;
     const root = this.props.pet.dog;
     if (dog.route.length) {
-      const p = root.getPosition(), next = dog.route[0], delta = new Vec345(next.x - p.x, 0, next.z - p.z), distance = delta.length();
+      const p = root.getPosition(), next = dog.route[0], delta = new Vec344(next.x - p.x, 0, next.z - p.z), distance = delta.length();
       if (distance < 0.04) {
         dog.route.shift();
         return;
@@ -15945,7 +15941,7 @@ var LilahTornado = class {
         root.setPosition(dog.point.x, 0.04, dog.point.z);
         this.spawn(dog.point, 0, "dog");
         dog.wait = -1;
-        dog.route = this.planner.route(dog.point, new Vec345(dog.home.x, 0, dog.home.z));
+        dog.route = this.planner.route(dog.point, new Vec344(dog.home.x, 0, dog.home.z));
       }
     }
   }
@@ -15971,7 +15967,7 @@ var LilahTornado = class {
     set("[data-notice]", this.elapsed < this.noticeUntil ? this.notice : this.messes.length === 3 ? "Lilah takes a breather. Pick any mess!" : "\u{1F463} Follow Lilah \xB7 \u2728 Tap Action to tidy");
     const bounds = get("#game").getBoundingClientRect();
     for (const m of this.messes) {
-      const p = this.camera.entity.camera.worldToScreen(new Vec345(m.point.x, 0.4, m.point.z)), x = Math.max(24, Math.min(bounds.width - 24, p.x)), y = Math.max(this.hud.offsetTop + this.hud.offsetHeight + 40, Math.min(bounds.height - 180, p.y));
+      const p = this.camera.entity.camera.worldToScreen(new Vec344(m.point.x, 0.4, m.point.z)), x = Math.max(24, Math.min(bounds.width - 24, p.x)), y = Math.max(this.hud.offsetTop + this.hud.offsetHeight + 40, Math.min(bounds.height - 180, p.y));
       m.label.classList.toggle("near", m === nearest);
       m.label.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
       m.label.classList.toggle("edge", x !== p.x || y !== p.y);
@@ -16073,7 +16069,7 @@ var LilahTornado = class {
 // src/game/FamilyDinner.ts
 init_AssetUrls();
 init_PropSpace();
-import { BoundingBox as BoundingBox23, Entity as Entity48, Vec3 as Vec346 } from "playcanvas";
+import { BoundingBox as BoundingBox23, Entity as Entity48, Vec3 as Vec345 } from "playcanvas";
 init_primitives();
 init_ContainerLease();
 var FamilyDinner = class {
@@ -16133,7 +16129,7 @@ var FamilyDinner = class {
   day = 0;
   stage = "idle";
   route = [];
-  goal = new Vec346();
+  goal = new Vec345();
   timer = 0;
   blocked = 0;
   retry = 0;
@@ -16141,14 +16137,14 @@ var FamilyDinner = class {
   serving = "pizza";
   table() {
     this.tray.reparent(this.house.root);
-    this.tray.setPosition(propPoint("dining", new Vec346(0.55, 0.99, 14.35)));
+    this.tray.setPosition(propPoint("dining", new Vec345(0.55, 0.99, 14.35)));
     this.tray.setEulerAngles(0, propYaw("dining", 0), 0);
     this.tray.enabled = true;
   }
   go(p, stage) {
     const at = this.root.getPosition();
     this.goal.copy(p);
-    this.route = this.planner.route(new Vec346(at.x, 0, at.z), p);
+    this.route = this.planner.route(new Vec345(at.x, 0, at.z), p);
     this.stage = stage;
     this.blocked = 0;
     return this.route.length > 0;
@@ -16186,7 +16182,7 @@ var FamilyDinner = class {
     if (this.stage === "idle") {
       if (s.dinnerServed && !this.tray.enabled) this.table();
       if (!canStart || !this.due()) return false;
-      if (!this.go(propPoint("fridge", new Vec346(-1.65, 0, 14.55)), "fetch")) {
+      if (!this.go(propPoint("fridge", new Vec345(-1.65, 0, 14.55)), "fetch")) {
         this.finish();
         return false;
       }
@@ -16195,13 +16191,13 @@ var FamilyDinner = class {
     if (["fetch", "carry", "seat"].includes(this.stage)) {
       const p = this.root.getPosition(), next = this.route[0];
       if (next) {
-        const delta = new Vec346(next.x - p.x, 0, next.z - p.z), distance = delta.length(), step = Math.min(distance, dt * 1.05);
+        const delta = new Vec345(next.x - p.x, 0, next.z - p.z), distance = delta.length(), step = Math.min(distance, dt * 1.05);
         delta.normalize();
         const q = p.clone().add(delta.clone().mulScalar(step));
         if (people.some((v) => Math.hypot(v.x - q.x, v.z - q.z) < 0.6) || !this.planner.free(q.x, q.z)) {
           this.blocked += dt;
           if (this.blocked > 3) {
-            this.route = this.planner.route(new Vec346(p.x, 0, p.z), this.goal);
+            this.route = this.planner.route(new Vec345(p.x, 0, p.z), this.goal);
             this.blocked = 0;
           }
           return true;
@@ -16220,11 +16216,11 @@ var FamilyDinner = class {
         this.stage = "pickup";
         this.timer = 1.4;
         this.animator.setIdleClip("Cleaning");
-        this.animator.faceTowards(propPoint("fridge", new Vec346(-2.65, 1, 14.55)));
+        this.animator.faceTowards(propPoint("fridge", new Vec345(-2.65, 1, 14.55)));
       } else if (this.stage === "carry") {
         this.stage = "place";
         this.timer = 1.1;
-        this.animator.faceTowards(propPoint("dining", new Vec346(0.55, 1, 13.85)));
+        this.animator.faceTowards(propPoint("dining", new Vec345(0.55, 1, 13.85)));
       } else {
         this.stage = "sitting";
         this.timer = 1.3;
@@ -16236,7 +16232,7 @@ var FamilyDinner = class {
       this.timer -= dt;
       if (this.stage === "sitting" || this.stage === "standing") {
         const down = this.stage === "sitting", t = Math.max(0, Math.min(1, 1 - this.timer / (down ? 1.3 : 1.2))), z = down ? 15.65 - 0.55 * t : 15.1 + 0.55 * t;
-        this.root.setPosition(propPoint("dining", new Vec346(0.55, 0.09, z)));
+        this.root.setPosition(propPoint("dining", new Vec345(0.55, 0.09, z)));
       }
       if (this.timer > 0) return true;
       if (this.stage === "pickup") {
@@ -16247,7 +16243,7 @@ var FamilyDinner = class {
         this.tray.setLocalPosition(0, 0.035, 0.06);
         this.tray.setLocalEulerAngles(0, 0, 0);
         this.tray.enabled = true;
-        if (!this.go(propPoint("dining", new Vec346(0.55, 0, 15.65)), "carry")) {
+        if (!this.go(propPoint("dining", new Vec345(0.55, 0, 15.65)), "carry")) {
           this.tray.enabled = false;
           this.finish();
         }
@@ -16266,14 +16262,14 @@ var FamilyDinner = class {
       } else if (this.stage === "sitting") {
         this.stage = "seated";
         this.timer = 12 + s.day % 4 * 2;
-        this.root.setPosition(propPoint("dining", new Vec346(0.55, 0.09, 15.1)));
+        this.root.setPosition(propPoint("dining", new Vec345(0.55, 0.09, 15.1)));
       } else if (this.stage === "seated") {
         this.stage = "standing";
         this.timer = 1.2;
         this.animator.setIdleClip("Idle");
         this.animator.playAction("StandUp", 1.2);
       } else if (this.stage === "standing") {
-        this.root.setPosition(propPoint("dining", new Vec346(0.55, 0.09, 15.65)));
+        this.root.setPosition(propPoint("dining", new Vec345(0.55, 0.09, 15.65)));
         this.finish();
         return false;
       }
@@ -16293,11 +16289,11 @@ var FamilyDinner = class {
 // src/game/Marc.ts
 init_PropSpace();
 init_AssetUrls();
-import { Asset as Asset13, AnimData as AnimData9, AnimTrack as AnimTrack9, Entity as Entity49, Quat as Quat12, Vec3 as Vec347 } from "playcanvas";
+import { Asset as Asset13, AnimData as AnimData9, AnimTrack as AnimTrack9, Entity as Entity49, Quat as Quat12, Vec3 as Vec346 } from "playcanvas";
 init_primitives();
-var SEAT = new Vec347(4.5, 0, 7.35);
+var SEAT = new Vec346(4.5, 0, 7.35);
 var YAW = -35;
-var FORWARD = new Vec347(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
+var FORWARD = new Vec346(Math.sin(YAW * Math.PI / 180), 0, Math.cos(YAW * Math.PI / 180));
 var ENTRY = SEAT.clone().add(FORWARD.clone().mulScalar(1.02));
 var SEATED = SEAT.clone().add(FORWARD.clone().mulScalar(0.28));
 var PATROL = [[8.4, 0.5], [8.1, 9.6], [0.4, 11.2], [3.8, 2], [1.25, 5.6]];
@@ -16364,7 +16360,7 @@ var Marc = class {
   standCount = 0;
   sitCount = 0;
   visited = /* @__PURE__ */ new Set();
-  velocity = new Vec347();
+  velocity = new Vec346();
   blockedFor = 0;
   nextScan = 0;
   async load() {
@@ -16439,7 +16435,7 @@ var Marc = class {
     if (!m) return false;
     const p = this.root.getPosition(), candidates = [];
     for (const radius of [0.65, 0.85]) for (let i = 0; i < 12; i++) {
-      const a = i * Math.PI / 6, v = new Vec347(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
+      const a = i * Math.PI / 6, v = new Vec346(m.x + Math.cos(a) * radius, 0, m.z + Math.sin(a) * radius);
       if (this.planner.free(v.x, v.z)) candidates.push(v);
     }
     candidates.sort((a, b) => a.distance(p) - b.distance(p));
@@ -16467,7 +16463,7 @@ var Marc = class {
     this.label.hidden = true;
     if (!this.root.enabled || document.hidden) return;
     if (!active) {
-      this.animator.update(0, new Vec347(), Math.max(elapsed, 1e-3));
+      this.animator.update(0, new Vec346(), Math.max(elapsed, 1e-3));
       return;
     }
     this.time += dt;
@@ -16536,7 +16532,7 @@ var Marc = class {
                   this.until = this.time + 3;
                   this.animator.setIdleClip("Cleaning");
                   const mess = this.mess();
-                  this.animator.faceTowards(new Vec347(mess.x, 0, mess.z));
+                  this.animator.faceTowards(new Vec346(mess.x, 0, mess.z));
                   this.say(["These blocks are plotting against my feet.", "Ah, floor juice. My least favorite flavor.", "Crumbs: the glitter of snack time."][Number(mess.id.at(-1))]);
                 } else {
                   this.state = "idle";
@@ -16557,7 +16553,7 @@ var Marc = class {
         }
       } else if (this.state === "sitting-down" || this.state === "standing-up") {
         const down = this.state === "sitting-down", t = Math.min(1, (this.time - this.transitionStart) / (down ? 1.3 : 1)), smooth2 = t * t * (3 - 2 * t);
-        const p2 = new Vec347().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
+        const p2 = new Vec346().lerp(propPoint("marc-seat", down ? ENTRY : SEATED), propPoint("marc-seat", down ? SEATED : ENTRY), smooth2);
         this.root.setPosition(p2.x, 0.09, p2.z);
         this.visual.setLocalEulerAngles(0, propYaw("marc-seat", YAW), 0);
         if (this.time >= this.until && !this.animator.busy) {
@@ -16589,7 +16585,7 @@ var Marc = class {
       } else if (this.time >= this.until) {
         if (this.purpose === "seat" || this.purpose === "mess") {
           const point = PATROL[this.patrolIndex++ % PATROL.length];
-          if (!this.go(new Vec347(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
+          if (!this.go(new Vec346(point[0], 0, point[1]), "wander")) this.until = this.time + 3;
         } else if (!this.go(propPoint("marc-seat", ENTRY), "seat")) this.until = this.time + 3;
       }
       if (this.time < 2 && this.state === "idle") {
@@ -16601,7 +16597,7 @@ var Marc = class {
     this.animator.update(dt, this.velocity, elapsed);
     const p = this.root.getPosition(), room = HOUSE_ROOMS.find((r) => p.x >= r.minX && p.x <= r.maxX && p.z >= r.minZ && p.z <= r.maxZ);
     if (room) this.visited.add(room.id);
-    const screen = camera.camera.worldToScreen(new Vec347(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
+    const screen = camera.camera.worldToScreen(new Vec346(p.x, p.y + this.height + 0.1, p.z)), viewport = document.querySelector("#game").getBoundingClientRect();
     this.label.hidden = performance.now() > this.speechUntil || screen.x < 0 || screen.x > viewport.width || screen.y < 135 || screen.y > viewport.height - 145;
     this.label.style.transform = `translate(${Math.max(6, Math.min(viewport.width - this.label.offsetWidth - 6, screen.x - this.label.offsetWidth / 2))}px,${screen.y - this.label.offsetHeight}px)`;
   }
@@ -16862,8 +16858,8 @@ async function startGame(editorApp) {
   const tornado = new LilahTornado(app, room, props, cleanup, loop, character, controller, camera, lilah);
   loop.tornado = tornado;
   const label = document.querySelector("#player-label");
-  const screenPoint = new Vec350();
-  const headPoint = new Vec350();
+  const screenPoint = new Vec349();
+  const headPoint = new Vec349();
   const viewport = document.querySelector("#game");
   const resize = () => {
     app.graphicsDevice.maxPixelRatio = window.devicePixelRatio || 1;

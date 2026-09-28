@@ -218,8 +218,7 @@ export class CleanupGame {
         }
       }
     }
-    this.feedback.update(now, this.interactions, this.carry, this.mission);
-    if(this.activity||this.character.animator.busy)this.feedback.hideWorkingLabel(this.workingId);
+    this.feedback.update(now, this.interactions, this.carry, this.mission, !this.activity && !this.character.animator.busy);
     this.audio.update();
     this.props.pet?.update(now, this.activity?.target.kind === 'pet' ? this.progress : 0, this.carry.socket.getPosition());
     this.props.daily?.effect(this.activity?.target.kind==='daily'?this.activity.target:null,this.progress,this.carry.socket.getPosition());

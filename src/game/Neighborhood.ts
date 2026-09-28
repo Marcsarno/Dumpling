@@ -13,7 +13,8 @@ export const SHOP_STOPS=[{id:'corner',x:-26,name:'Clover Corner'},{id:'toys',x:-
 /** Instantiated in short, independent blocks. Retire batches as well as entities. */
 export class Neighborhood {
  private sections=new Map<number,Section>();private maxSections=4;
- constructor(private app:Application,private house:Bedroom){}
+ private readonly sectionBounds=Array.from({length:this.maxSections},(_,i)=>new BoundingBox(new Vec3(-16-i*24,2,-23),new Vec3(16,8,16)));
+ constructor(private app:Application,private house:Bedroom,private readonly camera:Entity){}
  install(){
   this.house.walkable!.push({minX:-100,maxX:31,minZ:-27.5,maxZ:-16.3});this.house.halfWidth=110;
   for(const shop of SHOP_STOPS)this.house.walkable!.push({minX:shop.x-6,maxX:shop.x+6,minZ:-30.8,maxZ:-25.8});
@@ -21,7 +22,7 @@ export class Neighborhood {
  }
  update(p:Vec3,outside:boolean){
   for(let i=0;i<this.maxSections;i++){
-   const center=-16-i*24,camera=this.app.root.findByTag('migration.camera')[0] as Entity|undefined,near=outside&&(Math.abs(p.x-center)<30||!!camera?.camera?.frustum.containsAabb(new BoundingBox(new Vec3(center,2,-23),new Vec3(16,8,16))));
+   const center=-16-i*24,near=outside&&(Math.abs(p.x-center)<30||!!this.camera.camera?.frustum.containsAabb(this.sectionBounds[i]));
    if(near&&!this.sections.has(i))this.sections.set(i,this.create(i));
    if(!near&&this.sections.has(i)){const s=this.sections.get(i)!;s.root.enabled=false;this.app.batcher.removeGroup(s.group);s.root.destroy();s.art.dispose();s.materials.forEach(m=>{m.diffuseMap?.destroy();m.destroy();});s.leases.forEach(l=>l.release());this.sections.delete(i);}
   }

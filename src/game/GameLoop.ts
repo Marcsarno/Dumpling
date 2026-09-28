@@ -79,7 +79,7 @@ export class GameLoop {
       if(open){this.action.enabled=false;this.huntUI.panel.hidden=true;}else{this.action.enabled=true;this.findCopy='';this.wallet();}
     },()=>!this.save.data.pop?.tutorialSeen,()=>({bestScore:this.save.data.pop?.bestScore??0,tickets:this.save.data.pop?.tickets??0,levels:this.save.data.pop?.levels??{}}));
     this.recess=createRecess(app);
-    this.outdoors=new Outdoors(app,room);this.scooter=new Scooter(app,character,controller);this.neighborhood=new Neighborhood(app,room);this.fishing=new Fishing(app,this.outdoors.root,character,camera,this.save);this.fishing.onReward=()=>this.wallet();this.fishing.onFinish=()=>{this.joystick.reset();this.controller.reset();};
+    this.outdoors=new Outdoors(app,room,camera.entity);this.scooter=new Scooter(app,character,controller);this.neighborhood=new Neighborhood(app,room,camera.entity);this.fishing=new Fishing(app,this.outdoors.root,character,camera,this.save);this.fishing.onReward=()=>this.wallet();this.fishing.onFinish=()=>{this.joystick.reset();this.controller.reset();};
     this.encounters=new OutdoorEncounters(app,character,controller,s=>this.message(s));
     this.dailyPlay=new DailyPlay(app,character,controller,camera,s=>this.message(s));
     this.schoolGate=new SchoolGatePlay(app,character,controller,room,camera);
